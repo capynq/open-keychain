@@ -18,6 +18,7 @@ test('customizes a name, uses every icon camera preset, and downloads STL', asyn
   }
   await expect(viewer).toHaveAttribute('data-view', 'bottom');
   const surface = page.locator('.viewer-surface');
+  await surface.scrollIntoViewIfNeeded();
   const surfaceBox = await surface.boundingBox();
   expect(surfaceBox).toBeTruthy();
   await page.mouse.move(surfaceBox!.x + surfaceBox!.width * 0.5, surfaceBox!.y + surfaceBox!.height * 0.5);
