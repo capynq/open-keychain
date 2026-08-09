@@ -5,13 +5,15 @@ describe('font coordinate normalization', () => {
   it('maps OpenType Y-down outlines into world-space Y-up', () => {
     const glyph = {
       advanceWidth: 100,
-      getPath: () => ({ commands: [
-        { type: 'M' as const, x: 0, y: 0 },
-        { type: 'L' as const, x: 0, y: -100 },
-        { type: 'L' as const, x: 80, y: -100 },
-        { type: 'L' as const, x: 80, y: 0 },
-        { type: 'Z' as const },
-      ] }),
+      getPath: () => ({
+        commands: [
+          { type: 'M' as const, x: 0, y: 0 },
+          { type: 'L' as const, x: 0, y: -100 },
+          { type: 'L' as const, x: 80, y: -100 },
+          { type: 'L' as const, x: 80, y: 0 },
+          { type: 'Z' as const },
+        ],
+      }),
     };
     const font = {
       charToGlyph: () => glyph,

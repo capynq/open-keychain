@@ -7,7 +7,9 @@
   overflow: hidden;
   border-radius: 22px;
   background: #293141;
-  box-shadow: 0 20px 45px #262d3b1c, inset 0 0 0 1px #ffffff8c;
+  box-shadow:
+    0 20px 45px #262d3b1c,
+    inset 0 0 0 1px #ffffff8c;
 }
 
 .viewer-surface {
@@ -68,8 +70,15 @@
   color: #9a3d31;
 }
 
-.viewer-toolbar button:focus-visible { box-shadow: 0 0 0 2px #ef815e; }
-.toolbar-divider { width: 1px; height: 20px; margin: 0 3px; background: #ffffff2e; }
+.viewer-toolbar button:focus-visible {
+  box-shadow: 0 0 0 2px #ef815e;
+}
+.toolbar-divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 3px;
+  background: #ffffff2e;
+}
 
 .viewer-caption {
   position: absolute;
@@ -86,8 +95,20 @@
 }
 
 @media (max-width: 760px) {
-  .viewer { border-radius: 18px; }
-  .viewer-toolbar { flex-basis: 54px; gap: 2px; padding: 5px; }
-  .viewer-toolbar button { width: 44px; height: 44px; }
-  .viewer-caption { bottom: 10px; left: 10px; }
+  .viewer {
+    border-radius: 18px;
+  }
+  .viewer-toolbar {
+    flex-basis: 54px;
+    gap: 2px;
+    padding: 5px;
+  }
+  .viewer-toolbar button {
+    width: 44px;
+    height: 44px;
+  }
+  .viewer-caption {
+    bottom: 10px;
+    left: 10px;
+  }
 }

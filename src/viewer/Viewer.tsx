@@ -4,7 +4,15 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { GeometryResult } from '../geometry/types';
 import { t, type Locale } from '../i18n/utils';
-import { applyCameraPose, cameraPose, modelBounds, viewDefinition, VIEW_DEFINITIONS, type CameraViewIconId, type ViewId } from './views';
+import {
+  applyCameraPose,
+  cameraPose,
+  modelBounds,
+  viewDefinition,
+  VIEW_DEFINITIONS,
+  type CameraViewIconId,
+  type ViewId,
+} from './views';
 import './viewer.css';
 
 export type SurfacePresetId = 'matte' | 'graph' | 'dark';
@@ -36,8 +44,6 @@ function makeMesh(mesh: GeometryResult['baseMesh'], color: string, roughness: nu
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(mesh.positions, 3));
   geometry.setIndex(new THREE.BufferAttribute(mesh.indices, 1));
-  // Keep broad curved faces smooth while preserving crisp, flat transitions
-  // between the top, wall, and underside of the printable solid.
   const shadedGeometry = toCreasedNormals(geometry, THREE.MathUtils.degToRad(25));
   if (shadedGeometry !== geometry) geometry.dispose();
   const material = new THREE.MeshStandardMaterial({ color, roughness, metalness: 0.02 });
@@ -48,25 +54,48 @@ function makeMesh(mesh: GeometryResult['baseMesh'], color: string, roughness: nu
 }
 
 function CameraViewIcon({ icon }: { icon: CameraViewIconId }) {
-  if (icon === 'cube') return <svg data-icon={icon} viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Zm0 0v9m8-4.5-8 4.5m-8-4.5 8 4.5m0 9v-9" /></svg>;
-  if (icon === 'out-of-plane') return <svg data-icon={icon} viewBox="0 0 24 24" aria-hidden="true"><path d="M9 9h10v10H9zM14 14 4 4m0 0v6m0-6h6" /></svg>;
-  if (icon === 'into-plane') return <svg data-icon={icon} viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h10v10H5zM4 4l10 10m0 0V8m0 6H8" /></svg>;
+  if (icon === 'cube')
+    return (
+      <svg data-icon={icon} viewBox="0 0 24 24" aria-hidden="true">
+        <path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Zm0 0v9m8-4.5-8 4.5m-8-4.5 8 4.5m0 9v-9" />
+      </svg>
+    );
+  if (icon === 'out-of-plane')
+    return (
+      <svg data-icon={icon} viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M9 9h10v10H9zM14 14 4 4m0 0v6m0-6h6" />
+      </svg>
+    );
+  if (icon === 'into-plane')
+    return (
+      <svg data-icon={icon} viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M5 5h10v10H5zM4 4l10 10m0 0V8m0 6H8" />
+      </svg>
+    );
   const path = {
     'arrow-left': 'M20 12H4m0 0 6-6m-6 6 6 6',
     'arrow-right': 'M4 12h16m0 0-6-6m6 6-6 6',
     'arrow-up': 'M12 20V4m0 0-6 6m6-6 6 6',
     'arrow-down': 'M12 4v16m0 0-6-6m6 6 6-6',
   }[icon];
-  return <svg data-icon={icon} viewBox="0 0 24 24" aria-hidden="true"><path d={path} /></svg>;
+  return (
+    <svg data-icon={icon} viewBox="0 0 24 24" aria-hidden="true">
+      <path d={path} />
+    </svg>
+  );
 }
 
 function fitViewer(state: ViewerState, result: GeometryResult, selected: ViewId | 'custom', resetZoom = true): void {
   if (resetZoom) state.zoomScale = 1;
   const center = new THREE.Vector3(...result.dimensions.centerMm);
-  const bounds = modelBounds(result.dimensions.widthMm, result.dimensions.heightMm, result.dimensions.thicknessMm, center);
-  const direction = selected === 'custom'
-    ? state.camera.position.clone().sub(center).normalize()
-    : viewDefinition(selected).direction;
+  const bounds = modelBounds(
+    result.dimensions.widthMm,
+    result.dimensions.heightMm,
+    result.dimensions.thicknessMm,
+    center,
+  );
+  const direction =
+    selected === 'custom' ? state.camera.position.clone().sub(center).normalize() : viewDefinition(selected).direction;
   const up = selected === 'custom' ? state.camera.up : viewDefinition(selected).up;
   const pose = cameraPose(state.camera, bounds, direction, up, state.zoomScale);
   applyCameraPose(state.camera, pose);
@@ -79,11 +108,13 @@ function fitCurrentOrientation(state: ViewerState, result: GeometryResult): void
   const direction = state.camera.position.clone().sub(target);
   if (direction.lengthSq() < 1e-8) return;
   const center = new THREE.Vector3(...result.dimensions.centerMm);
-  const bounds = modelBounds(result.dimensions.widthMm, result.dimensions.heightMm, result.dimensions.thicknessMm, center);
+  const bounds = modelBounds(
+    result.dimensions.widthMm,
+    result.dimensions.heightMm,
+    result.dimensions.thicknessMm,
+    center,
+  );
   const pose = cameraPose(state.camera, bounds, direction.normalize(), state.camera.up, state.zoomScale);
-  // OrbitControls emits `change` after applying a gesture. Refit the same
-  // orientation immediately, without calling controls.update() recursively.
-  // The next controls update re-reads this radius before applying damping.
   applyCameraPose(state.camera, pose);
   state.controls.target.copy(pose.target);
 }
@@ -94,15 +125,21 @@ export function Viewer({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
   const resultRef = useRef<GeometryResult | undefined>(result);
   const activeViewRef = useRef<ViewId | 'custom'>('home');
   const [activeView, setActiveView] = useState<ViewId | 'custom'>('home');
-  resultRef.current = result;
 
-  const setView = useCallback((id: ViewId) => {
-    const state = stateRef.current;
-    if (!state || !result) return;
-    activeViewRef.current = id;
-    setActiveView(id);
-    fitViewer(state, result, id);
+  useEffect(() => {
+    resultRef.current = result;
   }, [result]);
+
+  const setView = useCallback(
+    (id: ViewId) => {
+      const state = stateRef.current;
+      if (!state || !result) return;
+      activeViewRef.current = id;
+      setActiveView(id);
+      fitViewer(state, result, id);
+    },
+    [result],
+  );
 
   const zoomBy = useCallback((factor: number) => {
     const state = stateRef.current;
@@ -283,8 +320,21 @@ export function Viewer({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
           </button>
         ))}
         <span className="toolbar-divider" aria-hidden="true" />
-        <button type="button" aria-label={t(locale, 'zoomOut')} title={t(locale, 'zoomOut')} onClick={() => zoomBy(1.22)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" /></svg></button>
-        <button type="button" aria-label={t(locale, 'zoomIn')} title={t(locale, 'zoomIn')} onClick={() => zoomBy(0.82)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></button>
+        <button
+          type="button"
+          aria-label={t(locale, 'zoomOut')}
+          title={t(locale, 'zoomOut')}
+          onClick={() => zoomBy(1.22)}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 12h14" />
+          </svg>
+        </button>
+        <button type="button" aria-label={t(locale, 'zoomIn')} title={t(locale, 'zoomIn')} onClick={() => zoomBy(0.82)}>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </button>
       </div>
     </div>
   );

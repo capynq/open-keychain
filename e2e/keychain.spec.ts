@@ -22,7 +22,9 @@ test('customizes a name, uses every icon camera preset, and downloads STL', asyn
   expect(surfaceBox).toBeTruthy();
   await page.mouse.move(surfaceBox!.x + surfaceBox!.width * 0.5, surfaceBox!.y + surfaceBox!.height * 0.5);
   await page.mouse.down();
-  await page.mouse.move(surfaceBox!.x + surfaceBox!.width * 0.18, surfaceBox!.y + surfaceBox!.height * 0.38, { steps: 8 });
+  await page.mouse.move(surfaceBox!.x + surfaceBox!.width * 0.18, surfaceBox!.y + surfaceBox!.height * 0.38, {
+    steps: 8,
+  });
   await page.mouse.up();
   await expect(viewer).toHaveAttribute('data-view', 'custom');
   await expect(surface.locator('canvas')).toBeVisible();
@@ -74,7 +76,10 @@ test('supports bounded zoom, preview surfaces, locales, and configurable 3MF exp
   expect((await download).suggestedFilename()).toMatch(/\.3mf$/);
 });
 
-for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 800 }]) {
+for (const viewport of [
+  { width: 1440, height: 900 },
+  { width: 1280, height: 800 },
+]) {
   test(`keeps all desktop controls visible at ${viewport.width}×${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.goto('/');
@@ -103,9 +108,13 @@ test('keeps the preview prominent and touch targets comfortable at 390 px', asyn
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await expect(page.locator('.viewer')).toBeVisible();
-  const dimensions = await page.locator('.viewer').evaluate((element) => ({ width: element.clientWidth, height: element.clientHeight }));
+  const dimensions = await page
+    .locator('.viewer')
+    .evaluate((element) => ({ width: element.clientWidth, height: element.clientHeight }));
   expect(dimensions.height).toBeLessThanOrEqual(500);
   expect(dimensions.width).toBeGreaterThan(300);
-  const cameraButtonHeight = await page.getByRole('button', { name: 'Home view' }).evaluate((element) => element.getBoundingClientRect().height);
+  const cameraButtonHeight = await page
+    .getByRole('button', { name: 'Home view' })
+    .evaluate((element) => element.getBoundingClientRect().height);
   expect(cameraButtonHeight).toBeGreaterThanOrEqual(44);
 });

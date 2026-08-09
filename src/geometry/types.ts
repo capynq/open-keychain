@@ -102,12 +102,13 @@ export function keyringMetrics(holeDiameterMm: number): KeyringMetrics {
 }
 
 export function sanitizeFilename(text: string, styleId: string, extension: ExportFormat = 'stl'): string {
-  const slug = text
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .toLowerCase()
-    .slice(0, 48) || 'name';
+  const slug =
+    text
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .toLowerCase()
+      .slice(0, 48) || 'name';
   return `keychain-${slug}-${styleId}.${extension}`;
 }

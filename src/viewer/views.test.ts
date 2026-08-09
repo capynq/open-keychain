@@ -32,14 +32,20 @@ describe('viewer camera views', () => {
 
   it('keeps every corner inside the frustum across arbitrary gesture orientations', () => {
     const corners = [
-      new THREE.Vector3(bounds.min.x, bounds.min.y, bounds.min.z), new THREE.Vector3(bounds.min.x, bounds.min.y, bounds.max.z),
-      new THREE.Vector3(bounds.min.x, bounds.max.y, bounds.min.z), new THREE.Vector3(bounds.min.x, bounds.max.y, bounds.max.z),
-      new THREE.Vector3(bounds.max.x, bounds.min.y, bounds.min.z), new THREE.Vector3(bounds.max.x, bounds.min.y, bounds.max.z),
-      new THREE.Vector3(bounds.max.x, bounds.max.y, bounds.min.z), new THREE.Vector3(bounds.max.x, bounds.max.y, bounds.max.z),
+      new THREE.Vector3(bounds.min.x, bounds.min.y, bounds.min.z),
+      new THREE.Vector3(bounds.min.x, bounds.min.y, bounds.max.z),
+      new THREE.Vector3(bounds.min.x, bounds.max.y, bounds.min.z),
+      new THREE.Vector3(bounds.min.x, bounds.max.y, bounds.max.z),
+      new THREE.Vector3(bounds.max.x, bounds.min.y, bounds.min.z),
+      new THREE.Vector3(bounds.max.x, bounds.min.y, bounds.max.z),
+      new THREE.Vector3(bounds.max.x, bounds.max.y, bounds.min.z),
+      new THREE.Vector3(bounds.max.x, bounds.max.y, bounds.max.z),
     ];
     for (const direction of [
-      new THREE.Vector3(1, -0.4, 0.8), new THREE.Vector3(-0.7, -0.2, 1),
-      new THREE.Vector3(0.25, 0.95, 0.35), new THREE.Vector3(-0.9, 0.3, -0.7),
+      new THREE.Vector3(1, -0.4, 0.8),
+      new THREE.Vector3(-0.7, -0.2, 1),
+      new THREE.Vector3(0.25, 0.95, 0.35),
+      new THREE.Vector3(-0.9, 0.3, -0.7),
     ]) {
       const pose = cameraPose(camera, bounds, direction, new THREE.Vector3(0, 1, 0));
       applyCameraPose(camera, pose);

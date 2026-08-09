@@ -30,7 +30,10 @@ function flattenQuadratic(start: Point, control: Point, end: Point, tolerance: n
 }
 
 function flattenCubic(start: Point, c1: Point, c2: Point, end: Point, tolerance: number, depth = 0): Point[] {
-  if (depth >= MAX_CURVE_DEPTH || Math.max(distanceToLine(c1, start, end), distanceToLine(c2, start, end)) <= tolerance) {
+  if (
+    depth >= MAX_CURVE_DEPTH ||
+    Math.max(distanceToLine(c1, start, end), distanceToLine(c2, start, end)) <= tolerance
+  ) {
     return [end];
   }
   const a: Point = [(start[0] + c1[0]) / 2, (start[1] + c1[1]) / 2];
@@ -57,6 +60,7 @@ function dedupe(points: Point[]): Point[] {
   return result;
 }
 
+/** Flatten font curves with a final-space tolerance so curved glyphs remain smooth without oversampling flat edges. */
 export function flattenText(font: opentype.Font, text: string, targetHeightMm: number): TextOutline {
   const glyphs = [...text].map((character) => font.charToGlyph(character));
   const paths: opentype.Path[] = [];
@@ -65,21 +69,21 @@ export function flattenText(font: opentype.Font, text: string, targetHeightMm: n
   for (const glyph of glyphs) {
     paths.push(glyph.getPath(advanceCursor, 0, 100));
     const kerning = previous ? font.getKerningValue(previous, glyph) : 0;
-    advanceCursor += (glyph.advanceWidth + kerning) / font.unitsPerEm * 100;
+    advanceCursor += ((glyph.advanceWidth + kerning) / font.unitsPerEm) * 100;
     previous = glyph;
   }
-  const pathPoints = paths.flatMap((path) => path.commands.flatMap((command) => {
-    if (command.type === 'Z') return [];
-    const points: Point[] = [[command.x, command.y]];
-    if (command.type === 'Q' || command.type === 'C') points.push([command.x1, command.y1]);
-    if (command.type === 'C') points.push([command.x2, command.y2]);
-    return points;
-  }));
+  const pathPoints = paths.flatMap((path) =>
+    path.commands.flatMap((command) => {
+      if (command.type === 'Z') return [];
+      const points: Point[] = [[command.x, command.y]];
+      if (command.type === 'Q' || command.type === 'C') points.push([command.x1, command.y1]);
+      if (command.type === 'C') points.push([command.x2, command.y2]);
+      return points;
+    }),
+  );
   const sourceHeight = pathPoints.length
     ? Math.max(...pathPoints.map((point) => point[1])) - Math.min(...pathPoints.map((point) => point[1]))
     : 100;
-  // Flatten in source-font space, but choose the tolerance so the resulting
-  // curves deviate by about 0.05 mm after the outline reaches its final size.
   const finalScale = targetHeightMm / Math.max(sourceHeight, 1);
   const tolerance = Math.max(0.003, 0.035 / finalScale);
   const polygons: Point[][] = [];
@@ -92,26 +96,27 @@ export function flattenText(font: opentype.Font, text: string, targetHeightMm: n
     current = [];
   };
 
-  for (const path of paths) for (const command of path.commands) {
-    if (command.type === 'M') {
-      if (current.length) finish();
-      currentPoint = [command.x, command.y];
-      current.push(currentPoint);
-    } else if (command.type === 'L') {
-      currentPoint = [command.x, command.y];
-      current.push(currentPoint);
-    } else if (command.type === 'Q') {
-      const end: Point = [command.x, command.y];
-      current.push(...flattenQuadratic(currentPoint, [command.x1, command.y1], end, tolerance));
-      currentPoint = end;
-    } else if (command.type === 'C') {
-      const end: Point = [command.x, command.y];
-      current.push(...flattenCubic(currentPoint, [command.x1, command.y1], [command.x2, command.y2], end, tolerance));
-      currentPoint = end;
-    } else if (command.type === 'Z') {
-      finish();
+  for (const path of paths)
+    for (const command of path.commands) {
+      if (command.type === 'M') {
+        if (current.length) finish();
+        currentPoint = [command.x, command.y];
+        current.push(currentPoint);
+      } else if (command.type === 'L') {
+        currentPoint = [command.x, command.y];
+        current.push(currentPoint);
+      } else if (command.type === 'Q') {
+        const end: Point = [command.x, command.y];
+        current.push(...flattenQuadratic(currentPoint, [command.x1, command.y1], end, tolerance));
+        currentPoint = end;
+      } else if (command.type === 'C') {
+        const end: Point = [command.x, command.y];
+        current.push(...flattenCubic(currentPoint, [command.x1, command.y1], [command.x2, command.y2], end, tolerance));
+        currentPoint = end;
+      } else if (command.type === 'Z') {
+        finish();
+      }
     }
-  }
   if (current.length) finish();
 
   const all = polygons.flat();
@@ -126,12 +131,12 @@ export function flattenText(font: opentype.Font, text: string, targetHeightMm: n
   const scale = targetHeightMm / rawHeight;
   const centerX = (rawMinX + rawMaxX) / 2;
   const centerY = (rawMinY + rawMaxY) / 2;
-  const scaled = polygons.map((polygon) => polygon.map(([x, y]) => [
-    Math.round((x - centerX) * scale * 1000) / 1000,
-    // OpenType coordinates grow downward on screen. World-space Y grows up,
-    // so a top view reads the name naturally instead of upside down.
-    Math.round(-(y - centerY) * scale * 1000) / 1000,
-  ] as Point));
+  const scaled = polygons.map((polygon) =>
+    polygon.map(
+      ([x, y]) =>
+        [Math.round((x - centerX) * scale * 1000) / 1000, Math.round(-(y - centerY) * scale * 1000) / 1000] as Point,
+    ),
+  );
   const points = scaled.flat();
   const minX = Math.min(...points.map((point) => point[0]));
   const maxX = Math.max(...points.map((point) => point[0]));

@@ -8,13 +8,17 @@ type ThreeMfPart = {
 };
 
 function escapeXml(value: string): string {
-  return value.replace(/[&<>"']/g, (character) => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&apos;',
-  })[character] ?? character);
+  return value.replace(
+    /[&<>"']/g,
+    (character) =>
+      ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&apos;',
+      })[character] ?? character,
+  );
 }
 
 function meshXml(mesh: MeshBuffer): string {
@@ -30,10 +34,12 @@ function meshXml(mesh: MeshBuffer): string {
 }
 
 function modelXml(parts: ThreeMfPart[]): string {
-  const resources = parts.map((part, index) => {
-    const id = index + 1;
-    return `<object id="${id}" type="model" pid="10" pindex="${index}"><name>${escapeXml(part.name)}</name>${meshXml(part.mesh)}</object>`;
-  }).join('');
+  const resources = parts
+    .map((part, index) => {
+      const id = index + 1;
+      return `<object id="${id}" type="model" pid="10" pindex="${index}"><name>${escapeXml(part.name)}</name>${meshXml(part.mesh)}</object>`;
+    })
+    .join('');
   const materials = parts.map((part) => `<base name="${escapeXml(part.name)}" displaycolor="${part.color}"/>`).join('');
   const build = parts.map((_, index) => `<item objectid="${index + 1}"/>`).join('');
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -52,12 +58,13 @@ export function serializeThreeMf(
   mergedMesh: MeshBuffer | undefined,
   mode: ThreeMfMode = 'separate-colors',
 ): ArrayBuffer {
-  const parts: ThreeMfPart[] = mode === 'merged'
-    ? [{ name: 'Keychain', mesh: mergedMesh ?? baseMesh, color: '#B84838' }]
-    : [
-      { name: 'Backing', mesh: baseMesh, color: '#B84838' },
-      { name: 'Raised text', mesh: reliefMesh, color: '#FAF4E9' },
-    ];
+  const parts: ThreeMfPart[] =
+    mode === 'merged'
+      ? [{ name: 'Keychain', mesh: mergedMesh ?? baseMesh, color: '#B84838' }]
+      : [
+          { name: 'Backing', mesh: baseMesh, color: '#B84838' },
+          { name: 'Raised text', mesh: reliefMesh, color: '#FAF4E9' },
+        ];
   const files = {
     '[Content_Types].xml': strToU8(`<?xml version="1.0" encoding="UTF-8"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">

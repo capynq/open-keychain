@@ -18,5 +18,14 @@ const wasm = await createWasm();
 for (const text of ['A', 'LI', 'ALEX', 'OLIVER', 'CHARLOTTE', 'MAXIMILIAN', 'iJj', 'ÉMILIE']) {
   const start = performance.now();
   const { result } = await buildKeychain(wasm, { ...DEFAULT_PARAMS, text });
-  console.log(JSON.stringify({ text, ms: Number((performance.now() - start).toFixed(1)), printable: result.printable, triangles: result.baseMesh.indices.length / 3, dimensions: result.dimensions, issues: result.issues }));
+  console.log(
+    JSON.stringify({
+      text,
+      ms: Number((performance.now() - start).toFixed(1)),
+      printable: result.printable,
+      triangles: result.baseMesh.indices.length / 3,
+      dimensions: result.dimensions,
+      issues: result.issues,
+    }),
+  );
 }

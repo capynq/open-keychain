@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 
 export type ViewId = 'home' | 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom';
-export type CameraViewIconId = 'cube' | 'into-plane' | 'out-of-plane' | 'arrow-left' | 'arrow-right' | 'arrow-up' | 'arrow-down';
+export type CameraViewIconId =
+  'cube' | 'into-plane' | 'out-of-plane' | 'arrow-left' | 'arrow-right' | 'arrow-up' | 'arrow-down';
 
 export type ViewDefinition = {
   id: ViewId;
@@ -20,13 +21,55 @@ export type CameraPose = {
 };
 
 export const VIEW_DEFINITIONS: readonly ViewDefinition[] = [
-  { id: 'home', label: 'Home view', icon: 'cube', direction: new THREE.Vector3(0, -0.9, 0.95).normalize(), up: new THREE.Vector3(0, 1, 0) },
-  { id: 'front', label: 'Front view', icon: 'out-of-plane', direction: new THREE.Vector3(0, -1, 0), up: new THREE.Vector3(0, 0, 1) },
-  { id: 'back', label: 'Back view', icon: 'into-plane', direction: new THREE.Vector3(0, 1, 0), up: new THREE.Vector3(0, 0, 1) },
-  { id: 'left', label: 'Left view', icon: 'arrow-left', direction: new THREE.Vector3(-1, 0, 0), up: new THREE.Vector3(0, 0, 1) },
-  { id: 'right', label: 'Right view', icon: 'arrow-right', direction: new THREE.Vector3(1, 0, 0), up: new THREE.Vector3(0, 0, 1) },
-  { id: 'top', label: 'Top view', icon: 'arrow-up', direction: new THREE.Vector3(0, 0, 1), up: new THREE.Vector3(0, 1, 0) },
-  { id: 'bottom', label: 'Bottom view', icon: 'arrow-down', direction: new THREE.Vector3(0, 0, -1), up: new THREE.Vector3(0, -1, 0) },
+  {
+    id: 'home',
+    label: 'Home view',
+    icon: 'cube',
+    direction: new THREE.Vector3(0, -0.9, 0.95).normalize(),
+    up: new THREE.Vector3(0, 1, 0),
+  },
+  {
+    id: 'front',
+    label: 'Front view',
+    icon: 'out-of-plane',
+    direction: new THREE.Vector3(0, -1, 0),
+    up: new THREE.Vector3(0, 0, 1),
+  },
+  {
+    id: 'back',
+    label: 'Back view',
+    icon: 'into-plane',
+    direction: new THREE.Vector3(0, 1, 0),
+    up: new THREE.Vector3(0, 0, 1),
+  },
+  {
+    id: 'left',
+    label: 'Left view',
+    icon: 'arrow-left',
+    direction: new THREE.Vector3(-1, 0, 0),
+    up: new THREE.Vector3(0, 0, 1),
+  },
+  {
+    id: 'right',
+    label: 'Right view',
+    icon: 'arrow-right',
+    direction: new THREE.Vector3(1, 0, 0),
+    up: new THREE.Vector3(0, 0, 1),
+  },
+  {
+    id: 'top',
+    label: 'Top view',
+    icon: 'arrow-up',
+    direction: new THREE.Vector3(0, 0, 1),
+    up: new THREE.Vector3(0, 1, 0),
+  },
+  {
+    id: 'bottom',
+    label: 'Bottom view',
+    icon: 'arrow-down',
+    direction: new THREE.Vector3(0, 0, -1),
+    up: new THREE.Vector3(0, -1, 0),
+  },
 ];
 
 export function viewDefinition(id: ViewId): ViewDefinition {
@@ -36,10 +79,14 @@ export function viewDefinition(id: ViewId): ViewDefinition {
 function boxCorners(bounds: THREE.Box3): THREE.Vector3[] {
   const { min, max } = bounds;
   return [
-    new THREE.Vector3(min.x, min.y, min.z), new THREE.Vector3(min.x, min.y, max.z),
-    new THREE.Vector3(min.x, max.y, min.z), new THREE.Vector3(min.x, max.y, max.z),
-    new THREE.Vector3(max.x, min.y, min.z), new THREE.Vector3(max.x, min.y, max.z),
-    new THREE.Vector3(max.x, max.y, min.z), new THREE.Vector3(max.x, max.y, max.z),
+    new THREE.Vector3(min.x, min.y, min.z),
+    new THREE.Vector3(min.x, min.y, max.z),
+    new THREE.Vector3(min.x, max.y, min.z),
+    new THREE.Vector3(min.x, max.y, max.z),
+    new THREE.Vector3(max.x, min.y, min.z),
+    new THREE.Vector3(max.x, min.y, max.z),
+    new THREE.Vector3(max.x, max.y, min.z),
+    new THREE.Vector3(max.x, max.y, max.z),
   ];
 }
 
@@ -69,8 +116,8 @@ export function cameraPose(
   const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect);
   const framingMargin = 1.12;
   const planarDistance = Math.max(
-    projectedHalfWidth * framingMargin / Math.tan(horizontalFov / 2),
-    projectedHalfHeight * framingMargin / Math.tan(verticalFov / 2),
+    (projectedHalfWidth * framingMargin) / Math.tan(horizontalFov / 2),
+    (projectedHalfHeight * framingMargin) / Math.tan(verticalFov / 2),
   );
   const size = bounds.getSize(new THREE.Vector3());
   const clearance = Math.max(1, Math.max(size.x, size.y, size.z) * 0.02);

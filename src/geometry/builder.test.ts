@@ -11,13 +11,16 @@ let wasm: Awaited<ReturnType<typeof createWasm>>;
 beforeAll(async () => {
   globalThis.fetch = (async (input: string | URL) => {
     const url = String(input);
-    if (url.startsWith('/fonts/')) return new Response(Uint8Array.from(await fs.readFile(path.join(process.cwd(), 'public', url))));
+    if (url.startsWith('/fonts/'))
+      return new Response(Uint8Array.from(await fs.readFile(path.join(process.cwd(), 'public', url))));
     return originalFetch(input);
   }) as typeof fetch;
   wasm = await createWasm();
 }, 30_000);
 
-afterAll(() => { globalThis.fetch = originalFetch; });
+afterAll(() => {
+  globalThis.fetch = originalFetch;
+});
 
 function topology(mesh: MeshBuffer) {
   const vertices = new Set<number>();
@@ -34,8 +37,12 @@ function topology(mesh: MeshBuffer) {
     const a = mesh.indices[index];
     const b = mesh.indices[index + 1];
     const c = mesh.indices[index + 2];
-    vertices.add(a); vertices.add(b); vertices.add(c);
-    connect(a, b); connect(b, c); connect(c, a);
+    vertices.add(a);
+    vertices.add(b);
+    vertices.add(c);
+    connect(a, b);
+    connect(b, c);
+    connect(c, a);
   }
   const pending = vertices.size ? [vertices.values().next().value as number] : [];
   const reached = new Set<number>();
@@ -52,16 +59,22 @@ function topology(mesh: MeshBuffer) {
 type Point2 = [number, number];
 
 function area(points: Point2[]): number {
-  return Math.abs(points.reduce((sum, point, index) => {
-    const next = points[(index + 1) % points.length];
-    return sum + point[0] * next[1] - next[0] * point[1];
-  }, 0)) / 2;
+  return (
+    Math.abs(
+      points.reduce((sum, point, index) => {
+        const next = points[(index + 1) % points.length];
+        return sum + point[0] * next[1] - next[0] * point[1];
+      }, 0),
+    ) / 2
+  );
 }
 
 function convexHull(points: Point2[]): Point2[] {
-  const unique = [...new Map(points.map((point) => [`${point[0].toFixed(4)}:${point[1].toFixed(4)}`, point])).values()]
-    .sort((left, right) => left[0] - right[0] || left[1] - right[1]);
-  const cross = (origin: Point2, left: Point2, right: Point2) => (left[0] - origin[0]) * (right[1] - origin[1]) - (left[1] - origin[1]) * (right[0] - origin[0]);
+  const unique = [
+    ...new Map(points.map((point) => [`${point[0].toFixed(4)}:${point[1].toFixed(4)}`, point])).values(),
+  ].sort((left, right) => left[0] - right[0] || left[1] - right[1]);
+  const cross = (origin: Point2, left: Point2, right: Point2) =>
+    (left[0] - origin[0]) * (right[1] - origin[1]) - (left[1] - origin[1]) * (right[0] - origin[0]);
   const half = (values: Point2[]) => {
     const result: Point2[] = [];
     for (const point of values) {
@@ -89,9 +102,23 @@ function topSurfaceArea(mesh: MeshBuffer): { surface: number; hull: number } {
 }
 
 describe('finished keychain geometry', () => {
-  for (const fontId of ['nunito', 'oswald', 'caveat', 'marck-script', 'bad-script', 'neucha', 'amatic-sc', 'lobster', 'pangolin']) {
+  for (const fontId of [
+    'nunito',
+    'oswald',
+    'caveat',
+    'marck-script',
+    'bad-script',
+    'neucha',
+    'amatic-sc',
+    'lobster',
+    'pangolin',
+  ]) {
     it(`builds Cyrillic НИКИТА with ${fontId}`, async () => {
-      const { result, exportMesh } = await buildKeychain(wasm, { ...DEFAULT_PARAMS, fontId, styleId: 'contour', text: 'НИКИТА' }, true);
+      const { result, exportMesh } = await buildKeychain(
+        wasm,
+        { ...DEFAULT_PARAMS, fontId, styleId: 'contour', text: 'НИКИТА' },
+        true,
+      );
       expect(result.printable, JSON.stringify(result.issues)).toBe(true);
       expect(exportMesh).toBeDefined();
       expect(topology(exportMesh!).connected).toBe(true);
@@ -101,9 +128,16 @@ describe('finished keychain geometry', () => {
 
   for (const text of ['NIKITA', 'NIKITAA', 'IIIIIIII']) {
     it(`keeps Bungee Bubble ${text} manifold with an open ring`, async () => {
-      const { result, exportMesh } = await buildKeychain(wasm, { ...DEFAULT_PARAMS, fontId: 'bungee', styleId: 'bubble', text }, true);
+      const { result, exportMesh } = await buildKeychain(
+        wasm,
+        { ...DEFAULT_PARAMS, fontId: 'bungee', styleId: 'bubble', text },
+        true,
+      );
       expect(exportMesh).toBeDefined();
-      expect(result.printable, JSON.stringify({ issues: result.issues, base: topology(result.baseMesh), model: topology(exportMesh!) })).toBe(true);
+      expect(
+        result.printable,
+        JSON.stringify({ issues: result.issues, base: topology(result.baseMesh), model: topology(exportMesh!) }),
+      ).toBe(true);
       expect([...exportMesh!.positions].every(Number.isFinite)).toBe(true);
       expect(result.dimensions.widthMm).toBeLessThanOrEqual(120.1);
       const meshTopology = topology(exportMesh!);
@@ -115,25 +149,45 @@ describe('finished keychain geometry', () => {
   }
 
   it('keeps the NIKITA Bubble silhouette materially below its convex hull area', async () => {
-    const { result } = await buildKeychain(wasm, { ...DEFAULT_PARAMS, fontId: 'bungee', styleId: 'bubble', text: 'NIKITA' });
+    const { result } = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      fontId: 'bungee',
+      styleId: 'bubble',
+      text: 'NIKITA',
+    });
     const projected = topSurfaceArea(result.baseMesh);
     expect(projected.surface / projected.hull).toBeLessThan(0.9);
   }, 30_000);
 
   it('keeps Frame printable with a recessed text panel', async () => {
-    const { result, exportMesh } = await buildKeychain(wasm, { ...DEFAULT_PARAMS, fontId: 'nunito', styleId: 'frame', text: 'NIKITA' }, true);
+    const { result, exportMesh } = await buildKeychain(
+      wasm,
+      { ...DEFAULT_PARAMS, fontId: 'nunito', styleId: 'frame', text: 'NIKITA' },
+      true,
+    );
     expect(result.printable, JSON.stringify(result.issues)).toBe(true);
     expect(exportMesh).toBeDefined();
     expect(topology(exportMesh!).connected).toBe(true);
   }, 30_000);
 
   it('keeps Frame printable for a wide name', async () => {
-    const { result } = await buildKeychain(wasm, { ...DEFAULT_PARAMS, fontId: 'nunito', styleId: 'frame', text: 'OLIVER' });
+    const { result } = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      fontId: 'nunito',
+      styleId: 'frame',
+      text: 'OLIVER',
+    });
     expect(result.printable, JSON.stringify(result.issues)).toBe(true);
   }, 30_000);
 
   it('fits the finished styled geometry and reports the adjustment as a warning', async () => {
-    const { result } = await buildKeychain(wasm, { ...DEFAULT_PARAMS, fontId: 'bungee', styleId: 'bubble', text: 'NIKITA', textHeightMm: 30 });
+    const { result } = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      fontId: 'bungee',
+      styleId: 'bubble',
+      text: 'NIKITA',
+      textHeightMm: 30,
+    });
     expect(result.printable, JSON.stringify(result.issues)).toBe(true);
     expect(result.dimensions.widthMm).toBeLessThanOrEqual(120.1);
     expect(result.issues).toContainEqual(expect.objectContaining({ severity: 'warning', code: 'scaled-to-fit' }));
@@ -141,7 +195,13 @@ describe('finished keychain geometry', () => {
   }, 30_000);
 
   it('returns an actionable error when 12 mm text still cannot fit', async () => {
-    const { result } = await buildKeychain(wasm, { ...DEFAULT_PARAMS, fontId: 'bungee', styleId: 'bubble', text: 'WWWWWWWWWWWWWWWWWWWWWWWW', textHeightMm: 12 });
+    const { result } = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      fontId: 'bungee',
+      styleId: 'bubble',
+      text: 'WWWWWWWWWWWWWWWWWWWWWWWW',
+      textHeightMm: 12,
+    });
     expect(result.printable).toBe(false);
     expect(result.issues).toContainEqual(expect.objectContaining({ severity: 'error', code: 'text-too-wide' }));
   }, 30_000);

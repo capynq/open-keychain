@@ -26,7 +26,11 @@ export class GeometryClient {
     return this.sendGenerate(params);
   }
 
-  export(params: KeychainParams, format: ExportFormat = 'stl', mode: ThreeMfMode = 'separate-colors'): Promise<{ filename: string; mimeType: string; data: ArrayBuffer }> {
+  export(
+    params: KeychainParams,
+    format: ExportFormat = 'stl',
+    mode: ThreeMfMode = 'separate-colors',
+  ): Promise<{ filename: string; mimeType: string; data: ArrayBuffer }> {
     const requestId = this.nextRequestId++;
     this.resolveExport = undefined;
     this.rejectExport = undefined;

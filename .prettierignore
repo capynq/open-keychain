@@ -1,0 +1,15 @@
+node_modules
+dist
+.vite
+coverage
+playwright-report
+test-results
+public/fonts/**/*.ttf
+public/fonts/licenses
+public/manifold.wasm
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.lock

@@ -3,7 +3,14 @@ import * as opentype from 'opentype.js';
 import { fontDefinition } from '../fonts/catalog';
 import { flattenText, hasRequiredGlyphs } from './text';
 import { buildStyle } from './styles';
-import { keyringMetrics, normalizeParams, type GeometryResult, type KeychainParams, type MeshBuffer, type ValidationIssue } from './types';
+import {
+  keyringMetrics,
+  normalizeParams,
+  type GeometryResult,
+  type KeychainParams,
+  type MeshBuffer,
+  type ValidationIssue,
+} from './types';
 
 const MAX_WIDTH_MM = 120;
 const MIN_TEXT_HEIGHT_MM = 12;
@@ -11,7 +18,10 @@ const MANIFOLD_SCALE = 1000;
 const WIDTH_FIT_ITERATIONS = 6;
 
 function parseFont(buffer: ArrayBuffer): opentype.Font {
-  const module = opentype as unknown as { parse?: (data: ArrayBuffer) => opentype.Font; default?: { parse: (data: ArrayBuffer) => opentype.Font } };
+  const module = opentype as unknown as {
+    parse?: (data: ArrayBuffer) => opentype.Font;
+    default?: { parse: (data: ArrayBuffer) => opentype.Font };
+  };
   const parse = module.parse ?? module.default?.parse;
   if (!parse) throw new Error('OpenType parser is unavailable.');
   return parse(buffer);
@@ -32,15 +42,18 @@ function asMesh(manifold: any): MeshBuffer {
 }
 
 function scalePolygons(polygons: Array<Array<[number, number]>>, factor: number): Array<Array<[number, number]>> {
-  return polygons.map((polygon) => polygon.map(([x, y]) => [
-    Math.round(x * factor * MANIFOLD_SCALE),
-    Math.round(y * factor * MANIFOLD_SCALE),
-  ]));
+  return polygons.map((polygon) =>
+    polygon.map(([x, y]) => [Math.round(x * factor * MANIFOLD_SCALE), Math.round(y * factor * MANIFOLD_SCALE)]),
+  );
 }
 
 function deleteAll(items: any[]): void {
   items.forEach((item) => {
-    try { item.delete(); } catch { /* already released */ }
+    try {
+      item.delete();
+    } catch (error) {
+      void error;
+    }
   });
 }
 
@@ -60,7 +73,12 @@ export async function createWasm(): Promise<Wasm> {
   return wasm;
 }
 
-export async function buildKeychain(wasm: Wasm, input: KeychainParams, includeExport = false): Promise<{
+/** Build validated printable geometry, fitting finished backing dimensions before tessellation. */
+export async function buildKeychain(
+  wasm: Wasm,
+  input: KeychainParams,
+  includeExport = false,
+): Promise<{
   result: GeometryResult;
   exportMesh?: MeshBuffer;
 }> {
@@ -79,7 +97,8 @@ export async function buildKeychain(wasm: Wasm, input: KeychainParams, includeEx
   const buffer = await response.arrayBuffer();
   const font = parseFont(buffer);
   const missing = hasRequiredGlyphs(font, params.text);
-  if (missing) return invalidResult(issues, 'missing-glyph', `The ${definition.name} font does not contain “${missing}”.`);
+  if (missing)
+    return invalidResult(issues, 'missing-glyph', `The ${definition.name} font does not contain “${missing}”.`);
 
   const outline = flattenText(font, params.text, params.textHeightMm);
   if (!outline.polygons.length || outline.width <= 0 || outline.height <= 0) {
@@ -87,7 +106,13 @@ export async function buildKeychain(wasm: Wasm, input: KeychainParams, includeEx
   }
 
   const keyring = keyringMetrics(params.holeDiameterMm);
-  type StyledGeometry = { scale: number; text: any; backing: any; recesses: Array<{ section: any; depthMm: number }>; widthMm: number };
+  type StyledGeometry = {
+    scale: number;
+    text: any;
+    backing: any;
+    recesses: Array<{ section: any; depthMm: number }>;
+    widthMm: number;
+  };
   const buildStyledGeometry = (scale: number): StyledGeometry => {
     const text = wasm.CrossSection.ofPolygons(scalePolygons(outline.polygons, scale), 'EvenOdd');
     const rawBounds = text.bounds();
@@ -103,9 +128,16 @@ export async function buildKeychain(wasm: Wasm, input: KeychainParams, includeEx
       keyringWall: keyring.wallMm * MANIFOLD_SCALE,
     });
     const bounds = style.backing.bounds();
-    return { scale, text, backing: style.backing, recesses: style.recesses ?? [], widthMm: (bounds.max[0] - bounds.min[0]) / MANIFOLD_SCALE };
+    return {
+      scale,
+      text,
+      backing: style.backing,
+      recesses: style.recesses ?? [],
+      widthMm: (bounds.max[0] - bounds.min[0]) / MANIFOLD_SCALE,
+    };
   };
-  const releaseStyledGeometry = (geometry: StyledGeometry) => deleteAll([geometry.backing, geometry.text, ...geometry.recesses.map((item) => item.section)]);
+  const releaseStyledGeometry = (geometry: StyledGeometry) =>
+    deleteAll([geometry.backing, geometry.text, ...geometry.recesses.map((item) => item.section)]);
 
   let styled = buildStyledGeometry(1);
   if (styled.widthMm > MAX_WIDTH_MM) {
@@ -113,13 +145,21 @@ export async function buildKeychain(wasm: Wasm, input: KeychainParams, includeEx
     const minimumScale = MIN_TEXT_HEIGHT_MM / params.textHeightMm;
     if (minimumScale >= 1) {
       releaseStyledGeometry(styled);
-      return invalidResult(issues, 'text-too-wide', 'This name cannot fit within 120 mm at the minimum 12 mm text height. Shorten the name or choose a narrower font.');
+      return invalidResult(
+        issues,
+        'text-too-wide',
+        'This name cannot fit within 120 mm at the minimum 12 mm text height. Shorten the name or choose a narrower font.',
+      );
     }
     const minimum = buildStyledGeometry(minimumScale);
     if (minimum.widthMm > MAX_WIDTH_MM) {
       releaseStyledGeometry(styled);
       releaseStyledGeometry(minimum);
-      return invalidResult(issues, 'text-too-wide', 'This name cannot fit within 120 mm without making the text smaller than 12 mm. Shorten the name or choose a narrower font.');
+      return invalidResult(
+        issues,
+        'text-too-wide',
+        'This name cannot fit within 120 mm without making the text smaller than 12 mm. Shorten the name or choose a narrower font.',
+      );
     }
     releaseStyledGeometry(styled);
     styled = minimum;
@@ -127,10 +167,7 @@ export async function buildKeychain(wasm: Wasm, input: KeychainParams, includeEx
     let lowWidth = minimum.widthMm;
     let high = 1;
     for (let iteration = 0; iteration < WIDTH_FIT_ITERATIONS; iteration += 1) {
-      // Keep a binary bracket, using its measured widths to choose the next
-      // split. Styled width is nearly linear in text scale, so this reaches
-      // the 0.1 mm target without adding more geometry builds.
-      const interpolated = low + (high - low) * (MAX_WIDTH_MM - lowWidth) / Math.max(highWidth - lowWidth, 0.001);
+      const interpolated = low + ((high - low) * (MAX_WIDTH_MM - lowWidth)) / Math.max(highWidth - lowWidth, 0.001);
       const candidateScale = Math.max(low + (high - low) * 0.1, Math.min(high - (high - low) * 0.1, interpolated));
       const candidate = buildStyledGeometry(candidateScale);
       if (candidate.widthMm <= MAX_WIDTH_MM) {
@@ -145,7 +182,11 @@ export async function buildKeychain(wasm: Wasm, input: KeychainParams, includeEx
         high = candidateScale;
       }
     }
-    issues.push({ severity: 'warning', code: 'scaled-to-fit', message: `The name was adjusted to ${(params.textHeightMm * styled.scale).toFixed(1)} mm high to keep the finished keychain within 120 mm.` });
+    issues.push({
+      severity: 'warning',
+      code: 'scaled-to-fit',
+      message: `The name was adjusted to ${(params.textHeightMm * styled.scale).toFixed(1)} mm high to keep the finished keychain within 120 mm.`,
+    });
   }
 
   const textSection = styled.text;
@@ -153,14 +194,13 @@ export async function buildKeychain(wasm: Wasm, input: KeychainParams, includeEx
   const baseThickness = Math.round(params.baseThicknessMm * MANIFOLD_SCALE);
   let base = styleBase.extrude(baseThickness);
   const maxRecessDepth = Math.max(0, baseThickness - 600);
-  const recessDepth = styled.recesses.length ? Math.min(
-    maxRecessDepth,
-    Math.round(Math.max(...styled.recesses.map((item) => item.depthMm * MANIFOLD_SCALE))),
-  ) : 0;
+  const recessDepth = styled.recesses.length
+    ? Math.min(maxRecessDepth, Math.round(Math.max(...styled.recesses.map((item) => item.depthMm * MANIFOLD_SCALE))))
+    : 0;
   if (recessDepth > 0) {
-    const cuts = styled.recesses.map((item) => item.section.extrude(recessDepth).translate([0, 0, baseThickness - recessDepth]));
-    // Recesses are cut from the top of the backing, leaving a connected lower panel.
-    // Manifold subtraction keeps the border walls crisp without changing output meshes.
+    const cuts = styled.recesses.map((item) =>
+      item.section.extrude(recessDepth).translate([0, 0, baseThickness - recessDepth]),
+    );
     const cutSolids = cuts;
     for (const cutSolid of cutSolids) {
       const nextBase = base.subtract(cutSolid);
@@ -170,7 +210,8 @@ export async function buildKeychain(wasm: Wasm, input: KeychainParams, includeEx
     }
   }
   const reliefBaseZ = baseThickness - Math.max(recessDepth, 0) - 150;
-  const relief = textSection.extrude(Math.round((params.reliefDepthMm + 0.15) * MANIFOLD_SCALE))
+  const relief = textSection
+    .extrude(Math.round((params.reliefDepthMm + 0.15) * MANIFOLD_SCALE))
     .translate([0, 0, reliefBaseZ]);
   const model = base.add(relief);
   const bounds = model.boundingBox();
@@ -180,10 +221,30 @@ export async function buildKeychain(wasm: Wasm, input: KeychainParams, includeEx
   const components = model.decompose();
   const connected = components.length === 1;
   deleteAll(components);
-  const printable = model.status() === 'NoError' && connected && finiteBounds(bounds) && validateMesh(baseMesh) && validateMesh(reliefMesh);
-  if (!connected) issues.push({ severity: 'error', code: 'disconnected', message: 'Some parts of the name are not connected. Increase padding or choose another style.' });
-  if (model.numTri() > 12000) issues.push({ severity: 'warning', code: 'dense-mesh', message: 'This curved model exceeds 12,000 triangles and may take longer to slice.' });
-  if (params.reliefDepthMm < 0.5) issues.push({ severity: 'warning', code: 'shallow-relief', message: 'A slightly taller text relief is easier to see after printing.' });
+  const printable =
+    model.status() === 'NoError' &&
+    connected &&
+    finiteBounds(bounds) &&
+    validateMesh(baseMesh) &&
+    validateMesh(reliefMesh);
+  if (!connected)
+    issues.push({
+      severity: 'error',
+      code: 'disconnected',
+      message: 'Some parts of the name are not connected. Increase padding or choose another style.',
+    });
+  if (model.numTri() > 12000)
+    issues.push({
+      severity: 'warning',
+      code: 'dense-mesh',
+      message: 'This curved model exceeds 12,000 triangles and may take longer to slice.',
+    });
+  if (params.reliefDepthMm < 0.5)
+    issues.push({
+      severity: 'warning',
+      code: 'shallow-relief',
+      message: 'A slightly taller text relief is easier to see after printing.',
+    });
   const result: GeometryResult = {
     generationId: 0,
     baseMesh,
