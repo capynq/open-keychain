@@ -15,6 +15,8 @@ export type KeychainParams = {
   connectorWidthMm: number;
   cornerRadiusMm: number;
   stakeLengthMm: number;
+  nameplateTiltDeg: number;
+  nameplateEmbedMm: number;
   jointClearanceMm: number;
   mechanicalGapMm: number;
   maxJointAngleDeg: number;
@@ -102,6 +104,8 @@ export const DEFAULT_PARAMS: KeychainParams = {
   connectorWidthMm: 1.8,
   cornerRadiusMm: 4,
   stakeLengthMm: 48,
+  nameplateTiltDeg: 6,
+  nameplateEmbedMm: 0.4,
   jointClearanceMm: 0.35,
   mechanicalGapMm: 0.6,
   maxJointAngleDeg: 35,
@@ -124,6 +128,8 @@ export function normalizeParams(params: KeychainParams): NormalizedParams {
     connectorWidthMm: clamp(params.connectorWidthMm ?? 1.8, 1.4, 3),
     cornerRadiusMm: clamp(params.cornerRadiusMm ?? 4, 1.5, 12),
     stakeLengthMm: clamp(params.stakeLengthMm ?? 48, 24, 100),
+    nameplateTiltDeg: clamp(params.nameplateTiltDeg ?? 6, 0, 45),
+    nameplateEmbedMm: clamp(params.nameplateEmbedMm ?? 0.4, 0.2, 1.8),
     jointClearanceMm: clamp(params.jointClearanceMm ?? 0.35, 0.2, 0.8),
     mechanicalGapMm: clamp(params.mechanicalGapMm ?? 0.6, 0.4, 1.5),
     maxJointAngleDeg: clamp(params.maxJointAngleDeg ?? 35, 15, 50),

@@ -13,7 +13,9 @@ export type ShapeParameter =
   | 'mechanicalGapMm'
   | 'maxJointAngleDeg'
   | 'cornerRadiusMm'
-  | 'stakeLengthMm';
+  | 'stakeLengthMm'
+  | 'nameplateTiltDeg'
+  | 'nameplateEmbedMm';
 
 export const PARAMETER_RANGES = {
   textHeightMm: { min: 12, max: 30, step: 0.5, unit: 'mm' },
@@ -28,22 +30,40 @@ export const PARAMETER_RANGES = {
   maxJointAngleDeg: { min: 15, max: 50, step: 1, unit: '°' },
   cornerRadiusMm: { min: 1.5, max: 12, step: 0.5, unit: 'mm' },
   stakeLengthMm: { min: 24, max: 100, step: 1, unit: 'mm' },
+  nameplateTiltDeg: { min: 0, max: 45, step: 1, unit: '°' },
+  nameplateEmbedMm: { min: 0.2, max: 1.8, step: 0.1, unit: 'mm' },
 } satisfies Record<ShapeParameter, ParameterRange>;
 
-const COMMON_PARAMETERS: readonly ShapeParameter[] = ['textHeightMm', 'baseThicknessMm', 'reliefDepthMm'];
+const COMMON_PARAMETERS: readonly ShapeParameter[] = ['textHeightMm', 'baseThicknessMm'];
+const RELIEF_PARAMETERS: readonly ShapeParameter[] = ['reliefDepthMm'];
 
 export const TEMPLATE_PARAMETER_KEYS: Record<TemplateId, readonly ShapeParameter[]> = {
-  'name-keychain': [...COMMON_PARAMETERS, 'paddingMm', 'letterSpacingMm', 'holeDiameterMm'],
+  'name-keychain': [...COMMON_PARAMETERS, ...RELIEF_PARAMETERS, 'paddingMm', 'letterSpacingMm', 'holeDiameterMm'],
   'articulated-name': [
     ...COMMON_PARAMETERS,
+    ...RELIEF_PARAMETERS,
     'holeDiameterMm',
     'connectorWidthMm',
     'jointClearanceMm',
     'mechanicalGapMm',
     'maxJointAngleDeg',
   ],
-  nameplate: [...COMMON_PARAMETERS, 'paddingMm', 'letterSpacingMm', 'holeDiameterMm', 'cornerRadiusMm'],
-  'plant-label': [...COMMON_PARAMETERS, 'paddingMm', 'letterSpacingMm', 'cornerRadiusMm', 'stakeLengthMm'],
+  nameplate: [
+    ...COMMON_PARAMETERS,
+    ...RELIEF_PARAMETERS,
+    'paddingMm',
+    'cornerRadiusMm',
+    'nameplateTiltDeg',
+    'nameplateEmbedMm',
+  ],
+  'plant-label': [
+    ...COMMON_PARAMETERS,
+    ...RELIEF_PARAMETERS,
+    'paddingMm',
+    'letterSpacingMm',
+    'cornerRadiusMm',
+    'stakeLengthMm',
+  ],
 };
 
 export function templateParameterKeys(templateId: TemplateId): readonly ShapeParameter[] {

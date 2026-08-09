@@ -3,7 +3,6 @@ import {
   buildStyle,
   capsule,
   connectIfNeeded,
-  finishStyle,
   ringAssembly,
   roundedRect,
   sectionBounds,
@@ -81,9 +80,9 @@ export const TEMPLATE_CATALOG: readonly TemplateDefinition[] = [
   {
     id: 'nameplate',
     name: 'Nameplate',
-    description: 'A clean rounded plate with inset raised text.',
-    supportsKeyring: true,
-    styles: ALL_STYLE_IDS,
+    description: 'A rounded sign with a tilted, embedded inscription.',
+    supportsKeyring: false,
+    styles: [],
   },
   {
     id: 'plant-label',
@@ -488,11 +487,16 @@ function articulatedStyle(wasm: any, input: StyleInput): ArticulatedBuild | Styl
 function nameplateStyle(wasm: any, input: StyleInput): StyleBuild {
   const textWidth = input.textBounds.max[0] - input.textBounds.min[0];
   const textHeight = input.textBounds.max[1] - input.textBounds.min[1];
-  const width = Math.max(34000, textWidth + input.padding * 2 + 8000);
-  const height = Math.max(18000, textHeight + input.padding * 2 + 3000);
-  const radius = Math.max(1500, Math.min(input.cornerRadius ?? 4000, Math.min(width, height) / 2 - 500));
+  const textDepth = (input.nameplateEmbedMm ?? 0.4) * MANIFOLD_SCALE + (input.reliefDepth ?? 1) * MANIFOLD_SCALE;
+  const tiltMargin = Math.abs(Math.sin(((input.nameplateTiltDeg ?? 6) * Math.PI) / 180)) * textDepth;
+  const width = Math.max(34000, textWidth + input.padding * 2);
+  const height = Math.max(18000, textHeight + input.padding * 2 + tiltMargin * 2);
+  const radius = Math.max(
+    1500,
+    Math.min(input.cornerRadius ?? 4000, Math.min(width, height) / 2 - input.padding - 250, input.padding * 3.2),
+  );
   const plate = roundedRect(wasm, width, height, radius);
-  return finishStyle(wasm, plate, input.text, input, 'left');
+  return { backing: plate, relief: input.text };
 }
 
 function plantLabelStyle(wasm: any, input: StyleInput): StyleBuild {

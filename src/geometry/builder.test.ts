@@ -219,6 +219,70 @@ describe('finished keychain geometry', () => {
     expect(result.printable, JSON.stringify(result.issues)).toBe(true);
   }, 30_000);
 
+  it('builds a tilted, embedded Nameplate without a keyring', async () => {
+    const { result, exportMesh } = await buildKeychain(
+      wasm,
+      {
+        ...DEFAULT_PARAMS,
+        templateId: 'nameplate',
+        fontId: 'nunito',
+        text: 'OLIVER',
+        nameplateTiltDeg: 18,
+        nameplateEmbedMm: 1.2,
+      },
+      true,
+    );
+    expect(result.printable, JSON.stringify(result.issues)).toBe(true);
+    expect(exportMesh).toBeDefined();
+    expect(topology(exportMesh!).connected).toBe(true);
+    expect(result.solidCount).toBe(1);
+    expect(result.dimensions.widthMm).toBeLessThanOrEqual(120.1);
+    const baseMaxZ = Math.max(
+      ...Array.from(
+        { length: result.baseMesh.positions.length / 3 },
+        (_, index) => result.baseMesh.positions[index * 3 + 2],
+      ),
+    );
+    const reliefMinZ = Math.min(
+      ...Array.from(
+        { length: result.reliefMesh.positions.length / 3 },
+        (_, index) => result.reliefMesh.positions[index * 3 + 2],
+      ),
+    );
+    const reliefMaxZ = Math.max(
+      ...Array.from(
+        { length: result.reliefMesh.positions.length / 3 },
+        (_, index) => result.reliefMesh.positions[index * 3 + 2],
+      ),
+    );
+    expect(reliefMinZ).toBeGreaterThanOrEqual(baseMaxZ - 0.15);
+    expect(reliefMaxZ - baseMaxZ).toBeGreaterThan(0.2);
+  }, 30_000);
+
+  it('keeps every Nameplate text component embedded while the top lift changes', async () => {
+    const low = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      templateId: 'nameplate',
+      fontId: 'nunito',
+      text: 'ALEX',
+      nameplateTiltDeg: 45,
+      nameplateEmbedMm: 1.8,
+      reliefDepthMm: 0.6,
+    });
+    const high = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      templateId: 'nameplate',
+      fontId: 'nunito',
+      text: 'ALEX',
+      nameplateTiltDeg: 45,
+      nameplateEmbedMm: 1.8,
+      reliefDepthMm: 2,
+    });
+    expect(low.result.printable, JSON.stringify(low.result.issues)).toBe(true);
+    expect(high.result.printable, JSON.stringify(high.result.issues)).toBe(true);
+    expect(high.result.dimensions.thicknessMm).toBeGreaterThan(low.result.dimensions.thicknessMm);
+  }, 30_000);
+
   it('fits the finished styled geometry and reports the adjustment as a warning', async () => {
     const { result } = await buildKeychain(wasm, {
       ...DEFAULT_PARAMS,

@@ -17,6 +17,8 @@ export type StyleInput = {
   connectorWidth?: number;
   cornerRadius?: number;
   stakeLength?: number;
+  nameplateTiltDeg?: number;
+  nameplateEmbedMm?: number;
   glyphs?: GlyphOutline[];
   baseThickness?: number;
   reliefDepth?: number;

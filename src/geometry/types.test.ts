@@ -9,6 +9,7 @@ describe('keychain parameters', () => {
     expect(result.textHeightMm).toBe(30);
     expect(result.holeDiameterMm).toBe(3);
     expect(result.letterSpacingMm).toBe(1);
+    expect(normalizeParams({ ...DEFAULT_PARAMS, nameplateTiltDeg: 90 }).nameplateTiltDeg).toBe(45);
   });
 
   it('exposes only controls that affect each template', () => {
@@ -16,6 +17,10 @@ describe('keychain parameters', () => {
     expect(templateParameterKeys('articulated-name')).not.toContain('letterSpacingMm');
     expect(templateParameterKeys('articulated-name')).not.toContain('paddingMm');
     expect(templateParameterKeys('nameplate')).toContain('cornerRadiusMm');
+    expect(templateParameterKeys('nameplate')).toContain('nameplateTiltDeg');
+    expect(templateParameterKeys('nameplate')).toContain('nameplateEmbedMm');
+    expect(templateParameterKeys('nameplate')).not.toContain('holeDiameterMm');
+    expect(templateParameterKeys('nameplate')).toContain('reliefDepthMm');
   });
 
   it('derives a printable ring wall', () => {
