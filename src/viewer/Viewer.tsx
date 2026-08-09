@@ -29,6 +29,8 @@ type ViewerState = {
 };
 
 const DEFAULT_ZOOM_SCALE = 1.16;
+const MIN_ZOOM_SCALE = 0.62;
+const MAX_ZOOM_SCALE = 3.2;
 const SURFACE_SIZE = 1800;
 
 function disposeChildren(group: THREE.Group): void {
@@ -133,7 +135,7 @@ export function Viewer({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
     const state = stateRef.current;
     const current = resultRef.current;
     if (!state || !current) return;
-    state.zoomScale = THREE.MathUtils.clamp(state.zoomScale * factor, 1, 3.2);
+    state.zoomScale = THREE.MathUtils.clamp(state.zoomScale * factor, MIN_ZOOM_SCALE, MAX_ZOOM_SCALE);
     fitViewer(state, current, activeViewRef.current, false);
     setActiveView(activeViewRef.current);
   }, []);

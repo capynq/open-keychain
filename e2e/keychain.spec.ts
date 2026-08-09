@@ -64,7 +64,7 @@ test('switches to a bilingual font when Cyrillic text is entered', async ({ page
 test('supports bounded zoom, preview surfaces, locales, and configurable 3MF export', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText('Ready to print')).toBeVisible({ timeout: 10_000 });
-  await page.getByRole('button', { name: 'Zoom in' }).click();
+  for (let click = 0; click < 8; click += 1) await page.getByRole('button', { name: 'Zoom in' }).click();
   await page.getByRole('button', { name: 'Zoom out' }).click();
   await page.getByRole('button', { name: 'Dark' }).click();
   await page.getByRole('combobox', { name: 'Language' }).selectOption('ru');
