@@ -4,7 +4,7 @@
 
 - Keep the existing Name keychain template printable across all supported Latin and Cyrillic fonts.
 - Ship Articulated name with rounded per-letter borders, connector joints, preserved counters, and one manifold export.
-- Ship Nameplate with configurable corner radius, inset padding, thickness, and relief.
+- Ship Nameplate as a keyring-free rounded sign with configurable corner radius, border padding, plate thickness, rigid text tilt, and physical embed depth.
 - Ship Plant label with a configurable narrow text stand (20–30% of text height), embedded raised lettering, and pointed printable stake.
 - Keep template-scoped style capability metadata so each template can gain its own style family without expanding the global style switch; articulated names currently use a dedicated style-free recipe.
 - Complete the geometry matrix for every template, font script, and representative narrow/wide name.
