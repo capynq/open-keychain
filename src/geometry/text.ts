@@ -9,6 +9,15 @@ export type TextOutline = {
   height: number;
 };
 
+export type GlyphOutline = {
+  character: string;
+  polygons: Point[][];
+  bounds: { minX: number; minY: number; maxX: number; maxY: number };
+  width: number;
+  height: number;
+  advance: number;
+};
+
 const MAX_CURVE_DEPTH = 12;
 
 function distanceToLine(point: Point, start: Point, end: Point): number {
@@ -60,8 +69,104 @@ function dedupe(points: Point[]): Point[] {
   return result;
 }
 
-/** Flatten font curves with a final-space tolerance so curved glyphs remain smooth without oversampling flat edges. */
-export function flattenText(font: opentype.Font, text: string, targetHeightMm: number): TextOutline {
+function flattenPath(path: opentype.Path, tolerance: number): Point[][] {
+  const polygons: Point[][] = [];
+  let current: Point[] = [];
+  let currentPoint: Point = [0, 0];
+  const finish = () => {
+    const polygon = dedupe(current);
+    if (polygon.length >= 3) polygons.push(polygon);
+    current = [];
+  };
+  for (const command of path.commands) {
+    if (command.type === 'M') {
+      if (current.length) finish();
+      currentPoint = [command.x, command.y];
+      current.push(currentPoint);
+    } else if (command.type === 'L') {
+      currentPoint = [command.x, command.y];
+      current.push(currentPoint);
+    } else if (command.type === 'Q') {
+      const end: Point = [command.x, command.y];
+      current.push(...flattenQuadratic(currentPoint, [command.x1, command.y1], end, tolerance));
+      currentPoint = end;
+    } else if (command.type === 'C') {
+      const end: Point = [command.x, command.y];
+      current.push(...flattenCubic(currentPoint, [command.x1, command.y1], [command.x2, command.y2], end, tolerance));
+      currentPoint = end;
+    } else if (command.type === 'Z') finish();
+  }
+  if (current.length) finish();
+  return polygons;
+}
+
+function commandPoints(paths: opentype.Path[]): Point[] {
+  return paths.flatMap((path) =>
+    path.commands.flatMap((command) => {
+      if (command.type === 'Z') return [];
+      if (command.type !== 'M' && command.type !== 'L' && command.type !== 'Q' && command.type !== 'C') return [];
+      const points: Point[] = [[command.x, command.y]];
+      if (command.type === 'Q' || command.type === 'C') points.push([command.x1, command.y1]);
+      if (command.type === 'C') points.push([command.x2, command.y2]);
+      return points;
+    }),
+  );
+}
+
+/** Create independent, locally centered outlines for the articulated mechanical layout. */
+export function flattenTextGlyphs(font: opentype.Font, text: string, targetHeightMm: number): GlyphOutline[] {
+  const characters = [...text];
+  const glyphs = characters.map((character) => font.charToGlyph(character));
+  let advanceCursor = 0;
+  const paths = glyphs.map((glyph) => {
+    const path = glyph.getPath(advanceCursor, 0, 100);
+    advanceCursor += (glyph.advanceWidth / font.unitsPerEm) * 100;
+    return path;
+  });
+  const points = commandPoints(paths);
+  if (!points.length) return [];
+  const rawMinY = Math.min(...points.map((point) => point[1]));
+  const rawMaxY = Math.max(...points.map((point) => point[1]));
+  const rawHeight = Math.max(rawMaxY - rawMinY, 1);
+  const scale = targetHeightMm / rawHeight;
+  const tolerance = Math.max(0.003, 0.035 / scale);
+  const centerY = (rawMinY + rawMaxY) / 2;
+  return paths.map((path, index) => {
+    const rawPolygons = flattenPath(path, tolerance);
+    const raw = rawPolygons.flat();
+    const firstPoint = commandPoints([paths[index]])[0];
+    const rawMinX = raw.length ? Math.min(...raw.map((point) => point[0])) : (firstPoint?.[0] ?? 0);
+    const rawMaxX = raw.length ? Math.max(...raw.map((point) => point[0])) : rawMinX;
+    const centerX = (rawMinX + rawMaxX) / 2;
+    const polygons = rawPolygons.map((polygon) =>
+      polygon.map(
+        ([x, y]) =>
+          [Math.round((x - centerX) * scale * 1000) / 1000, Math.round(-(y - centerY) * scale * 1000) / 1000] as Point,
+      ),
+    );
+    const scaled = polygons.flat();
+    const minX = scaled.length ? Math.min(...scaled.map((point) => point[0])) : 0;
+    const maxX = scaled.length ? Math.max(...scaled.map((point) => point[0])) : 0;
+    const minY = scaled.length ? Math.min(...scaled.map((point) => point[1])) : 0;
+    const maxY = scaled.length ? Math.max(...scaled.map((point) => point[1])) : 0;
+    return {
+      character: characters[index],
+      polygons,
+      bounds: { minX, minY, maxX, maxY },
+      width: maxX - minX,
+      height: maxY - minY,
+      advance: (glyphs[index].advanceWidth / font.unitsPerEm) * 100 * scale,
+    };
+  });
+}
+
+/** Flatten font curves with a final-space tolerance and separate glyph groups for collision-safe spacing. */
+export function flattenText(
+  font: opentype.Font,
+  text: string,
+  targetHeightMm: number,
+  letterSpacingMm = 0,
+): TextOutline {
   const glyphs = [...text].map((character) => font.charToGlyph(character));
   const paths: opentype.Path[] = [];
   let advanceCursor = 0;
@@ -75,6 +180,7 @@ export function flattenText(font: opentype.Font, text: string, targetHeightMm: n
   const pathPoints = paths.flatMap((path) =>
     path.commands.flatMap((command) => {
       if (command.type === 'Z') return [];
+      if (command.type !== 'M' && command.type !== 'L' && command.type !== 'Q' && command.type !== 'C') return [];
       const points: Point[] = [[command.x, command.y]];
       if (command.type === 'Q' || command.type === 'C') points.push([command.x1, command.y1]);
       if (command.type === 'C') points.push([command.x2, command.y2]);
@@ -86,63 +192,49 @@ export function flattenText(font: opentype.Font, text: string, targetHeightMm: n
     : 100;
   const finalScale = targetHeightMm / Math.max(sourceHeight, 1);
   const tolerance = Math.max(0.003, 0.035 / finalScale);
-  const polygons: Point[][] = [];
-  let current: Point[] = [];
-  let currentPoint: Point = [0, 0];
-
-  const finish = () => {
-    const polygon = dedupe(current);
-    if (polygon.length >= 3) polygons.push(polygon);
-    current = [];
-  };
-
-  for (const path of paths)
-    for (const command of path.commands) {
-      if (command.type === 'M') {
-        if (current.length) finish();
-        currentPoint = [command.x, command.y];
-        current.push(currentPoint);
-      } else if (command.type === 'L') {
-        currentPoint = [command.x, command.y];
-        current.push(currentPoint);
-      } else if (command.type === 'Q') {
-        const end: Point = [command.x, command.y];
-        current.push(...flattenQuadratic(currentPoint, [command.x1, command.y1], end, tolerance));
-        currentPoint = end;
-      } else if (command.type === 'C') {
-        const end: Point = [command.x, command.y];
-        current.push(...flattenCubic(currentPoint, [command.x1, command.y1], [command.x2, command.y2], end, tolerance));
-        currentPoint = end;
-      } else if (command.type === 'Z') {
-        finish();
-      }
-    }
-  if (current.length) finish();
-
-  const all = polygons.flat();
+  const glyphPolygons = paths.map((path) => flattenPath(path, tolerance));
+  const all = glyphPolygons.flat(2);
   if (!all.length) {
     return { polygons: [], bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 }, width: 0, height: 0 };
   }
-  const rawMinX = Math.min(...all.map((point) => point[0]));
-  const rawMaxX = Math.max(...all.map((point) => point[0]));
   const rawMinY = Math.min(...all.map((point) => point[1]));
   const rawMaxY = Math.max(...all.map((point) => point[1]));
   const rawHeight = Math.max(rawMaxY - rawMinY, 1);
   const scale = targetHeightMm / rawHeight;
-  const centerX = (rawMinX + rawMaxX) / 2;
-  const centerY = (rawMinY + rawMaxY) / 2;
-  const scaled = polygons.map((polygon) =>
-    polygon.map(
-      ([x, y]) =>
-        [Math.round((x - centerX) * scale * 1000) / 1000, Math.round(-(y - centerY) * scale * 1000) / 1000] as Point,
+  const scaledGroups = glyphPolygons.map((group) =>
+    group.map((polygon) => polygon.map(([x, y]) => [x * scale, y * scale] as Point)),
+  );
+  let previousMaxX: number | undefined;
+  for (const group of scaledGroups) {
+    const points = group.flat();
+    if (!points.length) continue;
+    const minX = Math.min(...points.map((point) => point[0]));
+    const maxX = Math.max(...points.map((point) => point[0]));
+    const shift = previousMaxX === undefined ? 0 : Math.max(0, previousMaxX + Math.max(0, letterSpacingMm) - minX);
+    if (shift) for (const polygon of group) for (const point of polygon) point[0] += shift;
+    previousMaxX = maxX + shift;
+  }
+  const spaced = scaledGroups.flat(2);
+  const spacedMinX = Math.min(...spaced.map((point) => point[0]));
+  const spacedMaxX = Math.max(...spaced.map((point) => point[0]));
+  const spacedMinY = Math.min(...spaced.map((point) => point[1]));
+  const spacedMaxY = Math.max(...spaced.map((point) => point[1]));
+  const centerX = (spacedMinX + spacedMaxX) / 2;
+  const centerY = (spacedMinY + spacedMaxY) / 2;
+  const scaled = scaledGroups.map((group) =>
+    group.map((polygon) =>
+      polygon.map(
+        ([x, y]) => [Math.round((x - centerX) * 1000) / 1000, Math.round(-(y - centerY) * 1000) / 1000] as Point,
+      ),
     ),
   );
-  const points = scaled.flat();
+  const polygons = scaled.flat();
+  const points = polygons.flat();
   const minX = Math.min(...points.map((point) => point[0]));
   const maxX = Math.max(...points.map((point) => point[0]));
   const minY = Math.min(...points.map((point) => point[1]));
   const maxY = Math.max(...points.map((point) => point[1]));
-  return { polygons: scaled, bounds: { minX, minY, maxX, maxY }, width: maxX - minX, height: maxY - minY };
+  return { polygons, bounds: { minX, minY, maxX, maxY }, width: maxX - minX, height: maxY - minY };
 }
 
 export function hasRequiredGlyphs(font: opentype.Font, text: string): string | undefined {

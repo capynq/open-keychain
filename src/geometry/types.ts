@@ -1,14 +1,25 @@
 export type StyleId = 'contour' | 'capsule' | 'soft-tag' | 'bubble' | 'arch' | 'frame';
+export type TemplateId = 'name-keychain' | 'articulated-name' | 'nameplate' | 'plant-label';
 
 export type KeychainParams = {
   text: string;
   fontId: string;
+  templateId: TemplateId;
   styleId: StyleId;
   textHeightMm: number;
   baseThicknessMm: number;
   reliefDepthMm: number;
   paddingMm: number;
+  letterSpacingMm: number;
   holeDiameterMm: number;
+  connectorWidthMm: number;
+  cornerRadiusMm: number;
+  stakeLengthMm: number;
+  jointClearanceMm: number;
+  mechanicalGapMm: number;
+  maxJointAngleDeg: number;
+  minimumWallMm: number;
+  bottomClearanceMm: number;
 };
 
 export type NormalizedParams = KeychainParams;
@@ -41,6 +52,21 @@ export type ValidationIssue = {
   message: string;
 };
 
+export type PrintAppearance = {
+  base: { name: string; color: string };
+  relief: { name: string; color: string };
+};
+
+export const DEFAULT_PRINT_APPEARANCE: PrintAppearance = {
+  base: { name: 'Backing', color: '#B84838' },
+  relief: { name: 'Raised text', color: '#FAF4E9' },
+};
+
+export const ARTICULATED_PRINT_APPEARANCE: PrintAppearance = {
+  base: { name: 'Structural letters and connectors', color: '#E7E2DA' },
+  relief: { name: 'Decorative letter caps', color: '#D94A52' },
+};
+
 export type GeometryResult = {
   generationId: number;
   baseMesh: MeshBuffer;
@@ -48,6 +74,9 @@ export type GeometryResult = {
   dimensions: Dimensions;
   issues: ValidationIssue[];
   printable: boolean;
+  appearance: PrintAppearance;
+  baseShading?: 'creased' | 'flat';
+  solidCount?: number;
 };
 
 export type WorkerRequest =
@@ -62,12 +91,22 @@ export type WorkerResponse =
 export const DEFAULT_PARAMS: KeychainParams = {
   text: 'ALEX',
   fontId: 'nunito',
+  templateId: 'name-keychain',
   styleId: 'contour',
   textHeightMm: 20,
   baseThicknessMm: 2.4,
   reliefDepthMm: 1,
   paddingMm: 2.4,
+  letterSpacingMm: 1,
   holeDiameterMm: 5,
+  connectorWidthMm: 1.8,
+  cornerRadiusMm: 4,
+  stakeLengthMm: 48,
+  jointClearanceMm: 0.35,
+  mechanicalGapMm: 0.6,
+  maxJointAngleDeg: 35,
+  minimumWallMm: 1.2,
+  bottomClearanceMm: 0.25,
 };
 
 export function normalizeParams(params: KeychainParams): NormalizedParams {
@@ -75,11 +114,21 @@ export function normalizeParams(params: KeychainParams): NormalizedParams {
   return {
     ...params,
     text,
+    templateId: params.templateId ?? 'name-keychain',
     textHeightMm: clamp(params.textHeightMm, 12, 30),
-    baseThicknessMm: clamp(params.baseThicknessMm, 1.6, 4),
+    baseThicknessMm: clamp(params.baseThicknessMm, params.templateId === 'articulated-name' ? 3.4 : 1.6, 4),
     reliefDepthMm: clamp(params.reliefDepthMm, 0.6, 2),
     paddingMm: clamp(params.paddingMm, 1.2, 5),
+    letterSpacingMm: clamp(params.letterSpacingMm ?? 1, 0, 8),
     holeDiameterMm: clamp(params.holeDiameterMm, 3, 7),
+    connectorWidthMm: clamp(params.connectorWidthMm ?? 1.8, 1.4, 3),
+    cornerRadiusMm: clamp(params.cornerRadiusMm ?? 4, 1.5, 12),
+    stakeLengthMm: clamp(params.stakeLengthMm ?? 48, 24, 100),
+    jointClearanceMm: clamp(params.jointClearanceMm ?? 0.35, 0.2, 0.8),
+    mechanicalGapMm: clamp(params.mechanicalGapMm ?? 0.6, 0.4, 1.5),
+    maxJointAngleDeg: clamp(params.maxJointAngleDeg ?? 35, 15, 50),
+    minimumWallMm: clamp(params.minimumWallMm ?? 1.2, 0.8, 3),
+    bottomClearanceMm: clamp(params.bottomClearanceMm ?? 0.25, 0.15, 0.6),
   };
 }
 

@@ -44,16 +44,24 @@ function topology(mesh: MeshBuffer) {
     connect(b, c);
     connect(c, a);
   }
-  const pending = vertices.size ? [vertices.values().next().value as number] : [];
   const reached = new Set<number>();
-  while (pending.length) {
-    const vertex = pending.pop()!;
+  let components = 0;
+  for (const vertex of vertices) {
     if (reached.has(vertex)) continue;
+    components += 1;
+    const component = [vertex];
     reached.add(vertex);
-    adjacency.get(vertex)?.forEach((neighbor) => pending.push(neighbor));
+    while (component.length) {
+      const current = component.pop()!;
+      adjacency.get(current)?.forEach((neighbor) => {
+        if (reached.has(neighbor)) return;
+        reached.add(neighbor);
+        component.push(neighbor);
+      });
+    }
   }
   const faces = mesh.indices.length / 3;
-  return { connected: reached.size === vertices.size, eulerCharacteristic: vertices.size - edges.size + faces };
+  return { connected: components === 1, components, eulerCharacteristic: vertices.size - edges.size + faces };
 }
 
 type Point2 = [number, number];
@@ -235,5 +243,151 @@ describe('finished keychain geometry', () => {
     });
     expect(result.printable).toBe(false);
     expect(result.issues).toContainEqual(expect.objectContaining({ severity: 'error', code: 'text-too-wide' }));
+  }, 30_000);
+
+  for (const templateId of ['articulated-name', 'nameplate', 'plant-label'] as const) {
+    for (const text of ['NIKITA', 'НІКІТА']) {
+      it(`builds ${templateId} for ${text}`, async () => {
+        const { result, exportMesh } = await buildKeychain(
+          wasm,
+          {
+            ...DEFAULT_PARAMS,
+            templateId,
+            fontId: templateId === 'articulated-name' || text.includes('І') ? 'rubik' : 'caveat',
+            text,
+          },
+          true,
+        );
+        expect(result.printable, JSON.stringify(result.issues)).toBe(true);
+        expect(exportMesh).toBeDefined();
+        if (templateId === 'articulated-name') {
+          expect(result.solidCount).toBe([...text].length * 2 - 1);
+          expect(topology(exportMesh!).components).toBe(result.solidCount);
+        } else {
+          expect(topology(exportMesh!).connected).toBe(true);
+        }
+        if (templateId === 'plant-label') expect(result.baseShading).toBe('flat');
+        expect(result.dimensions.widthMm).toBeLessThanOrEqual(120.1);
+        expect([...exportMesh!.positions].every(Number.isFinite)).toBe(true);
+      }, 30_000);
+    }
+  }
+
+  for (const text of ['ALEX', 'НІКІТА']) {
+    it(`builds a pointed, embedded plant label for ${text}`, async () => {
+      const { result, exportMesh } = await buildKeychain(
+        wasm,
+        {
+          ...DEFAULT_PARAMS,
+          templateId: 'plant-label',
+          fontId: text.includes('І') ? 'rubik' : 'nunito',
+          text,
+          stakeLengthMm: 48,
+          reliefDepthMm: 2,
+        },
+        true,
+      );
+      expect(result.printable, JSON.stringify(result.issues)).toBe(true);
+      expect(exportMesh).toBeDefined();
+      expect(topology(exportMesh!).connected).toBe(true);
+      expect([...exportMesh!.positions].every(Number.isFinite)).toBe(true);
+      expect(result.dimensions.widthMm).toBeLessThanOrEqual(120.1);
+      const positions = exportMesh!.positions;
+      let minY = Infinity;
+      let minX = Infinity;
+      let maxX = -Infinity;
+      for (let index = 0; index < positions.length; index += 3) {
+        minY = Math.min(minY, positions[index + 1]);
+        minX = Math.min(minX, positions[index]);
+        maxX = Math.max(maxX, positions[index]);
+      }
+      const centerX = (minX + maxX) / 2;
+      const tipXs: number[] = [];
+      for (let index = 0; index < positions.length; index += 3)
+        if (positions[index + 1] <= minY + 0.001) tipXs.push(positions[index]);
+      expect(tipXs.length).toBeGreaterThan(0);
+      expect(Math.max(...tipXs.map((x) => Math.abs(x - centerX)))).toBeLessThan(1);
+      const baseZ = Math.max(
+        ...Array.from(
+          { length: result.baseMesh.positions.length / 3 },
+          (_, index) => result.baseMesh.positions[index * 3 + 2],
+        ),
+      );
+      const reliefZ = Math.max(
+        ...Array.from(
+          { length: result.reliefMesh.positions.length / 3 },
+          (_, index) => result.reliefMesh.positions[index * 3 + 2],
+        ),
+      );
+      expect(reliefZ - baseZ).toBeGreaterThan(0.5);
+      expect(reliefZ - baseZ).toBeLessThanOrEqual(0.9);
+    }, 30_000);
+  }
+
+  for (const text of ['NIKITAA', 'IIII', 'ЛІЛІ']) {
+    it(`keeps articulated ${text} as separate printable shells`, async () => {
+      const { result, exportMesh } = await buildKeychain(
+        wasm,
+        {
+          ...DEFAULT_PARAMS,
+          templateId: 'articulated-name',
+          fontId: 'rubik',
+          text,
+        },
+        true,
+      );
+      expect(result.printable, JSON.stringify(result.issues)).toBe(true);
+      expect(result.solidCount).toBe([...text].length * 2 - 1);
+      expect(topology(exportMesh!).components).toBe(result.solidCount);
+      expect(result.dimensions.widthMm).toBeLessThanOrEqual(120.1);
+      expect(exportMesh).toBeDefined();
+      expect([...exportMesh!.positions].every(Number.isFinite)).toBe(true);
+    }, 30_000);
+  }
+
+  for (const font of FONT_CATALOG.filter((item) => item.supportsArticulated)) {
+    for (const text of ['ALEX', 'NIKITA', 'IIII']) {
+      it(`builds compact articulated ${text} with ${font.name}`, async () => {
+        const { result, exportMesh } = await buildKeychain(
+          wasm,
+          {
+            ...DEFAULT_PARAMS,
+            templateId: 'articulated-name',
+            fontId: font.id,
+            text,
+          },
+          true,
+        );
+        expect(result.printable, JSON.stringify(result.issues)).toBe(true);
+        expect(result.solidCount).toBe([...text].length * 2 - 1);
+        expect(topology(exportMesh!).components).toBe(result.solidCount);
+        expect(result.dimensions.widthMm).toBeLessThanOrEqual(120.1);
+      }, 30_000);
+    }
+  }
+
+  it('uses letter-shaped articulated bodies rather than rectangular plates', async () => {
+    const { result } = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      templateId: 'articulated-name',
+      fontId: 'rubik',
+      text: 'ALEX',
+    });
+    expect(result.printable, JSON.stringify(result.issues)).toBe(true);
+    const projected = topSurfaceArea(result.baseMesh);
+    expect(projected.surface / projected.hull).toBeLessThan(0.72);
+    expect(result.appearance.relief.color).toBe('#D94A52');
+    expect(result.appearance.base.color).toBe('#E7E2DA');
+  }, 30_000);
+
+  it('rejects unsupported thin articulated fonts at the builder boundary', async () => {
+    const { result } = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      templateId: 'articulated-name',
+      fontId: 'caveat',
+      text: 'ALEX',
+    });
+    expect(result.printable).toBe(false);
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: 'articulated-font', severity: 'error' }));
   }, 30_000);
 });

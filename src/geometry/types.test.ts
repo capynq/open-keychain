@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { templateParameterKeys } from './parameters';
 import { DEFAULT_PARAMS, keyringMetrics, normalizeParams, ringWallMm, sanitizeFilename } from './types';
 
 describe('keychain parameters', () => {
@@ -7,6 +8,14 @@ describe('keychain parameters', () => {
     expect(result.text).toBe('José');
     expect(result.textHeightMm).toBe(30);
     expect(result.holeDiameterMm).toBe(3);
+    expect(result.letterSpacingMm).toBe(1);
+  });
+
+  it('exposes only controls that affect each template', () => {
+    expect(templateParameterKeys('plant-label')).not.toContain('holeDiameterMm');
+    expect(templateParameterKeys('articulated-name')).not.toContain('letterSpacingMm');
+    expect(templateParameterKeys('articulated-name')).not.toContain('paddingMm');
+    expect(templateParameterKeys('nameplate')).toContain('cornerRadiusMm');
   });
 
   it('derives a printable ring wall', () => {

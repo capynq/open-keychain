@@ -1,4 +1,5 @@
-import type { StyleId } from './types';
+import type { StyleId, TemplateId } from './types';
+import type { GlyphOutline } from './text';
 
 export type Vec2 = [number, number];
 export type Bounds2 = { min: Vec2; max: Vec2 };
@@ -9,27 +10,44 @@ export type StyleInput = {
   text: CrossSection;
   textBounds: Bounds2;
   padding: number;
+  letterSpacing?: number;
   holeDiameter: number;
   keyringWall: number;
+  templateId?: TemplateId;
+  connectorWidth?: number;
+  cornerRadius?: number;
+  stakeLength?: number;
+  glyphs?: GlyphOutline[];
+  baseThickness?: number;
+  reliefDepth?: number;
+  jointClearance?: number;
+  mechanicalGap?: number;
+  maxJointAngleDeg?: number;
+  minimumWall?: number;
+  bottomClearance?: number;
+  /** Millimetres of 2D dilation applied to articulated glyphs before extrusion. */
+  articulatedOutlineExpansionMm?: number;
 };
 
 export type StyleBuild = {
   backing: CrossSection;
   relief: CrossSection;
   recesses?: Array<{ section: CrossSection; depthMm: number }>;
+  /** Optional template-specific cap depth in millimetres. */
+  reliefDepthMm?: number;
 };
 
-function roundedRect(wasm: any, width: number, height: number, radius: number): CrossSection {
+export function roundedRect(wasm: any, width: number, height: number, radius: number): CrossSection {
   const innerWidth = Math.max(100, width - radius * 2);
   const innerHeight = Math.max(100, height - radius * 2);
   return wasm.CrossSection.square([innerWidth, innerHeight], true).offset(radius, 'Round', 2, 64);
 }
 
-function union(wasm: any, sections: CrossSection[]): CrossSection {
+export function union(wasm: any, sections: CrossSection[]): CrossSection {
   return wasm.CrossSection.union(sections);
 }
 
-function sectionBounds(section: CrossSection): Bounds2 {
+export function sectionBounds(section: CrossSection): Bounds2 {
   const bounds = section.bounds();
   return { min: [bounds.min[0], bounds.min[1]], max: [bounds.max[0], bounds.max[1]] };
 }
@@ -86,7 +104,7 @@ function nearestBoundaryPair(left: Vec2[], right: Vec2[]): BoundaryPair {
   return best;
 }
 
-function capsule(wasm: any, start: Vec2, end: Vec2, width: number): CrossSection {
+export function capsule(wasm: any, start: Vec2, end: Vec2, width: number): CrossSection {
   const radius = width / 2;
   const startCap = wasm.CrossSection.circle(radius, 64).translate(start);
   const endCap = wasm.CrossSection.circle(radius, 64).translate(end);
@@ -97,7 +115,7 @@ function capsule(wasm: any, start: Vec2, end: Vec2, width: number): CrossSection
 }
 
 /** Connect disconnected outer components with a minimum spanning tree of rounded boundary capsules. */
-function connectIfNeeded(wasm: any, section: CrossSection, padding: number): CrossSection {
+export function connectIfNeeded(wasm: any, section: CrossSection, padding: number): CrossSection {
   const pieces = section.decompose();
   if (pieces.length <= 1) {
     pieces.forEach((piece: CrossSection) => piece.delete());
@@ -187,7 +205,7 @@ function attachmentAnchor(section: CrossSection, minimumSpan: number, side: 'lef
 }
 
 /** Attach a keyring tab while preserving the counter opening and repairing detached unions. */
-function ringAssembly(
+export function ringAssembly(
   wasm: any,
   base: CrossSection,
   holeDiameter: number,
@@ -236,13 +254,14 @@ function plateStyle(wasm: any, input: StyleInput, radius: number): CrossSection 
   return roundedRect(wasm, width, height, radius);
 }
 
-function finishStyle(
+export function finishStyle(
   wasm: any,
   backing: CrossSection,
   relief: CrossSection,
   input: StyleInput,
   side: 'left' | 'right',
   recesses?: Array<{ section: CrossSection; depthMm: number }>,
+  attachKeyring = true,
 ): StyleBuild {
   const support = relief.offset(Math.max(600, Math.min(input.padding, 1200)), 'Round', 2, 64);
   const joined = union(wasm, [backing, support]);
@@ -251,8 +270,8 @@ function finishStyle(
   support.delete();
   joined.delete();
   const connected = connectIfNeeded(wasm, simplified, input.padding);
-  const result = ringAssembly(wasm, connected, input.holeDiameter, input.keyringWall, side);
-  connected.delete();
+  const result = attachKeyring ? ringAssembly(wasm, connected, input.holeDiameter, input.keyringWall, side) : connected;
+  if (result !== connected) connected.delete();
   return { backing: result, relief, recesses };
 }
 
