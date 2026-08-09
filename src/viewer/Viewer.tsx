@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { GeometryResult } from '../geometry/types';
-import { t, type Locale } from '../i18n';
+import { t, type Locale } from '../i18n/utils';
 import { applyCameraPose, cameraPose, modelBounds, viewDefinition, VIEW_DEFINITIONS, type CameraViewIconId, type ViewId } from './views';
 import './viewer.css';
 

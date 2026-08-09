@@ -3,7 +3,7 @@ import { FONT_CATALOG, fontDefinition, fontSupportsText, textUsesCyrillic } from
 import { GeometryClient } from './geometry/client';
 import { DEFAULT_PARAMS, normalizeParams, type ExportFormat, type GeometryResult, type KeychainParams, type ThreeMfMode } from './geometry/types';
 import { STYLE_CATALOG } from './geometry/styles';
-import { detectLocale, issueMessage, t, type Locale } from './i18n';
+import { detectLocale, issueMessage, t, type Locale } from './i18n/utils';
 import { Viewer, type SurfacePresetId } from './viewer/Viewer';
 import './app.css';
 
