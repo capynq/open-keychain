@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title">
+  <title id="title">Open Keychain — parametric prints made locally</title>
+  <rect width="1200" height="630" fill="#f6f4ef"/>
+  <circle cx="1010" cy="90" r="250" fill="#ef815e" opacity=".2"/>
+  <circle cx="1080" cy="520" r="300" fill="#202433" opacity=".08"/>
+  <g transform="translate(110 175) scale(2.2)">
+    <rect width="64" height="64" rx="16" fill="#ef815e"/>
+    <path d="M18 31.5V22a7 7 0 0 1 7-7h14a7 7 0 0 1 7 7v20a7 7 0 0 1-7 7H25a7 7 0 0 1-7-7v-4.5" fill="none" stroke="#202433" stroke-width="5" stroke-linecap="round"/>
+    <path d="M25 26h14v12H25z" fill="none" stroke="#202433" stroke-width="4"/>
+    <path d="M11 31.5h12M41 31.5h12" stroke="#fff9f2" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <text x="300" y="285" fill="#202433" font-family="Arial, Helvetica, sans-serif" font-size="74" font-weight="800" letter-spacing="2">OPEN KEYCHAIN</text>
+  <text x="305" y="355" fill="#5e6573" font-family="Arial, Helvetica, sans-serif" font-size="30">Parametric prints, made locally.</text>
+</svg>
