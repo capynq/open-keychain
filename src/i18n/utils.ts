@@ -14,6 +14,8 @@ const keyByIssueCode: Record<string, string> = {
   'text-too-wide': 'errorTooWide',
   disconnected: 'errorDisconnected',
   'relief-outside-backing': 'errorReliefOutsideBacking',
+  'nameplate-text-outside-plate': 'errorNameplateTextOutside',
+  'nameplate-embedding': 'errorNameplateEmbedding',
   'scaled-to-fit': 'warningScaled',
   'dense-mesh': 'warningDense',
   'shallow-relief': 'warningShallow',

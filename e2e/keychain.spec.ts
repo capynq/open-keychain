@@ -107,6 +107,7 @@ test('supports beta templates and premium local scene presets', async ({ page })
   for (const template of ['Articulated name', 'Nameplate', 'Plant label', 'Name keychain']) {
     await page.getByRole('button', { name: template }).click();
     await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10_000 });
+    if (template === 'Nameplate') await expect(page.getByRole('heading', { name: 'Style' })).toHaveCount(0);
   }
   await page.getByRole('button', { name: 'Wood board' }).click();
   await expect(page.locator('.viewer')).toHaveAttribute('data-surface', 'wood');
@@ -124,7 +125,11 @@ test('scopes styles to supported templates and keeps the Montserrat preview visi
   const sampleWidth = await montserrat.locator('span').evaluate((element) => element.getBoundingClientRect().width);
   expect(sampleWidth).toBeGreaterThan(0);
   await page.getByRole('button', { name: 'Nameplate' }).click();
-  await expect(page.getByRole('heading', { name: 'Style' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Style' })).toHaveCount(0);
+  await expect(page.getByLabel('Keyring hole')).toHaveCount(0);
+  await expect(page.getByLabel('Text tilt')).toBeVisible();
+  await expect(page.getByLabel('Text lift')).toBeVisible();
+  await expect(page.getByLabel('Embed depth')).toBeVisible();
 });
 
 test('renders the plant label as a pointed T-shaped printable template', async ({ page }) => {

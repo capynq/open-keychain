@@ -177,6 +177,8 @@ function App() {
         connectorWidthMm: params.connectorWidthMm,
         cornerRadiusMm: params.cornerRadiusMm,
         stakeLengthMm: params.stakeLengthMm,
+        nameplateTiltDeg: params.nameplateTiltDeg,
+        nameplateEmbedMm: params.nameplateEmbedMm,
         jointClearanceMm: params.jointClearanceMm,
         mechanicalGapMm: params.mechanicalGapMm,
         maxJointAngleDeg: params.maxJointAngleDeg,
@@ -562,7 +564,7 @@ function App() {
               )}
               {showsParameter('baseThicknessMm') && (
                 <RangeControl
-                  label={t(locale, 'baseThickness')}
+                  label={t(locale, params.templateId === 'nameplate' ? 'plateThickness' : 'baseThickness')}
                   value={params.baseThicknessMm}
                   {...(params.templateId === 'articulated-name'
                     ? { ...PARAMETER_RANGES.baseThicknessMm, min: 3.4 }
@@ -572,7 +574,7 @@ function App() {
               )}
               {showsParameter('reliefDepthMm') && (
                 <RangeControl
-                  label={t(locale, 'raisedText')}
+                  label={t(locale, params.templateId === 'nameplate' ? 'textLift' : 'raisedText')}
                   value={params.reliefDepthMm}
                   {...PARAMETER_RANGES.reliefDepthMm}
                   onChange={(value) => update('reliefDepthMm', value)}
@@ -636,6 +638,22 @@ function App() {
                   value={params.cornerRadiusMm}
                   {...PARAMETER_RANGES.cornerRadiusMm}
                   onChange={(value) => update('cornerRadiusMm', value)}
+                />
+              )}
+              {showsParameter('nameplateTiltDeg') && (
+                <RangeControl
+                  label={t(locale, 'textTilt')}
+                  value={params.nameplateTiltDeg}
+                  {...PARAMETER_RANGES.nameplateTiltDeg}
+                  onChange={(value) => update('nameplateTiltDeg', value)}
+                />
+              )}
+              {showsParameter('nameplateEmbedMm') && (
+                <RangeControl
+                  label={t(locale, 'embedDepth')}
+                  value={params.nameplateEmbedMm}
+                  {...PARAMETER_RANGES.nameplateEmbedMm}
+                  onChange={(value) => update('nameplateEmbedMm', value)}
                 />
               )}
               {showsParameter('stakeLengthMm') && (
