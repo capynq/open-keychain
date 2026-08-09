@@ -1,0 +1,22 @@
+@font-face { font-family: OpenNunito; src: url('/fonts/nunito.ttf') format('truetype'); font-weight: 100 900; }
+@font-face { font-family: OpenQuicksand; src: url('/fonts/quicksand.ttf') format('truetype'); font-weight: 100 900; }
+@font-face { font-family: OpenFredoka; src: url('/fonts/fredoka.ttf') format('truetype'); font-weight: 100 900; }
+@font-face { font-family: OpenOswald; src: url('/fonts/oswald.ttf') format('truetype'); font-weight: 100 900; }
+@font-face { font-family: OpenBree; src: url('/fonts/bree-serif.ttf') format('truetype'); }
+@font-face { font-family: OpenBaloo; src: url('/fonts/baloo2.ttf') format('truetype'); font-weight: 100 900; }
+@font-face { font-family: OpenKalam; src: url('/fonts/kalam.ttf') format('truetype'); font-weight: 100 900; }
+@font-face { font-family: OpenBungee; src: url('/fonts/bungee.ttf') format('truetype'); }
+@font-face { font-family: OpenCaveat; src: url('/fonts/caveat.ttf') format('truetype'); font-weight: 100 900; }
+@font-face { font-family: OpenMarck; src: url('/fonts/marck-script.ttf') format('truetype'); }
+@font-face { font-family: OpenBadScript; src: url('/fonts/bad-script.ttf') format('truetype'); }
+@font-face { font-family: OpenNeucha; src: url('/fonts/neucha.ttf') format('truetype'); }
+@font-face { font-family: OpenAmatic; src: url('/fonts/amatic-sc.ttf') format('truetype'); font-weight: 400 700; }
+@font-face { font-family: OpenLobster; src: url('/fonts/lobster.ttf') format('truetype'); }
+@font-face { font-family: OpenPangolin; src: url('/fonts/pangolin.ttf') format('truetype'); }
+
+:root { font-family: OpenNunito, system-ui, sans-serif; color: #202433; background: #f6f4ef; font-synthesis: none; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; }
+button, input { font: inherit; }
+button { cursor: pointer; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

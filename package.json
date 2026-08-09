@@ -1,0 +1,39 @@
+{
+  "name": "open-keychain",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@10.27.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b --pretty false",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:watch": "vitest",
+    "bench:geometry": "node --import tsx scripts/bench-geometry.ts",
+    "bench:matrix": "node --import tsx scripts/bench-matrix.ts"
+  },
+  "dependencies": {
+    "fflate": "0.8.3",
+    "manifold-3d": "3.5.1",
+    "opentype.js": "2.0.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "three": "0.185.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "@types/three": "0.185.2",
+    "@types/node": "24.0.15",
+    "@vitejs/plugin-react": "5.1.1",
+    "@playwright/test": "1.61.1",
+    "jsdom": "27.0.0",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vite": "8.1.5",
+    "vitest": "4.1.10"
+  }
+}
