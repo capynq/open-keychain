@@ -28,8 +28,9 @@ type ViewerState = {
   zoomScale: number;
 };
 
-const DEFAULT_ZOOM_SCALE = 1.16;
-const MIN_ZOOM_SCALE = 0.62;
+const DEFAULT_ZOOM_SCALE = 0.65;
+const MIN_ZOOM_SCALE = 0.42;
+const ZOOM_IN_FACTOR = 0.72;
 const MAX_ZOOM_SCALE = 3.2;
 const SURFACE_SIZE = 1800;
 
@@ -316,7 +317,12 @@ export function Viewer({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
             <path d="M5 12h14" />
           </svg>
         </button>
-        <button type="button" aria-label={t(locale, 'zoomIn')} title={t(locale, 'zoomIn')} onClick={() => zoomBy(0.82)}>
+        <button
+          type="button"
+          aria-label={t(locale, 'zoomIn')}
+          title={t(locale, 'zoomIn')}
+          onClick={() => zoomBy(ZOOM_IN_FACTOR)}
+        >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 5v14M5 12h14" />
           </svg>

@@ -128,7 +128,7 @@ export function cameraPose(
   const narrowFov = Math.min(verticalFov, horizontalFov);
   const orbitDistance = (radius * ORBIT_MARGIN) / Math.sin(narrowFov / 2);
   const distance =
-    Math.max(planarDistance + projectedHalfDepth + clearance, orbitDistance) * Math.max(1, distanceScale);
+    Math.max(planarDistance + projectedHalfDepth + clearance, orbitDistance) * Math.max(0.35, distanceScale);
   const position = target.clone().addScaledVector(outward, distance);
   const near = Math.max(0.05, distance - radius - clearance);
   const far = Math.max(near + 1, distance + radius + clearance + SURFACE_DEPTH_CLEARANCE);

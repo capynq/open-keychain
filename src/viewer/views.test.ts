@@ -26,6 +26,13 @@ describe('viewer camera views', () => {
     expect(rightPose.position.x).toBeGreaterThan(bounds.max.x);
   });
 
+  it('moves the camera closer when zoom scale is below one', () => {
+    const view = viewDefinition('home');
+    const fitted = cameraPose(camera, bounds, view.direction, view.up, 1);
+    const close = cameraPose(camera, bounds, view.direction, view.up, 0.42);
+    expect(close.position.distanceTo(close.target)).toBeLessThan(fitted.position.distanceTo(fitted.target));
+  });
+
   it('provides a distinct SVG icon identifier for every preset', () => {
     expect(new Set(VIEW_DEFINITIONS.map((view) => view.icon)).size).toBe(VIEW_DEFINITIONS.length);
   });
