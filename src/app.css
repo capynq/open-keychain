@@ -1,6 +1,6 @@
 .app-shell {
   height: 100dvh;
-  min-height: 680px;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -28,13 +28,15 @@
   background: #ef815e;
   color: white;
   font-weight: 900;
-  letter-spacing: -0.08em;
+  font-size: 10px;
+  letter-spacing: 0.04em;
 }
-.brand-mark strong,
+.brand-mark h1,
 .brand-mark small {
   display: block;
 }
-.brand-mark strong {
+.brand-mark h1 {
+  margin: 0;
   letter-spacing: -0.03em;
   font-size: 14px;
 }
@@ -77,9 +79,6 @@
   max-width: 420px;
   min-height: 0;
 }
-.intro {
-  margin-bottom: 8px;
-}
 .eyebrow {
   color: #e07150;
   font-size: 9px;
@@ -87,23 +86,9 @@
   font-weight: 900;
   margin: 0 0 4px;
 }
-h1,
 h2,
 p {
   margin-top: 0;
-}
-h1 {
-  font-size: clamp(29px, 2.7vw, 38px);
-  line-height: 1;
-  letter-spacing: -0.055em;
-  margin-bottom: 6px;
-}
-.intro > p:last-child {
-  color: #777b87;
-  font-size: 12px;
-  line-height: 1.35;
-  max-width: 44ch;
-  margin-bottom: 0;
 }
 .control-section {
   padding: 8px 0;
@@ -135,11 +120,6 @@ h1 {
 .text-input input:focus {
   border-color: #ef815e;
   box-shadow: 0 0 0 3px #ef815e33;
-}
-.hint {
-  color: #898b93;
-  font-size: 10px;
-  margin: 4px 0 0;
 }
 .card-grid {
   display: grid;
@@ -449,23 +429,11 @@ input[type='range'] {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 20px;
   padding: 9px clamp(24px, 3vw, 48px);
   background: #202433;
   color: white;
-}
-.download-bar strong,
-.download-bar span {
-  display: block;
-}
-.download-bar strong {
-  font-size: 13px;
-}
-.download-bar span {
-  color: #b7bac4;
-  font-size: 10px;
-  margin-top: 1px;
 }
 .download-button {
   min-height: 40px;
@@ -489,7 +457,6 @@ input[type='range'] {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-left: auto;
 }
 .export-options button,
 .export-options select {
@@ -524,6 +491,69 @@ input[type='range'] {
   }
 }
 
+@media (max-height: 760px) and (min-width: 761px) {
+  .topbar {
+    padding-block: 8px;
+  }
+  .brand-mark > span {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    font-size: 9px;
+  }
+  .workspace {
+    gap: 20px;
+    padding-block: 8px;
+  }
+  .control-section {
+    padding-block: 5px;
+  }
+  .control-section h2 {
+    margin-bottom: 4px;
+  }
+  .text-input input {
+    height: 36px;
+  }
+  .choice-card,
+  .font-card {
+    min-height: 34px;
+  }
+  .style-swatch {
+    flex-basis: 24px;
+    height: 18px;
+  }
+  .font-card > span {
+    font-size: 13px;
+  }
+  .surface-grid button {
+    min-height: 26px;
+  }
+  .range-control {
+    padding-block: 0;
+  }
+  .control-label {
+    line-height: 14px;
+  }
+  input[type='range'] {
+    height: 13px;
+  }
+  .viewer-wrap {
+    max-height: calc(100% - 62px);
+  }
+  .preview-heading {
+    margin-bottom: 6px;
+  }
+  .preview-footer {
+    padding-top: 5px;
+  }
+  .download-bar {
+    padding-block: 7px;
+  }
+  .download-button {
+    min-height: 34px;
+  }
+}
+
 @media (max-width: 760px) {
   .app-shell {
     height: auto;
@@ -547,12 +577,6 @@ input[type='range'] {
   }
   .controls-panel {
     max-width: none;
-  }
-  .intro {
-    margin-bottom: 18px;
-  }
-  .intro > p:last-child {
-    font-size: 13px;
   }
   .control-section {
     padding: 16px 0;

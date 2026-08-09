@@ -4,7 +4,7 @@ const cameraViews = ['Home view', 'Front view', 'Back view', 'Left view', 'Right
 
 test('customizes a name, uses every icon camera preset, and downloads STL', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Your name, in 3D.' })).toBeVisible();
+  await expect(page.getByText('Open Keychain')).toBeVisible();
   const name = page.getByLabel('Name or text');
   await name.fill('OLIVER');
   await page.getByRole('button', { name: 'Capsule' }).click();
@@ -67,7 +67,6 @@ test('supports bounded zoom, preview surfaces, locales, and configurable 3MF exp
   await page.getByRole('button', { name: 'Zoom out' }).click();
   await page.getByRole('button', { name: 'Dark' }).click();
   await page.getByRole('combobox', { name: 'Language' }).selectOption('ru');
-  await expect(page.getByRole('heading', { name: 'Ваше имя в 3D.' })).toBeVisible();
   await page.getByRole('button', { name: '3MF' }).click();
   await page.getByRole('combobox', { name: 'Режим 3MF' }).selectOption('merged');
   await expect(page.getByRole('button', { name: /Скачать 3MF/ })).toBeEnabled();
@@ -79,6 +78,7 @@ test('supports bounded zoom, preview surfaces, locales, and configurable 3MF exp
 for (const viewport of [
   { width: 1440, height: 900 },
   { width: 1280, height: 800 },
+  { width: 1280, height: 720 },
 ]) {
   test(`keeps all desktop controls visible at ${viewport.width}×${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
@@ -101,6 +101,7 @@ for (const viewport of [
     expect(layout.controlsBottom).toBeLessThanOrEqual(layout.downloadTop);
     expect(layout.downloadBottom).toBeLessThanOrEqual(layout.viewportHeight);
     await expect(page.getByRole('button', { name: /Download STL/ })).toBeVisible();
+    await expect(page.getByLabel('Keyring hole')).toBeVisible();
   });
 }
 

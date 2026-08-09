@@ -188,17 +188,15 @@ function App() {
         ? issueMessage(locale, warningIssue)
         : !busy && result && !result.printable
           ? t(locale, 'errorNotReady')
-          : busy
-            ? t(locale, 'updating')
-            : t(locale, 'previewFeedback'));
+          : undefined);
 
   return (
     <main className="app-shell">
       <header className="topbar">
         <div className="brand-mark">
-          <span>OK</span>
+          <span aria-hidden="true">3D</span>
           <div>
-            <strong>Open Keychain</strong>
+            <h1>Open Keychain</h1>
             <small>{t(locale, 'brandTagline')}</small>
           </div>
         </div>
@@ -225,11 +223,6 @@ function App() {
       </header>
       <div className="workspace">
         <aside className="controls-panel">
-          <div className="intro">
-            <p className="eyebrow">{t(locale, 'eyebrow')}</p>
-            <h1>{t(locale, 'title')}</h1>
-            <p>{t(locale, 'intro')}</p>
-          </div>
           <section className="control-section">
             <h2>{t(locale, 'name')}</h2>
             <label className="text-input">
@@ -242,7 +235,6 @@ function App() {
                 placeholder={t(locale, 'namePlaceholder')}
               />
             </label>
-            <p className="hint">{t(locale, 'nameHint')}</p>
           </section>
           <section className="control-section">
             <h2>{t(locale, 'style')}</h2>
@@ -358,7 +350,7 @@ function App() {
         <section className="preview-panel">
           <div className="preview-heading">
             <div>
-              <p className="eyebrow">LIVE PREVIEW</p>
+              <p className="eyebrow">{t(locale, 'livePreview')}</p>
               <h2>{params.text || t(locale, 'title')}</h2>
             </div>
             <span className={`status-pill ${statusClass}`}>{statusText}</span>
@@ -380,21 +372,15 @@ function App() {
                 <span>{t(locale, 'dimensionsPending')}</span>
               )}
             </div>
-            <div className="feedback" aria-live="polite">
-              {feedback}
-            </div>
+            {feedback && (
+              <div className="feedback" aria-live="polite">
+                {feedback}
+              </div>
+            )}
           </div>
         </section>
       </div>
       <footer className="download-bar">
-        <div>
-          <strong>{t(locale, 'downloadReady')}</strong>
-          <span>
-            {exportFormat === 'stl'
-              ? 'STL · millimetres'
-              : `${t(locale, 'download3mf')} · ${threeMfMode === 'merged' ? t(locale, 'merged') : t(locale, 'separateColors')}`}
-          </span>
-        </div>
         <div className="export-options">
           <button
             type="button"
