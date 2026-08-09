@@ -9,6 +9,7 @@ const keyByIssueCode: Record<string, string> = {
   'text-too-long': 'errorTooLong',
   'font-load': 'errorFontLoad',
   'missing-glyph': 'errorMissingGlyph',
+  'articulated-font': 'errorArticulatedFont',
   'empty-outline': 'errorEmptyOutline',
   'text-too-wide': 'errorTooWide',
   disconnected: 'errorDisconnected',
@@ -16,6 +17,13 @@ const keyByIssueCode: Record<string, string> = {
   'scaled-to-fit': 'warningScaled',
   'dense-mesh': 'warningDense',
   'shallow-relief': 'warningShallow',
+  'articulated-base-adjusted': 'warningArticulatedBaseAdjusted',
+  'articulated-captive': 'errorArticulatedJoint',
+  'articulated-counter': 'errorArticulatedJoint',
+  'articulated-manifold': 'errorArticulatedJoint',
+  'articulated-body-collision': 'errorArticulatedJoint',
+  'articulated-connector-collision': 'errorArticulatedJoint',
+  'articulated-motion-collision': 'errorArticulatedJoint',
 };
 
 export function detectLocale(): Locale {
@@ -44,4 +52,9 @@ export function issueMessage(locale: Locale, issue: { code: string; message: str
 export function styleName(locale: Locale, styleId: string, fallback: string): string {
   const translate: TFunction = i18n.getFixedT(locale, 'styles');
   return translate(styleId, { defaultValue: fallback });
+}
+
+export function templateName(locale: Locale, templateId: string, fallback: string): string {
+  const translate: TFunction = i18n.getFixedT(locale, 'templates');
+  return translate(templateId, { defaultValue: fallback });
 }
