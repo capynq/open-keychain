@@ -13,7 +13,12 @@
     "test:e2e": "playwright test",
     "test:watch": "vitest",
     "bench:geometry": "node --import tsx scripts/bench-geometry.ts",
-    "bench:matrix": "node --import tsx scripts/bench-matrix.ts"
+    "bench:matrix": "node --import tsx scripts/bench-matrix.ts",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "validate": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },
   "dependencies": {
     "fflate": "0.8.3",
@@ -33,10 +38,17 @@
     "@types/react-dom": "19.2.3",
     "@types/three": "0.185.2",
     "@vitejs/plugin-react": "5.1.1",
+    "@eslint/js": "10.0.1",
+    "eslint": "10.8.1",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-react-refresh": "0.5.3",
     "jsdom": "27.0.0",
+    "prettier": "3.9.6",
     "tsx": "4.20.6",
     "typescript": "5.9.3",
     "vite": "8.1.5",
-    "vitest": "4.1.10"
+    "vitest": "4.1.10",
+    "typescript-eslint": "8.66.0"
   }
 }
