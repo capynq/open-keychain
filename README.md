@@ -10,10 +10,10 @@ Open Keychain is a privacy-friendly, self-hostable browser customizer for printa
 
 - Six distinct backing recipes: Contour, Capsule, Soft Tag, Bubble, Arch, and Frame.
 - Finished-geometry width fitting that keeps printable models at or below 120 mm while preserving a 12 mm minimum text height.
-- Component-aware rounded bridges, preserved letter counters, manifold validation, finite-coordinate checks, and an open keyring hole.
+- Component-aware rounded bridges, preserved letter counters, manifold validation, finite-coordinate checks, an open keyring hole, and a guaranteed backing inset around raised text.
 - Adaptive curve flattening and high-quality round offsets; flat surfaces remain minimally triangulated.
-- Three.js preview with exact-center rotation, six directional camera presets, a home view, bounded zoom controls, and crisp contact shadows.
-- Matte, graph, and dark preview surfaces that are never included in exported files.
+- Three.js preview with exact-center, rotation-safe orbiting, six directional camera presets, bounded zoom controls, and crisp contact shadows.
+- Matte, graph, and dark preview surfaces that follow the model without appearing in exported files.
 - STL export as one merged printable solid and 3MF export as either separate colored backing/relief objects or one merged object.
 - Bundled Latin/Cyrillic fonts with script-aware compatibility checks and automatic fallback for unsupported text.
 - English, Russian, and Ukrainian localization with browser detection and local preference persistence.
@@ -78,7 +78,7 @@ Open <http://localhost:8080>. No environment variables or external services are 
 
 The project bundles fonts from Google Fonts under the SIL Open Font License. License notices are in `public/fonts/licenses/`. Bundled fonts include Nunito, Quicksand, Fredoka, Oswald, Bree Serif, Baloo 2, Kalam, Bungee, Caveat, Marck Script, Bad Script, Neucha, Amatic SC, Lobster, and Pangolin. Bilingual families include modern Cyrillic coverage; Latin-only families are disabled for Cyrillic text.
 
-Project source is MIT licensed. Dependencies and bundled fonts retain their own licenses, which must be reviewed before redistribution.
+Project source is MIT licensed. This permits self-hosting, commercial use, and operating a paid hosted Open Keychain service. MIT also permits others to host modified versions, so this repository does not claim exclusivity over hosted forks. Dependencies and bundled fonts retain their own licenses, which must be reviewed before redistribution.
 
 ## Contributing
 
