@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FONT_CATALOG, fontSupportsText, textUsesCyrillic } from './catalog';
+import { FONT_CATALOG, fontSupportsArticulatedName, fontSupportsText, textUsesCyrillic } from './catalog';
 
 describe('font script coverage metadata', () => {
   it('recognizes Cyrillic text and disables Latin-only families', () => {
@@ -15,6 +15,43 @@ describe('font script coverage metadata', () => {
       'bungee',
     ]);
     expect(latinOnly.every((font) => !fontSupportsText(font, 'НИКИТА'))).toBe(true);
+  });
+
+  it('limits articulated names to the bundled heavy families', () => {
+    const articulated = FONT_CATALOG.filter((font) => font.supportsArticulated);
+    expect(articulated.map((font) => font.id)).toEqual(['bungee', 'rubik', 'montserrat']);
+    expect(articulated.every((font) => (font.articulatedDilationMm ?? 0) > 0)).toBe(true);
+    expect(articulated.every((font) => fontSupportsArticulatedName(font, 'ALEX'))).toBe(true);
+    expect(
+      fontSupportsArticulatedName(
+        FONT_CATALOG.find((font) => font.id === 'rubik')!,
+        'НІКІТА',
+      ),
+    ).toBe(true);
+    expect(
+      fontSupportsArticulatedName(
+        FONT_CATALOG.find((font) => font.id === 'montserrat')!,
+        'НІКІТА',
+      ),
+    ).toBe(true);
+    expect(
+      fontSupportsArticulatedName(
+        FONT_CATALOG.find((font) => font.id === 'nunito')!,
+        'ALEX',
+      ),
+    ).toBe(false);
+    expect(
+      fontSupportsArticulatedName(
+        FONT_CATALOG.find((font) => font.id === 'fredoka')!,
+        'ALEX',
+      ),
+    ).toBe(false);
+    expect(
+      fontSupportsArticulatedName(
+        FONT_CATALOG.find((font) => font.id === 'caveat')!,
+        'ALEX',
+      ),
+    ).toBe(false);
   });
 
   it('includes the bilingual calligraphic families', () => {

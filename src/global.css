@@ -37,6 +37,16 @@
   src: url('/fonts/bungee.ttf') format('truetype');
 }
 @font-face {
+  font-family: OpenRubik;
+  src: url('/fonts/rubik.ttf') format('truetype');
+  font-weight: 100 900;
+}
+@font-face {
+  font-family: OpenMontserrat;
+  src: url('/fonts/montserrat.ttf') format('truetype');
+  font-weight: 100 900;
+}
+@font-face {
   font-family: OpenCaveat;
   src: url('/fonts/caveat.ttf') format('truetype');
   font-weight: 100 900;

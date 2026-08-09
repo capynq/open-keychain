@@ -5,6 +5,8 @@ export type FontDefinition = {
   weight: number;
   category: string;
   scripts: readonly FontScript[];
+  supportsArticulated: boolean;
+  articulatedDilationMm?: number;
   sampleLatin: string;
   sampleCyrillic: string;
 };
@@ -22,6 +24,7 @@ export const FONT_CATALOG: FontDefinition[] = [
     weight: 700,
     category: 'Rounded',
     scripts: latinCyrillic,
+    supportsArticulated: false,
     sampleLatin: 'ALEX',
     sampleCyrillic: 'АБВГ',
   },
@@ -32,6 +35,7 @@ export const FONT_CATALOG: FontDefinition[] = [
     weight: 700,
     category: 'Geometric',
     scripts: latin,
+    supportsArticulated: false,
     sampleLatin: 'ALEX',
     sampleCyrillic: 'АБВГ',
   },
@@ -42,6 +46,7 @@ export const FONT_CATALOG: FontDefinition[] = [
     weight: 600,
     category: 'Chunky',
     scripts: latin,
+    supportsArticulated: false,
     sampleLatin: 'ALEX',
     sampleCyrillic: 'АБВГ',
   },
@@ -52,6 +57,7 @@ export const FONT_CATALOG: FontDefinition[] = [
     weight: 600,
     category: 'Condensed',
     scripts: latinCyrillic,
+    supportsArticulated: false,
     sampleLatin: 'ALEX',
     sampleCyrillic: 'АБВГ',
   },
@@ -62,6 +68,7 @@ export const FONT_CATALOG: FontDefinition[] = [
     weight: 400,
     category: 'Serif',
     scripts: latin,
+    supportsArticulated: false,
     sampleLatin: 'ALEX',
     sampleCyrillic: 'АБВГ',
   },
@@ -72,6 +79,7 @@ export const FONT_CATALOG: FontDefinition[] = [
     weight: 600,
     category: 'Playful',
     scripts: latin,
+    supportsArticulated: false,
     sampleLatin: 'ALEX',
     sampleCyrillic: 'АБВГ',
   },
@@ -82,6 +90,7 @@ export const FONT_CATALOG: FontDefinition[] = [
     weight: 700,
     category: 'Handwritten',
     scripts: latin,
+    supportsArticulated: false,
     sampleLatin: 'ALEX',
     sampleCyrillic: 'АБВГ',
   },
@@ -92,6 +101,32 @@ export const FONT_CATALOG: FontDefinition[] = [
     weight: 400,
     category: 'Decorative',
     scripts: latin,
+    supportsArticulated: true,
+    articulatedDilationMm: 0.55,
+    sampleLatin: 'ALEX',
+    sampleCyrillic: 'АБВГ',
+  },
+  {
+    id: 'rubik',
+    name: 'Rubik Black',
+    file: '/fonts/rubik.ttf',
+    weight: 900,
+    category: 'Chunky',
+    scripts: latinCyrillic,
+    supportsArticulated: true,
+    articulatedDilationMm: 1.6,
+    sampleLatin: 'ALEX',
+    sampleCyrillic: 'АБВГ',
+  },
+  {
+    id: 'montserrat',
+    name: 'Montserrat Black',
+    file: '/fonts/montserrat.ttf',
+    weight: 900,
+    category: 'Geometric',
+    scripts: latinCyrillic,
+    supportsArticulated: true,
+    articulatedDilationMm: 1.6,
     sampleLatin: 'ALEX',
     sampleCyrillic: 'АБВГ',
   },
@@ -102,6 +137,7 @@ export const FONT_CATALOG: FontDefinition[] = [
     weight: 400,
     category: 'Calligraphic',
     scripts: latinCyrillic,
+    supportsArticulated: false,
     sampleLatin: 'ALEX',
     sampleCyrillic: 'АБВГ',
   },
@@ -112,6 +148,7 @@ export const FONT_CATALOG: FontDefinition[] = [
     weight: 400,
     category: 'Calligraphic',
     scripts: latinCyrillic,
+    supportsArticulated: false,
     sampleLatin: 'ALEX',
     sampleCyrillic: 'АБВГ',
   },
@@ -122,6 +159,7 @@ export const FONT_CATALOG: FontDefinition[] = [
     weight: 400,
     category: 'Calligraphic',
     scripts: latinCyrillic,
+    supportsArticulated: false,
     sampleLatin: 'ALEX',
     sampleCyrillic: 'АБВГ',
   },
@@ -132,6 +170,7 @@ export const FONT_CATALOG: FontDefinition[] = [
     weight: 400,
     category: 'Calligraphic',
     scripts: latinCyrillic,
+    supportsArticulated: false,
     sampleLatin: 'ALEX',
     sampleCyrillic: 'АБВГ',
   },
@@ -142,6 +181,7 @@ export const FONT_CATALOG: FontDefinition[] = [
     weight: 400,
     category: 'Calligraphic',
     scripts: latinCyrillic,
+    supportsArticulated: false,
     sampleLatin: 'ALEX',
     sampleCyrillic: 'АБВГ',
   },
@@ -152,6 +192,7 @@ export const FONT_CATALOG: FontDefinition[] = [
     weight: 400,
     category: 'Calligraphic',
     scripts: latinCyrillic,
+    supportsArticulated: false,
     sampleLatin: 'ALEX',
     sampleCyrillic: 'АБВГ',
   },
@@ -162,6 +203,7 @@ export const FONT_CATALOG: FontDefinition[] = [
     weight: 400,
     category: 'Calligraphic',
     scripts: latinCyrillic,
+    supportsArticulated: false,
     sampleLatin: 'ALEX',
     sampleCyrillic: 'АБВГ',
   },
@@ -179,4 +221,12 @@ export function textUsesCyrillic(text: string): boolean {
 
 export function fontSupportsText(font: FontDefinition, text: string): boolean {
   return !textUsesCyrillic(text) || font.scripts.includes('cyrillic');
+}
+
+export function fontSupportsArticulatedName(font: FontDefinition, text: string): boolean {
+  return font.supportsArticulated && fontSupportsText(font, text);
+}
+
+export function articulatedFallbackFont(text: string): FontDefinition {
+  return FONT_CATALOG.find((font) => fontSupportsArticulatedName(font, text)) ?? FONT_CATALOG[0];
 }
