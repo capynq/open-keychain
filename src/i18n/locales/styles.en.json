@@ -1,1 +1,8 @@
-{"contour":"Contour","capsule":"Capsule","soft-tag":"Soft tag","bubble":"Bubble","arch":"Arch","frame":"Frame"}
+{
+  "contour": "Contour",
+  "capsule": "Capsule",
+  "soft-tag": "Soft tag",
+  "bubble": "Bubble",
+  "arch": "Arch",
+  "frame": "Frame"
+}
