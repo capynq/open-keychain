@@ -12,6 +12,7 @@ const keyByIssueCode: Record<string, string> = {
   'empty-outline': 'errorEmptyOutline',
   'text-too-wide': 'errorTooWide',
   disconnected: 'errorDisconnected',
+  'relief-outside-backing': 'errorReliefOutsideBacking',
   'scaled-to-fit': 'warningScaled',
   'dense-mesh': 'warningDense',
   'shallow-relief': 'warningShallow',

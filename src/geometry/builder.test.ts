@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { FONT_CATALOG } from '../fonts/catalog';
 import { buildKeychain, createWasm } from './builder';
 import { DEFAULT_PARAMS, type MeshBuffer } from './types';
 
@@ -101,6 +102,37 @@ function topSurfaceArea(mesh: MeshBuffer): { surface: number; hull: number } {
 }
 
 describe('finished keychain geometry', () => {
+  for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch', 'frame'] as const) {
+    for (const font of FONT_CATALOG) {
+      it(`contains Latin relief for ${font.name} ${styleId}`, async () => {
+        const { result } = await buildKeychain(wasm, {
+          ...DEFAULT_PARAMS,
+          fontId: font.id,
+          styleId,
+          text: 'ALEX',
+        });
+        expect(result.printable, JSON.stringify(result.issues)).toBe(true);
+        expect(result.issues.some((issue) => issue.code === 'relief-outside-backing')).toBe(false);
+        expect(result.dimensions.widthMm).toBeLessThanOrEqual(120.1);
+      }, 30_000);
+    }
+  }
+
+  for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch', 'frame'] as const) {
+    for (const font of FONT_CATALOG.filter((font) => font.scripts.includes('cyrillic'))) {
+      it(`contains Cyrillic relief for ${font.name} ${styleId}`, async () => {
+        const { result } = await buildKeychain(wasm, {
+          ...DEFAULT_PARAMS,
+          fontId: font.id,
+          styleId,
+          text: 'НИКИТА',
+        });
+        expect(result.printable, JSON.stringify(result.issues)).toBe(true);
+        expect(result.issues.some((issue) => issue.code === 'relief-outside-backing')).toBe(false);
+      }, 30_000);
+    }
+  }
+
   for (const fontId of [
     'nunito',
     'oswald',

@@ -65,6 +65,17 @@ function finiteBounds(bounds: { min: number[]; max: number[] }): boolean {
   return [...bounds.min, ...bounds.max].every(Number.isFinite);
 }
 
+function sectionArea(section: any): number {
+  const polygonArea = (polygon: Array<[number, number]>) =>
+    polygon.reduce((area, point, index) => {
+      const next = polygon[(index + 1) % polygon.length];
+      return area + point[0] * next[1] - next[0] * point[1];
+    }, 0) / 2;
+  return Math.abs(
+    (section.toPolygons() as Array<Array<[number, number]>>).reduce((area, polygon) => area + polygonArea(polygon), 0),
+  );
+}
+
 export async function createWasm(): Promise<Wasm> {
   const isBrowser = typeof (globalThis as { window?: unknown }).window !== 'undefined';
   const wasmPath = isBrowser ? '/manifold.wasm' : new URL('../../public/manifold.wasm', import.meta.url).pathname;
@@ -108,7 +119,8 @@ export async function buildKeychain(
   const keyring = keyringMetrics(params.holeDiameterMm);
   type StyledGeometry = {
     scale: number;
-    text: any;
+    rawText: any;
+    relief: any;
     backing: any;
     recesses: Array<{ section: any; depthMm: number }>;
     widthMm: number;
@@ -130,14 +142,19 @@ export async function buildKeychain(
     const bounds = style.backing.bounds();
     return {
       scale,
-      text,
+      rawText: text,
+      relief: style.relief,
       backing: style.backing,
       recesses: style.recesses ?? [],
       widthMm: (bounds.max[0] - bounds.min[0]) / MANIFOLD_SCALE,
     };
   };
   const releaseStyledGeometry = (geometry: StyledGeometry) =>
-    deleteAll([geometry.backing, geometry.text, ...geometry.recesses.map((item) => item.section)]);
+    deleteAll([
+      geometry.backing,
+      ...new Set([geometry.rawText, geometry.relief]),
+      ...geometry.recesses.map((item) => item.section),
+    ]);
 
   let styled = buildStyledGeometry(1);
   if (styled.widthMm > MAX_WIDTH_MM) {
@@ -189,8 +206,17 @@ export async function buildKeychain(
     });
   }
 
-  const textSection = styled.text;
+  const textSection = styled.relief;
   const styleBase = styled.backing;
+  const uncoveredRelief = textSection.subtract(styleBase);
+  const reliefContained = sectionArea(uncoveredRelief) <= 1;
+  uncoveredRelief.delete();
+  if (!reliefContained)
+    issues.push({
+      severity: 'error',
+      code: 'relief-outside-backing',
+      message: 'The raised text extends beyond its foundation. Choose another style or adjust the name.',
+    });
   const baseThickness = Math.round(params.baseThicknessMm * MANIFOLD_SCALE);
   let base = styleBase.extrude(baseThickness);
   const maxRecessDepth = Math.max(0, baseThickness - 600);
@@ -224,6 +250,7 @@ export async function buildKeychain(
   const printable =
     model.status() === 'NoError' &&
     connected &&
+    reliefContained &&
     finiteBounds(bounds) &&
     validateMesh(baseMesh) &&
     validateMesh(reliefMesh);
@@ -262,7 +289,14 @@ export async function buildKeychain(
     issues,
     printable,
   };
-  deleteAll([model, relief, base, styleBase, textSection, ...styled.recesses.map((item) => item.section)]);
+  deleteAll([
+    model,
+    relief,
+    base,
+    styleBase,
+    ...new Set([styled.rawText, textSection]),
+    ...styled.recesses.map((item) => item.section),
+  ]);
   return { result, exportMesh };
 }
 

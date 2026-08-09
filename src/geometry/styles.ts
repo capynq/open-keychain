@@ -15,6 +15,7 @@ export type StyleInput = {
 
 export type StyleBuild = {
   backing: CrossSection;
+  relief: CrossSection;
   recesses?: Array<{ section: CrossSection; depthMm: number }>;
 };
 
@@ -227,30 +228,48 @@ function ringAssembly(
   return connectIfNeeded(wasm, result, wall);
 }
 
-function plateStyle(wasm: any, input: StyleInput, radius: number, side: 'left' | 'right'): CrossSection {
+function plateStyle(wasm: any, input: StyleInput, radius: number): CrossSection {
   const textWidth = input.textBounds.max[0] - input.textBounds.min[0];
   const textHeight = input.textBounds.max[1] - input.textBounds.min[1];
   const width = Math.max(34000, textWidth + input.padding * 2 + 6000);
   const height = Math.max(18000, textHeight + input.padding * 2);
-  const plate = roundedRect(wasm, width, height, radius);
-  const result = ringAssembly(wasm, plate, input.holeDiameter, input.keyringWall, side);
-  plate.delete();
-  return result;
+  return roundedRect(wasm, width, height, radius);
+}
+
+function finishStyle(
+  wasm: any,
+  backing: CrossSection,
+  relief: CrossSection,
+  input: StyleInput,
+  side: 'left' | 'right',
+  recesses?: Array<{ section: CrossSection; depthMm: number }>,
+): StyleBuild {
+  const support = relief.offset(Math.max(600, Math.min(input.padding, 1200)), 'Round', 2, 64);
+  const joined = union(wasm, [backing, support]);
+  const simplified = joined.simplify(20);
+  backing.delete();
+  support.delete();
+  joined.delete();
+  const connected = connectIfNeeded(wasm, simplified, input.padding);
+  const result = ringAssembly(wasm, connected, input.holeDiameter, input.keyringWall, side);
+  connected.delete();
+  return { backing: result, relief, recesses };
 }
 
 export function buildStyle(wasm: any, styleId: StyleId, input: StyleInput): StyleBuild {
   const textWidth = input.textBounds.max[0] - input.textBounds.min[0];
   const textHeight = input.textBounds.max[1] - input.textBounds.min[1];
 
-  if (styleId === 'capsule') return { backing: plateStyle(wasm, input, Math.max(5000, textHeight / 2), 'right') };
+  if (styleId === 'capsule')
+    return finishStyle(wasm, plateStyle(wasm, input, Math.max(5000, textHeight / 2)), input.text, input, 'right');
   if (styleId === 'soft-tag') {
-    const plate = plateStyle(wasm, input, 3500, 'left');
+    const plate = plateStyle(wasm, input, 3500);
     const bounds = sectionBounds(plate);
     const accent = wasm.CrossSection.circle(3400, 64).translate([bounds.max[0] - 3000, bounds.max[1] - 3000]);
     const result = union(wasm, [plate, accent]);
     plate.delete();
     accent.delete();
-    return { backing: result };
+    return finishStyle(wasm, result, input.text, input, 'left');
   }
   if (styleId === 'bubble') {
     const backing = input.text.offset(input.padding + 800, 'Round', 2, 64);
@@ -272,22 +291,17 @@ export function buildStyle(wasm: any, styleId: StyleId, input: StyleInput): Styl
     connectedBacking.delete();
     bubbles.forEach((bubble: CrossSection) => bubble.delete());
     const organic = connectIfNeeded(wasm, decorated, input.padding);
-    const result = ringAssembly(wasm, organic, input.holeDiameter, input.keyringWall, 'left');
-    organic.delete();
-    return { backing: result };
+    return finishStyle(wasm, organic, input.text, input, 'left');
   }
   if (styleId === 'arch') {
     const centerX = (input.textBounds.min[0] + input.textBounds.max[0]) / 2;
     const width = Math.max(textWidth, 1);
-    const arch = input.text.warp((point: Vec2) => {
+    const relief = input.text.warp((point: Vec2) => {
       const normalized = (point[0] - centerX) / (width / 2);
       point[1] += Math.max(1500, Math.min(5000, textHeight * 0.18)) * (1 - normalized * normalized);
     });
-    const backing = connectIfNeeded(wasm, arch.offset(Math.max(input.padding, 2400), 'Round', 2, 64), input.padding);
-    arch.delete();
-    const result = ringAssembly(wasm, backing, input.holeDiameter, input.keyringWall, 'left');
-    backing.delete();
-    return { backing: result };
+    const backing = relief.offset(Math.max(input.padding, 2400), 'Round', 2, 64);
+    return finishStyle(wasm, backing, relief, input, 'left');
   }
   if (styleId === 'frame') {
     const width = Math.max(38000, textWidth + input.padding * 2 + 10000);
@@ -303,17 +317,14 @@ export function buildStyle(wasm: any, styleId: StyleId, input: StyleInput): Styl
     const rawCombined = union(wasm, [frame, textPad]);
     const combined = connectIfNeeded(wasm, rawCombined, 6000);
     const recessPad = input.text.offset(500, 'Round', 2, 64);
-    const result = ringAssembly(wasm, combined, input.holeDiameter, input.keyringWall, 'right');
     outer.delete();
     innerCut.delete();
     frame.delete();
-    return { backing: result, recesses: [{ section: recessPad, depthMm: 0.2 }] };
+    return finishStyle(wasm, combined, input.text, input, 'right', [{ section: recessPad, depthMm: 0.2 }]);
   }
 
-  const offset = connectIfNeeded(wasm, input.text.offset(Math.max(input.padding, 2400), 'Round', 2, 64), input.padding);
-  const result = ringAssembly(wasm, offset, input.holeDiameter, input.keyringWall, 'left');
-  offset.delete();
-  return { backing: result };
+  const offset = input.text.offset(Math.max(input.padding, 2400), 'Round', 2, 64);
+  return finishStyle(wasm, offset, input.text, input, 'left');
 }
 
 export const STYLE_CATALOG: Array<{ id: StyleId; name: string; description: string }> = [
