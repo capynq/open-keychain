@@ -32,22 +32,22 @@
     "three": "0.185.1"
   },
   "devDependencies": {
-    "@playwright/test": "1.61.1",
+    "@playwright/test": "1.62.1",
     "@types/node": "24.0.15",
     "@types/react": "19.2.7",
-    "@types/react-dom": "19.2.3",
+    "@types/react-dom": "19.2.4",
     "@types/three": "0.185.2",
-    "@vitejs/plugin-react": "5.1.1",
+    "@vitejs/plugin-react": "6.0.5",
     "@eslint/js": "10.0.1",
     "eslint": "10.8.1",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-react-hooks": "7.1.1",
     "eslint-plugin-react-refresh": "0.5.3",
-    "jsdom": "27.0.0",
+    "jsdom": "30.0.1",
     "prettier": "3.9.6",
     "tsx": "4.20.6",
     "typescript": "5.9.3",
-    "vite": "8.1.5",
+    "vite": "8.2.0",
     "vitest": "4.1.10",
     "typescript-eslint": "8.66.0"
   }
