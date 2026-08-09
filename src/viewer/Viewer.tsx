@@ -28,6 +28,9 @@ type ViewerState = {
   zoomScale: number;
 };
 
+const DEFAULT_ZOOM_SCALE = 1.16;
+const SURFACE_SIZE = 1800;
+
 function disposeChildren(group: THREE.Group): void {
   while (group.children.length) {
     const child = group.children[0];
@@ -86,7 +89,7 @@ function CameraViewIcon({ icon }: { icon: CameraViewIconId }) {
 }
 
 function fitViewer(state: ViewerState, result: GeometryResult, selected: ViewId | 'custom', resetZoom = true): void {
-  if (resetZoom) state.zoomScale = 1;
+  if (resetZoom) state.zoomScale = DEFAULT_ZOOM_SCALE;
   const center = new THREE.Vector3(...result.dimensions.centerMm);
   const bounds = modelBounds(
     result.dimensions.widthMm,
@@ -100,23 +103,8 @@ function fitViewer(state: ViewerState, result: GeometryResult, selected: ViewId 
   const pose = cameraPose(state.camera, bounds, direction, up, state.zoomScale);
   applyCameraPose(state.camera, pose);
   state.controls.target.copy(pose.target);
+  state.controls.cursor.copy(pose.target);
   state.controls.update();
-}
-
-function fitCurrentOrientation(state: ViewerState, result: GeometryResult): void {
-  const target = new THREE.Vector3(...result.dimensions.centerMm);
-  const direction = state.camera.position.clone().sub(target);
-  if (direction.lengthSq() < 1e-8) return;
-  const center = new THREE.Vector3(...result.dimensions.centerMm);
-  const bounds = modelBounds(
-    result.dimensions.widthMm,
-    result.dimensions.heightMm,
-    result.dimensions.thicknessMm,
-    center,
-  );
-  const pose = cameraPose(state.camera, bounds, direction.normalize(), state.camera.up, state.zoomScale);
-  applyCameraPose(state.camera, pose);
-  state.controls.target.copy(pose.target);
 }
 
 export function Viewer({ result, surfacePreset = 'matte', locale = 'en' }: ViewerProps) {
@@ -145,7 +133,7 @@ export function Viewer({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
     const state = stateRef.current;
     const current = resultRef.current;
     if (!state || !current) return;
-    state.zoomScale = THREE.MathUtils.clamp(state.zoomScale * factor, 0.48, 3.2);
+    state.zoomScale = THREE.MathUtils.clamp(state.zoomScale * factor, 1, 3.2);
     fitViewer(state, current, activeViewRef.current, false);
     setActiveView(activeViewRef.current);
   }, []);
@@ -173,6 +161,9 @@ export function Viewer({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
     controls.enablePan = false;
     controls.enableZoom = false;
     controls.enableRotate = true;
+    controls.cursor.set(0, 0, 0);
+    controls.minTargetRadius = 0;
+    controls.maxTargetRadius = 0;
     controls.touches.ONE = THREE.TOUCH.ROTATE;
     controls.touches.TWO = THREE.TOUCH.ROTATE;
     controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
@@ -182,20 +173,11 @@ export function Viewer({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
       activeViewRef.current = 'custom';
       setActiveView('custom');
       const current = resultRef.current;
-      if (current && stateRef.current) stateRef.current.controls.target.fromArray(current.dimensions.centerMm);
+      if (current && stateRef.current) {
+        stateRef.current.controls.target.fromArray(current.dimensions.centerMm);
+        stateRef.current.controls.cursor.fromArray(current.dimensions.centerMm);
+      }
     });
-    let refitFrame: number | undefined;
-    const refitGesture = () => {
-      if (refitFrame !== undefined) return;
-      refitFrame = requestAnimationFrame(() => {
-        refitFrame = undefined;
-        const current = resultRef.current;
-        const state = stateRef.current;
-        if (activeViewRef.current !== 'custom' || !current || !state) return;
-        fitCurrentOrientation(state, current);
-      });
-    };
-    controls.addEventListener('change', refitGesture);
 
     const group = new THREE.Group();
     scene.add(group);
@@ -215,13 +197,13 @@ export function Viewer({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
     rim.position.set(64, 32, 48);
     scene.add(rim);
     const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(1200, 1200),
-      new THREE.MeshStandardMaterial({ color: '#ddd5cb', roughness: 0.92, metalness: 0 }),
+      new THREE.PlaneGeometry(SURFACE_SIZE, SURFACE_SIZE),
+      new THREE.MeshStandardMaterial({ color: '#eee8df', roughness: 0.92, metalness: 0 }),
     );
     floor.position.z = -0.08;
     floor.receiveShadow = true;
     scene.add(floor);
-    const grid = new THREE.GridHelper(1200, 60, '#b8b0a6', '#d2cbc1');
+    const grid = new THREE.GridHelper(SURFACE_SIZE, 90, '#b8b0a6', '#d2cbc1');
     grid.rotation.x = Math.PI / 2;
     grid.position.z = -0.06;
     grid.visible = false;
@@ -235,7 +217,7 @@ export function Viewer({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
       camera.aspect = width / Math.max(height, 1);
       camera.updateProjectionMatrix();
       const current = resultRef.current;
-      if (current) fitViewer(viewerState, current, activeViewRef.current);
+      if (current) fitViewer(viewerState, current, activeViewRef.current, false);
     };
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(host);
@@ -251,9 +233,7 @@ export function Viewer({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
 
     return () => {
       cancelAnimationFrame(frame);
-      if (refitFrame !== undefined) cancelAnimationFrame(refitFrame);
       resizeObserver.disconnect();
-      controls.removeEventListener('change', refitGesture);
       controls.dispose();
       disposeChildren(group);
       floor.geometry.dispose();
@@ -272,12 +252,16 @@ export function Viewer({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
     disposeChildren(state.group);
     state.group.add(makeMesh(result.baseMesh, '#b84838', 0.42));
     state.group.add(makeMesh(result.reliefMesh, '#faf4e9', 0.3));
+    const center = new THREE.Vector3(...result.dimensions.centerMm);
+    state.floor.position.set(center.x, center.y, -0.08);
+    state.grid.position.set(center.x, center.y, -0.06);
     const selected = activeViewRef.current;
     const maxDimension = Math.max(result.dimensions.widthMm, result.dimensions.heightMm, result.dimensions.thicknessMm);
-    state.key.shadow.camera.left = -maxDimension * 0.9;
-    state.key.shadow.camera.right = maxDimension * 0.9;
-    state.key.shadow.camera.top = maxDimension * 0.9;
-    state.key.shadow.camera.bottom = -maxDimension * 0.9;
+    const shadowSpan = maxDimension * 0.72;
+    state.key.shadow.camera.left = -shadowSpan;
+    state.key.shadow.camera.right = shadowSpan;
+    state.key.shadow.camera.top = shadowSpan;
+    state.key.shadow.camera.bottom = -shadowSpan;
     state.key.shadow.camera.near = 0.1;
     state.key.shadow.camera.far = Math.max(300, maxDimension * 4);
     state.key.shadow.camera.updateProjectionMatrix();
@@ -288,14 +272,14 @@ export function Viewer({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
     const state = stateRef.current;
     if (!state) return;
     const floorMaterial = state.floor.material as THREE.MeshStandardMaterial;
-    const presets: Record<SurfacePresetId, { background: string; floor: string; roughness: number; grid: boolean }> = {
-      matte: { background: '#eee8df', floor: '#ddd5cb', roughness: 0.92, grid: false },
-      graph: { background: '#e7e4de', floor: '#d3d0ca', roughness: 0.86, grid: true },
-      dark: { background: '#202735', floor: '#30394a', roughness: 0.8, grid: false },
+    const presets: Record<SurfacePresetId, { background: string; roughness: number; grid: boolean }> = {
+      matte: { background: '#eee8df', roughness: 0.92, grid: false },
+      graph: { background: '#e7e4de', roughness: 0.86, grid: true },
+      dark: { background: '#202735', roughness: 0.8, grid: false },
     };
     const preset = presets[surfacePreset];
     state.scene.background = new THREE.Color(preset.background);
-    floorMaterial.color.set(preset.floor);
+    floorMaterial.color.set(preset.background);
     floorMaterial.roughness = preset.roughness;
     state.grid.visible = preset.grid;
   }, [surfacePreset]);

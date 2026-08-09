@@ -20,6 +20,9 @@ export type CameraPose = {
   far: number;
 };
 
+const ORBIT_MARGIN = 1.08;
+const SURFACE_DEPTH_CLEARANCE = 1300;
+
 export const VIEW_DEFINITIONS: readonly ViewDefinition[] = [
   {
     id: 'home',
@@ -120,12 +123,15 @@ export function cameraPose(
     (projectedHalfHeight * framingMargin) / Math.tan(verticalFov / 2),
   );
   const size = bounds.getSize(new THREE.Vector3());
+  const radius = size.length() / 2;
   const clearance = Math.max(1, Math.max(size.x, size.y, size.z) * 0.02);
-  const distance = (planarDistance + projectedHalfDepth + clearance) * Math.max(0.35, distanceScale);
+  const narrowFov = Math.min(verticalFov, horizontalFov);
+  const orbitDistance = (radius * ORBIT_MARGIN) / Math.sin(narrowFov / 2);
+  const distance =
+    Math.max(planarDistance + projectedHalfDepth + clearance, orbitDistance) * Math.max(1, distanceScale);
   const position = target.clone().addScaledVector(outward, distance);
-  const cornerDistances = relativeCorners.map((corner) => distance - corner.dot(outward));
-  const near = Math.max(0.05, Math.min(...cornerDistances) - clearance);
-  const far = Math.max(near + 1, Math.max(...cornerDistances) + clearance);
+  const near = Math.max(0.05, distance - radius - clearance);
+  const far = Math.max(near + 1, distance + radius + clearance + SURFACE_DEPTH_CLEARANCE);
   return { position, target, up, near, far };
 }
 

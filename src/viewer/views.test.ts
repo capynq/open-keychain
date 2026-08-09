@@ -59,4 +59,36 @@ describe('viewer camera views', () => {
       }
     }
   });
+
+  it('keeps the fitted home distance and clipping planes safe through a full custom orbit', () => {
+    const home = cameraPose(camera, bounds, viewDefinition('home').direction, viewDefinition('home').up, 1.16);
+    const distance = home.position.distanceTo(home.target);
+    const corners = [
+      new THREE.Vector3(bounds.min.x, bounds.min.y, bounds.min.z),
+      new THREE.Vector3(bounds.min.x, bounds.min.y, bounds.max.z),
+      new THREE.Vector3(bounds.min.x, bounds.max.y, bounds.min.z),
+      new THREE.Vector3(bounds.min.x, bounds.max.y, bounds.max.z),
+      new THREE.Vector3(bounds.max.x, bounds.min.y, bounds.min.z),
+      new THREE.Vector3(bounds.max.x, bounds.min.y, bounds.max.z),
+      new THREE.Vector3(bounds.max.x, bounds.max.y, bounds.min.z),
+      new THREE.Vector3(bounds.max.x, bounds.max.y, bounds.max.z),
+    ];
+    for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 12) {
+      const direction = new THREE.Vector3(Math.cos(angle), Math.sin(angle), 0.42).normalize();
+      camera.position.copy(center).addScaledVector(direction, distance);
+      camera.up.set(0, 0, 1);
+      camera.near = home.near;
+      camera.far = home.far;
+      camera.lookAt(center);
+      camera.updateProjectionMatrix();
+      camera.updateMatrixWorld();
+      for (const corner of corners) {
+        const projected = corner.clone().project(camera);
+        expect(Math.abs(projected.x)).toBeLessThan(1);
+        expect(Math.abs(projected.y)).toBeLessThan(1);
+        expect(projected.z).toBeGreaterThan(-1);
+        expect(projected.z).toBeLessThan(1);
+      }
+    }
+  });
 });
