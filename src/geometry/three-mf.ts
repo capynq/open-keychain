@@ -1,5 +1,5 @@
 import { zipSync, strToU8 } from 'fflate';
-import type { MeshBuffer, ThreeMfMode } from './types';
+import { DEFAULT_PRINT_APPEARANCE, type MeshBuffer, type PrintAppearance, type ThreeMfMode } from './types';
 
 type ThreeMfPart = {
   name: string;
@@ -57,13 +57,14 @@ export function serializeThreeMf(
   reliefMesh: MeshBuffer,
   mergedMesh: MeshBuffer | undefined,
   mode: ThreeMfMode = 'separate-colors',
+  appearance: PrintAppearance = DEFAULT_PRINT_APPEARANCE,
 ): ArrayBuffer {
   const parts: ThreeMfPart[] =
     mode === 'merged'
-      ? [{ name: 'Keychain', mesh: mergedMesh ?? baseMesh, color: '#B84838' }]
+      ? [{ name: 'Keychain', mesh: mergedMesh ?? baseMesh, color: appearance.base.color }]
       : [
-          { name: 'Backing', mesh: baseMesh, color: '#B84838' },
-          { name: 'Raised text', mesh: reliefMesh, color: '#FAF4E9' },
+          { name: appearance.base.name, mesh: baseMesh, color: appearance.base.color },
+          { name: appearance.relief.name, mesh: reliefMesh, color: appearance.relief.color },
         ];
   const files = {
     '[Content_Types].xml': strToU8(`<?xml version="1.0" encoding="UTF-8"?>

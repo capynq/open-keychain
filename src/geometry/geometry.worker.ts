@@ -36,7 +36,13 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       const format: ExportFormat = request.format ?? 'stl';
       const data =
         format === '3mf'
-          ? serializeThreeMf(result.baseMesh, result.reliefMesh, exportMesh, request.mode ?? 'separate-colors')
+          ? serializeThreeMf(
+              result.baseMesh,
+              result.reliefMesh,
+              exportMesh,
+              request.mode ?? 'separate-colors',
+              result.appearance,
+            )
           : serializeBinaryStl(exportMesh);
       const filename = sanitizeFilename(request.params.text, request.params.styleId, format);
       const response: WorkerResponse = {

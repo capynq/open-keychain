@@ -1,7 +1,7 @@
 import { unzipSync, strFromU8 } from 'fflate';
 import { describe, expect, it } from 'vitest';
 import { serializeThreeMf } from './three-mf';
-import type { MeshBuffer } from './types';
+import { ARTICULATED_PRINT_APPEARANCE, type MeshBuffer } from './types';
 
 const triangle: MeshBuffer = {
   positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
@@ -24,5 +24,15 @@ describe('3MF export', () => {
     const model = strFromU8(files['3D/3dmodel.model']);
     expect(model.match(/<object id=/g)).toHaveLength(1);
     expect(model).toContain('Keychain');
+  });
+
+  it('preserves articulated layer names and reference-inspired colours', () => {
+    const files = unzipSync(
+      new Uint8Array(serializeThreeMf(triangle, triangle, triangle, 'separate-colors', ARTICULATED_PRINT_APPEARANCE)),
+    );
+    const model = strFromU8(files['3D/3dmodel.model']);
+    expect(model).toContain('Structural letters and connectors');
+    expect(model).toContain('Decorative letter caps');
+    expect(model).toContain('displaycolor="#D94A52"');
   });
 });
