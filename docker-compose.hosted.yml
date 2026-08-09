@@ -1,0 +1,46 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.hosted-web
+    ports:
+      - '8080:80'
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3000
+      APP_URL: ${APP_URL:-http://localhost:8080}
+      DATABASE_URL: postgres://open_keychain:${POSTGRES_PASSWORD:-change-me}@db:5432/open_keychain
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET}
+      ANONYMOUS_WEEKLY_EXPORTS: ${ANONYMOUS_WEEKLY_EXPORTS:-3}
+      PAID_DAILY_EXPORTS: ${PAID_DAILY_EXPORTS:-200}
+      PAID_MINUTE_EXPORTS: ${PAID_MINUTE_EXPORTS:-6}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: open_keychain
+      POSTGRES_USER: open_keychain
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    volumes:
+      - open-keychain-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U open_keychain -d open_keychain']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  open-keychain-postgres:

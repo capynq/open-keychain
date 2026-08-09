@@ -14,6 +14,8 @@
     "test:watch": "vitest",
     "bench:geometry": "node --import tsx scripts/bench-geometry.ts",
     "bench:matrix": "node --import tsx scripts/bench-matrix.ts",
+    "server": "tsx server/index.ts",
+    "server:typecheck": "tsc -p tsconfig.node.json --pretty false",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "lint": "eslint .",
@@ -21,34 +23,39 @@
     "validate": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },
   "dependencies": {
+    "better-auth": "^1.6.26",
+    "fastify": "^5.11.3",
     "fflate": "0.8.3",
     "i18next": "^26.3.6",
     "i18next-browser-languagedetector": "^8.2.1",
     "manifold-3d": "3.5.1",
     "opentype.js": "2.0.0",
+    "pg": "^8.23.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-i18next": "^17.0.11",
     "three": "0.185.1"
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
     "@playwright/test": "1.62.1",
     "@types/node": "24.0.15",
+    "@types/pg": "^8.21.0",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.4",
     "@types/three": "0.185.2",
     "@vitejs/plugin-react": "6.0.5",
-    "@eslint/js": "10.0.1",
     "eslint": "10.8.1",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-react-hooks": "7.1.1",
     "eslint-plugin-react-refresh": "0.5.3",
     "jsdom": "30.0.1",
     "prettier": "3.9.6",
+    "sharp": "^0.35.3",
     "tsx": "4.20.6",
     "typescript": "5.9.3",
+    "typescript-eslint": "8.66.0",
     "vite": "8.2.0",
-    "vitest": "4.1.10",
-    "typescript-eslint": "8.66.0"
+    "vitest": "4.1.10"
   }
 }

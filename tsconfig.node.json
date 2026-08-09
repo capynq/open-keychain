@@ -12,5 +12,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["vite.config.ts", "vitest.config.ts", "scripts", "opentype.d.ts"]
+  "include": ["vite.config.ts", "vitest.config.ts", "scripts", "server", "opentype.d.ts"]
 }
