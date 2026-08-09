@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { GeometryResult } from '../geometry/types';
 import { t, type Locale } from '../i18n/utils';
@@ -15,7 +16,7 @@ import {
 } from './views';
 import './viewer.css';
 
-export type SurfacePresetId = 'matte' | 'graph' | 'dark';
+export type SurfacePresetId = 'matte' | 'graph' | 'dark' | 'wood' | 'metal';
 type ViewerProps = { result: GeometryResult | undefined; surfacePreset?: SurfacePresetId; locale?: Locale };
 type ViewerState = {
   camera: THREE.PerspectiveCamera;
@@ -24,8 +25,10 @@ type ViewerState = {
   scene: THREE.Scene;
   floor: THREE.Mesh;
   grid: THREE.GridHelper;
+  platform: THREE.Mesh;
   key: THREE.DirectionalLight;
   zoomScale: number;
+  displayOffsetZ: number;
 };
 
 const DEFAULT_ZOOM_SCALE = 0.65;
@@ -46,13 +49,13 @@ function disposeChildren(group: THREE.Group): void {
   }
 }
 
-function makeMesh(mesh: GeometryResult['baseMesh'], color: string, roughness: number): THREE.Mesh {
+function makeMesh(mesh: GeometryResult['baseMesh'], color: string, roughness: number, flatShading = false): THREE.Mesh {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(mesh.positions, 3));
   geometry.setIndex(new THREE.BufferAttribute(mesh.indices, 1));
-  const shadedGeometry = toCreasedNormals(geometry, THREE.MathUtils.degToRad(25));
+  const shadedGeometry = flatShading ? geometry : toCreasedNormals(geometry, THREE.MathUtils.degToRad(25));
   if (shadedGeometry !== geometry) geometry.dispose();
-  const material = new THREE.MeshStandardMaterial({ color, roughness, metalness: 0.02 });
+  const material = new THREE.MeshStandardMaterial({ color, roughness, metalness: 0.02, flatShading });
   const object = new THREE.Mesh(shadedGeometry, material);
   object.castShadow = true;
   object.receiveShadow = true;
@@ -94,6 +97,7 @@ function CameraViewIcon({ icon }: { icon: CameraViewIconId }) {
 function fitViewer(state: ViewerState, result: GeometryResult, selected: ViewId | 'custom', resetZoom = true): void {
   if (resetZoom) state.zoomScale = DEFAULT_ZOOM_SCALE;
   const center = new THREE.Vector3(...result.dimensions.centerMm);
+  center.z += state.displayOffsetZ;
   const bounds = modelBounds(
     result.dimensions.widthMm,
     result.dimensions.heightMm,
@@ -108,6 +112,18 @@ function fitViewer(state: ViewerState, result: GeometryResult, selected: ViewId 
   state.controls.target.copy(pose.target);
   state.controls.cursor.copy(pose.target);
   state.controls.update();
+}
+
+function syncPlatform(state: ViewerState, result: GeometryResult | undefined): void {
+  if (!result || !state.platform.visible) return;
+  const width = Math.max(32, result.dimensions.widthMm + 24);
+  const depth = Math.max(28, result.dimensions.heightMm + 24);
+  const thickness = 3.6;
+  const radius = Math.min(5, Math.min(width, depth) * 0.16);
+  state.platform.geometry.dispose();
+  state.platform.geometry = new RoundedBoxGeometry(width, depth, thickness, 5, radius);
+  state.platform.position.set(result.dimensions.centerMm[0], result.dimensions.centerMm[1], -thickness / 2);
+  state.platform.receiveShadow = true;
 }
 
 export function Viewer({ result, surfacePreset = 'matte', locale = 'en' }: ViewerProps) {
@@ -154,7 +170,7 @@ export function Viewer({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.08;
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFShadowMap;
+    renderer.shadowMap.type = THREE.BasicShadowMap;
     host.prepend(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -177,8 +193,10 @@ export function Viewer({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
       setActiveView('custom');
       const current = resultRef.current;
       if (current && stateRef.current) {
-        stateRef.current.controls.target.fromArray(current.dimensions.centerMm);
-        stateRef.current.controls.cursor.fromArray(current.dimensions.centerMm);
+        const target = new THREE.Vector3(...current.dimensions.centerMm);
+        target.z += stateRef.current.displayOffsetZ;
+        stateRef.current.controls.target.copy(target);
+        stateRef.current.controls.cursor.copy(target);
       }
     });
 
@@ -211,8 +229,25 @@ export function Viewer({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
     grid.position.z = -0.06;
     grid.visible = false;
     scene.add(grid);
+    const platform = new THREE.Mesh(
+      new RoundedBoxGeometry(1, 1, 1, 3, 0.2),
+      new THREE.MeshStandardMaterial({ color: '#a87850', roughness: 0.68, metalness: 0 }),
+    );
+    platform.visible = false;
+    scene.add(platform);
 
-    const viewerState: ViewerState = { camera, controls, group, scene, floor, grid, key, zoomScale: 1 };
+    const viewerState: ViewerState = {
+      camera,
+      controls,
+      group,
+      scene,
+      floor,
+      grid,
+      platform,
+      key,
+      zoomScale: 1,
+      displayOffsetZ: 0,
+    };
     const resize = () => {
       const width = host.clientWidth;
       const height = host.clientHeight;
@@ -243,6 +278,8 @@ export function Viewer({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
       (floor.material as THREE.Material).dispose();
       grid.geometry.dispose();
       (grid.material as THREE.Material).dispose();
+      platform.geometry.dispose();
+      (platform.material as THREE.Material).dispose();
       renderer.dispose();
       renderer.domElement.remove();
       stateRef.current = undefined;
@@ -253,11 +290,14 @@ export function Viewer({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
     const state = stateRef.current;
     if (!state || !result) return;
     disposeChildren(state.group);
-    state.group.add(makeMesh(result.baseMesh, '#b84838', 0.42));
-    state.group.add(makeMesh(result.reliefMesh, '#faf4e9', 0.3));
+    state.group.add(makeMesh(result.baseMesh, result.appearance.base.color, 0.42, result.baseShading === 'flat'));
+    state.group.add(makeMesh(result.reliefMesh, result.appearance.relief.color, 0.3));
     const center = new THREE.Vector3(...result.dimensions.centerMm);
-    state.floor.position.set(center.x, center.y, -0.08);
-    state.grid.position.set(center.x, center.y, -0.06);
+    state.floor.position.set(center.x, center.y, state.platform.visible ? -3.72 : -0.08);
+    state.grid.position.set(center.x, center.y, state.platform.visible ? -3.7 : -0.06);
+    state.displayOffsetZ = state.platform.visible ? 3.72 : 0;
+    state.group.position.z = state.displayOffsetZ;
+    syncPlatform(state, result);
     const selected = activeViewRef.current;
     const maxDimension = Math.max(result.dimensions.widthMm, result.dimensions.heightMm, result.dimensions.thicknessMm);
     const shadowSpan = maxDimension * 0.72;
@@ -275,20 +315,83 @@ export function Viewer({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
     const state = stateRef.current;
     if (!state) return;
     const floorMaterial = state.floor.material as THREE.MeshStandardMaterial;
-    const presets: Record<SurfacePresetId, { background: string; roughness: number; grid: boolean }> = {
-      matte: { background: '#eee8df', roughness: 0.92, grid: false },
-      graph: { background: '#e7e4de', roughness: 0.86, grid: true },
-      dark: { background: '#202735', roughness: 0.8, grid: false },
+    const presets: Record<
+      SurfacePresetId,
+      {
+        background: string;
+        roughness: number;
+        metalness: number;
+        grid: boolean;
+        platform: boolean;
+        platformColor: string;
+      }
+    > = {
+      matte: {
+        background: '#eee8df',
+        roughness: 0.92,
+        metalness: 0,
+        grid: false,
+        platform: false,
+        platformColor: '#a87850',
+      },
+      graph: {
+        background: '#e7e4de',
+        roughness: 0.86,
+        metalness: 0,
+        grid: true,
+        platform: false,
+        platformColor: '#a87850',
+      },
+      dark: {
+        background: '#202735',
+        roughness: 0.8,
+        metalness: 0.05,
+        grid: false,
+        platform: false,
+        platformColor: '#555b65',
+      },
+      wood: {
+        background: '#d8d0c4',
+        roughness: 0.82,
+        metalness: 0,
+        grid: true,
+        platform: true,
+        platformColor: '#9a6746',
+      },
+      metal: {
+        background: '#d4d8dc',
+        roughness: 0.48,
+        metalness: 0.32,
+        grid: true,
+        platform: true,
+        platformColor: '#6e7781',
+      },
     };
     const preset = presets[surfacePreset];
     state.scene.background = new THREE.Color(preset.background);
     floorMaterial.color.set(preset.background);
     floorMaterial.roughness = preset.roughness;
+    floorMaterial.metalness = preset.metalness;
     state.grid.visible = preset.grid;
+    state.platform.visible = preset.platform;
+    const platformMaterial = state.platform.material as THREE.MeshStandardMaterial;
+    platformMaterial.color.set(preset.platformColor);
+    platformMaterial.roughness = preset.roughness;
+    platformMaterial.metalness = preset.metalness;
+    const current = resultRef.current;
+    state.displayOffsetZ = preset.platform ? 3.72 : 0;
+    state.group.position.z = state.displayOffsetZ;
+    if (current) {
+      const center = new THREE.Vector3(...current.dimensions.centerMm);
+      state.floor.position.set(center.x, center.y, preset.platform ? -3.72 : -0.08);
+      state.grid.position.set(center.x, center.y, preset.platform ? -3.7 : -0.06);
+      syncPlatform(state, current);
+      fitViewer(state, current, activeViewRef.current, false);
+    }
   }, [surfacePreset]);
 
   return (
-    <div className="viewer" aria-label="Interactive 3D preview" data-view={activeView}>
+    <div className="viewer" aria-label="Interactive 3D preview" data-view={activeView} data-surface={surfacePreset}>
       <div className="viewer-surface" ref={hostRef}>
         <p className="viewer-caption">{t(locale, 'dragRotate')}</p>
       </div>
