@@ -3,8 +3,7 @@ import { fromNodeHeaders } from 'better-auth/node';
 import type { FastifyRequest } from 'fastify';
 import type pg from 'pg';
 import type { ServerConfig } from './config';
-
-export function createAuth(pool: pg.Pool, config: ServerConfig) {
+export const createAuth = (pool: pg.Pool, config: ServerConfig) => {
   return betterAuth({
     database: pool,
     baseURL: config.appUrl,
@@ -50,8 +49,7 @@ export function createAuth(pool: pg.Pool, config: ServerConfig) {
       useSecureCookies: config.appUrl.startsWith('https://'),
     },
   });
-}
-
-export async function sessionForRequest(auth: ReturnType<typeof createAuth>, request: FastifyRequest) {
+};
+export const sessionForRequest = async (auth: ReturnType<typeof createAuth>, request: FastifyRequest) => {
   return auth.api.getSession({ headers: fromNodeHeaders(request.headers) });
-}
+};

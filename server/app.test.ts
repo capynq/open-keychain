@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { createApp } from './app';
 import type { ServerConfig } from './config';
-
 const config: ServerConfig = {
   port: 3000,
   host: '127.0.0.1',
@@ -12,7 +11,6 @@ const config: ServerConfig = {
   paidDailyExports: 200,
   paidMinuteExports: 6,
 };
-
 const pool = {
   query: async () => ({ rows: [], rowCount: 0 }),
   connect: async () => ({
@@ -20,14 +18,11 @@ const pool = {
     release: () => undefined,
   }),
 } as never;
-
 describe('hosted API', () => {
   const apps: Array<ReturnType<typeof createApp>> = [];
-
   afterEach(async () => {
     await Promise.all(apps.splice(0).map((app) => app.close()));
   });
-
   it('exposes a health endpoint without requiring a session', async () => {
     const app = createApp(pool, config);
     apps.push(app);

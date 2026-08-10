@@ -1,14 +1,12 @@
 import { expect, test } from '@playwright/test';
-
 const cameraViews = ['Home view', 'Front view', 'Back view', 'Left view', 'Right view', 'Top view', 'Bottom view'];
-
 test('customizes a name, uses every icon camera preset, and downloads STL', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText('Open Keychain')).toBeVisible();
   const name = page.getByLabel('Name or text');
   await name.fill('OLIVER');
   await page.getByRole('button', { name: 'Capsule' }).click();
-  await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10_000 });
+  await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10000 });
   const viewer = page.locator('.viewer');
   for (const label of cameraViews) {
     const button = page.getByRole('button', { name: label });
@@ -39,26 +37,23 @@ test('customizes a name, uses every icon camera preset, and downloads STL', asyn
     .click();
   expect((await download).suggestedFilename()).toMatch(/^keychain-oliver-capsule\.stl$/);
 });
-
 test('treats adjusted NIKITA Bubble geometry as ready and a width failure as an error', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Name or text').fill('NIKITA');
   await page.getByRole('button', { name: 'Bubble' }).click();
   await page.getByRole('button', { name: /Bungee/ }).click();
-  await expect(page.getByText('Ready · adjusted')).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText('Ready · adjusted')).toBeVisible({ timeout: 10000 });
   await expect(page.getByText(/adjusted to .* mm high/)).toBeVisible();
   await page.getByRole('button', { name: 'Export' }).click();
   await expect(page.getByRole('dialog', { name: 'Choose an export' })).toBeVisible();
   await expect(page.getByRole('dialog').getByRole('button', { name: /STL file/ })).toBeEnabled();
-
   await page.getByLabel('Name height').fill('12');
   await page.getByLabel('Name or text').fill('WWWWWWWWWWWWWWWWWWWWWWWW');
-  await expect(page.getByText('Needs attention')).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText('Needs attention')).toBeVisible({ timeout: 10000 });
   await expect(page.getByText(/cannot fit within 120 mm/)).toBeVisible();
   await expect(page.getByRole('dialog').getByRole('button', { name: /STL file/ })).toBeDisabled();
   await page.getByRole('button', { name: 'Close' }).click();
 });
-
 test('switches to a bilingual font when Cyrillic text is entered', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: /Bungee/ }).click();
@@ -66,9 +61,8 @@ test('switches to a bilingual font when Cyrillic text is entered', async ({ page
   await expect(page.getByRole('button', { name: /Bungee/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /Rubik Black/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /Caveat/ })).toBeVisible();
-  await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10_000 });
+  await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10000 });
 });
-
 test('selects a printable heavy font for articulated names and hides unsuitable choices', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: /Caveat/ }).click();
@@ -81,12 +75,11 @@ test('selects a printable heavy font for articulated names and hides unsuitable 
   await expect(page.getByRole('button', { name: /Fredoka/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /Bungee/ })).toBeEnabled();
   await expect(page.getByRole('button', { name: /Montserrat Black/ })).toBeEnabled();
-  await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10_000 });
+  await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10000 });
 });
-
 test('supports bounded zoom, preview surfaces, locales, and configurable 3MF export', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByText('Ready to print')).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText('Ready to print')).toBeVisible({ timeout: 10000 });
   for (let click = 0; click < 8; click += 1) await page.getByRole('button', { name: 'Zoom in' }).click();
   await page.getByRole('button', { name: 'Zoom out' }).click();
   await page.getByRole('button', { name: 'Dark' }).click();
@@ -101,12 +94,11 @@ test('supports bounded zoom, preview surfaces, locales, and configurable 3MF exp
     .click();
   expect((await download).suggestedFilename()).toMatch(/\.3mf$/);
 });
-
 test('supports beta templates and premium local scene presets', async ({ page }) => {
   await page.goto('/');
   for (const template of ['Articulated name', 'Nameplate', 'Plant label', 'Name keychain']) {
     await page.getByRole('button', { name: template }).click();
-    await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10_000 });
+    await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10000 });
     if (template === 'Nameplate') await expect(page.getByRole('heading', { name: 'Style' })).toHaveCount(0);
   }
   await page.getByRole('button', { name: 'Wood board' }).click();
@@ -115,7 +107,6 @@ test('supports beta templates and premium local scene presets', async ({ page })
   await expect(page.locator('.viewer')).toHaveAttribute('data-surface', 'metal');
   await expect(page.locator('.viewer-surface canvas')).toBeVisible();
 });
-
 test('scopes styles to supported templates and keeps the Montserrat preview visible', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Articulated name' }).click();
@@ -131,17 +122,15 @@ test('scopes styles to supported templates and keeps the Montserrat preview visi
   await expect(page.getByLabel('Text lift')).toBeVisible();
   await expect(page.getByLabel('Embed depth')).toBeVisible();
 });
-
 test('renders the plant label as a pointed T-shaped printable template', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Plant label' }).click();
   await expect(page.getByLabel('Stake length')).toBeVisible();
-  await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10_000 });
+  await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10000 });
   await page.getByRole('button', { name: 'Export' }).click();
   await expect(page.getByRole('dialog', { name: 'Choose an export' })).toBeVisible();
   await expect(page.getByRole('dialog').getByRole('button', { name: /STL file/ })).toBeEnabled();
 });
-
 test('shows only template-relevant shape controls', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Plant label' }).click();
@@ -155,7 +144,6 @@ test('shows only template-relevant shape controls', async ({ page }) => {
   await page.getByRole('button', { name: 'Nameplate' }).click();
   await expect(page.getByLabel('Corner radius')).toBeVisible();
 });
-
 for (const viewport of [
   { width: 1440, height: 900 },
   { width: 1280, height: 800 },
@@ -164,7 +152,7 @@ for (const viewport of [
   test(`keeps all desktop controls visible at ${viewport.width}×${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.goto('/');
-    await expect(page.getByText('Ready to print')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText('Ready to print')).toBeVisible({ timeout: 10000 });
     const layout = await page.evaluate(() => {
       const controls = document.querySelector('.controls-panel')!.getBoundingClientRect();
       const header = document.querySelector('.topbar')!.getBoundingClientRect();
@@ -190,7 +178,6 @@ for (const viewport of [
     await expect(page.getByLabel('Keyring hole')).toBeVisible();
   });
 }
-
 test('keeps the complete articulated shape control set reachable in the scrollable pane', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 600 });
   await page.goto('/');
@@ -206,7 +193,6 @@ test('keeps the complete articulated shape control set reachable in the scrollab
   });
   await expect(page.getByLabel('Max joint angle')).toBeVisible();
 });
-
 test('keeps the preview prominent and touch targets comfortable at 390 px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');

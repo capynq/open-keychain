@@ -1,19 +1,18 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
-import { buildKeychain, createWasm } from '../src/geometry/builder';
-import { DEFAULT_PARAMS } from '../src/geometry/types';
-
+import { buildKeychain, createWasm } from '../src/domain/keychain/build/keychain-builder';
+import { DEFAULT_PARAMS } from '../src/domain/keychain/model/types';
 const originalFetch = globalThis.fetch;
 globalThis.fetch = (async (input: string | URL) => {
   const url = String(input);
   if (url.startsWith('/fonts/')) {
     const file = await fs.readFile(path.join(process.cwd(), 'public', url));
-    return new Response(file);
+    const body = file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength) as ArrayBuffer;
+    return new Response(body);
   }
   return originalFetch(input);
 }) as typeof fetch;
-
 const wasm = await createWasm();
 for (const text of ['A', 'LI', 'ALEX', 'OLIVER', 'CHARLOTTE', 'MAXIMILIAN', 'iJj', 'ÉMILIE']) {
   const start = performance.now();

@@ -14,15 +14,24 @@ export default defineConfig([
   reactHooks.configs.flat.recommended,
   {
     files: ['src/**/*.{ts,tsx}', 'scripts/**/*.{ts,tsx}', 'e2e/**/*.{ts,tsx}'],
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
     plugins: { 'react-refresh': reactRefresh },
     rules: {
       'no-console': 'warn',
+      'func-style': ['error', 'expression', { allowArrowFunctions: true }],
+      'prefer-arrow-callback': 'error',
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
-      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
+      '@typescript-eslint/no-explicit-any': 'error',
     },
   },
   {
-    files: ['scripts/**/*.{ts,tsx}'],
+    files: ['server/**/*.{ts,tsx}', 'scripts/**/*.{ts,tsx}'],
     rules: { 'no-console': 'off' },
   },
   prettier,

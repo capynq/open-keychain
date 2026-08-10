@@ -8,13 +8,11 @@ export type ServerConfig = {
   paidDailyExports: number;
   paidMinuteExports: number;
 };
-
-function numberEnv(value: string | undefined, fallback: number): number {
+const numberEnv = (value: string | undefined, fallback: number): number => {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-}
-
-export function serverConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
+};
+export const serverConfig = (env: NodeJS.ProcessEnv = process.env): ServerConfig => {
   const databaseUrl = env.DATABASE_URL;
   const authSecret = env.BETTER_AUTH_SECRET;
   if (!databaseUrl) throw new Error('DATABASE_URL is required to start the hosted API.');
@@ -29,4 +27,4 @@ export function serverConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig
     paidDailyExports: numberEnv(env.PAID_DAILY_EXPORTS, 200),
     paidMinuteExports: numberEnv(env.PAID_MINUTE_EXPORTS, 6),
   };
-}
+};

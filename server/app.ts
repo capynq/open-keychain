@@ -5,33 +5,42 @@ import { createAuth, sessionForRequest } from './auth';
 import type { PlanId } from './billing';
 import type { ServerConfig } from './config';
 import { quotaAvailable, quotaPolicyFor } from './quotas';
-
-type ProjectBody = { name?: string; params?: unknown; thumbnail?: string };
-
-function cookieValue(request: FastifyRequest, name: string): string | undefined {
+type ProjectBody = {
+  name?: string;
+  params?: unknown;
+  thumbnail?: string;
+};
+const cookieValue = (request: FastifyRequest, name: string): string | undefined => {
   const match = request.headers.cookie?.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
   return match ? decodeURIComponent(match[1]) : undefined;
-}
-
-function anonymousActor(request: FastifyRequest, reply: FastifyReply): string {
+};
+const anonymousActor = (request: FastifyRequest, reply: FastifyReply): string => {
   const existing = cookieValue(request, 'ok_anon');
   if (existing) return existing;
   const value = randomUUID();
   reply.header('Set-Cookie', `ok_anon=${encodeURIComponent(value)}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Lax`);
   return value;
-}
-
-function jsonBody(request: FastifyRequest): ProjectBody {
+};
+const jsonBody = (request: FastifyRequest): ProjectBody => {
   return (request.body && typeof request.body === 'object' ? request.body : {}) as ProjectBody;
-}
-
-async function currentUser(auth: ReturnType<typeof createAuth>, request: FastifyRequest) {
+};
+const currentUser = async (auth: ReturnType<typeof createAuth>, request: FastifyRequest) => {
   const session = await sessionForRequest(auth, request);
   return session?.user;
-}
-
-async function usage(pool: pg.Pool, actorKey: string): Promise<{ weekly: number; daily: number; minute: number }> {
-  const result = await pool.query<{ weekly: string; daily: string; minute: string }>(
+};
+const usage = async (
+  pool: pg.Pool,
+  actorKey: string,
+): Promise<{
+  weekly: number;
+  daily: number;
+  minute: number;
+}> => {
+  const result = await pool.query<{
+    weekly: string;
+    daily: string;
+    minute: string;
+  }>(
     `SELECT
       COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days') AS weekly,
       COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '1 day') AS daily,
@@ -41,24 +50,22 @@ async function usage(pool: pg.Pool, actorKey: string): Promise<{ weekly: number;
   );
   const row = result.rows[0] ?? { weekly: '0', daily: '0', minute: '0' };
   return { weekly: Number(row.weekly), daily: Number(row.daily), minute: Number(row.minute) };
-}
-
-async function userPlan(pool: pg.Pool, userId: string): Promise<PlanId> {
-  const result = await pool.query<{ plan_id: PlanId }>(
+};
+const userPlan = async (pool: pg.Pool, userId: string): Promise<PlanId> => {
+  const result = await pool.query<{
+    plan_id: PlanId;
+  }>(
     `SELECT plan_id FROM subscriptions
      WHERE user_id = $1 AND status IN ('trialing', 'active')
        AND (current_period_end IS NULL OR current_period_end > NOW())`,
     [userId],
   );
   return result.rows[0]?.plan_id === 'maker' ? 'maker' : 'free';
-}
-
-export function createApp(pool: pg.Pool, config: ServerConfig): FastifyInstance {
+};
+export const createApp = (pool: pg.Pool, config: ServerConfig): FastifyInstance => {
   const app = Fastify({ logger: true });
   const auth = createAuth(pool, config);
-
   app.get('/api/health', async () => ({ status: 'ok' }));
-
   app.route({
     method: ['GET', 'POST'],
     url: '/api/auth/*',
@@ -77,19 +84,16 @@ export function createApp(pool: pg.Pool, config: ServerConfig): FastifyInstance 
       return response.body ? Buffer.from(await response.arrayBuffer()) : null;
     },
   });
-
   app.get('/api/me', async (request, reply) => {
     const user = await currentUser(auth, request);
     if (!user) return reply.status(401).send({ error: 'UNAUTHORIZED' });
     return { user };
   });
-
   app.get('/api/billing/status', async (request, reply) => {
     const user = await currentUser(auth, request);
     if (!user) return reply.status(401).send({ error: 'UNAUTHORIZED' });
     return { plan: await userPlan(pool, user.id), billingConfigured: false };
   });
-
   app.post('/api/usage/export-intent', async (request, reply) => {
     const user = await currentUser(auth, request);
     const actorKey = user?.id ?? anonymousActor(request, reply);
@@ -113,17 +117,23 @@ export function createApp(pool: pg.Pool, config: ServerConfig): FastifyInstance 
       "INSERT INTO export_intents(token, actor_key, user_id, expires_at) VALUES ($1, $2, $3, NOW() + INTERVAL '10 minutes')",
       [token, actorKey, user?.id ?? null],
     );
-    return { token, expiresAt: new Date(Date.now() + 10 * 60_000).toISOString() };
+    return { token, expiresAt: new Date(Date.now() + 10 * 60000).toISOString() };
   });
-
-  app.post<{ Params: { token: string } }>('/api/usage/export-complete/:token', async (request, reply) => {
+  app.post<{
+    Params: {
+      token: string;
+    };
+  }>('/api/usage/export-complete/:token', async (request, reply) => {
     const user = await currentUser(auth, request);
     const actorKey = user?.id ?? cookieValue(request, 'ok_anon');
     if (!actorKey) return reply.status(401).send({ error: 'UNAUTHORIZED' });
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      const intent = await client.query<{ actor_key: string; user_id: string | null }>(
+      const intent = await client.query<{
+        actor_key: string;
+        user_id: string | null;
+      }>(
         'SELECT actor_key, user_id FROM export_intents WHERE token = $1 AND expires_at > NOW() AND completed_at IS NULL FOR UPDATE',
         [request.params.token],
       );
@@ -143,7 +153,6 @@ export function createApp(pool: pg.Pool, config: ServerConfig): FastifyInstance 
       client.release();
     }
   });
-
   app.get('/api/projects', async (request, reply) => {
     const user = await currentUser(auth, request);
     if (!user) return reply.status(401).send({ error: 'UNAUTHORIZED' });
@@ -153,7 +162,6 @@ export function createApp(pool: pg.Pool, config: ServerConfig): FastifyInstance 
     );
     return { projects: result.rows };
   });
-
   app.post('/api/projects', async (request, reply) => {
     const user = await currentUser(auth, request);
     if (!user) return reply.status(401).send({ error: 'UNAUTHORIZED' });
@@ -167,8 +175,11 @@ export function createApp(pool: pg.Pool, config: ServerConfig): FastifyInstance 
     );
     return reply.status(201).send({ project: result.rows[0] });
   });
-
-  app.patch<{ Params: { id: string } }>('/api/projects/:id', async (request, reply) => {
+  app.patch<{
+    Params: {
+      id: string;
+    };
+  }>('/api/projects/:id', async (request, reply) => {
     const user = await currentUser(auth, request);
     if (!user) return reply.status(401).send({ error: 'UNAUTHORIZED' });
     const body = jsonBody(request);
@@ -191,8 +202,11 @@ export function createApp(pool: pg.Pool, config: ServerConfig): FastifyInstance 
     if (!result.rowCount) return reply.status(404).send({ error: 'PROJECT_NOT_FOUND' });
     return { project: result.rows[0] };
   });
-
-  app.delete<{ Params: { id: string } }>('/api/projects/:id', async (request, reply) => {
+  app.delete<{
+    Params: {
+      id: string;
+    };
+  }>('/api/projects/:id', async (request, reply) => {
     const user = await currentUser(auth, request);
     if (!user) return reply.status(401).send({ error: 'UNAUTHORIZED' });
     const result = await pool.query('DELETE FROM projects WHERE id = $1 AND user_id = $2', [
@@ -202,6 +216,5 @@ export function createApp(pool: pg.Pool, config: ServerConfig): FastifyInstance 
     if (!result.rowCount) return reply.status(404).send({ error: 'PROJECT_NOT_FOUND' });
     return reply.status(204).send();
   });
-
   return app;
-}
+};

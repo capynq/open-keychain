@@ -67,7 +67,33 @@ React controls ── latest params ──> GeometryClient ──> Web Worker
 
 The geometry convention is millimetres, with the base on Z=0 and the model centered in X/Y. Glyph outlines are flattened with final-space curve tolerance, converted with EvenOdd winding so counters remain holes, connected into the selected backing recipe, extruded, and combined with contained raised text. An articulated name is mechanically different: every character is a separate, glyph-shaped structural solid with a matching raised cap, local rounded joint bosses, a reinforced first-letter ring lug, and short dogbone captive connectors. Its shell count is one letter body per character plus one connector per gap; no rectangular character plates are generated. Print clearances, minimum walls, captive-head dimensions, neutral-pose separation, and the joint motion envelope are validated before export. Preview materials and surfaces are scene-only and never enter STL or 3MF.
 
-New styles should compose the shared primitives in `src/geometry/styles.ts` and keep the existing `KeychainParams` builder boundary. Geometry remains client-side by design: hosted mode never uploads fonts or meshes. Its small TypeScript API only manages sessions, quotas, and versioned projects.
+The source tree follows feature-first composition with explicit domain and infrastructure boundaries:
+
+```text
+src/
+├── app/                         composition root, shell components, and app-level styles
+├── domain/keychain/             printable model domain
+│   ├── model/                   params, dimensions, mesh/result types
+│   ├── text/                    font outline and glyph processing
+│   ├── fonts/                   font catalog and support detection
+│   ├── styles/                  style geometry definitions
+│   ├── templates/               template geometry definitions
+│   └── build/                   model assembly and validation
+├── features/
+│   ├── customizer/              controls, parameter state, and generation lifecycle
+│   ├── preview/                 viewer, camera poses, and preview styling
+│   ├── export/                  export dialog and download orchestration
+│   └── hosted/                  account, project, quota, and billing API client
+├── infrastructure/
+│   ├── geometry/                Manifold/WASM worker and geometry adapters
+│   ├── export/                  STL and 3MF serializers
+│   └── i18n/                    i18next setup, locale utilities, and JSON locales
+└── main.tsx                     browser entrypoint
+```
+
+New styles should compose the shared primitives in `src/domain/keychain/styles/style-builder.ts` and keep the existing `KeychainParams` builder boundary. Geometry remains client-side by design: hosted mode never uploads fonts or meshes. Its small TypeScript API only manages sessions, quotas, and versioned projects.
+
+Keep new code in the narrowest matching package. The domain package must stay independent of React and browser state; feature packages own UI workflows; infrastructure packages own browser, worker, WASM, network, and file-format integrations. Each package exposes a small `index.ts` barrel for consumers so imports do not depend on implementation filenames.
 
 ## Self-hosting
 
