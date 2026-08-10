@@ -1,5 +1,9 @@
 import type { Manifold } from '../../../infrastructure/geometry/manifold-types';
-import { MANIFOLD_SCALE, asMesh, validateMesh } from '../../../infrastructure/geometry/manifold-utils';
+import {
+  MANIFOLD_SCALE,
+  asMesh,
+  validateMesh,
+} from '../../../infrastructure/geometry/manifold-utils';
 import type { ArticulatedBuild } from '../templates/template-builder';
 import type { KeychainParams, ValidationIssue } from '../model/types';
 
@@ -13,9 +17,11 @@ const hasSolidIntersection = (left: Manifold, right: Manifold): boolean => {
 const motionEnvelopeValid = (build: ArticulatedBuild, maxAngleDeg: number): boolean => {
   const angles = [-maxAngleDeg, -maxAngleDeg / 2, 0, maxAngleDeg / 2, maxAngleDeg];
   return angles.every((angle) => {
-    const excursion = Math.abs(Math.sin((angle * Math.PI) / 180)) * build.invariants.neckWidth * 0.25;
+    const excursion =
+      Math.abs(Math.sin((angle * Math.PI) / 180)) * build.invariants.neckWidth * 0.25;
     return (
-      build.invariants.chamberDiameter >= build.invariants.headDiameter + build.invariants.clearance * 2 + excursion * 2
+      build.invariants.chamberDiameter >=
+      build.invariants.headDiameter + build.invariants.clearance * 2 + excursion * 2
     );
   });
 };
@@ -44,7 +50,8 @@ export const validateArticulatedBuild = (
     issues.push({
       severity: 'error',
       code: 'articulated-shell-count',
-      message: 'The articulated name did not produce one carrier per letter and one connector per gap.',
+      message:
+        'The articulated name did not produce one carrier per letter and one connector per gap.',
     });
   }
   if (!manifoldValid || !rigidPartsValid || !meshes.every(validateMesh)) {
@@ -65,7 +72,8 @@ export const validateArticulatedBuild = (
     issues.push({
       severity: 'error',
       code: 'articulated-captive',
-      message: 'The articulated connector does not satisfy its captive-head and wall-thickness constraints.',
+      message:
+        'The articulated connector does not satisfy its captive-head and wall-thickness constraints.',
     });
   }
   if (!invariants.countersPreserved) {
@@ -84,8 +92,14 @@ export const validateArticulatedBuild = (
       });
       break;
     }
-    const leftConnectorCollision = hasSolidIntersection(build.parts[index].solid, build.connectors[index]);
-    const rightConnectorCollision = hasSolidIntersection(build.parts[index + 1].solid, build.connectors[index]);
+    const leftConnectorCollision = hasSolidIntersection(
+      build.parts[index].solid,
+      build.connectors[index],
+    );
+    const rightConnectorCollision = hasSolidIntersection(
+      build.parts[index + 1].solid,
+      build.connectors[index],
+    );
     if (leftConnectorCollision || rightConnectorCollision) {
       issues.push({
         severity: 'error',

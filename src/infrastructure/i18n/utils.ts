@@ -32,7 +32,11 @@ export const detectLocale = (): Locale => {
 export const setLocale = (locale: Locale): Promise<void> => {
   return i18n.changeLanguage(locale).then(() => undefined);
 };
-export const t = (locale: Locale, key: string, variables: Record<string, string | number> = {}): string => {
+export const t = (
+  locale: Locale,
+  key: string,
+  variables: Record<string, string | number> = {},
+): string => {
   return i18n.getFixedT(locale, 'translation')(key, variables);
 };
 export const issueMessage = (

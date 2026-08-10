@@ -1,7 +1,12 @@
 import Module from 'manifold-3d';
 import * as opentype from 'opentype.js';
 import { fontDefinition, fontSupportsArticulatedName, type FontDefinition } from '../fonts/catalog';
-import { flattenText, flattenTextGlyphs, hasRequiredGlyphs, type GlyphOutline } from '../text/outline';
+import {
+  flattenText,
+  flattenTextGlyphs,
+  hasRequiredGlyphs,
+  type GlyphOutline,
+} from '../text/outline';
 import {
   buildTemplate,
   isArticulatedBuild,
@@ -40,7 +45,10 @@ const WIDTH_FIT_ITERATIONS = 6;
  * Dilation in final model space keeps the articulated result at the advertised heavy weight while preserving
  * one source of truth for the printable glyph outline and its counters.
  */
-const articulatedGlyphDilationMm = (templateId: KeychainParams['templateId'], definition: FontDefinition): number => {
+const articulatedGlyphDilationMm = (
+  templateId: KeychainParams['templateId'],
+  definition: FontDefinition,
+): number => {
   if (templateId !== 'articulated-name') return 0;
   return definition.articulatedDilationMm ?? 0.55;
 };
@@ -56,15 +64,23 @@ const parseFont = (buffer: ArrayBuffer): opentype.Font => {
   return parse(buffer);
 };
 type Wasm = GeometryWasm;
-const scalePolygons = (polygons: Array<Array<[number, number]>>, factor: number): Array<Array<[number, number]>> => {
+const scalePolygons = (
+  polygons: Array<Array<[number, number]>>,
+  factor: number,
+): Array<Array<[number, number]>> => {
   return polygons.map((polygon) =>
-    polygon.map(([x, y]) => [Math.round(x * factor * MANIFOLD_SCALE), Math.round(y * factor * MANIFOLD_SCALE)]),
+    polygon.map(([x, y]) => [
+      Math.round(x * factor * MANIFOLD_SCALE),
+      Math.round(y * factor * MANIFOLD_SCALE),
+    ]),
   );
 };
 const scaleGlyphs = (glyphs: GlyphOutline[], factor: number): GlyphOutline[] => {
   return glyphs.map((glyph) => ({
     ...glyph,
-    polygons: glyph.polygons.map((polygon) => polygon.map(([x, y]) => [x * factor, y * factor] as [number, number])),
+    polygons: glyph.polygons.map((polygon) =>
+      polygon.map(([x, y]) => [x * factor, y * factor] as [number, number]),
+    ),
     bounds: {
       minX: glyph.bounds.minX * factor,
       minY: glyph.bounds.minY * factor,
@@ -124,10 +140,16 @@ const finalizeArticulated = (
   result: GeometryResult;
   exportMesh?: MeshBuffer;
 } => {
-  const baseMesh = mergeMeshes([...build.parts.map((part) => asMesh(part.body)), ...build.connectors.map(asMesh)]);
+  const baseMesh = mergeMeshes([
+    ...build.parts.map((part) => asMesh(part.body)),
+    ...build.connectors.map(asMesh),
+  ]);
   const reliefMesh = mergeMeshes(build.parts.map((part) => asMesh(part.cap)));
   const exportMesh = includeExport
-    ? mergeMeshes([...build.parts.map((part) => asMesh(part.solid)), ...build.connectors.map(asMesh)])
+    ? mergeMeshes([
+        ...build.parts.map((part) => asMesh(part.solid)),
+        ...build.connectors.map(asMesh),
+      ])
     : undefined;
   const valid = validateArticulatedBuild(build, params, issues);
   if (params.reliefDepthMm < 0.5)
@@ -185,31 +207,50 @@ export const buildKeychain = async (
     issues.push({
       severity: 'warning',
       code: 'articulated-base-adjusted',
-      message: 'Base thickness was adjusted to 3.4 mm so the captive joints retain printable top and bottom walls.',
+      message:
+        'Base thickness was adjusted to 3.4 mm so the captive joints retain printable top and bottom walls.',
     });
-  if (!params.text) return invalidResult(issues, 'empty-text', 'Enter a name to create your keychain.');
+  if (!params.text)
+    return invalidResult(issues, 'empty-text', 'Enter a name to create your keychain.');
   if ([...params.text].length > 24)
     return invalidResult(issues, 'text-too-long', 'Shorten the name to 24 characters or fewer.');
   const definition = fontDefinition(params.fontId);
-  if (params.templateId === 'articulated-name' && !fontSupportsArticulatedName(definition, params.text))
+  if (
+    params.templateId === 'articulated-name' &&
+    !fontSupportsArticulatedName(definition, params.text)
+  )
     return invalidResult(
       issues,
       'articulated-font',
       `${definition.name} is not available for articulated letters. Choose a supported heavy font.`,
     );
   const response = await fetch(definition.file);
-  if (!response.ok) return invalidResult(issues, 'font-load', `Could not load the ${definition.name} font.`);
+  if (!response.ok)
+    return invalidResult(issues, 'font-load', `Could not load the ${definition.name} font.`);
   const font = parseFont(await response.arrayBuffer());
   const missing = hasRequiredGlyphs(font, params.text);
   if (missing)
-    return invalidResult(issues, 'missing-glyph', `The ${definition.name} font does not contain “${missing}”.`);
+    return invalidResult(
+      issues,
+      'missing-glyph',
+      `The ${definition.name} font does not contain “${missing}”.`,
+    );
   const outline = flattenText(font, params.text, params.textHeightMm, params.letterSpacingMm);
   if (!outline.polygons.length || outline.width <= 0 || outline.height <= 0)
     return invalidResult(issues, 'empty-outline', 'This name does not produce a usable outline.');
   const articulatedGlyphs =
-    params.templateId === 'articulated-name' ? flattenTextGlyphs(font, params.text, params.textHeightMm) : undefined;
-  if (params.templateId === 'articulated-name' && !articulatedGlyphs?.some((glyph) => glyph.polygons.length))
-    return invalidResult(issues, 'empty-outline', 'This name does not produce usable articulated glyphs.');
+    params.templateId === 'articulated-name'
+      ? flattenTextGlyphs(font, params.text, params.textHeightMm)
+      : undefined;
+  if (
+    params.templateId === 'articulated-name' &&
+    !articulatedGlyphs?.some((glyph) => glyph.polygons.length)
+  )
+    return invalidResult(
+      issues,
+      'empty-outline',
+      'This name does not produce usable articulated glyphs.',
+    );
   const keyring = keyringMetrics(params.holeDiameterMm);
   const articulatedOutlineExpansionMm = articulatedGlyphDilationMm(params.templateId, definition);
   const buildStyledGeometry = (scale: number): StyledGeometry => {
@@ -284,8 +325,12 @@ export const buildKeychain = async (
     let lowWidth = minimum.widthMm;
     let high = 1;
     for (let iteration = 0; iteration < WIDTH_FIT_ITERATIONS; iteration += 1) {
-      const interpolated = low + ((high - low) * (MAX_WIDTH_MM - lowWidth)) / Math.max(highWidth - lowWidth, 0.001);
-      const candidateScale = Math.max(low + (high - low) * 0.1, Math.min(high - (high - low) * 0.1, interpolated));
+      const interpolated =
+        low + ((high - low) * (MAX_WIDTH_MM - lowWidth)) / Math.max(highWidth - lowWidth, 0.001);
+      const candidateScale = Math.max(
+        low + (high - low) * 0.1,
+        Math.min(high - (high - low) * 0.1, interpolated),
+      );
       const candidate = buildStyledGeometry(candidateScale);
       if (candidate.widthMm <= MAX_WIDTH_MM) {
         releaseStyledGeometry(styled);
@@ -306,8 +351,16 @@ export const buildKeychain = async (
     });
   }
   if (styled.kind === 'articulated')
-    return finalizeArticulated(styled.build, styled.rawText, styled.scale, params, issues, includeExport);
-  if (params.templateId === 'nameplate') return buildNameplate(wasm, styled, params, issues, includeExport);
+    return finalizeArticulated(
+      styled.build,
+      styled.rawText,
+      styled.scale,
+      params,
+      issues,
+      includeExport,
+    );
+  if (params.templateId === 'nameplate')
+    return buildNameplate(wasm, styled, params, issues, includeExport);
   const textSection = styled.relief;
   const styleBase = styled.backing;
   const uncoveredRelief = textSection.subtract(styleBase);
@@ -317,17 +370,23 @@ export const buildKeychain = async (
     issues.push({
       severity: 'error',
       code: 'relief-outside-backing',
-      message: 'The raised text extends beyond its foundation. Choose another style or adjust the name.',
+      message:
+        'The raised text extends beyond its foundation. Choose another style or adjust the name.',
     });
   const baseThickness = Math.round(params.baseThicknessMm * MANIFOLD_SCALE);
   let base = styleBase.extrude(baseThickness);
   const maxRecessDepth = Math.max(0, baseThickness - 600);
   const recessDepth = styled.recesses.length
-    ? Math.min(maxRecessDepth, Math.round(Math.max(...styled.recesses.map((item) => item.depthMm * MANIFOLD_SCALE))))
+    ? Math.min(
+        maxRecessDepth,
+        Math.round(Math.max(...styled.recesses.map((item) => item.depthMm * MANIFOLD_SCALE))),
+      )
     : 0;
   if (recessDepth > 0) {
     for (const item of styled.recesses) {
-      const cutSolid = item.section.extrude(recessDepth).translate([0, 0, baseThickness - recessDepth]);
+      const cutSolid = item.section
+        .extrude(recessDepth)
+        .translate([0, 0, baseThickness - recessDepth]);
       const nextBase = base.subtract(cutSolid);
       base.delete();
       cutSolid.delete();
@@ -357,7 +416,8 @@ export const buildKeychain = async (
     issues.push({
       severity: 'error',
       code: 'disconnected',
-      message: 'Some parts of the name are not connected. Increase padding or choose another style.',
+      message:
+        'Some parts of the name are not connected. Increase padding or choose another style.',
     });
   if (model.numTri() > 12000)
     issues.push({

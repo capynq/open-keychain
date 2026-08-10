@@ -39,7 +39,13 @@ export const PARAMETER_RANGES = {
 const COMMON_PARAMETERS: readonly ShapeParameter[] = ['textHeightMm', 'baseThicknessMm'];
 const RELIEF_PARAMETERS: readonly ShapeParameter[] = ['reliefDepthMm'];
 export const TEMPLATE_PARAMETER_KEYS: Record<TemplateId, readonly ShapeParameter[]> = {
-  'name-keychain': [...COMMON_PARAMETERS, ...RELIEF_PARAMETERS, 'paddingMm', 'letterSpacingMm', 'holeDiameterMm'],
+  'name-keychain': [
+    ...COMMON_PARAMETERS,
+    ...RELIEF_PARAMETERS,
+    'paddingMm',
+    'letterSpacingMm',
+    'holeDiameterMm',
+  ],
   'articulated-name': [
     ...COMMON_PARAMETERS,
     ...RELIEF_PARAMETERS,
@@ -69,6 +75,9 @@ export const TEMPLATE_PARAMETER_KEYS: Record<TemplateId, readonly ShapeParameter
 export const templateParameterKeys = (templateId: TemplateId): readonly ShapeParameter[] => {
   return TEMPLATE_PARAMETER_KEYS[templateId];
 };
-export const hasTemplateParameter = (templateId: TemplateId, parameter: keyof KeychainParams): boolean => {
+export const hasTemplateParameter = (
+  templateId: TemplateId,
+  parameter: keyof KeychainParams,
+): boolean => {
   return templateParameterKeys(templateId).includes(parameter as ShapeParameter);
 };

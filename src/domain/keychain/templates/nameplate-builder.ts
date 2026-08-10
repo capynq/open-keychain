@@ -43,7 +43,11 @@ export const buildNameplate = (
   const carrierCentered = carrierRawText.translate([-pivotX, -pivotY, 0]);
   const carrierRotated = carrierCentered.rotate([params.nameplateTiltDeg, 0, 0]);
   const carrierRotatedBounds = carrierRotated.boundingBox();
-  const carrier = carrierRotated.translate([pivotX, pivotY, baseThickness - embedDepth - carrierRotatedBounds.max[2]]);
+  const carrier = carrierRotated.translate([
+    pivotX,
+    pivotY,
+    baseThickness - embedDepth - carrierRotatedBounds.max[2],
+  ]);
   deleteGeometry([carrierRawText, carrierCentered, carrierRotated]);
   const carrierBounds = carrier.boundingBox();
   let tiltedText: Manifold | undefined;
@@ -133,12 +137,14 @@ export const buildNameplate = (
   if (!tiltedText || !model) throw new Error('Nameplate geometry did not produce a text carrier.');
   const bounds = model.boundingBox();
   const textSolidBounds = tiltedText.boundingBox();
-  const hasEmbedding = carrierFullyEmbedded && textSolidBounds.min[2] < baseThickness - 100 && everyTextPartEmbedded;
+  const hasEmbedding =
+    carrierFullyEmbedded && textSolidBounds.min[2] < baseThickness - 100 && everyTextPartEmbedded;
   if (!textInsidePlateFootprint)
     issues.push({
       severity: 'error',
       code: 'nameplate-text-outside-plate',
-      message: 'The tilted inscription extends beyond the nameplate. Increase padding or reduce the tilt.',
+      message:
+        'The tilted inscription extends beyond the nameplate. Increase padding or reduce the tilt.',
     });
   if (!hasEmbedding || !hasVisibleCap)
     issues.push({
@@ -191,7 +197,16 @@ export const buildNameplate = (
     solidCount: 1,
   };
   deleteGeometry([
-    ...new Set([model, visibleText, tiltedText, carrier, plate, styled.backing, styled.relief, styled.rawText]),
+    ...new Set([
+      model,
+      visibleText,
+      tiltedText,
+      carrier,
+      plate,
+      styled.backing,
+      styled.relief,
+      styled.rawText,
+    ]),
   ]);
   return { result, exportMesh };
 };

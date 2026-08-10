@@ -135,7 +135,11 @@ export const normalizeParams = (params: KeychainParams): NormalizedParams => {
     text,
     templateId: params.templateId ?? 'name-keychain',
     textHeightMm: clamp(params.textHeightMm, 12, 30),
-    baseThicknessMm: clamp(params.baseThicknessMm, params.templateId === 'articulated-name' ? 3.4 : 1.6, 4),
+    baseThicknessMm: clamp(
+      params.baseThicknessMm,
+      params.templateId === 'articulated-name' ? 3.4 : 1.6,
+      4,
+    ),
     reliefDepthMm: clamp(params.reliefDepthMm, 0.6, 2),
     paddingMm: clamp(params.paddingMm, 1.2, 5),
     letterSpacingMm: clamp(params.letterSpacingMm ?? 1, 0, 8),
@@ -167,7 +171,11 @@ export const keyringMetrics = (holeDiameterMm: number): KeyringMetrics => {
     overlapMm: Math.max(5, wallMm * 2),
   };
 };
-export const sanitizeFilename = (text: string, styleId: string, extension: ExportFormat = 'stl'): string => {
+export const sanitizeFilename = (
+  text: string,
+  styleId: string,
+  extension: ExportFormat = 'stl',
+): string => {
   const slug =
     text
       .normalize('NFKD')

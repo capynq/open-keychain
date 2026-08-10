@@ -26,7 +26,14 @@ export type TemplateDefinition = {
   supportsKeyring: boolean;
   styles: readonly StyleId[];
 };
-const ALL_STYLE_IDS: readonly StyleId[] = ['contour', 'capsule', 'soft-tag', 'bubble', 'arch', 'frame'];
+const ALL_STYLE_IDS: readonly StyleId[] = [
+  'contour',
+  'capsule',
+  'soft-tag',
+  'bubble',
+  'arch',
+  'frame',
+];
 export type ArticulatedPart = {
   body: Solid;
   cap: Solid;
@@ -122,9 +129,13 @@ const deleteAll = (items: DisposableGeometry[]): void => {
     }
   });
 };
-const scalePolygons = (polygons: Array<Array<[number, number]>>): Array<Array<[number, number]>> => {
+const scalePolygons = (
+  polygons: Array<Array<[number, number]>>,
+): Array<Array<[number, number]>> => {
   return polygons.map((polygon) =>
-    polygon.map(([x, y]) => [Math.round(x * MANIFOLD_SCALE), Math.round(y * MANIFOLD_SCALE)] as Vec2),
+    polygon.map(
+      ([x, y]) => [Math.round(x * MANIFOLD_SCALE), Math.round(y * MANIFOLD_SCALE)] as Vec2,
+    ),
   );
 };
 const aggregateBounds = (
@@ -153,7 +164,9 @@ const area = (section: CrossSection): number => {
       const next = polygon[(index + 1) % polygon.length];
       return total + point[0] * next[1] - next[0] * point[1];
     }, 0) / 2;
-  return Math.abs((section.toPolygons() as Vec2[][]).reduce((total, polygon) => total + polygonArea(polygon), 0));
+  return Math.abs(
+    (section.toPolygons() as Vec2[][]).reduce((total, polygon) => total + polygonArea(polygon), 0),
+  );
 };
 const signedArea = (polygon: Vec2[]): number => {
   return (
@@ -167,7 +180,8 @@ const counterPolygons = (section: CrossSection): Vec2[][] => {
   const polygons = section.toPolygons() as Vec2[][];
   if (!polygons.length) return [];
   const outer = polygons.reduce(
-    (largest, polygon) => (Math.abs(signedArea(polygon)) > Math.abs(signedArea(largest)) ? polygon : largest),
+    (largest, polygon) =>
+      Math.abs(signedArea(polygon)) > Math.abs(signedArea(largest)) ? polygon : largest,
     polygons[0],
   );
   const outerSign = Math.sign(signedArea(outer));
@@ -214,7 +228,10 @@ const closestPointOnSegment = (point: Vec2, start: Vec2, end: Vec2): Vec2 => {
   const dy = end[1] - start[1];
   const lengthSquared = dx * dx + dy * dy;
   if (!lengthSquared) return start;
-  const ratio = Math.max(0, Math.min(1, ((point[0] - start[0]) * dx + (point[1] - start[1]) * dy) / lengthSquared));
+  const ratio = Math.max(
+    0,
+    Math.min(1, ((point[0] - start[0]) * dx + (point[1] - start[1]) * dy) / lengthSquared),
+  );
   return [start[0] + dx * ratio, start[1] + dy * ratio];
 };
 const nearestBoundaryPoint = (section: CrossSection, target: Vec2): Vec2 => {
@@ -222,7 +239,11 @@ const nearestBoundaryPoint = (section: CrossSection, target: Vec2): Vec2 => {
   let nearestDistance = Infinity;
   for (const polygon of section.toPolygons() as Vec2[][])
     for (let index = 0; index < polygon.length; index += 1) {
-      const candidate = closestPointOnSegment(target, polygon[index], polygon[(index + 1) % polygon.length]);
+      const candidate = closestPointOnSegment(
+        target,
+        polygon[index],
+        polygon[(index + 1) % polygon.length],
+      );
       const distance = (candidate[0] - target[0]) ** 2 + (candidate[1] - target[1]) ** 2;
       if (distance < nearestDistance) {
         nearest = candidate;
@@ -287,7 +308,12 @@ const articulatedSocket = (
   const reach = chamberRadius + bridgeWidth;
   const throatEnd: Vec2 = [side === 'left' ? carrierEdge - reach : carrierEdge + reach, anchor[1]];
   const throat = capsule(wasm, anchor, throatEnd, throatWidth);
-  const relief = capsule(wasm, anchor, throatEnd, Math.max(throatWidth, bridgeWidth + clearance * 3));
+  const relief = capsule(
+    wasm,
+    anchor,
+    throatEnd,
+    Math.max(throatWidth, bridgeWidth + clearance * 3),
+  );
   const socket2d = union(wasm, [chamber, throat, relief]);
   const socket = socket2d.extrude(connectorThickness + clearance * 2).translate([0, 0, socketZ]);
   chamber.delete();
@@ -335,7 +361,10 @@ const articulatedStyle = (wasm: GeometryWasm, input: StyleInput): ArticulatedBui
   const chamberRadius = headRadius + clearance + motionAllowance;
   const bossRadius = chamberRadius + minimumWall;
   const minimumAxialWall = Math.max(650, bottomClearance * 2);
-  const connectorThickness = Math.max(900, Math.min(1200, baseThickness - minimumAxialWall * 2 - clearance * 2));
+  const connectorThickness = Math.max(
+    900,
+    Math.min(1200, baseThickness - minimumAxialWall * 2 - clearance * 2),
+  );
   const socketDepth = connectorThickness + clearance * 2;
   const socketZ = Math.max(bottomClearance, (baseThickness - socketDepth) / 2);
   const axialWall = Math.min(socketZ, baseThickness - socketDepth - socketZ);
@@ -350,8 +379,13 @@ const articulatedStyle = (wasm: GeometryWasm, input: StyleInput): ArticulatedBui
   const jointY = glyphBounds.min + (glyphBounds.max - glyphBounds.min) * 0.4;
   const prototypes: ArticulatedPrototype[] = [];
   for (let index = 0; index < glyphs.length; index += 1) {
-    const glyphOutline = wasm.CrossSection.ofPolygons(scalePolygons(glyphs[index].polygons), 'EvenOdd');
-    const glyph = glyphExpansion ? glyphOutline.offset(glyphExpansion, 'Round', 2, 64) : glyphOutline.translate([0, 0]);
+    const glyphOutline = wasm.CrossSection.ofPolygons(
+      scalePolygons(glyphs[index].polygons),
+      'EvenOdd',
+    );
+    const glyph = glyphExpansion
+      ? glyphOutline.offset(glyphExpansion, 'Round', 2, 64)
+      : glyphOutline.translate([0, 0]);
     glyphOutline.delete();
     const needsLeft = index > 0;
     const needsRight = index < glyphs.length - 1;
@@ -402,9 +436,12 @@ const articulatedStyle = (wasm: GeometryWasm, input: StyleInput): ArticulatedBui
     const glyph2d = prototype.glyph.translate([offsetX, 0]);
     const structuralBounds = sectionBounds(structural2d);
     const socketCuts: Solid[] = [];
-    const leftAnchor = prototype.leftAnchor && ([prototype.leftAnchor[0] + offsetX, prototype.leftAnchor[1]] as Vec2);
+    const leftAnchor =
+      prototype.leftAnchor &&
+      ([prototype.leftAnchor[0] + offsetX, prototype.leftAnchor[1]] as Vec2);
     const rightAnchor =
-      prototype.rightAnchor && ([prototype.rightAnchor[0] + offsetX, prototype.rightAnchor[1]] as Vec2);
+      prototype.rightAnchor &&
+      ([prototype.rightAnchor[0] + offsetX, prototype.rightAnchor[1]] as Vec2);
     if (leftAnchor)
       socketCuts.push(
         articulatedSocket(
@@ -466,7 +503,15 @@ const articulatedStyle = (wasm: GeometryWasm, input: StyleInput): ArticulatedBui
     const rightAnchor = parts[index + 1].leftAnchor;
     if (!leftAnchor || !rightAnchor) continue;
     connectors.push(
-      connectorSolid(wasm, leftAnchor, rightAnchor, headRadius, bridgeWidth, connectorThickness, connectorZ),
+      connectorSolid(
+        wasm,
+        leftAnchor,
+        rightAnchor,
+        headRadius,
+        bridgeWidth,
+        connectorThickness,
+        connectorZ,
+      ),
     );
   }
   const allSolids = [...parts.map((part) => part.solid), ...connectors];
@@ -494,13 +539,19 @@ const articulatedStyle = (wasm: GeometryWasm, input: StyleInput): ArticulatedBui
 const nameplateStyle = (wasm: GeometryWasm, input: StyleInput): StyleBuild => {
   const textWidth = input.textBounds.max[0] - input.textBounds.min[0];
   const textHeight = input.textBounds.max[1] - input.textBounds.min[1];
-  const textDepth = (input.nameplateEmbedMm ?? 0.4) * MANIFOLD_SCALE + (input.reliefDepth ?? 1) * MANIFOLD_SCALE;
-  const tiltMargin = Math.abs(Math.sin(((input.nameplateTiltDeg ?? 6) * Math.PI) / 180)) * textDepth;
+  const textDepth =
+    (input.nameplateEmbedMm ?? 0.4) * MANIFOLD_SCALE + (input.reliefDepth ?? 1) * MANIFOLD_SCALE;
+  const tiltMargin =
+    Math.abs(Math.sin(((input.nameplateTiltDeg ?? 6) * Math.PI) / 180)) * textDepth;
   const width = Math.max(34000, textWidth + input.padding * 2);
   const height = Math.max(18000, textHeight + input.padding * 2 + tiltMargin * 2);
   const radius = Math.max(
     1500,
-    Math.min(input.cornerRadius ?? 4000, Math.min(width, height) / 2 - input.padding - 250, input.padding * 3.2),
+    Math.min(
+      input.cornerRadius ?? 4000,
+      Math.min(width, height) / 2 - input.padding - 250,
+      input.padding * 3.2,
+    ),
   );
   const plate = roundedRect(wasm, width, height, radius);
   return { backing: plate, relief: input.text };
@@ -524,7 +575,10 @@ const plantLabelStyle = (wasm: GeometryWasm, input: StyleInput): StyleBuild => {
   const tipTop = foundationBottom - (stakeTotal - tipHeight);
   const shaftBottom = tipTop - 1000;
   const shaftHeight = Math.max(1000, shaftTop - shaftBottom);
-  const shaft = wasm.CrossSection.square([stakeWidth, shaftHeight], true).translate([0, (shaftTop + shaftBottom) / 2]);
+  const shaft = wasm.CrossSection.square([stakeWidth, shaftHeight], true).translate([
+    0,
+    (shaftTop + shaftBottom) / 2,
+  ]);
   const tip = wasm.CrossSection.ofPolygons(
     [
       [
@@ -538,7 +592,11 @@ const plantLabelStyle = (wasm: GeometryWasm, input: StyleInput): StyleBuild => {
   const textOffsetY = foundationBottom + 1000 - input.textBounds.min[1];
   const labelText = input.text.translate([0, textOffsetY]);
   const labelFootprint = labelText.translate([0, 0]);
-  const connected = connectIfNeeded(wasm, union(wasm, [foundation, shaft, tip, labelFootprint]), 1200);
+  const connected = connectIfNeeded(
+    wasm,
+    union(wasm, [foundation, shaft, tip, labelFootprint]),
+    1200,
+  );
   const joinedLabel = labelText.translate([0, 0]);
   const joined = union(wasm, [connected, joinedLabel]);
   connected.delete();
@@ -568,5 +626,8 @@ export const isArticulatedBuild = (build: TemplateBuild): build is ArticulatedBu
   return 'kind' in build && build.kind === 'articulated';
 };
 export const releaseArticulatedBuild = (build: ArticulatedBuild): void => {
-  deleteAll([...build.parts.flatMap((part) => [part.body, part.cap, part.solid]), ...build.connectors]);
+  deleteAll([
+    ...build.parts.flatMap((part) => [part.body, part.cap, part.solid]),
+    ...build.connectors,
+  ]);
 };

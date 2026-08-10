@@ -13,11 +13,13 @@ export class GeometryClient {
   private busy = false;
   private resolveGeometry: ((result: GeometryResult) => void) | undefined;
   private rejectGeometry: ((error: Error) => void) | undefined;
-  private resolveExport: ((file: { filename: string; mimeType: string; data: ArrayBuffer }) => void) | undefined;
+  private resolveExport:
+    ((file: { filename: string; mimeType: string; data: ArrayBuffer }) => void) | undefined;
   private rejectExport: ((error: Error) => void) | undefined;
   constructor() {
     this.worker = new Worker(new URL('./geometry-worker.ts', import.meta.url), { type: 'module' });
-    this.worker.onmessage = (event: MessageEvent<WorkerResponse>) => this.handleResponse(event.data);
+    this.worker.onmessage = (event: MessageEvent<WorkerResponse>) =>
+      this.handleResponse(event.data);
   }
   request(params: KeychainParams): Promise<GeometryResult> {
     this.latestParams = params;
@@ -41,7 +43,13 @@ export class GeometryClient {
     const requestId = this.nextRequestId++;
     this.resolveExport = undefined;
     this.rejectExport = undefined;
-    this.worker.postMessage({ type: 'export', requestId, params, format, mode } satisfies WorkerRequest);
+    this.worker.postMessage({
+      type: 'export',
+      requestId,
+      params,
+      format,
+      mode,
+    } satisfies WorkerRequest);
     return new Promise((resolve, reject) => {
       this.resolveExport = resolve;
       this.rejectExport = reject;
@@ -73,7 +81,11 @@ export class GeometryClient {
       return;
     }
     if (response.type === 'export') {
-      this.resolveExport?.({ filename: response.filename, mimeType: response.mimeType, data: response.data });
+      this.resolveExport?.({
+        filename: response.filename,
+        mimeType: response.mimeType,
+        data: response.data,
+      });
       this.resolveExport = undefined;
       this.rejectExport = undefined;
       return;

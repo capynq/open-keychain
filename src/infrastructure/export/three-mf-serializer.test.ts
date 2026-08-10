@@ -17,14 +17,24 @@ describe('3MF export', () => {
     expect(model).not.toContain('surface');
   });
   it('supports merged single-object mode', () => {
-    const files = unzipSync(new Uint8Array(serializeThreeMf(triangle, triangle, triangle, 'merged')));
+    const files = unzipSync(
+      new Uint8Array(serializeThreeMf(triangle, triangle, triangle, 'merged')),
+    );
     const model = strFromU8(files['3D/3dmodel.model']);
     expect(model.match(/<object id=/g)).toHaveLength(1);
     expect(model).toContain('Keychain');
   });
   it('preserves articulated layer names and reference-inspired colours', () => {
     const files = unzipSync(
-      new Uint8Array(serializeThreeMf(triangle, triangle, triangle, 'separate-colors', ARTICULATED_PRINT_APPEARANCE)),
+      new Uint8Array(
+        serializeThreeMf(
+          triangle,
+          triangle,
+          triangle,
+          'separate-colors',
+          ARTICULATED_PRINT_APPEARANCE,
+        ),
+      ),
     );
     const model = strFromU8(files['3D/3dmodel.model']);
     expect(model).toContain('Structural letters and connectors');

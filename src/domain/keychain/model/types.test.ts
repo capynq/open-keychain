@@ -1,9 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { templateParameterKeys } from './parameters';
-import { DEFAULT_PARAMS, keyringMetrics, normalizeParams, ringWallMm, sanitizeFilename } from './types';
+import {
+  DEFAULT_PARAMS,
+  keyringMetrics,
+  normalizeParams,
+  ringWallMm,
+  sanitizeFilename,
+} from './types';
 describe('keychain parameters', () => {
   it('normalizes text and clamps consumer controls', () => {
-    const result = normalizeParams({ ...DEFAULT_PARAMS, text: '  José   ', textHeightMm: 100, holeDiameterMm: 0 });
+    const result = normalizeParams({
+      ...DEFAULT_PARAMS,
+      text: '  José   ',
+      textHeightMm: 100,
+      holeDiameterMm: 0,
+    });
     expect(result.text).toBe('José');
     expect(result.textHeightMm).toBe(30);
     expect(result.holeDiameterMm).toBe(3);

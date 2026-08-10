@@ -29,9 +29,18 @@ const distanceToLine = (point: Point, start: Point, end: Point): number => {
   const dx = end[0] - start[0];
   const dy = end[1] - start[1];
   if (dx === 0 && dy === 0) return Math.hypot(point[0] - start[0], point[1] - start[1]);
-  return Math.abs(dy * point[0] - dx * point[1] + end[0] * start[1] - end[1] * start[0]) / Math.hypot(dx, dy);
+  return (
+    Math.abs(dy * point[0] - dx * point[1] + end[0] * start[1] - end[1] * start[0]) /
+    Math.hypot(dx, dy)
+  );
 };
-const flattenQuadratic = (start: Point, control: Point, end: Point, tolerance: number, depth = 0): Point[] => {
+const flattenQuadratic = (
+  start: Point,
+  control: Point,
+  end: Point,
+  tolerance: number,
+  depth = 0,
+): Point[] => {
   if (depth >= MAX_CURVE_DEPTH || distanceToLine(control, start, end) <= tolerance) return [end];
   const a: Point = [(start[0] + control[0]) / 2, (start[1] + control[1]) / 2];
   const b: Point = [(control[0] + end[0]) / 2, (control[1] + end[1]) / 2];
@@ -41,7 +50,14 @@ const flattenQuadratic = (start: Point, control: Point, end: Point, tolerance: n
     ...flattenQuadratic(middle, b, end, tolerance, depth + 1),
   ];
 };
-const flattenCubic = (start: Point, c1: Point, c2: Point, end: Point, tolerance: number, depth = 0): Point[] => {
+const flattenCubic = (
+  start: Point,
+  c1: Point,
+  c2: Point,
+  end: Point,
+  tolerance: number,
+  depth = 0,
+): Point[] => {
   if (
     depth >= MAX_CURVE_DEPTH ||
     Math.max(distanceToLine(c1, start, end), distanceToLine(c2, start, end)) <= tolerance
@@ -63,9 +79,13 @@ const dedupe = (points: Point[]): Point[] => {
   const result: Point[] = [];
   for (const point of points) {
     const previous = result[result.length - 1];
-    if (!previous || Math.hypot(point[0] - previous[0], point[1] - previous[1]) >= 0.001) result.push(point);
+    if (!previous || Math.hypot(point[0] - previous[0], point[1] - previous[1]) >= 0.001)
+      result.push(point);
   }
-  if (result.length > 1 && Math.hypot(result[0][0] - result.at(-1)![0], result[0][1] - result.at(-1)![1]) < 0.001) {
+  if (
+    result.length > 1 &&
+    Math.hypot(result[0][0] - result.at(-1)![0], result[0][1] - result.at(-1)![1]) < 0.001
+  ) {
     result.pop();
   }
   return result;
@@ -93,7 +113,15 @@ const flattenPath = (path: opentype.Path, tolerance: number): Point[][] => {
       currentPoint = end;
     } else if (command.type === 'C') {
       const end: Point = [command.x, command.y];
-      current.push(...flattenCubic(currentPoint, [command.x1, command.y1], [command.x2, command.y2], end, tolerance));
+      current.push(
+        ...flattenCubic(
+          currentPoint,
+          [command.x1, command.y1],
+          [command.x2, command.y2],
+          end,
+          tolerance,
+        ),
+      );
       currentPoint = end;
     } else if (command.type === 'Z') finish();
   }
@@ -104,7 +132,13 @@ const commandPoints = (paths: opentype.Path[]): Point[] => {
   return paths.flatMap((path) =>
     path.commands.flatMap((command) => {
       if (command.type === 'Z') return [];
-      if (command.type !== 'M' && command.type !== 'L' && command.type !== 'Q' && command.type !== 'C') return [];
+      if (
+        command.type !== 'M' &&
+        command.type !== 'L' &&
+        command.type !== 'Q' &&
+        command.type !== 'C'
+      )
+        return [];
       const points: Point[] = [[command.x, command.y]];
       if (command.type === 'Q' || command.type === 'C') points.push([command.x1, command.y1]);
       if (command.type === 'C') points.push([command.x2, command.y2]);
@@ -113,7 +147,11 @@ const commandPoints = (paths: opentype.Path[]): Point[] => {
   );
 };
 /** Create independent, locally centered outlines for the articulated mechanical layout. */
-export const flattenTextGlyphs = (font: opentype.Font, text: string, targetHeightMm: number): GlyphOutline[] => {
+export const flattenTextGlyphs = (
+  font: opentype.Font,
+  text: string,
+  targetHeightMm: number,
+): GlyphOutline[] => {
   const characters = [...text];
   const glyphs = characters.map((character) => font.charToGlyph(character));
   let advanceCursor = 0;
@@ -140,7 +178,10 @@ export const flattenTextGlyphs = (font: opentype.Font, text: string, targetHeigh
     const polygons = rawPolygons.map((polygon) =>
       polygon.map(
         ([x, y]) =>
-          [Math.round((x - centerX) * scale * 1000) / 1000, Math.round(-(y - centerY) * scale * 1000) / 1000] as Point,
+          [
+            Math.round((x - centerX) * scale * 1000) / 1000,
+            Math.round(-(y - centerY) * scale * 1000) / 1000,
+          ] as Point,
       ),
     );
     const scaled = polygons.flat();
@@ -178,7 +219,13 @@ export const flattenText = (
   const pathPoints = paths.flatMap((path) =>
     path.commands.flatMap((command) => {
       if (command.type === 'Z') return [];
-      if (command.type !== 'M' && command.type !== 'L' && command.type !== 'Q' && command.type !== 'C') return [];
+      if (
+        command.type !== 'M' &&
+        command.type !== 'L' &&
+        command.type !== 'Q' &&
+        command.type !== 'C'
+      )
+        return [];
       const points: Point[] = [[command.x, command.y]];
       if (command.type === 'Q' || command.type === 'C') points.push([command.x1, command.y1]);
       if (command.type === 'C') points.push([command.x2, command.y2]);
@@ -186,7 +233,8 @@ export const flattenText = (
     }),
   );
   const sourceHeight = pathPoints.length
-    ? Math.max(...pathPoints.map((point) => point[1])) - Math.min(...pathPoints.map((point) => point[1]))
+    ? Math.max(...pathPoints.map((point) => point[1])) -
+      Math.min(...pathPoints.map((point) => point[1]))
     : 100;
   const finalScale = targetHeightMm / Math.max(sourceHeight, 1);
   const tolerance = Math.max(0.003, 0.035 / finalScale);
@@ -208,7 +256,10 @@ export const flattenText = (
     if (!points.length) continue;
     const minX = Math.min(...points.map((point) => point[0]));
     const maxX = Math.max(...points.map((point) => point[0]));
-    const shift = previousMaxX === undefined ? 0 : Math.max(0, previousMaxX + Math.max(0, letterSpacingMm) - minX);
+    const shift =
+      previousMaxX === undefined
+        ? 0
+        : Math.max(0, previousMaxX + Math.max(0, letterSpacingMm) - minX);
     if (shift) for (const polygon of group) for (const point of polygon) point[0] += shift;
     previousMaxX = maxX + shift;
   }
@@ -222,7 +273,11 @@ export const flattenText = (
   const scaled = scaledGroups.map((group) =>
     group.map((polygon) =>
       polygon.map(
-        ([x, y]) => [Math.round((x - centerX) * 1000) / 1000, Math.round(-(y - centerY) * 1000) / 1000] as Point,
+        ([x, y]) =>
+          [
+            Math.round((x - centerX) * 1000) / 1000,
+            Math.round(-(y - centerY) * 1000) / 1000,
+          ] as Point,
       ),
     ),
   );

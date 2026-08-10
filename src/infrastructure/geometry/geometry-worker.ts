@@ -31,7 +31,8 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       const { result, exportMesh } = await buildKeychain(wasm, request.params, true);
       if (!exportMesh || !result.printable) {
         const message =
-          result.issues.find((issue) => issue.severity === 'error')?.message ?? 'This model is not ready to download.';
+          result.issues.find((issue) => issue.severity === 'error')?.message ??
+          'This model is not ready to download.';
         const response: WorkerResponse = { type: 'error', requestId: request.requestId, message };
         self.postMessage(response);
         return;
@@ -61,7 +62,8 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     const response: WorkerResponse = {
       type: 'error',
       requestId: request.requestId,
-      message: error instanceof Error ? error.message : 'The geometry engine could not create this model.',
+      message:
+        error instanceof Error ? error.message : 'The geometry engine could not create this model.',
     };
     self.postMessage(response);
   }

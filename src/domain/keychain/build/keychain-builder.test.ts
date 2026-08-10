@@ -10,7 +10,9 @@ beforeAll(async () => {
   globalThis.fetch = (async (input: string | URL) => {
     const url = String(input);
     if (url.startsWith('/fonts/'))
-      return new Response(Uint8Array.from(await fs.readFile(path.join(process.cwd(), 'public', url))));
+      return new Response(
+        Uint8Array.from(await fs.readFile(path.join(process.cwd(), 'public', url))),
+      );
     return originalFetch(input);
   }) as typeof fetch;
   wasm = await createWasm();
@@ -57,7 +59,11 @@ const topology = (mesh: MeshBuffer) => {
     }
   }
   const faces = mesh.indices.length / 3;
-  return { connected: components === 1, components, eulerCharacteristic: vertices.size - edges.size + faces };
+  return {
+    connected: components === 1,
+    components,
+    eulerCharacteristic: vertices.size - edges.size + faces,
+  };
 };
 type Point2 = [number, number];
 const area = (points: Point2[]): number => {
@@ -72,7 +78,9 @@ const area = (points: Point2[]): number => {
 };
 const convexHull = (points: Point2[]): Point2[] => {
   const unique = [
-    ...new Map(points.map((point) => [`${point[0].toFixed(4)}:${point[1].toFixed(4)}`, point])).values(),
+    ...new Map(
+      points.map((point) => [`${point[0].toFixed(4)}:${point[1].toFixed(4)}`, point]),
+    ).values(),
   ].sort((left, right) => left[0] - right[0] || left[1] - right[1]);
   const cross = (origin: Point2, left: Point2, right: Point2) =>
     (left[0] - origin[0]) * (right[1] - origin[1]) - (left[1] - origin[1]) * (right[0] - origin[0]);
@@ -92,14 +100,19 @@ const topSurfaceArea = (
   surface: number;
   hull: number;
 } => {
-  const zValues = Array.from({ length: mesh.positions.length / 3 }, (_, index) => mesh.positions[index * 3 + 2]);
+  const zValues = Array.from(
+    { length: mesh.positions.length / 3 },
+    (_, index) => mesh.positions[index * 3 + 2],
+  );
   const top = Math.max(...zValues);
   let surface = 0;
   const points: Point2[] = [];
   for (let index = 0; index < mesh.indices.length; index += 3) {
     const ids = [mesh.indices[index], mesh.indices[index + 1], mesh.indices[index + 2]];
     if (!ids.every((id) => Math.abs(mesh.positions[id * 3 + 2] - top) < 1e-4)) continue;
-    const triangle = ids.map((id) => [mesh.positions[id * 3], mesh.positions[id * 3 + 1]] as Point2);
+    const triangle = ids.map(
+      (id) => [mesh.positions[id * 3], mesh.positions[id * 3 + 1]] as Point2,
+    );
     surface += area(triangle);
     points.push(...triangle);
   }
@@ -168,7 +181,11 @@ describe('finished keychain geometry', () => {
       expect(exportMesh).toBeDefined();
       expect(
         result.printable,
-        JSON.stringify({ issues: result.issues, base: topology(result.baseMesh), model: topology(exportMesh!) }),
+        JSON.stringify({
+          issues: result.issues,
+          base: topology(result.baseMesh),
+          model: topology(exportMesh!),
+        }),
       ).toBe(true);
       expect([...exportMesh!.positions].every(Number.isFinite)).toBe(true);
       expect(result.dimensions.widthMm).toBeLessThanOrEqual(120.1);
@@ -176,7 +193,9 @@ describe('finished keychain geometry', () => {
       expect(meshTopology.connected).toBe(true);
       expect(meshTopology.eulerCharacteristic).toBeLessThanOrEqual(0);
       const triangles = exportMesh!.indices.length / 3;
-      expect(triangles <= 12000 || result.issues.some((issue) => issue.code === 'dense-mesh')).toBe(true);
+      expect(triangles <= 12000 || result.issues.some((issue) => issue.code === 'dense-mesh')).toBe(
+        true,
+      );
     }, 30000);
   }
   it('keeps the NIKITA Bubble silhouette materially below its convex hull area', async () => {
@@ -280,7 +299,9 @@ describe('finished keychain geometry', () => {
     });
     expect(result.printable, JSON.stringify(result.issues)).toBe(true);
     expect(result.dimensions.widthMm).toBeLessThanOrEqual(120.1);
-    expect(result.issues).toContainEqual(expect.objectContaining({ severity: 'warning', code: 'scaled-to-fit' }));
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({ severity: 'warning', code: 'scaled-to-fit' }),
+    );
     expect(result.issues.some((issue) => issue.severity === 'error')).toBe(false);
   }, 30000);
   it('returns an actionable error when 12 mm text still cannot fit', async () => {
@@ -292,7 +313,9 @@ describe('finished keychain geometry', () => {
       textHeightMm: 12,
     });
     expect(result.printable).toBe(false);
-    expect(result.issues).toContainEqual(expect.objectContaining({ severity: 'error', code: 'text-too-wide' }));
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({ severity: 'error', code: 'text-too-wide' }),
+    );
   }, 30000);
   for (const templateId of ['articulated-name', 'nameplate', 'plant-label'] as const) {
     for (const text of ['NIKITA', 'НІКІТА']) {
@@ -432,6 +455,8 @@ describe('finished keychain geometry', () => {
       text: 'ALEX',
     });
     expect(result.printable).toBe(false);
-    expect(result.issues).toContainEqual(expect.objectContaining({ code: 'articulated-font', severity: 'error' }));
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({ code: 'articulated-font', severity: 'error' }),
+    );
   }, 30000);
 });

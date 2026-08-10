@@ -40,7 +40,12 @@ export type StyleBuild = {
   /** Optional template-specific cap depth in millimetres. */
   reliefDepthMm?: number;
 };
-export const roundedRect = (wasm: GeometryWasm, width: number, height: number, radius: number): CrossSection => {
+export const roundedRect = (
+  wasm: GeometryWasm,
+  width: number,
+  height: number,
+  radius: number,
+): CrossSection => {
   const innerWidth = Math.max(100, width - radius * 2);
   const innerHeight = Math.max(100, height - radius * 2);
   return wasm.CrossSection.square([innerWidth, innerHeight], true).offset(radius, 'Round', 2, 64);
@@ -64,7 +69,8 @@ const polygonArea = (polygon: Vec2[]): number => {
 const outerBoundary = (section: CrossSection): Vec2[] => {
   const polygons = section.toPolygons() as Vec2[][];
   return polygons.reduce(
-    (largest, polygon) => (Math.abs(polygonArea(polygon)) > Math.abs(polygonArea(largest)) ? polygon : largest),
+    (largest, polygon) =>
+      Math.abs(polygonArea(polygon)) > Math.abs(polygonArea(largest)) ? polygon : largest,
     polygons[0] ?? [],
   );
 };
@@ -73,7 +79,10 @@ const closestPointOnSegment = (point: Vec2, start: Vec2, end: Vec2): Vec2 => {
   const dy = end[1] - start[1];
   const lengthSquared = dx * dx + dy * dy;
   if (!lengthSquared) return start;
-  const t = Math.max(0, Math.min(1, ((point[0] - start[0]) * dx + (point[1] - start[1]) * dy) / lengthSquared));
+  const t = Math.max(
+    0,
+    Math.min(1, ((point[0] - start[0]) * dx + (point[1] - start[1]) * dy) / lengthSquared),
+  );
   return [start[0] + dx * t, start[1] + dy * t];
 };
 type BoundaryPair = {
@@ -103,7 +112,12 @@ const nearestBoundaryPair = (left: Vec2[], right: Vec2[]): BoundaryPair => {
   }
   return best;
 };
-export const capsule = (wasm: GeometryWasm, start: Vec2, end: Vec2, width: number): CrossSection => {
+export const capsule = (
+  wasm: GeometryWasm,
+  start: Vec2,
+  end: Vec2,
+  width: number,
+): CrossSection => {
   const radius = width / 2;
   const startCap = wasm.CrossSection.circle(radius, 64).translate(start);
   const endCap = wasm.CrossSection.circle(radius, 64).translate(end);
@@ -113,7 +127,11 @@ export const capsule = (wasm: GeometryWasm, start: Vec2, end: Vec2, width: numbe
   return result;
 };
 /** Connect disconnected outer components with a minimum spanning tree of rounded boundary capsules. */
-export const connectIfNeeded = (wasm: GeometryWasm, section: CrossSection, padding: number): CrossSection => {
+export const connectIfNeeded = (
+  wasm: GeometryWasm,
+  section: CrossSection,
+  padding: number,
+): CrossSection => {
   const pieces = section.decompose();
   if (pieces.length <= 1) {
     pieces.forEach((piece: CrossSection) => piece.delete());
@@ -134,7 +152,8 @@ export const connectIfNeeded = (wasm: GeometryWasm, section: CrossSection, paddi
       for (let to = 0; to < pieces.length; to += 1) {
         if (visited.has(to)) continue;
         const candidate = nearestBoundaryPair(boundaries[from], boundaries[to]);
-        if (!best || candidate.distanceSquared < best.distanceSquared) best = { ...candidate, from, to };
+        if (!best || candidate.distanceSquared < best.distanceSquared)
+          best = { ...candidate, from, to };
       }
     if (!best) break;
     bridges.push(capsule(wasm, best.start, best.end, bridgeWidth));
@@ -180,7 +199,11 @@ const horizontalIntervals = (polygons: Vec2[][], y: number): Array<[number, numb
     intervals.push([intersections[index], intersections[index + 1]]);
   return intervals;
 };
-const attachmentAnchor = (section: CrossSection, minimumSpan: number, side: 'left' | 'right'): Vec2 => {
+const attachmentAnchor = (
+  section: CrossSection,
+  minimumSpan: number,
+  side: 'left' | 'right',
+): Vec2 => {
   const bounds = sectionBounds(section);
   const polygons = section.toPolygons() as Vec2[][];
   const height = bounds.max[1] - bounds.min[1];
@@ -201,13 +224,24 @@ const attachmentAnchor = (section: CrossSection, minimumSpan: number, side: 'lef
       const edge = Math.min(y - bounds.min[1], bounds.max[1] - y);
       const x = side === 'left' ? start : end;
       const isFartherOut =
-        side === 'left' ? x < (best?.point[0] ?? Infinity) - 0.01 : x > (best?.point[0] ?? -Infinity) + 0.01;
-      if (!best || isFartherOut || (Math.abs(x - best.point[0]) < 0.01 && (width > best.width || edge > best.edge))) {
+        side === 'left'
+          ? x < (best?.point[0] ?? Infinity) - 0.01
+          : x > (best?.point[0] ?? -Infinity) + 0.01;
+      if (
+        !best ||
+        isFartherOut ||
+        (Math.abs(x - best.point[0]) < 0.01 && (width > best.width || edge > best.edge))
+      ) {
         best = { point: [x, y], width, edge };
       }
     }
   }
-  return best?.point ?? [side === 'left' ? bounds.min[0] : bounds.max[0], (bounds.min[1] + bounds.max[1]) / 2];
+  return (
+    best?.point ?? [
+      side === 'left' ? bounds.min[0] : bounds.max[0],
+      (bounds.min[1] + bounds.max[1]) / 2,
+    ]
+  );
 };
 /** Attach a keyring tab while preserving the counter opening and repairing detached unions. */
 export const ringAssembly = (
@@ -228,7 +262,10 @@ export const ringAssembly = (
       : anchor[0] + outerRadius - Math.min(1600, outerRadius * 0.34);
   const center: Vec2 = [x, anchor[1]];
   const outer = wasm.CrossSection.circle(outerRadius, 96).translate(center);
-  const rootHeight = Math.min(bounds.max[1] - bounds.min[1], Math.max(wall * 2.7, outerRadius * 1.45));
+  const rootHeight = Math.min(
+    bounds.max[1] - bounds.min[1],
+    Math.max(wall * 2.7, outerRadius * 1.45),
+  );
   const root = roundedRect(wasm, rootWidth + overlap, rootHeight, rootHeight / 2).translate([
     side === 'left' ? anchor[0] - (rootWidth - overlap) / 2 : anchor[0] + (rootWidth - overlap) / 2,
     anchor[1],
@@ -274,7 +311,9 @@ export const finishStyle = (
   support.delete();
   joined.delete();
   const connected = connectIfNeeded(wasm, simplified, input.padding);
-  const result = attachKeyring ? ringAssembly(wasm, connected, input.holeDiameter, input.keyringWall, side) : connected;
+  const result = attachKeyring
+    ? ringAssembly(wasm, connected, input.holeDiameter, input.keyringWall, side)
+    : connected;
   if (result !== connected) connected.delete();
   return { backing: result, relief, recesses };
 };
@@ -282,11 +321,20 @@ export const buildStyle = (wasm: GeometryWasm, styleId: StyleId, input: StyleInp
   const textWidth = input.textBounds.max[0] - input.textBounds.min[0];
   const textHeight = input.textBounds.max[1] - input.textBounds.min[1];
   if (styleId === 'capsule')
-    return finishStyle(wasm, plateStyle(wasm, input, Math.max(5000, textHeight / 2)), input.text, input, 'right');
+    return finishStyle(
+      wasm,
+      plateStyle(wasm, input, Math.max(5000, textHeight / 2)),
+      input.text,
+      input,
+      'right',
+    );
   if (styleId === 'soft-tag') {
     const plate = plateStyle(wasm, input, 3500);
     const bounds = sectionBounds(plate);
-    const accent = wasm.CrossSection.circle(3400, 64).translate([bounds.max[0] - 3000, bounds.max[1] - 3000]);
+    const accent = wasm.CrossSection.circle(3400, 64).translate([
+      bounds.max[0] - 3000,
+      bounds.max[1] - 3000,
+    ]);
     const result = union(wasm, [plate, accent]);
     plate.delete();
     accent.delete();
@@ -341,7 +389,9 @@ export const buildStyle = (wasm: GeometryWasm, styleId: StyleId, input: StyleInp
     outer.delete();
     innerCut.delete();
     frame.delete();
-    return finishStyle(wasm, combined, input.text, input, 'right', [{ section: recessPad, depthMm: 0.2 }]);
+    return finishStyle(wasm, combined, input.text, input, 'right', [
+      { section: recessPad, depthMm: 0.2 },
+    ]);
   }
   const offset = input.text.offset(Math.max(input.padding, 2400), 'Round', 2, 64);
   return finishStyle(wasm, offset, input.text, input, 'left');

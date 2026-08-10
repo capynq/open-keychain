@@ -41,7 +41,9 @@ const modelXml = (parts: ThreeMfPart[]): string => {
       return `<object id="${id}" type="model" pid="10" pindex="${index}"><name>${escapeXml(part.name)}</name>${meshXml(part.mesh)}</object>`;
     })
     .join('');
-  const materials = parts.map((part) => `<base name="${escapeXml(part.name)}" displaycolor="${part.color}"/>`).join('');
+  const materials = parts
+    .map((part) => `<base name="${escapeXml(part.name)}" displaycolor="${part.color}"/>`)
+    .join('');
   const build = parts.map((_, index) => `<item objectid="${index + 1}"/>`).join('');
   return `<?xml version="1.0" encoding="UTF-8"?>
 <model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
@@ -79,5 +81,8 @@ export const serializeThreeMf = (
     '3D/3dmodel.model': strToU8(modelXml(parts)),
   };
   const zipped = zipSync(files);
-  return zipped.buffer.slice(zipped.byteOffset, zipped.byteOffset + zipped.byteLength) as ArrayBuffer;
+  return zipped.buffer.slice(
+    zipped.byteOffset,
+    zipped.byteOffset + zipped.byteLength,
+  ) as ArrayBuffer;
 };

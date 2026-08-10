@@ -46,7 +46,10 @@ export const validateMesh = (mesh: MeshBuffer): boolean => {
   return [...mesh.positions].every(Number.isFinite) && [...mesh.indices].every(Number.isFinite);
 };
 
-export const finiteBounds = (bounds: { min: readonly number[]; max: readonly number[] }): boolean => {
+export const finiteBounds = (bounds: {
+  min: readonly number[];
+  max: readonly number[];
+}): boolean => {
   return [...bounds.min, ...bounds.max].every(Number.isFinite);
 };
 
@@ -57,6 +60,8 @@ export const sectionArea = (section: CrossSection): number => {
       return area + point[0] * next[1] - next[0] * point[1];
     }, 0) / 2;
   return Math.abs(
-    section.toPolygons().reduce((area, polygon) => area + polygonArea(polygon as Array<[number, number]>), 0),
+    section
+      .toPolygons()
+      .reduce((area, polygon) => area + polygonArea(polygon as Array<[number, number]>), 0),
   );
 };

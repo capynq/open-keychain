@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { FONT_CATALOG, fontSupportsArticulatedName, fontSupportsText, textUsesCyrillic } from './catalog';
+import {
+  FONT_CATALOG,
+  fontSupportsArticulatedName,
+  fontSupportsText,
+  textUsesCyrillic,
+} from './catalog';
 describe('font script coverage metadata', () => {
   it('recognizes Cyrillic text and disables Latin-only families', () => {
     expect(textUsesCyrillic('Привет')).toBe(true);
@@ -62,9 +67,11 @@ describe('font script coverage metadata', () => {
       'lobster',
       'pangolin',
     ]);
-    expect(calligraphic.every((font) => font.scripts.includes('latin') && font.scripts.includes('cyrillic'))).toBe(
-      true,
-    );
+    expect(
+      calligraphic.every(
+        (font) => font.scripts.includes('latin') && font.scripts.includes('cyrillic'),
+      ),
+    ).toBe(true);
     expect(calligraphic.every((font) => font.sampleLatin && font.sampleCyrillic)).toBe(true);
   });
 });

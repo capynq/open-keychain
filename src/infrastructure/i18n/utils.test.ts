@@ -7,7 +7,9 @@ describe('i18n utilities', () => {
   });
   it('localizes style names and geometry issues', () => {
     expect(styleName('uk', 'frame', 'Frame')).not.toBe('Frame');
-    expect(issueMessage('en', { code: 'missing-glyph', message: 'The font does not contain “Ж”.' })).toContain('Ж');
+    expect(
+      issueMessage('en', { code: 'missing-glyph', message: 'The font does not contain “Ж”.' }),
+    ).toContain('Ж');
     expect(issueMessage('ru', { code: 'relief-outside-backing', message: '' })).toContain('основы');
   });
 });
