@@ -8,8 +8,8 @@
 }
 .topbar {
   flex: 0 0 auto;
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   padding: 12px clamp(24px, 3vw, 48px);
   border-bottom: 1px solid #dfddd6;
@@ -26,19 +26,11 @@
   height: 34px;
   border-radius: 10px;
 }
-.brand-mark h1,
-.brand-mark small {
-  display: block;
-}
 .brand-mark h1 {
+  display: block;
   margin: 0;
   letter-spacing: -0.03em;
   font-size: 14px;
-}
-.brand-mark small {
-  color: #777b87;
-  font-size: 10px;
-  margin-top: 1px;
 }
 .github-link {
   color: #303545;
@@ -47,13 +39,15 @@
   font-size: 13px;
 }
 .export-header-button {
-  min-height: 30px;
+  justify-self: center;
+  min-height: 40px;
   border: 0;
-  border-radius: 8px;
-  padding: 6px 10px;
+  border-radius: 10px;
+  padding: 9px 24px;
   background: #ef815e;
   color: #fff;
-  font-size: 11px;
+  box-shadow: 0 5px 12px #ef815e38;
+  font-size: 13px;
   font-weight: 900;
 }
 .export-header-button:hover {
@@ -122,6 +116,7 @@
   overflow: auto;
 }
 .topbar-actions {
+  justify-self: end;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -321,7 +316,7 @@ p {
 }
 .font-card > span {
   min-width: 0;
-  flex: 1;
+  flex: 1 1 50%;
   font-size: 15px;
   line-height: 1;
   overflow: hidden;
@@ -330,7 +325,7 @@ p {
 }
 .font-card small {
   min-width: 0;
-  max-width: 100%;
+  max-width: 45%;
   flex: 0 1 auto;
   color: #858791;
   font-size: 8px;
@@ -347,64 +342,8 @@ p {
   flex: none;
   min-height: 16px;
 }
-.font-nunito > span {
-  font-family: OpenNunito;
-  font-weight: 700;
-}
-.font-quicksand > span {
-  font-family: OpenQuicksand;
-  font-weight: 700;
-}
-.font-fredoka > span {
-  font-family: OpenFredoka;
-  font-weight: 600;
-}
-.font-oswald > span {
-  font-family: OpenOswald;
-  font-weight: 600;
-}
-.font-bree-serif > span {
-  font-family: OpenBree;
-}
-.font-baloo2 > span {
-  font-family: OpenBaloo;
-  font-weight: 600;
-}
-.font-kalam > span {
-  font-family: OpenKalam;
-  font-weight: 700;
-}
-.font-bungee > span {
-  font-family: OpenBungee;
-}
-.font-rubik > span {
-  font-family: OpenRubik;
-  font-weight: 900;
-}
-.font-montserrat > span {
-  font-family: OpenMontserrat;
-  font-weight: 900;
-}
-.font-caveat > span {
-  font-family: OpenCaveat;
-}
-.font-marck-script > span {
-  font-family: OpenMarck;
-}
-.font-bad-script > span {
-  font-family: OpenBadScript;
-}
-.font-neucha > span {
-  font-family: OpenNeucha;
-}
-.font-amatic-sc > span {
-  font-family: OpenAmatic;
-}
-.font-lobster > span {
-  font-family: OpenLobster;
-}
-.font-pangolin > span {
-  font-family: OpenPangolin;
+.articulated-font-grid .font-card small {
+  max-width: 100%;
 }
 .font-notice {
   color: #9a4d30;
@@ -455,15 +394,9 @@ input[type='range'] {
 .preview-heading {
   width: min(100%, 820px);
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   margin: 0 0 10px;
-}
-.preview-heading h2 {
-  font-size: 24px;
-  line-height: 1;
-  letter-spacing: -0.05em;
-  margin: 0;
 }
 .status-pill {
   border-radius: 999px;
@@ -700,6 +633,26 @@ input[type='range'] {
   }
   .topbar {
     padding: 14px 18px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'brand export'
+      'actions actions';
+    row-gap: 10px;
+  }
+  .brand-mark {
+    grid-area: brand;
+  }
+  .export-header-button {
+    grid-area: export;
+    justify-self: end;
+    min-height: 36px;
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+  .topbar-actions {
+    grid-area: actions;
+    width: 100%;
+    justify-content: flex-end;
   }
   .github-link {
     font-size: 12px;
@@ -763,9 +716,6 @@ input[type='range'] {
   }
   .preview-heading {
     width: 100%;
-  }
-  .preview-heading h2 {
-    font-size: 23px;
   }
   .preview-footer {
     width: 100%;

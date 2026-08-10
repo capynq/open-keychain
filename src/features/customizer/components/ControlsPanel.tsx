@@ -94,11 +94,13 @@ export const ControlsPanel = ({
           <button
             type="button"
             key={font.id}
-            className={`font-card font-${font.id} ${params.fontId === font.id ? 'selected' : ''}`}
+            className={`font-card ${params.fontId === font.id ? 'selected' : ''}`}
             onClick={() => update('fontId', font.id)}
             title={font.name}
           >
-            <span>{usesCyrillic ? font.sampleCyrillic : font.sampleLatin}</span>
+            <span style={{ fontFamily: font.previewFamily, fontWeight: font.weight }}>
+              {usesCyrillic ? font.sampleCyrillic : font.sampleLatin}
+            </span>
             <small>{font.name}</small>
           </button>
         ))}

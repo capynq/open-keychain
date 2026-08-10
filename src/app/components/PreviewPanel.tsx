@@ -4,13 +4,11 @@ import { t, type Locale } from '../../infrastructure/i18n';
 
 export const PreviewPanel = ({
   locale,
-  text,
   geometry,
   surfacePreset,
   status,
 }: {
   locale: Locale;
-  text: string;
   geometry: {
     result: GeometryResult | undefined;
     busy: boolean;
@@ -20,10 +18,7 @@ export const PreviewPanel = ({
 }) => (
   <section className="preview-panel">
     <div className="preview-heading">
-      <div>
-        <p className="eyebrow">{t(locale, 'livePreview')}</p>
-        <h2>{text || t(locale, 'title')}</h2>
-      </div>
+      <h2 className="eyebrow">{t(locale, 'livePreview')}</h2>
       <span className={`status-pill ${status.className}`}>{status.text}</span>
     </div>
     <div className="viewer-wrap">

@@ -11,6 +11,9 @@ const cameraViews = [
 test('customizes a name, uses every icon camera preset, and downloads STL', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText('Open Keychain')).toBeVisible();
+  await expect(page.locator('.brand-mark small')).toHaveCount(0);
+  await expect(page.locator('.preview-heading h2')).toHaveText('LIVE PREVIEW');
+  await expect(page.getByRole('heading', { name: 'ALEX' })).toHaveCount(0);
   const name = page.getByLabel('Name or text');
   await name.fill('OLIVER');
   await page.getByRole('button', { name: 'Capsule' }).click();
@@ -136,14 +139,31 @@ test('scopes styles to supported templates and keeps the Montserrat preview visi
   page,
 }) => {
   await page.goto('/');
+  const readMontserratPreview = async () => {
+    const montserrat = page.getByRole('button', { name: /Montserrat Black/ });
+
+    await expect(montserrat).toBeVisible();
+    return montserrat.locator('span').evaluate((element) => {
+      const style = getComputedStyle(element);
+
+      return {
+        width: element.getBoundingClientRect().width,
+        family: style.fontFamily,
+        weight: style.fontWeight,
+      };
+    });
+  };
+
+  const nameKeychainPreview = await readMontserratPreview();
   await page.getByRole('button', { name: 'Articulated name' }).click();
   await expect(page.getByRole('heading', { name: 'Style' })).toHaveCount(0);
   const montserrat = page.getByRole('button', { name: /Montserrat Black/ });
   await expect(montserrat).toBeVisible();
-  const sampleWidth = await montserrat
-    .locator('span')
-    .evaluate((element) => element.getBoundingClientRect().width);
-  expect(sampleWidth).toBeGreaterThan(0);
+  const articulatedPreview = await readMontserratPreview();
+  expect(nameKeychainPreview.width).toBeGreaterThan(0);
+  expect(articulatedPreview.width).toBeGreaterThan(0);
+  expect(nameKeychainPreview.family).toBe(articulatedPreview.family);
+  expect(nameKeychainPreview.weight).toBe(articulatedPreview.weight);
   await page.getByRole('button', { name: 'Nameplate' }).click();
   await expect(page.getByRole('heading', { name: 'Style' })).toHaveCount(0);
   await expect(page.getByLabel('Keyring hole')).toHaveCount(0);
@@ -197,6 +217,8 @@ for (const viewport of [
         controlsBottom: controls.bottom,
         exportTop: exportButton.top,
         exportBottom: exportButton.bottom,
+        exportCenter: (exportButton.left + exportButton.right) / 2,
+        viewportCenter: window.innerWidth / 2,
       };
     });
     expect(layout.documentHeight).toBeLessThanOrEqual(layout.viewportHeight);
@@ -205,6 +227,8 @@ for (const viewport of [
     expect(layout.headerBottom).toBeLessThanOrEqual(layout.controlsTop);
     expect(layout.exportTop).toBeGreaterThanOrEqual(layout.headerTop);
     expect(layout.exportBottom).toBeLessThanOrEqual(layout.headerBottom);
+    expect(Math.abs(layout.exportCenter - layout.viewportCenter)).toBeLessThanOrEqual(1);
+    expect(layout.exportBottom - layout.exportTop).toBeGreaterThanOrEqual(36);
     await expect(page.getByRole('button', { name: 'Export' })).toBeVisible();
     await expect(page.getByLabel('Keyring hole')).toBeVisible();
   });

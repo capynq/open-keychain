@@ -74,4 +74,11 @@ describe('font script coverage metadata', () => {
     ).toBe(true);
     expect(calligraphic.every((font) => font.sampleLatin && font.sampleCyrillic)).toBe(true);
   });
+  it('keeps font preview family and weight metadata centralized', () => {
+    expect(FONT_CATALOG.every((font) => font.previewFamily && font.weight > 0)).toBe(true);
+    expect(FONT_CATALOG.find((font) => font.id === 'montserrat')).toMatchObject({
+      previewFamily: 'OpenMontserrat',
+      weight: 900,
+    });
+  });
 });

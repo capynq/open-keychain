@@ -13,3 +13,4 @@ public/manifold.wasm
 *.gif
 *.ico
 *.lock
+pnpm-lock.yaml

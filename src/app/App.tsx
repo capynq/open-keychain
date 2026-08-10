@@ -64,7 +64,6 @@ const App = () => {
         />
         <PreviewPanel
           locale={locale}
-          text={customizer.params.text}
           geometry={geometry}
           surfacePreset={surfacePreset}
           status={status}

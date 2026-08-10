@@ -25,9 +25,17 @@ export const AppHeader = ({
         <img src="/brand/open-keychain-mark.svg" alt="" width="34" height="34" />
         <div>
           <h1>Open Keychain</h1>
-          <small>{t(locale, 'brandTagline')}</small>
         </div>
       </div>
+      <button
+        type="button"
+        className="export-header-button"
+        onClick={onExportOpen}
+        aria-haspopup="dialog"
+        aria-expanded={exportOpen}
+      >
+        {t(locale, 'export')}
+      </button>
       <div className="topbar-actions">
         <label className="language-picker">
           <span className="sr-only">{t(locale, 'language')}</span>
@@ -48,15 +56,6 @@ export const AppHeader = ({
         <a href="https://github.com/WilfredoN/open-keychain" className="github-link">
           {t(locale, 'openSource')}
         </a>
-        <button
-          type="button"
-          className="export-header-button"
-          onClick={onExportOpen}
-          aria-haspopup="dialog"
-          aria-expanded={exportOpen}
-        >
-          {t(locale, 'export')}
-        </button>
         {hostedMode && (
           <div className="account-menu">
             <button
