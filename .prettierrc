@@ -1,5 +1,5 @@
 {
-  "printWidth": 120,
+  "printWidth": 100,
   "tabWidth": 2,
   "useTabs": false,
   "semi": true,
@@ -8,5 +8,24 @@
   "arrowParens": "always",
   "bracketSpacing": true,
   "endOfLine": "lf",
-  "proseWrap": "preserve"
+  "proseWrap": "preserve",
+  "objectWrap": "preserve",
+  "overrides": [
+    {
+      "files": [
+        "*.md",
+        "*.mdx",
+        "*.json",
+        "*.css",
+        "*.scss",
+        "*.html",
+        "*.yml",
+        "*.yaml",
+        "*.d.ts"
+      ],
+      "options": {
+        "printWidth": 120
+      }
+    }
+  ]
 }

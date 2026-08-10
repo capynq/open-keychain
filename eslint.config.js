@@ -7,7 +7,13 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig([
   {
-    ignores: ['dist/**', 'node_modules/**', 'playwright-report/**', 'test-results/**', 'coverage/**'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'playwright-report/**',
+      'test-results/**',
+      'coverage/**',
+    ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
@@ -35,4 +41,23 @@ export default defineConfig([
     rules: { 'no-console': 'off' },
   },
   prettier,
+  {
+    files: [
+      'src/app/**/*.{ts,tsx}',
+      'src/features/customizer/hooks/**/*.{ts,tsx}',
+      'src/features/export/model/**/*.{ts,tsx}',
+      'src/features/hosted/hooks/**/*.{ts,tsx}',
+      'src/features/preview/components/**/*.{ts,tsx}',
+    ],
+    rules: {
+      'padding-line-between-statements': [
+        'error',
+        {
+          blankLine: 'always',
+          prev: ['const', 'let', 'var'],
+          next: ['expression', 'return'],
+        },
+      ],
+    },
+  },
 ]);
