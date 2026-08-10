@@ -85,7 +85,12 @@ const boxCorners = (bounds: THREE.Box3): THREE.Vector3[] => {
     new THREE.Vector3(max.x, max.y, max.z),
   ];
 };
-export const modelBounds = (width: number, height: number, depth: number, center: THREE.Vector3): THREE.Box3 => {
+export const modelBounds = (
+  width: number,
+  height: number,
+  depth: number,
+  center: THREE.Vector3,
+): THREE.Box3 => {
   const halfSize = new THREE.Vector3(width / 2, height / 2, depth / 2);
   return new THREE.Box3(center.clone().sub(halfSize), center.clone().add(halfSize));
 };
@@ -103,9 +108,15 @@ export const cameraPose = (
   up.normalize();
   const right = up.clone().cross(outward).normalize();
   const relativeCorners = boxCorners(bounds).map((corner) => corner.sub(target));
-  const projectedHalfWidth = Math.max(...relativeCorners.map((corner) => Math.abs(corner.dot(right))));
-  const projectedHalfHeight = Math.max(...relativeCorners.map((corner) => Math.abs(corner.dot(up))));
-  const projectedHalfDepth = Math.max(...relativeCorners.map((corner) => Math.abs(corner.dot(outward))));
+  const projectedHalfWidth = Math.max(
+    ...relativeCorners.map((corner) => Math.abs(corner.dot(right))),
+  );
+  const projectedHalfHeight = Math.max(
+    ...relativeCorners.map((corner) => Math.abs(corner.dot(up))),
+  );
+  const projectedHalfDepth = Math.max(
+    ...relativeCorners.map((corner) => Math.abs(corner.dot(outward))),
+  );
   const verticalFov = THREE.MathUtils.degToRad(camera.fov);
   const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect);
   const framingMargin = 1.12;
@@ -119,7 +130,8 @@ export const cameraPose = (
   const narrowFov = Math.min(verticalFov, horizontalFov);
   const orbitDistance = (radius * ORBIT_MARGIN) / Math.sin(narrowFov / 2);
   const distance =
-    Math.max(planarDistance + projectedHalfDepth + clearance, orbitDistance) * Math.max(0.35, distanceScale);
+    Math.max(planarDistance + projectedHalfDepth + clearance, orbitDistance) *
+    Math.max(0.35, distanceScale);
   const position = target.clone().addScaledVector(outward, distance);
   const near = Math.max(0.05, distance - radius - clearance);
   const far = Math.max(near + 1, distance + radius + clearance + SURFACE_DEPTH_CLEARANCE);

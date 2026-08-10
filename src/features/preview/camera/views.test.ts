@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { applyCameraPose, cameraPose, modelBounds, viewDefinition, VIEW_DEFINITIONS } from './views';
+import {
+  applyCameraPose,
+  cameraPose,
+  modelBounds,
+  viewDefinition,
+  VIEW_DEFINITIONS,
+} from './views';
 describe('viewer camera views', () => {
   const camera = new THREE.PerspectiveCamera(36, 1.6, 0.1, 1000);
   const center = new THREE.Vector3(2, -3, 1);
@@ -26,7 +32,9 @@ describe('viewer camera views', () => {
     const view = viewDefinition('home');
     const fitted = cameraPose(camera, bounds, view.direction, view.up, 1);
     const close = cameraPose(camera, bounds, view.direction, view.up, 0.42);
-    expect(close.position.distanceTo(close.target)).toBeLessThan(fitted.position.distanceTo(fitted.target));
+    expect(close.position.distanceTo(close.target)).toBeLessThan(
+      fitted.position.distanceTo(fitted.target),
+    );
   });
   it('provides a distinct SVG icon identifier for every preset', () => {
     expect(new Set(VIEW_DEFINITIONS.map((view) => view.icon)).size).toBe(VIEW_DEFINITIONS.length);
@@ -61,7 +69,13 @@ describe('viewer camera views', () => {
     }
   });
   it('keeps the fitted home distance and clipping planes safe through a full custom orbit', () => {
-    const home = cameraPose(camera, bounds, viewDefinition('home').direction, viewDefinition('home').up, 1.16);
+    const home = cameraPose(
+      camera,
+      bounds,
+      viewDefinition('home').direction,
+      viewDefinition('home').up,
+      1.16,
+    );
     const distance = home.position.distanceTo(home.target);
     const corners = [
       new THREE.Vector3(bounds.min.x, bounds.min.y, bounds.min.z),

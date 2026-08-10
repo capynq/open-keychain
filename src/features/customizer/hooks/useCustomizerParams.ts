@@ -8,7 +8,12 @@ import {
   textUsesCyrillic,
 } from '../../../domain/keychain';
 import { PARAMETER_RANGES, hasTemplateParameter } from '../../../domain/keychain';
-import { DEFAULT_PARAMS, normalizeParams, type KeychainParams, type TemplateId } from '../../../domain/keychain';
+import {
+  DEFAULT_PARAMS,
+  normalizeParams,
+  type KeychainParams,
+  type TemplateId,
+} from '../../../domain/keychain';
 import { STYLE_CATALOG, TEMPLATE_CATALOG } from '../../../domain/keychain';
 import type { FontNotice } from '../model/customizer-types';
 
@@ -28,31 +33,45 @@ export const useCustomizerParams = (): {
   const [params, setParams] = useState<KeychainParams>(() => {
     try {
       const saved = localStorage.getItem('open-keychain-preferences');
-      const next = saved ? normalizeParams({ ...DEFAULT_PARAMS, ...JSON.parse(saved) }) : DEFAULT_PARAMS;
+      const next = saved
+        ? normalizeParams({ ...DEFAULT_PARAMS, ...JSON.parse(saved) })
+        : DEFAULT_PARAMS;
       const current = fontDefinition(next.fontId);
-      if (next.templateId === 'articulated-name' && !fontSupportsArticulatedName(current, next.text))
+      if (
+        next.templateId === 'articulated-name' &&
+        !fontSupportsArticulatedName(current, next.text)
+      )
         next.fontId = articulatedFallbackFont(next.text).id;
       else if (!fontSupportsText(current, next.text))
-        next.fontId = FONT_CATALOG.find((font) => fontSupportsText(font, next.text))?.id ?? DEFAULT_PARAMS.fontId;
+        next.fontId =
+          FONT_CATALOG.find((font) => fontSupportsText(font, next.text))?.id ??
+          DEFAULT_PARAMS.fontId;
       return next;
     } catch {
       return DEFAULT_PARAMS;
     }
   });
+
   const [fontNotice, setFontNotice] = useState<FontNotice>();
+
   const selectedFont = useMemo(
     () => FONT_CATALOG.find((font) => font.id === params.fontId) ?? FONT_CATALOG[0],
     [params.fontId],
   );
+
   const activeTemplate = useMemo(
-    () => TEMPLATE_CATALOG.find((template) => template.id === params.templateId) ?? TEMPLATE_CATALOG[0],
+    () =>
+      TEMPLATE_CATALOG.find((template) => template.id === params.templateId) ?? TEMPLATE_CATALOG[0],
     [params.templateId],
   );
+
   const availableStyles = useMemo(
     () => STYLE_CATALOG.filter((style) => activeTemplate.styles.includes(style.id)),
     [activeTemplate],
   );
+
   const usesCyrillic = textUsesCyrillic(params.text);
+
   useEffect(() => {
     localStorage.setItem(
       'open-keychain-preferences',
@@ -79,10 +98,12 @@ export const useCustomizerParams = (): {
       }),
     );
   }, [params]);
+
   const update = <K extends keyof KeychainParams>(key: K, value: KeychainParams[K]): void => {
     setFontNotice(undefined);
     setParams((current) => ({ ...current, [key]: value }));
   };
+
   const updateText = (text: string): void => {
     const currentFont = fontDefinition(params.fontId);
     const articulated = params.templateId === 'articulated-name';
@@ -94,9 +115,11 @@ export const useCustomizerParams = (): {
       : articulated
         ? articulatedFallbackFont(text)
         : FONT_CATALOG.find((font) => fontSupportsText(font, text));
-    if (replacement) setFontNotice({ font: currentFont.name, replacement: replacement.name, articulated });
+    if (replacement)
+      setFontNotice({ font: currentFont.name, replacement: replacement.name, articulated });
     setParams((current) => ({ ...current, text, fontId: replacement?.id ?? current.fontId }));
   };
+
   const selectTemplate = (templateId: TemplateId): void => {
     setFontNotice(undefined);
     const selected = fontDefinition(params.fontId);
@@ -105,22 +128,30 @@ export const useCustomizerParams = (): {
         ? articulatedFallbackFont(params.text)
         : undefined;
     if (previewReplacement)
-      setFontNotice({ font: selected.name, replacement: previewReplacement.name, articulated: true });
+      setFontNotice({
+        font: selected.name,
+        replacement: previewReplacement.name,
+        articulated: true,
+      });
     setParams((current) => {
       const currentFont = fontDefinition(current.fontId);
       const replacement =
         templateId === 'articulated-name' && !fontSupportsArticulatedName(currentFont, current.text)
           ? articulatedFallbackFont(current.text)
           : undefined;
+
       return {
         ...current,
         templateId,
         fontId: replacement?.id ?? current.fontId,
         baseThicknessMm:
-          templateId === 'articulated-name' ? Math.max(3.4, current.baseThicknessMm) : current.baseThicknessMm,
+          templateId === 'articulated-name'
+            ? Math.max(3.4, current.baseThicknessMm)
+            : current.baseThicknessMm,
       };
     });
   };
+
   return {
     params,
     selectedFont,

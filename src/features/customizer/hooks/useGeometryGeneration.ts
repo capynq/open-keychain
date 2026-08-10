@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
+} from 'react';
 import { GeometryClient } from '../../../infrastructure/geometry';
 import type { GeometryResult, KeychainParams } from '../../../domain/keychain';
 
@@ -16,14 +23,18 @@ export const useGeometryGeneration = (
   const [result, setResult] = useState<GeometryResult>();
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string>();
+
   useEffect(() => {
     const client = new GeometryClient();
+
     clientRef.current = client;
     return () => client.dispose();
   }, []);
+
   useEffect(() => {
     resultRef.current = result;
   }, [result]);
+
   useEffect(() => {
     const timer = window.setTimeout(
       () => {
@@ -42,7 +53,9 @@ export const useGeometryGeneration = (
       },
       resultRef.current ? 90 : 0,
     );
+
     return () => window.clearTimeout(timer);
   }, [params]);
+
   return { clientRef, result, busy, error, setError };
 };

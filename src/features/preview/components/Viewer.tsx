@@ -41,6 +41,7 @@ const SURFACE_SIZE = 1800;
 const disposeChildren = (group: THREE.Group): void => {
   while (group.children.length) {
     const child = group.children[0];
+
     group.remove(child);
     if (child instanceof THREE.Mesh) {
       child.geometry.dispose();
@@ -56,12 +57,21 @@ const makeMesh = (
   flatShading = false,
 ): THREE.Mesh => {
   const geometry = new THREE.BufferGeometry();
+
   geometry.setAttribute('position', new THREE.BufferAttribute(mesh.positions, 3));
   geometry.setIndex(new THREE.BufferAttribute(mesh.indices, 1));
-  const shadedGeometry = flatShading ? geometry : toCreasedNormals(geometry, THREE.MathUtils.degToRad(25));
+  const shadedGeometry = flatShading
+    ? geometry
+    : toCreasedNormals(geometry, THREE.MathUtils.degToRad(25));
   if (shadedGeometry !== geometry) geometry.dispose();
-  const material = new THREE.MeshStandardMaterial({ color, roughness, metalness: 0.02, flatShading });
+  const material = new THREE.MeshStandardMaterial({
+    color,
+    roughness,
+    metalness: 0.02,
+    flatShading,
+  });
   const object = new THREE.Mesh(shadedGeometry, material);
+
   object.castShadow = true;
   object.receiveShadow = true;
   return object;
@@ -91,15 +101,22 @@ const CameraViewIcon = ({ icon }: { icon: CameraViewIconId }) => {
     'arrow-up': 'M12 20V4m0 0-6 6m6-6 6 6',
     'arrow-down': 'M12 4v16m0 0-6-6m6 6 6-6',
   }[icon];
+
   return (
     <svg data-icon={icon} viewBox="0 0 24 24" aria-hidden="true">
       <path d={path} />
     </svg>
   );
 };
-const fitViewer = (state: ViewerState, result: GeometryResult, selected: ViewId | 'custom', resetZoom = true): void => {
+const fitViewer = (
+  state: ViewerState,
+  result: GeometryResult,
+  selected: ViewId | 'custom',
+  resetZoom = true,
+): void => {
   if (resetZoom) state.zoomScale = DEFAULT_ZOOM_SCALE;
   const center = new THREE.Vector3(...result.dimensions.centerMm);
+
   center.z += state.displayOffsetZ;
   const bounds = modelBounds(
     result.dimensions.widthMm,
@@ -108,9 +125,12 @@ const fitViewer = (state: ViewerState, result: GeometryResult, selected: ViewId 
     center,
   );
   const direction =
-    selected === 'custom' ? state.camera.position.clone().sub(center).normalize() : viewDefinition(selected).direction;
+    selected === 'custom'
+      ? state.camera.position.clone().sub(center).normalize()
+      : viewDefinition(selected).direction;
   const up = selected === 'custom' ? state.camera.up : viewDefinition(selected).up;
   const pose = cameraPose(state.camera, bounds, direction, up, state.zoomScale);
+
   applyCameraPose(state.camera, pose);
   state.controls.target.copy(pose.target);
   state.controls.cursor.copy(pose.target);
@@ -122,20 +142,31 @@ const syncPlatform = (state: ViewerState, result: GeometryResult | undefined): v
   const depth = Math.max(28, result.dimensions.heightMm + 24);
   const thickness = 3.6;
   const radius = Math.min(5, Math.min(width, depth) * 0.16);
+
   state.platform.geometry.dispose();
   state.platform.geometry = new RoundedBoxGeometry(width, depth, thickness, 5, radius);
-  state.platform.position.set(result.dimensions.centerMm[0], result.dimensions.centerMm[1], -thickness / 2);
+  state.platform.position.set(
+    result.dimensions.centerMm[0],
+    result.dimensions.centerMm[1],
+    -thickness / 2,
+  );
   state.platform.receiveShadow = true;
 };
 export const Viewer = ({ result, surfacePreset = 'matte', locale = 'en' }: ViewerProps) => {
   const hostRef = useRef<HTMLDivElement>(null);
+
   const stateRef = useRef<ViewerState | undefined>(undefined);
+
   const resultRef = useRef<GeometryResult | undefined>(result);
+
   const activeViewRef = useRef<ViewId | 'custom'>('home');
+
   const [activeView, setActiveView] = useState<ViewId | 'custom'>('home');
+
   useEffect(() => {
     resultRef.current = result;
   }, [result]);
+
   const setView = useCallback(
     (id: ViewId) => {
       const state = stateRef.current;
@@ -146,21 +177,33 @@ export const Viewer = ({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
     },
     [result],
   );
+
   const zoomBy = useCallback((factor: number) => {
     const state = stateRef.current;
     const current = resultRef.current;
     if (!state || !current) return;
-    state.zoomScale = THREE.MathUtils.clamp(state.zoomScale * factor, MIN_ZOOM_SCALE, MAX_ZOOM_SCALE);
+    state.zoomScale = THREE.MathUtils.clamp(
+      state.zoomScale * factor,
+      MIN_ZOOM_SCALE,
+      MAX_ZOOM_SCALE,
+    );
     fitViewer(state, current, activeViewRef.current, false);
     setActiveView(activeViewRef.current);
   }, []);
+
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return undefined;
     const scene = new THREE.Scene();
+
     scene.background = new THREE.Color('#eee8df');
     const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: false,
+      powerPreference: 'high-performance',
+    });
+
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(host.clientWidth, host.clientHeight, false);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -170,6 +213,7 @@ export const Viewer = ({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
     renderer.shadowMap.type = THREE.BasicShadowMap;
     host.prepend(renderer.domElement);
     const controls = new OrbitControls(camera, renderer.domElement);
+
     controls.enableDamping = true;
     controls.dampingFactor = 0.12;
     controls.rotateSpeed = 0.68;
@@ -190,18 +234,24 @@ export const Viewer = ({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
       const current = resultRef.current;
       if (current && stateRef.current) {
         const target = new THREE.Vector3(...current.dimensions.centerMm);
+
         target.z += stateRef.current.displayOffsetZ;
         stateRef.current.controls.target.copy(target);
         stateRef.current.controls.cursor.copy(target);
       }
     });
     const group = new THREE.Group();
+
     scene.add(group);
     scene.add(new THREE.HemisphereLight('#fff8ec', '#7f8796', 2.2));
     const key = new THREE.DirectionalLight('#fff9ed', 3.2);
+
     key.position.set(-48, -64, 92);
     key.castShadow = true;
-    key.shadow.mapSize.set(window.innerWidth < 760 ? 1024 : 2048, window.innerWidth < 760 ? 1024 : 2048);
+    key.shadow.mapSize.set(
+      window.innerWidth < 760 ? 1024 : 2048,
+      window.innerWidth < 760 ? 1024 : 2048,
+    );
     key.shadow.bias = -0.0002;
     key.shadow.normalBias = 0.025;
     key.shadow.camera.left = -100;
@@ -210,16 +260,19 @@ export const Viewer = ({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
     key.shadow.camera.bottom = -100;
     scene.add(key);
     const rim = new THREE.DirectionalLight('#d8c2b0', 2.1);
+
     rim.position.set(64, 32, 48);
     scene.add(rim);
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(SURFACE_SIZE, SURFACE_SIZE),
       new THREE.MeshStandardMaterial({ color: '#eee8df', roughness: 0.92, metalness: 0 }),
     );
+
     floor.position.z = -0.08;
     floor.receiveShadow = true;
     scene.add(floor);
     const grid = new THREE.GridHelper(SURFACE_SIZE, 90, '#b8b0a6', '#d2cbc1');
+
     grid.rotation.x = Math.PI / 2;
     grid.position.z = -0.06;
     grid.visible = false;
@@ -228,6 +281,7 @@ export const Viewer = ({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
       new RoundedBoxGeometry(1, 1, 1, 3, 0.2),
       new THREE.MeshStandardMaterial({ color: '#a87850', roughness: 0.68, metalness: 0 }),
     );
+
     platform.visible = false;
     scene.add(platform);
     const viewerState: ViewerState = {
@@ -245,6 +299,7 @@ export const Viewer = ({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
     const resize = () => {
       const width = host.clientWidth;
       const height = host.clientHeight;
+
       renderer.setSize(width, height, false);
       camera.aspect = width / Math.max(height, 1);
       camera.updateProjectionMatrix();
@@ -252,6 +307,7 @@ export const Viewer = ({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
       if (current) fitViewer(viewerState, current, activeViewRef.current, false);
     };
     const resizeObserver = new ResizeObserver(resize);
+
     resizeObserver.observe(host);
     resize();
     stateRef.current = viewerState;
@@ -261,6 +317,7 @@ export const Viewer = ({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
       renderer.render(scene, camera);
       frame = requestAnimationFrame(animate);
     };
+
     animate();
     return () => {
       cancelAnimationFrame(frame);
@@ -278,21 +335,30 @@ export const Viewer = ({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
       stateRef.current = undefined;
     };
   }, []);
+
   useEffect(() => {
     const state = stateRef.current;
     if (!state || !result) return;
     disposeChildren(state.group);
-    state.group.add(makeMesh(result.baseMesh, result.appearance.base.color, 0.42, result.baseShading === 'flat'));
+    state.group.add(
+      makeMesh(result.baseMesh, result.appearance.base.color, 0.42, result.baseShading === 'flat'),
+    );
     state.group.add(makeMesh(result.reliefMesh, result.appearance.relief.color, 0.3));
     const center = new THREE.Vector3(...result.dimensions.centerMm);
+
     state.floor.position.set(center.x, center.y, state.platform.visible ? -3.72 : -0.08);
     state.grid.position.set(center.x, center.y, state.platform.visible ? -3.7 : -0.06);
     state.displayOffsetZ = state.platform.visible ? 3.72 : 0;
     state.group.position.z = state.displayOffsetZ;
     syncPlatform(state, result);
     const selected = activeViewRef.current;
-    const maxDimension = Math.max(result.dimensions.widthMm, result.dimensions.heightMm, result.dimensions.thicknessMm);
+    const maxDimension = Math.max(
+      result.dimensions.widthMm,
+      result.dimensions.heightMm,
+      result.dimensions.thicknessMm,
+    );
     const shadowSpan = maxDimension * 0.72;
+
     state.key.shadow.camera.left = -shadowSpan;
     state.key.shadow.camera.right = shadowSpan;
     state.key.shadow.camera.top = shadowSpan;
@@ -302,6 +368,7 @@ export const Viewer = ({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
     state.key.shadow.camera.updateProjectionMatrix();
     fitViewer(state, result, selected);
   }, [result]);
+
   useEffect(() => {
     const state = stateRef.current;
     if (!state) return;
@@ -359,6 +426,7 @@ export const Viewer = ({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
       },
     };
     const preset = presets[surfacePreset];
+
     state.scene.background = new THREE.Color(preset.background);
     floorMaterial.color.set(preset.background);
     floorMaterial.roughness = preset.roughness;
@@ -366,14 +434,17 @@ export const Viewer = ({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
     state.grid.visible = preset.grid;
     state.platform.visible = preset.platform;
     const platformMaterial = state.platform.material as THREE.MeshStandardMaterial;
+
     platformMaterial.color.set(preset.platformColor);
     platformMaterial.roughness = preset.roughness;
     platformMaterial.metalness = preset.metalness;
     const current = resultRef.current;
+
     state.displayOffsetZ = preset.platform ? 3.72 : 0;
     state.group.position.z = state.displayOffsetZ;
     if (current) {
       const center = new THREE.Vector3(...current.dimensions.centerMm);
+
       state.floor.position.set(center.x, center.y, preset.platform ? -3.72 : -0.08);
       state.grid.position.set(center.x, center.y, preset.platform ? -3.7 : -0.06);
       syncPlatform(state, current);
@@ -381,7 +452,12 @@ export const Viewer = ({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
     }
   }, [surfacePreset]);
   return (
-    <div className="viewer" aria-label="Interactive 3D preview" data-view={activeView} data-surface={surfacePreset}>
+    <div
+      className="viewer"
+      aria-label="Interactive 3D preview"
+      data-view={activeView}
+      data-surface={surfacePreset}
+    >
       <div className="viewer-surface" ref={hostRef}>
         <p className="viewer-caption">{t(locale, 'dragRotate')}</p>
       </div>
