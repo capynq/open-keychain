@@ -9,13 +9,10 @@ import {
   signUp,
   type HostedProject,
   type HostedUser,
-} from '../../hosted/api/hosted-api';
+} from '../api/hosted-api';
 import type { KeychainParams } from '../../../domain/keychain';
 
-export const useHostedAccount = (
-  params: KeychainParams,
-  onLoadProject: (params: KeychainParams) => void,
-): {
+export type HostedAccountState = {
   account: HostedUser | undefined;
   projects: HostedProject[];
   accountOpen: boolean;
@@ -34,7 +31,12 @@ export const useHostedAccount = (
   saveCurrentProject: () => Promise<void>;
   loadProject: (project: HostedProject) => void;
   logOut: () => Promise<void>;
-} => {
+};
+
+export const useHostedAccount = (
+  params: KeychainParams,
+  onLoadProject: (params: KeychainParams) => void,
+): HostedAccountState => {
   const [account, setAccount] = useState<HostedUser>();
   const [projects, setProjects] = useState<HostedProject[]>([]);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -44,16 +46,19 @@ export const useHostedAccount = (
   const [authPassword, setAuthPassword] = useState('');
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState<string>();
+
   useEffect(() => {
     if (!hostedMode) return;
     void currentUser().then((user) => {
       setAccount(user);
+
       if (user)
         void listProjects()
           .then(setProjects)
           .catch(() => setProjects([]));
     });
   }, []);
+
   const submitAuth = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     setAuthBusy(true);
@@ -63,6 +68,7 @@ export const useHostedAccount = (
         authMode === 'sign-up'
           ? await signUp(authName, authEmail, authPassword)
           : await signIn(authEmail, authPassword);
+
       setAccount(response.user);
       setProjects(await listProjects());
       setAuthPassword('');
@@ -72,27 +78,35 @@ export const useHostedAccount = (
       setAuthBusy(false);
     }
   };
+
   const saveCurrentProject = async (): Promise<void> => {
     if (!account) return;
     const name = window.prompt('Project name', params.text || 'Untitled keychain')?.trim();
     if (!name) return;
     try {
       const response = await saveProject(name, params as unknown as Record<string, unknown>);
-      setProjects((current) => [response.project, ...current.filter((project) => project.id !== response.project.id)]);
+
+      setProjects((current) => [
+        response.project,
+        ...current.filter((project) => project.id !== response.project.id),
+      ]);
     } catch (cause) {
       setAuthError(cause instanceof Error ? cause.message : 'Project could not be saved.');
       setAccountOpen(true);
     }
   };
+
   const loadProject = (project: HostedProject): void => {
     onLoadProject(project.params as KeychainParams);
     setAccountOpen(false);
   };
+
   const logOut = async (): Promise<void> => {
     await signOut();
     setAccount(undefined);
     setProjects([]);
   };
+
   return {
     account,
     projects,

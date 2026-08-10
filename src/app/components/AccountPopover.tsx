@@ -1,44 +1,31 @@
-import type { FormEvent } from 'react';
-import type { HostedProject, HostedUser } from '../../features/hosted';
+import type { HostedAccountState } from '../../features/hosted';
 import { t, type Locale } from '../../infrastructure/i18n';
 
 export const AccountPopover = ({
   locale,
-  account,
-  projects,
-  authMode,
-  authName,
-  authEmail,
-  authPassword,
-  authBusy,
-  authError,
-  setAuthMode,
-  setAuthName,
-  setAuthEmail,
-  setAuthPassword,
-  submitAuth,
-  saveCurrentProject,
-  loadProject,
-  logOut,
+  state,
 }: {
   locale: Locale;
-  account: HostedUser | undefined;
-  projects: HostedProject[];
-  authMode: 'sign-in' | 'sign-up';
-  authName: string;
-  authEmail: string;
-  authPassword: string;
-  authBusy: boolean;
-  authError: string | undefined;
-  setAuthMode: (mode: 'sign-in' | 'sign-up') => void;
-  setAuthName: (name: string) => void;
-  setAuthEmail: (email: string) => void;
-  setAuthPassword: (password: string) => void;
-  submitAuth: (event: FormEvent<HTMLFormElement>) => Promise<void>;
-  saveCurrentProject: () => Promise<void>;
-  loadProject: (project: HostedProject) => void;
-  logOut: () => Promise<void>;
+  state: HostedAccountState;
 }) => {
+  const {
+    account,
+    projects,
+    authMode,
+    authName,
+    authEmail,
+    authPassword,
+    authBusy,
+    authError,
+    setAuthMode,
+    setAuthName,
+    setAuthEmail,
+    setAuthPassword,
+    submitAuth,
+    saveCurrentProject,
+    loadProject,
+    logOut,
+  } = state;
   if (account)
     return (
       <>
@@ -90,9 +77,16 @@ export const AccountPopover = ({
       />
       {authError && <small className="account-error">{authError}</small>}
       <button type="submit" disabled={authBusy}>
-        {authBusy ? t(locale, 'updating') : authMode === 'sign-up' ? t(locale, 'createAccount') : t(locale, 'signIn')}
+        {authBusy
+          ? t(locale, 'updating')
+          : authMode === 'sign-up'
+            ? t(locale, 'createAccount')
+            : t(locale, 'signIn')}
       </button>
-      <button type="button" onClick={() => setAuthMode(authMode === 'sign-in' ? 'sign-up' : 'sign-in')}>
+      <button
+        type="button"
+        onClick={() => setAuthMode(authMode === 'sign-in' ? 'sign-up' : 'sign-in')}
+      >
         {authMode === 'sign-in' ? t(locale, 'createAccount') : t(locale, 'signIn')}
       </button>
     </form>

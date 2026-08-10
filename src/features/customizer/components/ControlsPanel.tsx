@@ -4,39 +4,32 @@ import {
   fontSupportsText,
   TEMPLATE_CATALOG,
 } from '../../../domain/keychain';
-import type { KeychainParams, TemplateId } from '../../../domain/keychain';
+import type { KeychainParams } from '../../../domain/keychain';
 import { styleName, templateName, t, type Locale } from '../../../infrastructure/i18n';
 import type { SurfacePresetId } from '../../preview';
-import { PARAMETER_RANGES } from '../hooks/useCustomizerParams';
-import type { FontNotice } from '../model/customizer-types';
+import { PARAMETER_RANGES, type useCustomizerParams } from '../hooks/useCustomizerParams';
 import { RangeControl } from './RangeControl';
 
 export const ControlsPanel = ({
   locale,
-  params,
-  selectedFont,
-  availableStyles,
-  usesCyrillic,
-  fontNotice,
+  customizer: {
+    params,
+    selectedFont,
+    availableStyles,
+    usesCyrillic,
+    fontNotice,
+    update,
+    updateText,
+    selectTemplate,
+    showsParameter,
+  },
   surfacePreset,
   onSurfaceChange,
-  update,
-  updateText,
-  selectTemplate,
-  showsParameter,
 }: {
   locale: Locale;
-  params: KeychainParams;
-  selectedFont: (typeof FONT_CATALOG)[number];
-  availableStyles: readonly { id: string; name: string }[];
-  usesCyrillic: boolean;
-  fontNotice: FontNotice | undefined;
+  customizer: ReturnType<typeof useCustomizerParams>;
   surfacePreset: SurfacePresetId;
   onSurfaceChange: (preset: SurfacePresetId) => void;
-  update: <K extends keyof KeychainParams>(key: K, value: KeychainParams[K]) => void;
-  updateText: (text: string) => void;
-  selectTemplate: (templateId: TemplateId) => void;
-  showsParameter: (parameter: keyof KeychainParams) => boolean;
 }) => (
   <aside className="controls-panel">
     <section className="control-section">
@@ -90,7 +83,9 @@ export const ControlsPanel = ({
       <h2>
         {t(locale, 'font')} <span className="selected-note">{selectedFont.name}</span>
       </h2>
-      <div className={`font-grid ${params.templateId === 'articulated-name' ? 'articulated-font-grid' : ''}`}>
+      <div
+        className={`font-grid ${params.templateId === 'articulated-name' ? 'articulated-font-grid' : ''}`}
+      >
         {FONT_CATALOG.filter((font) =>
           params.templateId === 'articulated-name'
             ? fontSupportsArticulatedName(font, params.text)
@@ -145,7 +140,10 @@ export const ControlsPanel = ({
         )}
         {showsParameter('baseThicknessMm') && (
           <RangeControl
-            label={t(locale, params.templateId === 'nameplate' ? 'plateThickness' : 'baseThickness')}
+            label={t(
+              locale,
+              params.templateId === 'nameplate' ? 'plateThickness' : 'baseThickness',
+            )}
             value={params.baseThicknessMm}
             {...(params.templateId === 'articulated-name'
               ? { ...PARAMETER_RANGES.baseThicknessMm, min: 3.4 }
