@@ -2,9 +2,9 @@
 
 See the [beta and product roadmap](ROADMAP.md) for upcoming templates, hosted features, and operational milestones.
 
-[![CI](https://github.com/WilfredoN/3d-keychain/actions/workflows/ci.yml/badge.svg)](https://github.com/WilfredoN/3d-keychain/actions/workflows/ci.yml)
+[![CI](https://github.com/WilfredoN/open-keychain/actions/workflows/ci.yml/badge.svg)](https://github.com/WilfredoN/open-keychain/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Open issues](https://img.shields.io/github/issues/WilfredoN/3d-keychain)](https://github.com/WilfredoN/3d-keychain/issues)
+[![Open issues](https://img.shields.io/github/issues/WilfredoN/open-keychain)](https://github.com/WilfredoN/open-keychain/issues)
 
 Open Keychain is a privacy-friendly, self-hostable browser customizer for printable name products. Model generation, font processing, preview, and STL/3MF export happen locally in the browser. The default build has no account, database, telemetry, or required backend; an optional hosted profile adds accounts, quotas, and a saved-project gallery.
 
@@ -25,7 +25,7 @@ Open Keychain is a privacy-friendly, self-hostable browser customizer for printa
 
 ## Development
 
-Requirements: Node 22+ and pnpm 10+.
+Requirements: Node 22.22.1+ and pnpm 10+.
 
 ```sh
 pnpm install
@@ -48,6 +48,8 @@ pnpm bench:matrix
 `pnpm validate` runs formatting, linting, typechecking, unit tests, and the production build. The matrix benchmark covers representative font/style/name combinations, including Cyrillic names for every bilingual family. Curved models are kept below 12,000 triangles where practical; dense meshes are reported as warnings instead of being silently degraded.
 
 Playwright tests require browser binaries. Install them once with `pnpm exec playwright install` before running E2E locally.
+
+Git hooks are installed by `pnpm install`. The pre-commit hook formats and lints staged files, the commit-msg hook checks conventional commits, and the pre-push hook runs `pnpm validate`. Continuous integration additionally runs the geometry matrix and browser tests. Use `git commit --no-verify` only for an exceptional recovery case, then run the skipped checks manually.
 
 ## Runtime architecture
 
@@ -125,7 +127,7 @@ Project source is MIT licensed. This permits self-hosting, commercial use, and o
 
 ## Contributing
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow, validation commands, geometry invariants, and conventional commit format. Security reports should follow [SECURITY.md](.github/SECURITY.md). Please use the issue templates for bug reports and feature requests.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow, validation commands, geometry invariants, and conventional commit format. See [SUPPORT.md](SUPPORT.md) for help channels, [GOVERNANCE.md](GOVERNANCE.md) for project decisions, and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for community standards. Security reports should follow [SECURITY.md](.github/SECURITY.md). Please use the issue templates for bug reports and feature requests.
 
 ## Browser support
 

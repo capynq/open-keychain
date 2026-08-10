@@ -1,0 +1,27 @@
+name: Support request
+description: Ask for help using or self-hosting Open Keychain
+title: 'support: '
+labels:
+  - question
+body:
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Describe what you are trying to do and include the template, font, and text when relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Include the visible result, error message, or deployment symptom.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser, operating system, screen size, and commit or deployment URL.
+    validations:
+      required: true
