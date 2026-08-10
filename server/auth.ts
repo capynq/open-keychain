@@ -13,7 +13,9 @@ export const createAuth = (pool: pg.Pool, config: ServerConfig) => {
       requireEmailVerification: false,
       minPasswordLength: 10,
     },
-    user: { fields: { emailVerified: 'email_verified', createdAt: 'created_at', updatedAt: 'updated_at' } },
+    user: {
+      fields: { emailVerified: 'email_verified', createdAt: 'created_at', updatedAt: 'updated_at' },
+    },
     session: {
       fields: {
         expiresAt: 'expires_at',
@@ -50,6 +52,9 @@ export const createAuth = (pool: pg.Pool, config: ServerConfig) => {
     },
   });
 };
-export const sessionForRequest = async (auth: ReturnType<typeof createAuth>, request: FastifyRequest) => {
+export const sessionForRequest = async (
+  auth: ReturnType<typeof createAuth>,
+  request: FastifyRequest,
+) => {
   return auth.api.getSession({ headers: fromNodeHeaders(request.headers) });
 };

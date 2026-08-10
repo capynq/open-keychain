@@ -18,7 +18,10 @@ const anonymousActor = (request: FastifyRequest, reply: FastifyReply): string =>
   const existing = cookieValue(request, 'ok_anon');
   if (existing) return existing;
   const value = randomUUID();
-  reply.header('Set-Cookie', `ok_anon=${encodeURIComponent(value)}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Lax`);
+  reply.header(
+    'Set-Cookie',
+    `ok_anon=${encodeURIComponent(value)}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Lax`,
+  );
   return value;
 };
 const jsonBody = (request: FastifyRequest): ProjectBody => {
@@ -71,7 +74,8 @@ export const createApp = (pool: pg.Pool, config: ServerConfig): FastifyInstance 
     url: '/api/auth/*',
     handler: async (request, reply) => {
       const url = new URL(request.url, config.appUrl);
-      const body = request.body && request.method !== 'GET' ? JSON.stringify(request.body) : undefined;
+      const body =
+        request.body && request.method !== 'GET' ? JSON.stringify(request.body) : undefined;
       const headers = new Headers();
       Object.entries(request.headers).forEach(([key, value]) => {
         if (typeof value === 'string') headers.set(key, value);
@@ -142,8 +146,13 @@ export const createApp = (pool: pg.Pool, config: ServerConfig): FastifyInstance 
         await client.query('ROLLBACK');
         return reply.status(400).send({ error: 'INVALID_EXPORT_INTENT' });
       }
-      await client.query('UPDATE export_intents SET completed_at = NOW() WHERE token = $1', [request.params.token]);
-      await client.query('INSERT INTO export_events(actor_key, user_id) VALUES ($1, $2)', [actorKey, user?.id ?? null]);
+      await client.query('UPDATE export_intents SET completed_at = NOW() WHERE token = $1', [
+        request.params.token,
+      ]);
+      await client.query('INSERT INTO export_events(actor_key, user_id) VALUES ($1, $2)', [
+        actorKey,
+        user?.id ?? null,
+      ]);
       await client.query('COMMIT');
       return { recorded: true };
     } catch (error) {
@@ -166,12 +175,19 @@ export const createApp = (pool: pg.Pool, config: ServerConfig): FastifyInstance 
     const user = await currentUser(auth, request);
     if (!user) return reply.status(401).send({ error: 'UNAUTHORIZED' });
     const body = jsonBody(request);
-    if (!body.name?.trim() || !body.params) return reply.status(400).send({ error: 'INVALID_PROJECT' });
+    if (!body.name?.trim() || !body.params)
+      return reply.status(400).send({ error: 'INVALID_PROJECT' });
     const result = await pool.query(
       `INSERT INTO projects(id, user_id, name, params, thumbnail)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id, name, params, thumbnail, schema_version, created_at, updated_at`,
-      [randomUUID(), user.id, body.name.trim().slice(0, 120), JSON.stringify(body.params), body.thumbnail ?? null],
+      [
+        randomUUID(),
+        user.id,
+        body.name.trim().slice(0, 120),
+        JSON.stringify(body.params),
+        body.thumbnail ?? null,
+      ],
     );
     return reply.status(201).send({ project: result.rows[0] });
   });

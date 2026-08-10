@@ -9,13 +9,27 @@ globalThis.fetch = (async (input: string | URL) => {
   const url = String(input);
   if (url.startsWith('/fonts/')) {
     const file = await fs.readFile(path.join(process.cwd(), 'public', url));
-    const body = file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength) as ArrayBuffer;
+    const body = file.buffer.slice(
+      file.byteOffset,
+      file.byteOffset + file.byteLength,
+    ) as ArrayBuffer;
     return new Response(body);
   }
   return originalFetch(input);
 }) as typeof fetch;
 const wasm = await createWasm();
-const names = ['ALEX', 'OLIVER', 'OBO', 'iJj', 'ÉMILIE', 'NIKITA', 'NIKITAA', 'IIIIIIII', 'НИКИТА', 'Привет'];
+const names = [
+  'ALEX',
+  'OLIVER',
+  'OBO',
+  'iJj',
+  'ÉMILIE',
+  'NIKITA',
+  'NIKITAA',
+  'IIIIIIII',
+  'НИКИТА',
+  'Привет',
+];
 let passed = 0;
 let failed = 0;
 const triangleCounts = new Map<string, number>();
@@ -31,14 +45,28 @@ for (const font of FONT_CATALOG)
       const triangles = (exportMesh?.indices.length ?? 0) / 3;
       const key = `${font.id}/${style.id}`;
       triangleCounts.set(key, Math.max(triangleCounts.get(key) ?? 0, triangles));
-      const densityCovered = triangles <= 12000 || result.issues.some((issue) => issue.code === 'dense-mesh');
+      const densityCovered =
+        triangles <= 12000 || result.issues.some((issue) => issue.code === 'dense-mesh');
       if (result.printable && densityCovered) passed += 1;
       else {
         failed += 1;
-        console.error(JSON.stringify({ font: font.name, style: style.name, text, triangles, issues: result.issues }));
+        console.error(
+          JSON.stringify({
+            font: font.name,
+            style: style.name,
+            text,
+            triangles,
+            issues: result.issues,
+          }),
+        );
       }
     }
 console.log(
-  JSON.stringify({ cases: passed + failed, passed, failed, maximumTriangles: Object.fromEntries(triangleCounts) }),
+  JSON.stringify({
+    cases: passed + failed,
+    passed,
+    failed,
+    maximumTriangles: Object.fromEntries(triangleCounts),
+  }),
 );
 if (failed) process.exitCode = 1;

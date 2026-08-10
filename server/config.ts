@@ -16,7 +16,8 @@ export const serverConfig = (env: NodeJS.ProcessEnv = process.env): ServerConfig
   const databaseUrl = env.DATABASE_URL;
   const authSecret = env.BETTER_AUTH_SECRET;
   if (!databaseUrl) throw new Error('DATABASE_URL is required to start the hosted API.');
-  if (!authSecret || authSecret.length < 32) throw new Error('BETTER_AUTH_SECRET must contain at least 32 characters.');
+  if (!authSecret || authSecret.length < 32)
+    throw new Error('BETTER_AUTH_SECRET must contain at least 32 characters.');
   return {
     port: numberEnv(env.PORT, 3000),
     host: env.HOST ?? '127.0.0.1',

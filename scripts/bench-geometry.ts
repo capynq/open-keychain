@@ -8,7 +8,10 @@ globalThis.fetch = (async (input: string | URL) => {
   const url = String(input);
   if (url.startsWith('/fonts/')) {
     const file = await fs.readFile(path.join(process.cwd(), 'public', url));
-    const body = file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength) as ArrayBuffer;
+    const body = file.buffer.slice(
+      file.byteOffset,
+      file.byteOffset + file.byteLength,
+    ) as ArrayBuffer;
     return new Response(body);
   }
   return originalFetch(input);
