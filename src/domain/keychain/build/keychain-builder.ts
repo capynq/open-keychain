@@ -254,7 +254,12 @@ export const buildKeychain = async (
   const keyring = keyringMetrics(params.holeDiameterMm);
   const articulatedOutlineExpansionMm = articulatedGlyphDilationMm(params.templateId, definition);
   const buildStyledGeometry = (scale: number): StyledGeometry => {
-    const text = wasm.CrossSection.ofPolygons(scalePolygons(outline.polygons, scale), 'EvenOdd');
+    const rawText = wasm.CrossSection.ofPolygons(scalePolygons(outline.polygons, scale), 'EvenOdd');
+    const text =
+      params.templateId === 'articulated-name' || params.fontWeightMm <= 0
+        ? rawText.translate([0, 0])
+        : rawText.offset(params.fontWeightMm * MANIFOLD_SCALE, 'Round', 2, 64);
+    rawText.delete();
     const rawBounds = text.bounds();
     const textBounds = {
       min: [rawBounds.min[0], rawBounds.min[1]] as [number, number],
@@ -264,6 +269,9 @@ export const buildKeychain = async (
       text,
       textBounds,
       padding: params.paddingMm * MANIFOLD_SCALE,
+      textInset:
+        params.templateId === 'articulated-name' ? undefined : params.edgeInsetMm * MANIFOLD_SCALE,
+      letterFillWidth: params.letterFillMm * MANIFOLD_SCALE,
       letterSpacing: params.letterSpacingMm,
       holeDiameter: params.holeDiameterMm * MANIFOLD_SCALE,
       keyringWall: keyring.wallMm * MANIFOLD_SCALE,

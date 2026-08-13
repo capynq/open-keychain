@@ -4,7 +4,7 @@ export type FontDefinition = {
   file: string;
   previewFamily: string;
   weight: number;
-  category: string;
+  category: FontCategory;
   scripts: readonly FontScript[];
   supportsArticulated: boolean;
   articulatedDilationMm?: number;
@@ -12,8 +12,31 @@ export type FontDefinition = {
   sampleCyrillic: string;
 };
 export type FontScript = 'latin' | 'cyrillic';
+export type FontCategory =
+  | 'Rounded'
+  | 'Geometric'
+  | 'Chunky'
+  | 'Condensed'
+  | 'Serif'
+  | 'Playful'
+  | 'Decorative'
+  | 'Handwritten'
+  | 'Calligraphic'
+  | 'Marker';
 const latin: readonly FontScript[] = ['latin'];
 const latinCyrillic: readonly FontScript[] = ['latin', 'cyrillic'];
+export const FONT_CATEGORY_ORDER: readonly FontCategory[] = [
+  'Rounded',
+  'Geometric',
+  'Chunky',
+  'Condensed',
+  'Serif',
+  'Playful',
+  'Decorative',
+  'Handwritten',
+  'Calligraphic',
+  'Marker',
+];
 export const FONT_CATALOG: FontDefinition[] = [
   {
     id: 'nunito',
@@ -180,7 +203,7 @@ export const FONT_CATALOG: FontDefinition[] = [
     file: '/fonts/neucha.ttf',
     previewFamily: 'OpenNeucha',
     weight: 400,
-    category: 'Calligraphic',
+    category: 'Handwritten',
     scripts: latinCyrillic,
     supportsArticulated: false,
     sampleLatin: 'ALEX',
@@ -192,7 +215,7 @@ export const FONT_CATALOG: FontDefinition[] = [
     file: '/fonts/amatic-sc.ttf',
     previewFamily: 'OpenAmatic',
     weight: 400,
-    category: 'Calligraphic',
+    category: 'Marker',
     scripts: latinCyrillic,
     supportsArticulated: false,
     sampleLatin: 'ALEX',
@@ -216,7 +239,79 @@ export const FONT_CATALOG: FontDefinition[] = [
     file: '/fonts/pangolin.ttf',
     previewFamily: 'OpenPangolin',
     weight: 400,
+    category: 'Handwritten',
+    scripts: latinCyrillic,
+    supportsArticulated: false,
+    sampleLatin: 'ALEX',
+    sampleCyrillic: 'АБВГ',
+  },
+  {
+    id: 'playpen-sans',
+    name: 'Playpen Sans',
+    file: '/fonts/playpen-sans.ttf',
+    previewFamily: 'OpenPlaypen',
+    weight: 500,
+    category: 'Handwritten',
+    scripts: latinCyrillic,
+    supportsArticulated: false,
+    sampleLatin: 'ALEX',
+    sampleCyrillic: 'АБВГ',
+  },
+  {
+    id: 'shantell-sans',
+    name: 'Shantell Sans',
+    file: '/fonts/shantell-sans.ttf',
+    previewFamily: 'OpenShantell',
+    weight: 500,
+    category: 'Handwritten',
+    scripts: latinCyrillic,
+    supportsArticulated: false,
+    sampleLatin: 'ALEX',
+    sampleCyrillic: 'АБВГ',
+  },
+  {
+    id: 'balsamiq-sans',
+    name: 'Balsamiq Sans',
+    file: '/fonts/balsamiq-sans.ttf',
+    previewFamily: 'OpenBalsamiq',
+    weight: 400,
+    category: 'Handwritten',
+    scripts: latinCyrillic,
+    supportsArticulated: false,
+    sampleLatin: 'ALEX',
+    sampleCyrillic: 'АБВГ',
+  },
+  {
+    id: 'comforter',
+    name: 'Comforter',
+    file: '/fonts/comforter.ttf',
+    previewFamily: 'OpenComforter',
+    weight: 400,
     category: 'Calligraphic',
+    scripts: latinCyrillic,
+    supportsArticulated: false,
+    sampleLatin: 'ALEX',
+    sampleCyrillic: 'АБВГ',
+  },
+  {
+    id: 'comforter-brush',
+    name: 'Comforter Brush',
+    file: '/fonts/comforter-brush.ttf',
+    previewFamily: 'OpenComforterBrush',
+    weight: 400,
+    category: 'Calligraphic',
+    scripts: latinCyrillic,
+    supportsArticulated: false,
+    sampleLatin: 'ALEX',
+    sampleCyrillic: 'АБВГ',
+  },
+  {
+    id: 'underdog',
+    name: 'Underdog',
+    file: '/fonts/underdog.ttf',
+    previewFamily: 'OpenUnderdog',
+    weight: 400,
+    category: 'Marker',
     scripts: latinCyrillic,
     supportsArticulated: false,
     sampleLatin: 'ALEX',

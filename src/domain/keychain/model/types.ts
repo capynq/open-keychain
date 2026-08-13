@@ -6,9 +6,12 @@ export type KeychainParams = {
   templateId: TemplateId;
   styleId: StyleId;
   textHeightMm: number;
+  fontWeightMm: number;
   baseThicknessMm: number;
   reliefDepthMm: number;
   paddingMm: number;
+  edgeInsetMm: number;
+  letterFillMm: number;
   letterSpacingMm: number;
   holeDiameterMm: number;
   connectorWidthMm: number;
@@ -112,9 +115,12 @@ export const DEFAULT_PARAMS: KeychainParams = {
   templateId: 'name-keychain',
   styleId: 'contour',
   textHeightMm: 20,
+  fontWeightMm: 0,
   baseThicknessMm: 2.4,
   reliefDepthMm: 1,
   paddingMm: 2.4,
+  edgeInsetMm: 2.4,
+  letterFillMm: 2.4,
   letterSpacingMm: 1,
   holeDiameterMm: 5,
   connectorWidthMm: 1.8,
@@ -135,6 +141,7 @@ export const normalizeParams = (params: KeychainParams): NormalizedParams => {
     text,
     templateId: params.templateId ?? 'name-keychain',
     textHeightMm: clamp(params.textHeightMm, 12, 30),
+    fontWeightMm: clamp(params.fontWeightMm ?? 0, 0, 1.5),
     baseThicknessMm: clamp(
       params.baseThicknessMm,
       params.templateId === 'articulated-name' ? 3.4 : 1.6,
@@ -142,6 +149,8 @@ export const normalizeParams = (params: KeychainParams): NormalizedParams => {
     ),
     reliefDepthMm: clamp(params.reliefDepthMm, 0.6, 2),
     paddingMm: clamp(params.paddingMm, 1.2, 5),
+    edgeInsetMm: clamp(params.edgeInsetMm ?? params.paddingMm, 0.8, 4),
+    letterFillMm: clamp(params.letterFillMm ?? params.paddingMm, 1.2, 8),
     letterSpacingMm: clamp(params.letterSpacingMm ?? 1, 0, 8),
     holeDiameterMm: clamp(params.holeDiameterMm, 3, 7),
     connectorWidthMm: clamp(params.connectorWidthMm ?? 1.8, 1.4, 3),

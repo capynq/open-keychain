@@ -11,9 +11,7 @@ import './styles/app.css';
 
 const App = () => {
   const [locale, setLocale] = useState<Locale>(detectLocale);
-  const [surfacePreset, setSurfacePreset] = useState<SurfacePresetId>(
-    () => (localStorage.getItem('open-keychain-surface') as SurfacePresetId) || 'matte',
-  );
+  const [surfacePreset, setSurfacePreset] = useState<SurfacePresetId>('matte');
   const [exportOpen, setExportOpen] = useState(false);
 
   const customizer = useCustomizerParams();
@@ -36,14 +34,6 @@ const App = () => {
     return () => document.removeEventListener('keydown', closeOnEscape);
   }, [exportOpen]);
 
-  useEffect(() => {
-    localStorage.setItem('open-keychain-locale', locale);
-  }, [locale]);
-
-  useEffect(() => {
-    localStorage.setItem('open-keychain-surface', surfacePreset);
-  }, [surfacePreset]);
-
   const status = previewStatus(geometry, locale);
 
   return (
@@ -61,6 +51,10 @@ const App = () => {
           customizer={customizer}
           surfacePreset={surfacePreset}
           onSurfaceChange={setSurfacePreset}
+          onReset={() => {
+            customizer.reset();
+            setSurfacePreset('matte');
+          }}
         />
         <PreviewPanel
           locale={locale}

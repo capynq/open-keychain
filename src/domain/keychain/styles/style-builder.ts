@@ -10,6 +10,10 @@ export type StyleInput = {
   text: CrossSection;
   textBounds: Bounds2;
   padding: number;
+  /** Distance between the relief contour and its surrounding backing, in scaled units. */
+  textInset?: number;
+  /** Width of the filled connection between separate letter backings, in scaled units. */
+  letterFillWidth?: number;
   letterSpacing?: number;
   holeDiameter: number;
   keyringWall: number;
@@ -131,6 +135,7 @@ export const connectIfNeeded = (
   wasm: GeometryWasm,
   section: CrossSection,
   padding: number,
+  letterFillWidth?: number,
 ): CrossSection => {
   const pieces = section.decompose();
   if (pieces.length <= 1) {
@@ -139,7 +144,7 @@ export const connectIfNeeded = (
   }
   const boundaries = pieces.map(outerBoundary);
   const visited = new Set<number>([0]);
-  const bridgeWidth = Math.max(2000, padding);
+  const bridgeWidth = Math.max(1200, letterFillWidth ?? padding);
   const bridges: CrossSection[] = [];
   while (visited.size < pieces.length) {
     let best:
@@ -286,10 +291,11 @@ export const ringAssembly = (
   return connectIfNeeded(wasm, result, wall);
 };
 const plateStyle = (wasm: GeometryWasm, input: StyleInput, radius: number): CrossSection => {
+  const textInset = Math.max(600, input.textInset ?? input.padding);
   const textWidth = input.textBounds.max[0] - input.textBounds.min[0];
   const textHeight = input.textBounds.max[1] - input.textBounds.min[1];
-  const width = Math.max(34000, textWidth + input.padding * 2 + 6000);
-  const height = Math.max(18000, textHeight + input.padding * 2);
+  const width = Math.max(34000, textWidth + textInset * 2 + 6000);
+  const height = Math.max(18000, textHeight + textInset * 2);
   return roundedRect(wasm, width, height, radius);
 };
 export const finishStyle = (
@@ -304,13 +310,14 @@ export const finishStyle = (
   }>,
   attachKeyring = true,
 ): StyleBuild => {
-  const support = relief.offset(Math.max(600, Math.min(input.padding, 1200)), 'Round', 2, 64);
+  const textInset = Math.max(600, input.textInset ?? input.padding);
+  const support = relief.offset(Math.max(600, Math.min(textInset, 1200)), 'Round', 2, 64);
   const joined = union(wasm, [backing, support]);
   const simplified = joined.simplify(20);
   backing.delete();
   support.delete();
   joined.delete();
-  const connected = connectIfNeeded(wasm, simplified, input.padding);
+  const connected = connectIfNeeded(wasm, simplified, input.padding, input.letterFillWidth);
   const result = attachKeyring
     ? ringAssembly(wasm, connected, input.holeDiameter, input.keyringWall, side)
     : connected;
@@ -318,6 +325,7 @@ export const finishStyle = (
   return { backing: result, relief, recesses };
 };
 export const buildStyle = (wasm: GeometryWasm, styleId: StyleId, input: StyleInput): StyleBuild => {
+  const textInset = Math.max(600, input.textInset ?? input.padding);
   const textWidth = input.textBounds.max[0] - input.textBounds.min[0];
   const textHeight = input.textBounds.max[1] - input.textBounds.min[1];
   if (styleId === 'capsule')
@@ -341,8 +349,8 @@ export const buildStyle = (wasm: GeometryWasm, styleId: StyleId, input: StyleInp
     return finishStyle(wasm, result, input.text, input, 'left');
   }
   if (styleId === 'bubble') {
-    const backing = input.text.offset(input.padding + 800, 'Round', 2, 64);
-    const connectedBacking = connectIfNeeded(wasm, backing, input.padding);
+    const backing = input.text.offset(textInset + 800, 'Round', 2, 64);
+    const connectedBacking = connectIfNeeded(wasm, backing, input.padding, input.letterFillWidth);
     const bounds = sectionBounds(connectedBacking);
     const bubbles = [
       wasm.CrossSection.circle(Math.max(3000, input.padding + 500), 64).translate([
@@ -359,7 +367,7 @@ export const buildStyle = (wasm: GeometryWasm, styleId: StyleId, input: StyleInp
     joined.delete();
     connectedBacking.delete();
     bubbles.forEach((bubble: CrossSection) => bubble.delete());
-    const organic = connectIfNeeded(wasm, decorated, input.padding);
+    const organic = connectIfNeeded(wasm, decorated, input.padding, input.letterFillWidth);
     return finishStyle(wasm, organic, input.text, input, 'left');
   }
   if (styleId === 'arch') {
@@ -369,19 +377,20 @@ export const buildStyle = (wasm: GeometryWasm, styleId: StyleId, input: StyleInp
       const normalized = (point[0] - centerX) / (width / 2);
       point[1] += Math.max(1500, Math.min(5000, textHeight * 0.18)) * (1 - normalized * normalized);
     });
-    const backing = relief.offset(Math.max(input.padding, 2400), 'Round', 2, 64);
+    const backing = relief.offset(textInset, 'Round', 2, 64);
     return finishStyle(wasm, backing, relief, input, 'left');
   }
   if (styleId === 'frame') {
-    const width = Math.max(38000, textWidth + input.padding * 2 + 10000);
-    const height = Math.max(20000, textHeight + input.padding * 2 + 2000);
+    const width = Math.max(38000, textWidth + textInset * 2 + 10000);
+    const height = Math.max(20000, textHeight + textInset * 2 + 2000);
     const outer = roundedRect(wasm, width, height, 4000);
     const innerCut = roundedRect(wasm, width - 8000, height - 8000, 1500);
     const frame = outer.subtract(innerCut);
     const textPad = connectIfNeeded(
       wasm,
-      input.text.offset(Math.max(input.padding, 2600), 'Round', 2, 64),
+      input.text.offset(textInset, 'Round', 2, 64),
       input.padding,
+      input.letterFillWidth,
     );
     const rawCombined = union(wasm, [frame, textPad]);
     const combined = connectIfNeeded(wasm, rawCombined, 6000);
@@ -393,7 +402,7 @@ export const buildStyle = (wasm: GeometryWasm, styleId: StyleId, input: StyleInp
       { section: recessPad, depthMm: 0.2 },
     ]);
   }
-  const offset = input.text.offset(Math.max(input.padding, 2400), 'Round', 2, 64);
+  const offset = input.text.offset(textInset, 'Round', 2, 64);
   return finishStyle(wasm, offset, input.text, input, 'left');
 };
 export const STYLE_CATALOG: Array<{

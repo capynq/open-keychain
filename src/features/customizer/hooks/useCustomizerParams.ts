@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import {
   FONT_CATALOG,
   articulatedFallbackFont,
@@ -8,12 +8,7 @@ import {
   textUsesCyrillic,
 } from '../../../domain/keychain';
 import { PARAMETER_RANGES, hasTemplateParameter } from '../../../domain/keychain';
-import {
-  DEFAULT_PARAMS,
-  normalizeParams,
-  type KeychainParams,
-  type TemplateId,
-} from '../../../domain/keychain';
+import { DEFAULT_PARAMS, type KeychainParams, type TemplateId } from '../../../domain/keychain';
 import { STYLE_CATALOG, TEMPLATE_CATALOG } from '../../../domain/keychain';
 import type { FontNotice } from '../model/customizer-types';
 
@@ -27,30 +22,12 @@ export const useCustomizerParams = (): {
   update: <K extends keyof KeychainParams>(key: K, value: KeychainParams[K]) => void;
   updateText: (text: string) => void;
   selectTemplate: (templateId: TemplateId) => void;
+  updateBackingSize: (value: number) => void;
+  reset: () => void;
   showsParameter: (parameter: keyof KeychainParams) => boolean;
   setParams: Dispatch<SetStateAction<KeychainParams>>;
 } => {
-  const [params, setParams] = useState<KeychainParams>(() => {
-    try {
-      const saved = localStorage.getItem('open-keychain-preferences');
-      const next = saved
-        ? normalizeParams({ ...DEFAULT_PARAMS, ...JSON.parse(saved) })
-        : DEFAULT_PARAMS;
-      const current = fontDefinition(next.fontId);
-      if (
-        next.templateId === 'articulated-name' &&
-        !fontSupportsArticulatedName(current, next.text)
-      )
-        next.fontId = articulatedFallbackFont(next.text).id;
-      else if (!fontSupportsText(current, next.text))
-        next.fontId =
-          FONT_CATALOG.find((font) => fontSupportsText(font, next.text))?.id ??
-          DEFAULT_PARAMS.fontId;
-      return next;
-    } catch {
-      return DEFAULT_PARAMS;
-    }
-  });
+  const [params, setParams] = useState<KeychainParams>(() => ({ ...DEFAULT_PARAMS }));
 
   const [fontNotice, setFontNotice] = useState<FontNotice>();
 
@@ -72,33 +49,6 @@ export const useCustomizerParams = (): {
 
   const usesCyrillic = textUsesCyrillic(params.text);
 
-  useEffect(() => {
-    localStorage.setItem(
-      'open-keychain-preferences',
-      JSON.stringify({
-        fontId: params.fontId,
-        templateId: params.templateId,
-        styleId: params.styleId,
-        textHeightMm: params.textHeightMm,
-        baseThicknessMm: params.baseThicknessMm,
-        reliefDepthMm: params.reliefDepthMm,
-        paddingMm: params.paddingMm,
-        letterSpacingMm: params.letterSpacingMm,
-        holeDiameterMm: params.holeDiameterMm,
-        connectorWidthMm: params.connectorWidthMm,
-        cornerRadiusMm: params.cornerRadiusMm,
-        stakeLengthMm: params.stakeLengthMm,
-        nameplateTiltDeg: params.nameplateTiltDeg,
-        nameplateEmbedMm: params.nameplateEmbedMm,
-        jointClearanceMm: params.jointClearanceMm,
-        mechanicalGapMm: params.mechanicalGapMm,
-        maxJointAngleDeg: params.maxJointAngleDeg,
-        minimumWallMm: params.minimumWallMm,
-        bottomClearanceMm: params.bottomClearanceMm,
-      }),
-    );
-  }, [params]);
-
   const update = <K extends keyof KeychainParams>(key: K, value: KeychainParams[K]): void => {
     setFontNotice(undefined);
     setParams((current) => ({ ...current, [key]: value }));
@@ -118,6 +68,15 @@ export const useCustomizerParams = (): {
     if (replacement)
       setFontNotice({ font: currentFont.name, replacement: replacement.name, articulated });
     setParams((current) => ({ ...current, text, fontId: replacement?.id ?? current.fontId }));
+  };
+
+  const updateBackingSize = (value: number): void => {
+    setFontNotice(undefined);
+    setParams((current) => ({
+      ...current,
+      paddingMm: value,
+      edgeInsetMm: value,
+    }));
   };
 
   const selectTemplate = (templateId: TemplateId): void => {
@@ -152,6 +111,11 @@ export const useCustomizerParams = (): {
     });
   };
 
+  const reset = (): void => {
+    setFontNotice(undefined);
+    setParams({ ...DEFAULT_PARAMS });
+  };
+
   return {
     params,
     selectedFont,
@@ -161,7 +125,9 @@ export const useCustomizerParams = (): {
     fontNotice,
     update,
     updateText,
+    updateBackingSize,
     selectTemplate,
+    reset,
     showsParameter: (parameter) => hasTemplateParameter(params.templateId, parameter),
     setParams,
   };

@@ -7,9 +7,12 @@ export type ParameterRange = {
 };
 export type ShapeParameter =
   | 'textHeightMm'
+  | 'fontWeightMm'
   | 'baseThicknessMm'
   | 'reliefDepthMm'
   | 'paddingMm'
+  | 'edgeInsetMm'
+  | 'letterFillMm'
   | 'letterSpacingMm'
   | 'holeDiameterMm'
   | 'connectorWidthMm'
@@ -22,9 +25,12 @@ export type ShapeParameter =
   | 'nameplateEmbedMm';
 export const PARAMETER_RANGES = {
   textHeightMm: { min: 12, max: 30, step: 0.5, unit: 'mm' },
+  letterFillMm: { min: 1.2, max: 8, step: 0.1, unit: 'mm' },
+  fontWeightMm: { min: 0, max: 1.5, step: 0.1, unit: 'mm' },
   baseThicknessMm: { min: 1.6, max: 4, step: 0.1, unit: 'mm' },
   reliefDepthMm: { min: 0.6, max: 2, step: 0.1, unit: 'mm' },
   paddingMm: { min: 1.2, max: 5, step: 0.1, unit: 'mm' },
+  edgeInsetMm: { min: 0.8, max: 4, step: 0.1, unit: 'mm' },
   letterSpacingMm: { min: 0, max: 8, step: 0.1, unit: 'mm' },
   holeDiameterMm: { min: 3, max: 7, step: 0.1, unit: 'mm' },
   connectorWidthMm: { min: 1.4, max: 3, step: 0.1, unit: 'mm' },
@@ -37,10 +43,12 @@ export const PARAMETER_RANGES = {
   nameplateEmbedMm: { min: 0.2, max: 1.8, step: 0.1, unit: 'mm' },
 } satisfies Record<ShapeParameter, ParameterRange>;
 const COMMON_PARAMETERS: readonly ShapeParameter[] = ['textHeightMm', 'baseThicknessMm'];
+const STANDARD_TEXT_PARAMETERS: readonly ShapeParameter[] = ['fontWeightMm', 'edgeInsetMm'];
 const RELIEF_PARAMETERS: readonly ShapeParameter[] = ['reliefDepthMm'];
 export const TEMPLATE_PARAMETER_KEYS: Record<TemplateId, readonly ShapeParameter[]> = {
   'name-keychain': [
     ...COMMON_PARAMETERS,
+    ...STANDARD_TEXT_PARAMETERS,
     ...RELIEF_PARAMETERS,
     'paddingMm',
     'letterSpacingMm',
@@ -57,6 +65,7 @@ export const TEMPLATE_PARAMETER_KEYS: Record<TemplateId, readonly ShapeParameter
   ],
   nameplate: [
     ...COMMON_PARAMETERS,
+    ...STANDARD_TEXT_PARAMETERS,
     ...RELIEF_PARAMETERS,
     'paddingMm',
     'cornerRadiusMm',
@@ -65,6 +74,7 @@ export const TEMPLATE_PARAMETER_KEYS: Record<TemplateId, readonly ShapeParameter
   ],
   'plant-label': [
     ...COMMON_PARAMETERS,
+    ...STANDARD_TEXT_PARAMETERS,
     ...RELIEF_PARAMETERS,
     'paddingMm',
     'letterSpacingMm',
@@ -80,4 +90,12 @@ export const hasTemplateParameter = (
   parameter: keyof KeychainParams,
 ): boolean => {
   return templateParameterKeys(templateId).includes(parameter as ShapeParameter);
+};
+
+const LETTER_FILL_STYLE_IDS = new Set(['contour', 'bubble', 'arch', 'frame']);
+export const hasLetterFillControl = (
+  templateId: TemplateId,
+  styleId: KeychainParams['styleId'],
+): boolean => {
+  return templateId === 'name-keychain' && LETTER_FILL_STYLE_IDS.has(styleId);
 };

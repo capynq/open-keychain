@@ -4,5 +4,11 @@
   "soft-tag": "Soft tag",
   "bubble": "Bubble",
   "arch": "Arch",
-  "frame": "Frame"
+  "frame": "Frame",
+  "contour.description": "Backing follows the text",
+  "capsule.description": "Simple rounded plate",
+  "soft-tag.description": "Plate with a soft tab",
+  "bubble.description": "Organic shape with bubbles",
+  "arch.description": "Shape with an arched top",
+  "frame.description": "Backing with an inner frame"
 }

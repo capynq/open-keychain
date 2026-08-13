@@ -119,6 +119,27 @@ const topSurfaceArea = (
   return { surface, hull: area(convexHull(points)) };
 };
 describe('finished keychain geometry', () => {
+  it('supports a solid backing that closes gaps between letters', async () => {
+    const contour = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      fontId: 'comforter',
+      text: 'ABCD',
+      backingMode: 'contour',
+    });
+    const solid = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      fontId: 'comforter',
+      text: 'ABCD',
+      backingMode: 'solid',
+    });
+    expect(contour.result.printable, JSON.stringify(contour.result.issues)).toBe(true);
+    expect(solid.result.printable, JSON.stringify(solid.result.issues)).toBe(true);
+    expect(topology(solid.result.baseMesh).connected).toBe(true);
+    expect(topSurfaceArea(solid.result.baseMesh).surface).toBeGreaterThan(
+      topSurfaceArea(contour.result.baseMesh).surface,
+    );
+  }, 30000);
+
   for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch', 'frame'] as const) {
     for (const font of FONT_CATALOG) {
       it(`contains Latin relief for ${font.name} ${styleId}`, async () => {
@@ -343,6 +364,24 @@ describe('finished keychain geometry', () => {
         expect([...exportMesh!.positions].every(Number.isFinite)).toBe(true);
       }, 30000);
     }
+  }
+  for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch', 'frame'] as const) {
+    it(`builds the ${styleId} plant label shape`, async () => {
+      const { result, exportMesh } = await buildKeychain(
+        wasm,
+        {
+          ...DEFAULT_PARAMS,
+          templateId: 'plant-label',
+          styleId,
+          text: 'ALEX',
+        },
+        true,
+      );
+      expect(result.printable, JSON.stringify(result.issues)).toBe(true);
+      expect(exportMesh).toBeDefined();
+      expect(topology(exportMesh!).connected).toBe(true);
+      expect([...exportMesh!.positions].every(Number.isFinite)).toBe(true);
+    }, 30000);
   }
   for (const text of ['ALEX', 'НІКІТА']) {
     it(`builds a pointed, embedded plant label for ${text}`, async () => {

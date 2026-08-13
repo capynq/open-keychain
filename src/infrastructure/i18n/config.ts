@@ -27,9 +27,8 @@ void i18n
     ns: ['translation', 'styles', 'templates'],
     defaultNS: 'translation',
     detection: {
-      order: ['localStorage', 'navigator'],
-      lookupLocalStorage: 'open-keychain-locale',
-      caches: ['localStorage'],
+      order: ['navigator'],
+      caches: [],
     },
     interpolation: { escapeValue: false, prefix: '{', suffix: '}' },
     react: { useSuspense: false },

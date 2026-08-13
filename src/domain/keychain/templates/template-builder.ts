@@ -556,7 +556,66 @@ const nameplateStyle = (wasm: GeometryWasm, input: StyleInput): StyleBuild => {
   const plate = roundedRect(wasm, width, height, radius);
   return { backing: plate, relief: input.text };
 };
-const plantLabelStyle = (wasm: GeometryWasm, input: StyleInput): StyleBuild => {
+const plantFoundation = (
+  wasm: GeometryWasm,
+  styleId: StyleId,
+  width: number,
+  height: number,
+  radius: number,
+): CrossSection => {
+  const base = roundedRect(wasm, width, height, radius);
+  if (styleId === 'contour' || styleId === 'capsule') return base;
+
+  const bounds = sectionBounds(base);
+  if (styleId === 'soft-tag') {
+    const accent = wasm.CrossSection.circle(Math.max(2600, height * 0.48), 64).translate([
+      bounds.max[0] - height * 0.28,
+      bounds.max[1] - height * 0.28,
+    ]);
+    const result = union(wasm, [base, accent]);
+    base.delete();
+    accent.delete();
+    return result;
+  }
+  if (styleId === 'bubble') {
+    const bubbles = [
+      wasm.CrossSection.circle(Math.max(2600, height * 0.44), 64).translate([
+        bounds.min[0] + height * 0.34,
+        bounds.max[1] - height * 0.3,
+      ]),
+      wasm.CrossSection.circle(Math.max(2200, height * 0.34), 64).translate([
+        bounds.max[0] - height * 0.22,
+        bounds.min[1] + height * 0.25,
+      ]),
+    ];
+    const result = union(wasm, [base, ...bubbles]);
+    base.delete();
+    bubbles.forEach((bubble) => bubble.delete());
+    return result;
+  }
+  if (styleId === 'arch') {
+    const arch = wasm.CrossSection.circle(Math.max(height, width * 0.22), 64).translate([
+      (bounds.min[0] + bounds.max[0]) / 2,
+      bounds.max[1] - height * 0.12,
+    ]);
+    const result = union(wasm, [base, arch]);
+    base.delete();
+    arch.delete();
+    return result;
+  }
+  const inner = roundedRect(
+    wasm,
+    Math.max(10000, width - 4200),
+    Math.max(2500, height - 2600),
+    1000,
+  );
+  const result = base.subtract(inner);
+  base.delete();
+  inner.delete();
+  return result;
+};
+
+const plantLabelStyle = (wasm: GeometryWasm, input: StyleInput, styleId: StyleId): StyleBuild => {
   const textWidth = input.textBounds.max[0] - input.textBounds.min[0];
   const textHeight = input.textBounds.max[1] - input.textBounds.min[1];
   const foundationWidth = Math.max(34000, textWidth + input.padding * 2 + 7000);
@@ -565,7 +624,13 @@ const plantLabelStyle = (wasm: GeometryWasm, input: StyleInput): StyleBuild => {
     1200,
     Math.min(input.cornerRadius ?? 4000, Math.min(foundationWidth, foundationHeight) / 2 - 500),
   );
-  const foundation = roundedRect(wasm, foundationWidth, foundationHeight, radius);
+  const foundation = plantFoundation(
+    wasm,
+    styleId,
+    foundationWidth,
+    foundationHeight,
+    styleId === 'capsule' ? foundationHeight / 2 : radius,
+  );
   const stakeTotal = Math.max(24000, (input.stakeLength ?? 48) * 1000);
   const tipHeight = Math.max(8000, Math.min(12000, stakeTotal * 0.16));
   const stakeWidth = Math.max(6000, Math.min(8500, foundationWidth * 0.18));
@@ -619,7 +684,7 @@ export const buildTemplate = (
 ): TemplateBuild => {
   if (templateId === 'articulated-name') return articulatedStyle(wasm, input);
   if (templateId === 'nameplate') return nameplateStyle(wasm, input);
-  if (templateId === 'plant-label') return plantLabelStyle(wasm, input);
+  if (templateId === 'plant-label') return plantLabelStyle(wasm, input, styleId);
   return buildStyle(wasm, styleId, input);
 };
 export const isArticulatedBuild = (build: TemplateBuild): build is ArticulatedBuild => {

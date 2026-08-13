@@ -62,10 +62,9 @@ describe('font script coverage metadata', () => {
       'caveat',
       'marck-script',
       'bad-script',
-      'neucha',
-      'amatic-sc',
       'lobster',
-      'pangolin',
+      'comforter',
+      'comforter-brush',
     ]);
     expect(
       calligraphic.every(
@@ -73,6 +72,14 @@ describe('font script coverage metadata', () => {
       ),
     ).toBe(true);
     expect(calligraphic.every((font) => font.sampleLatin && font.sampleCyrillic)).toBe(true);
+  });
+  it('groups casual and marker-style Cyrillic handwriting families', () => {
+    expect(
+      FONT_CATALOG.filter((font) => font.category === 'Handwritten').map((font) => font.id),
+    ).toEqual(['kalam', 'neucha', 'pangolin', 'playpen-sans', 'shantell-sans', 'balsamiq-sans']);
+    expect(
+      FONT_CATALOG.filter((font) => font.category === 'Marker').map((font) => font.id),
+    ).toEqual(['amatic-sc', 'underdog']);
   });
   it('keeps font preview family and weight metadata centralized', () => {
     expect(FONT_CATALOG.every((font) => font.previewFamily && font.weight > 0)).toBe(true);

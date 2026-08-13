@@ -4,5 +4,11 @@
   "soft-tag": "Мягкая бирка",
   "bubble": "Пузырь",
   "arch": "Арка",
-  "frame": "Рамка"
+  "frame": "Рамка",
+  "contour.description": "Подложка повторяет контур текста",
+  "capsule.description": "Простая округлая табличка",
+  "soft-tag.description": "Табличка с мягким выступом",
+  "bubble.description": "Органичная форма с пузырями",
+  "arch.description": "Форма с арочным верхом",
+  "frame.description": "Подложка с внутренней рамкой"
 }

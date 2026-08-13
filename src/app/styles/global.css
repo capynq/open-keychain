@@ -76,6 +76,36 @@
   font-family: OpenPangolin;
   src: url('/fonts/pangolin.ttf') format('truetype');
 }
+@font-face {
+  font-family: OpenPlaypen;
+  src: url('/fonts/playpen-sans.ttf') format('truetype');
+  font-weight: 100 800;
+}
+@font-face {
+  font-family: OpenShantell;
+  src: url('/fonts/shantell-sans.ttf') format('truetype');
+  font-weight: 300 800;
+}
+@font-face {
+  font-family: OpenBalsamiq;
+  src: url('/fonts/balsamiq-sans.ttf') format('truetype');
+  font-weight: 400;
+}
+@font-face {
+  font-family: OpenComforter;
+  src: url('/fonts/comforter.ttf') format('truetype');
+  font-weight: 400;
+}
+@font-face {
+  font-family: OpenComforterBrush;
+  src: url('/fonts/comforter-brush.ttf') format('truetype');
+  font-weight: 400;
+}
+@font-face {
+  font-family: OpenUnderdog;
+  src: url('/fonts/underdog.ttf') format('truetype');
+  font-weight: 400;
+}
 
 :root {
   font-family: OpenNunito, system-ui, sans-serif;
