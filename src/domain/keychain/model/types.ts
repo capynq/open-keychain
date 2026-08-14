@@ -16,6 +16,7 @@ export type KeychainParams = {
   connectorWidthMm: number;
   cornerRadiusMm: number;
   stakeLengthMm: number;
+  plantAccentEnabled: boolean;
   nameplateTiltDeg: number;
   nameplateEmbedMm: number;
   jointClearanceMm: number;
@@ -124,6 +125,7 @@ export const DEFAULT_PARAMS: KeychainParams = {
   connectorWidthMm: 1.8,
   cornerRadiusMm: 4,
   stakeLengthMm: 48,
+  plantAccentEnabled: true,
   nameplateTiltDeg: 6,
   nameplateEmbedMm: 0.4,
   jointClearanceMm: 0.35,
@@ -154,7 +156,8 @@ export const normalizeParams = (params: KeychainParams): NormalizedParams => {
     connectorWidthMm: clamp(params.connectorWidthMm ?? 1.8, 1.4, 3),
     cornerRadiusMm: clamp(params.cornerRadiusMm ?? 4, 1.5, 12),
     stakeLengthMm: clamp(params.stakeLengthMm ?? 48, 24, 100),
-    nameplateTiltDeg: clamp(params.nameplateTiltDeg ?? 6, 0, 45),
+    plantAccentEnabled: params.plantAccentEnabled ?? true,
+    nameplateTiltDeg: clamp(params.nameplateTiltDeg ?? 6, 0, 90),
     nameplateEmbedMm: clamp(
       params.nameplateEmbedMm ?? 0.4,
       0.2,

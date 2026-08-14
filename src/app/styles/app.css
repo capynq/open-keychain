@@ -524,6 +524,24 @@ input[type='range'] {
   margin: 0;
 }
 
+.check-control {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+  color: #4e5260;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.check-control input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: #e87855;
+}
+
 .preview-panel {
   width: 100%;
   max-width: 920px;

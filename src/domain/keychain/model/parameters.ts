@@ -22,6 +22,7 @@ export type ShapeParameter =
   | 'stakeLengthMm'
   | 'nameplateTiltDeg'
   | 'nameplateEmbedMm';
+export type CustomizerParameter = ShapeParameter | 'plantAccentEnabled';
 export const PARAMETER_RANGES = {
   textHeightMm: { min: 12, max: 30, step: 0.5, unit: 'mm' },
   fontWeightMm: { min: 0, max: 1.5, step: 0.1, unit: 'mm' },
@@ -37,7 +38,7 @@ export const PARAMETER_RANGES = {
   maxJointAngleDeg: { min: 15, max: 50, step: 1, unit: '°' },
   cornerRadiusMm: { min: 1.5, max: 12, step: 0.5, unit: 'mm' },
   stakeLengthMm: { min: 24, max: 100, step: 1, unit: 'mm' },
-  nameplateTiltDeg: { min: 0, max: 45, step: 1, unit: '°' },
+  nameplateTiltDeg: { min: 0, max: 90, step: 1, unit: '°' },
   nameplateEmbedMm: { min: 0.2, max: 1.8, step: 0.1, unit: 'mm' },
 } satisfies Record<ShapeParameter, ParameterRange>;
 const COMMON_PARAMETERS: readonly ShapeParameter[] = ['textHeightMm', 'baseThicknessMm'];
@@ -85,14 +86,20 @@ export const templateParameterKeys = (templateId: TemplateId): readonly ShapePar
 };
 export const hasTemplateParameter = (
   templateId: TemplateId,
-  parameter: keyof KeychainParams,
+  parameter: CustomizerParameter,
 ): boolean => {
+  if (parameter === 'plantAccentEnabled') return templateId === 'plant-label';
   return templateParameterKeys(templateId).includes(parameter as ShapeParameter);
 };
 
 /** Parameters that are meaningful for the currently selected template and style. */
-export const hasActiveParameter = (params: KeychainParams, parameter: ShapeParameter): boolean => {
+export const hasActiveParameter = (
+  params: KeychainParams,
+  parameter: CustomizerParameter,
+): boolean => {
   if (!hasTemplateParameter(params.templateId, parameter)) return false;
+  if (parameter === 'plantAccentEnabled')
+    return ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'].includes(params.styleId);
   // Capsule plant labels derive their ends from the board height, so a separate
   // corner-radius setting cannot change that geometry.
   return !(

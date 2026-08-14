@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { hasActiveParameter, parameterRange, templateParameterKeys } from './parameters';
+import {
+  hasActiveParameter,
+  parameterRange,
+  templateParameterKeys,
+  type CustomizerParameter,
+} from './parameters';
 import {
   DEFAULT_PARAMS,
   keyringMetrics,
   normalizeParams,
   ringWallMm,
   sanitizeFilename,
+  type KeychainParams,
 } from './types';
 describe('keychain parameters', () => {
   it('normalizes text and clamps consumer controls', () => {
@@ -19,7 +25,12 @@ describe('keychain parameters', () => {
     expect(result.textHeightMm).toBe(30);
     expect(result.holeDiameterMm).toBe(3);
     expect(result.letterSpacingMm).toBe(1);
-    expect(normalizeParams({ ...DEFAULT_PARAMS, nameplateTiltDeg: 90 }).nameplateTiltDeg).toBe(45);
+    expect(result.plantAccentEnabled).toBe(true);
+    expect(
+      normalizeParams({ ...DEFAULT_PARAMS, plantAccentEnabled: false }).plantAccentEnabled,
+    ).toBe(false);
+    expect(normalizeParams({ ...DEFAULT_PARAMS, nameplateTiltDeg: 90 }).nameplateTiltDeg).toBe(90);
+    expect(normalizeParams({ ...DEFAULT_PARAMS, nameplateTiltDeg: 120 }).nameplateTiltDeg).toBe(90);
     expect(
       normalizeParams({
         ...DEFAULT_PARAMS,
@@ -59,6 +70,86 @@ describe('keychain parameters', () => {
         'nameplateEmbedMm',
       ).max,
     ).toBeCloseTo(1.3);
+  });
+  it('keeps the visible parameter matrix aligned with template and style capabilities', () => {
+    const parameters: readonly CustomizerParameter[] = [
+      'textHeightMm',
+      'fontWeightMm',
+      'baseThicknessMm',
+      'reliefDepthMm',
+      'edgeInsetMm',
+      'letterSpacingMm',
+      'holeDiameterMm',
+      'connectorWidthMm',
+      'jointClearanceMm',
+      'mechanicalGapMm',
+      'maxJointAngleDeg',
+      'cornerRadiusMm',
+      'stakeLengthMm',
+      'nameplateTiltDeg',
+      'nameplateEmbedMm',
+      'plantAccentEnabled',
+    ];
+    const active = (templateId: KeychainParams['templateId'], styleId: KeychainParams['styleId']) =>
+      new Set(
+        parameters.filter((parameter) =>
+          hasActiveParameter({ ...DEFAULT_PARAMS, templateId, styleId }, parameter),
+        ),
+      );
+    const expectActive = (
+      templateId: KeychainParams['templateId'],
+      styleId: KeychainParams['styleId'],
+      expected: readonly CustomizerParameter[],
+    ) => {
+      expect([...active(templateId, styleId)].sort()).toEqual([...expected].sort());
+    };
+
+    expectActive('name-keychain', 'contour', [
+      'textHeightMm',
+      'fontWeightMm',
+      'baseThicknessMm',
+      'reliefDepthMm',
+      'edgeInsetMm',
+      'letterSpacingMm',
+      'holeDiameterMm',
+    ]);
+    expectActive('articulated-name', 'contour', [
+      'textHeightMm',
+      'baseThicknessMm',
+      'reliefDepthMm',
+      'holeDiameterMm',
+      'connectorWidthMm',
+      'jointClearanceMm',
+      'mechanicalGapMm',
+      'maxJointAngleDeg',
+    ]);
+    expectActive('nameplate', 'contour', [
+      'textHeightMm',
+      'fontWeightMm',
+      'baseThicknessMm',
+      'reliefDepthMm',
+      'edgeInsetMm',
+      'cornerRadiusMm',
+      'nameplateTiltDeg',
+      'nameplateEmbedMm',
+    ]);
+
+    const plantParameters = [
+      'textHeightMm',
+      'fontWeightMm',
+      'baseThicknessMm',
+      'reliefDepthMm',
+      'edgeInsetMm',
+      'letterSpacingMm',
+      'cornerRadiusMm',
+      'stakeLengthMm',
+      'plantAccentEnabled',
+    ] as const;
+    for (const styleId of ['contour', 'soft-tag', 'bubble', 'arch'] as const)
+      expectActive('plant-label', styleId, plantParameters);
+    expectActive('plant-label', 'capsule', [
+      ...plantParameters.filter((parameter) => parameter !== 'cornerRadiusMm'),
+    ]);
   });
   it('derives a printable ring wall', () => {
     expect(ringWallMm(3)).toBe(2.2);

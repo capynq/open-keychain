@@ -15,6 +15,7 @@ const keyByIssueCode: Record<string, string> = {
   'nameplate-text-outside-plate': 'errorNameplateTextOutside',
   'nameplate-embedding': 'errorNameplateEmbedding',
   'scaled-to-fit': 'warningScaled',
+  'text-over-width': 'warningTextOverWidth',
   'dense-mesh': 'warningDense',
   'shallow-relief': 'warningShallow',
   'articulated-base-adjusted': 'warningArticulatedBaseAdjusted',
@@ -51,7 +52,8 @@ export const issueMessage = (
   const translate: TFunction = i18n.getFixedT(locale, 'translation');
   return translate(key, {
     glyph: issue.message.match(/[“«]([^”»]+)[”»]/)?.[1] ?? '',
-    height: issue.message.match(/to ([\d.]+) mm/)?.[1] ?? '',
+    height: issue.message.match(/(?:to|remains) ([\d.]+) mm/)?.[1] ?? '',
+    width: issue.message.match(/is ([\d.]+) mm wide/)?.[1] ?? '',
   });
 };
 export const styleName = (locale: Locale, styleId: string, fallback: string): string => {

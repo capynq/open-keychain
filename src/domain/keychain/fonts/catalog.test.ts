@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   FONT_CATALOG,
+  effectiveFontWeightMm,
   fontSupportsArticulatedName,
   fontSupportsText,
   textUsesCyrillic,
@@ -72,6 +73,14 @@ describe('font script coverage metadata', () => {
       ),
     ).toBe(true);
     expect(calligraphic.every((font) => font.sampleLatin && font.sampleCyrillic)).toBe(true);
+    expect(calligraphic.every((font) => font.minimumCyrillicWeightMm === 0.4)).toBe(true);
+    expect(calligraphic.every((font) => font.minimumFittedTextHeightMm === 18)).toBe(true);
+  });
+  it('strengthens Cyrillic calligraphic outlines without changing Latin or explicit weight', () => {
+    const comforterBrush = FONT_CATALOG.find((font) => font.id === 'comforter-brush')!;
+    expect(effectiveFontWeightMm(comforterBrush, 'ВЛАДИСЛАВА', 0)).toBe(0.4);
+    expect(effectiveFontWeightMm(comforterBrush, 'ALEX', 0)).toBe(0);
+    expect(effectiveFontWeightMm(comforterBrush, 'ВЛАДИСЛАВА', 0.8)).toBe(0.8);
   });
   it('groups casual and marker-style Cyrillic handwriting families', () => {
     expect(

@@ -14,6 +14,7 @@ const SHAPE_DEFAULTS = {
   connectorWidthMm: DEFAULT_PARAMS.connectorWidthMm,
   cornerRadiusMm: DEFAULT_PARAMS.cornerRadiusMm,
   stakeLengthMm: DEFAULT_PARAMS.stakeLengthMm,
+  plantAccentEnabled: DEFAULT_PARAMS.plantAccentEnabled,
   nameplateTiltDeg: DEFAULT_PARAMS.nameplateTiltDeg,
   nameplateEmbedMm: DEFAULT_PARAMS.nameplateEmbedMm,
   jointClearanceMm: DEFAULT_PARAMS.jointClearanceMm,

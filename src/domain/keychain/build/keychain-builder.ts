@@ -1,6 +1,11 @@
 import Module from 'manifold-3d';
 import * as opentype from 'opentype.js';
-import { fontDefinition, fontSupportsArticulatedName, type FontDefinition } from '../fonts/catalog';
+import {
+  effectiveFontWeightMm,
+  fontDefinition,
+  fontSupportsArticulatedName,
+  type FontDefinition,
+} from '../fonts/catalog';
 import {
   flattenText,
   flattenTextGlyphs,
@@ -253,12 +258,14 @@ export const buildKeychain = async (
     );
   const keyring = keyringMetrics(params.holeDiameterMm);
   const articulatedOutlineExpansionMm = articulatedGlyphDilationMm(params.templateId, definition);
+  const effectiveWeightMm = effectiveFontWeightMm(definition, params.text, params.fontWeightMm);
+  const minimumFittedTextHeightMm = definition.minimumFittedTextHeightMm;
   const buildStyledGeometry = (scale: number): StyledGeometry => {
     const rawText = wasm.CrossSection.ofPolygons(scalePolygons(outline.polygons, scale), 'EvenOdd');
     const text =
-      params.templateId === 'articulated-name' || params.fontWeightMm <= 0
+      params.templateId === 'articulated-name' || effectiveWeightMm <= 0
         ? rawText.translate([0, 0])
-        : rawText.offset(params.fontWeightMm * MANIFOLD_SCALE, 'Round', 2, 64);
+        : rawText.offset(effectiveWeightMm * MANIFOLD_SCALE, 'Round', 2, 64);
     rawText.delete();
     const rawBounds = text.bounds();
     const textBounds = {
@@ -278,6 +285,7 @@ export const buildKeychain = async (
       connectorWidth: params.connectorWidthMm,
       cornerRadius: params.cornerRadiusMm * MANIFOLD_SCALE,
       stakeLength: params.stakeLengthMm,
+      plantAccentEnabled: params.plantAccentEnabled,
       nameplateTiltDeg: params.nameplateTiltDeg,
       nameplateEmbedMm: params.nameplateEmbedMm,
       glyphs: articulatedGlyphs ? scaleGlyphs(articulatedGlyphs, scale) : undefined,
@@ -305,7 +313,13 @@ export const buildKeychain = async (
     };
   };
   let styled = buildStyledGeometry(1);
-  if (styled.widthMm > MAX_WIDTH_MM) {
+  if (styled.widthMm > MAX_WIDTH_MM && minimumFittedTextHeightMm !== undefined) {
+    issues.push({
+      severity: 'warning',
+      code: 'text-over-width',
+      message: `The name remains ${params.textHeightMm.toFixed(1)} mm high and is ${styled.widthMm.toFixed(1)} mm wide; the 120 mm recommended width was not enforced for this font.`,
+    });
+  } else if (styled.widthMm > MAX_WIDTH_MM) {
     let highWidth = styled.widthMm;
     const minimumScale = MIN_TEXT_HEIGHT_MM / params.textHeightMm;
     if (minimumScale >= 1) {

@@ -8,6 +8,10 @@ export type FontDefinition = {
   scripts: readonly FontScript[];
   supportsArticulated: boolean;
   articulatedDilationMm?: number;
+  /** Minimum outline dilation for Cyrillic calligraphic text to keep fine strokes printable. */
+  minimumCyrillicWeightMm?: number;
+  /** Text height below which width fitting should stop shrinking this font. */
+  minimumFittedTextHeightMm?: number;
   sampleLatin: string;
   sampleCyrillic: string;
 };
@@ -170,6 +174,8 @@ export const FONT_CATALOG: FontDefinition[] = [
     category: 'Calligraphic',
     scripts: latinCyrillic,
     supportsArticulated: false,
+    minimumCyrillicWeightMm: 0.4,
+    minimumFittedTextHeightMm: 18,
     sampleLatin: 'ALEX',
     sampleCyrillic: 'АБВГ',
   },
@@ -182,6 +188,8 @@ export const FONT_CATALOG: FontDefinition[] = [
     category: 'Calligraphic',
     scripts: latinCyrillic,
     supportsArticulated: false,
+    minimumCyrillicWeightMm: 0.4,
+    minimumFittedTextHeightMm: 18,
     sampleLatin: 'ALEX',
     sampleCyrillic: 'АБВГ',
   },
@@ -194,6 +202,8 @@ export const FONT_CATALOG: FontDefinition[] = [
     category: 'Calligraphic',
     scripts: latinCyrillic,
     supportsArticulated: false,
+    minimumCyrillicWeightMm: 0.4,
+    minimumFittedTextHeightMm: 18,
     sampleLatin: 'ALEX',
     sampleCyrillic: 'АБВГ',
   },
@@ -230,6 +240,8 @@ export const FONT_CATALOG: FontDefinition[] = [
     category: 'Calligraphic',
     scripts: latinCyrillic,
     supportsArticulated: false,
+    minimumCyrillicWeightMm: 0.4,
+    minimumFittedTextHeightMm: 18,
     sampleLatin: 'ALEX',
     sampleCyrillic: 'АБВГ',
   },
@@ -290,6 +302,8 @@ export const FONT_CATALOG: FontDefinition[] = [
     category: 'Calligraphic',
     scripts: latinCyrillic,
     supportsArticulated: false,
+    minimumCyrillicWeightMm: 0.4,
+    minimumFittedTextHeightMm: 18,
     sampleLatin: 'ALEX',
     sampleCyrillic: 'АБВГ',
   },
@@ -302,6 +316,8 @@ export const FONT_CATALOG: FontDefinition[] = [
     category: 'Calligraphic',
     scripts: latinCyrillic,
     supportsArticulated: false,
+    minimumCyrillicWeightMm: 0.4,
+    minimumFittedTextHeightMm: 18,
     sampleLatin: 'ALEX',
     sampleCyrillic: 'АБВГ',
   },
@@ -330,6 +346,14 @@ export const fontSupportsText = (font: FontDefinition, text: string): boolean =>
 };
 export const fontSupportsArticulatedName = (font: FontDefinition, text: string): boolean => {
   return font.supportsArticulated && fontSupportsText(font, text);
+};
+export const effectiveFontWeightMm = (
+  font: FontDefinition,
+  text: string,
+  requestedWeightMm: number,
+): number => {
+  const minimumWeightMm = textUsesCyrillic(text) ? (font.minimumCyrillicWeightMm ?? 0) : 0;
+  return Math.max(requestedWeightMm, minimumWeightMm);
 };
 export const articulatedFallbackFont = (text: string): FontDefinition => {
   return FONT_CATALOG.find((font) => fontSupportsArticulatedName(font, text)) ?? FONT_CATALOG[0];

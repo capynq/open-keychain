@@ -11,6 +11,7 @@ import {
   PARAMETER_RANGES,
   hasActiveParameter,
   parameterRange,
+  type CustomizerParameter,
   type ParameterRange,
   type ShapeParameter,
 } from '../../../domain/keychain';
@@ -32,7 +33,7 @@ export const useCustomizerParams = (): {
   updateBackingSize: (value: number) => void;
   resetSection: (section: CustomizerResetSection) => void;
   reset: () => void;
-  showsParameter: (parameter: keyof KeychainParams) => boolean;
+  showsParameter: (parameter: CustomizerParameter) => boolean;
   rangeFor: (parameter: ShapeParameter) => ParameterRange;
   setParams: Dispatch<SetStateAction<KeychainParams>>;
 } => {
@@ -143,7 +144,7 @@ export const useCustomizerParams = (): {
     selectTemplate,
     resetSection,
     reset,
-    showsParameter: (parameter) => hasActiveParameter(params, parameter as ShapeParameter),
+    showsParameter: (parameter) => hasActiveParameter(params, parameter),
     rangeFor: (parameter) => parameterRange(params, parameter),
     setParams,
   };

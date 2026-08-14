@@ -195,7 +195,7 @@ export const ControlsPanel = ({
             onChange={(value) => update('reliefDepthMm', value)}
           />
         )}
-        {params.templateId !== 'articulated-name' && (
+        {showsParameter('edgeInsetMm') && (
           <RangeControl
             label={t(locale, 'backingSize')}
             value={params.edgeInsetMm}
@@ -219,7 +219,7 @@ export const ControlsPanel = ({
             onChange={(value) => update('holeDiameterMm', value)}
           />
         )}
-        {params.templateId === 'articulated-name' && (
+        {showsParameter('connectorWidthMm') && (
           <>
             <RangeControl
               label={t(locale, 'connectorWidth')}
@@ -278,6 +278,16 @@ export const ControlsPanel = ({
             {...rangeFor('stakeLengthMm')}
             onChange={(value) => update('stakeLengthMm', value)}
           />
+        )}
+        {showsParameter('plantAccentEnabled') && (
+          <label className="check-control">
+            <input
+              type="checkbox"
+              checked={params.plantAccentEnabled}
+              onChange={(event) => update('plantAccentEnabled', event.target.checked)}
+            />
+            <span>{t(locale, 'plantAccents')}</span>
+          </label>
         )}
       </div>
     </section>

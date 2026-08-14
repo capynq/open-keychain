@@ -550,13 +550,42 @@ const plantFoundation = (
   width: number,
   height: number,
   radius: number,
+  accentEnabled: boolean,
 ): CrossSection => {
   const base = roundedRect(wasm, width, height, radius);
-  if (styleId === 'contour' || styleId === 'capsule') return base;
+  if (!accentEnabled) return base;
 
   const bounds = sectionBounds(base);
+  const centerY = (bounds.min[1] + bounds.max[1]) / 2;
+  const centerX = (bounds.min[0] + bounds.max[0]) / 2;
+  const minimumRadius = 2600;
+  const accentRadius = (ratio: number): number => Math.max(minimumRadius, height * ratio);
+  const accent = (radius: number, center: Vec2): CrossSection =>
+    wasm.CrossSection.circle(radius, 64).translate(center);
+
+  if (styleId === 'contour') {
+    const topAccent = accent(Math.max(height * 0.9, width * 0.2), [
+      centerX,
+      bounds.max[1] + height * 0.25,
+    ]);
+    const result = union(wasm, [base, topAccent]);
+    base.delete();
+    topAccent.delete();
+    return result;
+  }
+  if (styleId === 'capsule') {
+    const radius = Math.max(height * 0.6, width * 0.12);
+    const accents = [
+      accent(radius, [bounds.min[0] + height * 0.28, centerY]),
+      accent(radius, [bounds.max[0] - height * 0.28, centerY]),
+    ];
+    const result = union(wasm, [base, ...accents]);
+    base.delete();
+    accents.forEach((item) => item.delete());
+    return result;
+  }
   if (styleId === 'soft-tag') {
-    const accent = wasm.CrossSection.circle(Math.max(2600, height * 0.48), 64).translate([
+    const accent = wasm.CrossSection.circle(accentRadius(0.48), 64).translate([
       bounds.max[0] - height * 0.28,
       bounds.max[1] - height * 0.28,
     ]);
@@ -567,7 +596,7 @@ const plantFoundation = (
   }
   if (styleId === 'bubble') {
     const bubbles = [
-      wasm.CrossSection.circle(Math.max(2600, height * 0.44), 64).translate([
+      wasm.CrossSection.circle(accentRadius(0.44), 64).translate([
         bounds.min[0] + height * 0.34,
         bounds.max[1] - height * 0.3,
       ]),
@@ -618,6 +647,7 @@ const plantLabelStyle = (wasm: GeometryWasm, input: StyleInput, styleId: StyleId
     foundationWidth,
     foundationHeight,
     styleId === 'capsule' ? foundationHeight / 2 : radius,
+    input.plantAccentEnabled ?? true,
   );
   const stakeTotal = Math.max(24000, (input.stakeLength ?? 48) * 1000);
   const tipHeight = Math.max(8000, Math.min(12000, stakeTotal * 0.16));

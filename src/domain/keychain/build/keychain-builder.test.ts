@@ -124,6 +124,20 @@ const meshFingerprint = (mesh: MeshBuffer): number[] => {
     weightedPositionSum += mesh.positions[index] * ((index % 17) + 1);
   return [mesh.positions.length, mesh.indices.length, Number(weightedPositionSum.toFixed(3))];
 };
+const meshXYBounds = (mesh: MeshBuffer) => {
+  const xs: number[] = [];
+  const ys: number[] = [];
+  for (let index = 0; index < mesh.positions.length; index += 3) {
+    xs.push(mesh.positions[index]);
+    ys.push(mesh.positions[index + 1]);
+  }
+  return {
+    minX: Math.min(...xs),
+    maxX: Math.max(...xs),
+    minY: Math.min(...ys),
+    maxY: Math.max(...ys),
+  };
+};
 const geometryFingerprint = (result: Awaited<ReturnType<typeof buildKeychain>>['result']) => [
   ...meshFingerprint(result.baseMesh),
   ...meshFingerprint(result.reliefMesh),
@@ -405,7 +419,7 @@ describe('finished keychain geometry', () => {
         label: 'nameplate tilt',
         base: nameplate,
         low: { nameplateTiltDeg: 0 },
-        high: { nameplateTiltDeg: 45 },
+        high: { nameplateTiltDeg: 90 },
       },
       {
         label: 'nameplate embed',
@@ -520,9 +534,51 @@ describe('finished keychain geometry', () => {
       expect(result.printable, JSON.stringify(result.issues)).toBe(true);
       expect(exportMesh).toBeDefined();
       expect(topology(exportMesh!).components).toBeGreaterThan(0);
-      expect(result.dimensions.widthMm).toBeLessThanOrEqual(120.1);
+      if (
+        FONT_CATALOG.find((font) => font.id === fontId)?.minimumFittedTextHeightMm &&
+        result.dimensions.widthMm > 120.1
+      ) {
+        expect(result.issues).toContainEqual(
+          expect.objectContaining({ severity: 'warning', code: 'text-over-width' }),
+        );
+      } else {
+        expect(result.dimensions.widthMm).toBeLessThanOrEqual(120.1);
+      }
     }, 30000);
   }
+  it('applies the print-safe minimum weight to Cyrillic calligraphic text', async () => {
+    const automatic = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      fontId: 'comforter-brush',
+      text: 'ВЛАДИСЛАВА',
+      fontWeightMm: 0,
+    });
+    const explicit = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      fontId: 'comforter-brush',
+      text: 'ВЛАДИСЛАВА',
+      fontWeightMm: 0.4,
+    });
+    expect(automatic.result.printable, JSON.stringify(automatic.result.issues)).toBe(true);
+    expect(explicit.result.printable, JSON.stringify(explicit.result.issues)).toBe(true);
+    expect(geometryFingerprint(automatic.result)).toEqual(geometryFingerprint(explicit.result));
+  }, 30000);
+  it('keeps calligraphic text readable instead of shrinking it to the width cap', async () => {
+    const { result } = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      fontId: 'comforter-brush',
+      text: 'ВЛАДИСЛАВА',
+      textHeightMm: 20,
+      fontWeightMm: 0,
+    });
+    expect(result.printable, JSON.stringify(result.issues)).toBe(true);
+    expect(result.dimensions.heightMm).toBeGreaterThanOrEqual(20);
+    expect(result.dimensions.widthMm).toBeGreaterThan(120);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({ severity: 'warning', code: 'text-over-width' }),
+    );
+    expect(result.issues.some((issue) => issue.code === 'scaled-to-fit')).toBe(false);
+  }, 30000);
   for (const text of ['NIKITA', 'NIKITAA', 'IIIIIIII']) {
     it(`keeps Bungee Bubble ${text} manifold with an open ring`, async () => {
       const { result, exportMesh } = await buildKeychain(
@@ -614,7 +670,7 @@ describe('finished keychain geometry', () => {
       templateId: 'nameplate',
       fontId: 'nunito',
       text: 'ALEX',
-      nameplateTiltDeg: 45,
+      nameplateTiltDeg: 90,
       nameplateEmbedMm: 1.8,
       reliefDepthMm: 2,
     });
@@ -736,6 +792,37 @@ describe('finished keychain geometry', () => {
     }
     expect(new Set(surfaces)).toHaveLength(5);
   }, 30000);
+  it('toggles decorative plant-label accents without changing the stake or text', async () => {
+    for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'] as const) {
+      const enabled = await buildKeychain(wasm, {
+        ...DEFAULT_PARAMS,
+        templateId: 'plant-label',
+        styleId,
+        text: 'ALEX',
+        plantAccentEnabled: true,
+      });
+      const disabled = await buildKeychain(wasm, {
+        ...DEFAULT_PARAMS,
+        templateId: 'plant-label',
+        styleId,
+        text: 'ALEX',
+        plantAccentEnabled: false,
+      });
+      expect(enabled.result.printable, `${styleId}: ${JSON.stringify(enabled.result.issues)}`).toBe(
+        true,
+      );
+      expect(
+        disabled.result.printable,
+        `${styleId}: ${JSON.stringify(disabled.result.issues)}`,
+      ).toBe(true);
+      const enabledFingerprint = geometryFingerprint(enabled.result);
+      const disabledFingerprint = geometryFingerprint(disabled.result);
+      expect(enabledFingerprint).not.toEqual(disabledFingerprint);
+      expect(meshXYBounds(enabled.result.baseMesh), styleId).not.toEqual(
+        meshXYBounds(disabled.result.baseMesh),
+      );
+    }
+  }, 60000);
   it('changes the nameplate across the backing-size range', async () => {
     const compact = await buildKeychain(wasm, {
       ...DEFAULT_PARAMS,
