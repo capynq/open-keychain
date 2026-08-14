@@ -206,11 +206,11 @@ export const flattenText = (
   targetHeightMm: number,
   letterSpacingMm = 0,
 ): TextOutline => {
-  const glyphs = [...text].map((character) => font.charToGlyph(character));
+  const fontGlyphs = [...text].map((character) => font.charToGlyph(character));
   const paths: opentype.Path[] = [];
   let advanceCursor = 0;
   let previous: opentype.Glyph | undefined;
-  for (const glyph of glyphs) {
+  for (const glyph of fontGlyphs) {
     paths.push(glyph.getPath(advanceCursor, 0, 100));
     const kerning = previous ? font.getKerningValue(previous, glyph) : 0;
     advanceCursor += ((glyph.advanceWidth + kerning) / font.unitsPerEm) * 100;
@@ -241,7 +241,12 @@ export const flattenText = (
   const glyphPolygons = paths.map((path) => flattenPath(path, tolerance));
   const all = glyphPolygons.flat(2);
   if (!all.length) {
-    return { polygons: [], bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 }, width: 0, height: 0 };
+    return {
+      polygons: [],
+      bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 },
+      width: 0,
+      height: 0,
+    };
   }
   const rawMinY = Math.min(...all.map((point) => point[1]));
   const rawMaxY = Math.max(...all.map((point) => point[1]));
@@ -270,7 +275,7 @@ export const flattenText = (
   const spacedMaxY = Math.max(...spaced.map((point) => point[1]));
   const centerX = (spacedMinX + spacedMaxX) / 2;
   const centerY = (spacedMinY + spacedMaxY) / 2;
-  const scaled = scaledGroups.map((group) =>
+  const polygons = scaledGroups.flatMap((group) =>
     group.map((polygon) =>
       polygon.map(
         ([x, y]) =>
@@ -281,13 +286,17 @@ export const flattenText = (
       ),
     ),
   );
-  const polygons = scaled.flat();
   const points = polygons.flat();
   const minX = Math.min(...points.map((point) => point[0]));
   const maxX = Math.max(...points.map((point) => point[0]));
   const minY = Math.min(...points.map((point) => point[1]));
   const maxY = Math.max(...points.map((point) => point[1]));
-  return { polygons, bounds: { minX, minY, maxX, maxY }, width: maxX - minX, height: maxY - minY };
+  return {
+    polygons,
+    bounds: { minX, minY, maxX, maxY },
+    width: maxX - minX,
+    height: maxY - minY,
+  };
 };
 export const hasRequiredGlyphs = (font: opentype.Font, text: string): string | undefined => {
   for (const character of text) {

@@ -7,7 +7,13 @@ import {
   fontSupportsText,
   textUsesCyrillic,
 } from '../../../domain/keychain';
-import { PARAMETER_RANGES, hasTemplateParameter } from '../../../domain/keychain';
+import {
+  PARAMETER_RANGES,
+  hasActiveParameter,
+  parameterRange,
+  type ParameterRange,
+  type ShapeParameter,
+} from '../../../domain/keychain';
 import { DEFAULT_PARAMS, type KeychainParams, type TemplateId } from '../../../domain/keychain';
 import { STYLE_CATALOG, TEMPLATE_CATALOG } from '../../../domain/keychain';
 import type { FontNotice } from '../model/customizer-types';
@@ -25,6 +31,7 @@ export const useCustomizerParams = (): {
   updateBackingSize: (value: number) => void;
   reset: () => void;
   showsParameter: (parameter: keyof KeychainParams) => boolean;
+  rangeFor: (parameter: ShapeParameter) => ParameterRange;
   setParams: Dispatch<SetStateAction<KeychainParams>>;
 } => {
   const [params, setParams] = useState<KeychainParams>(() => ({ ...DEFAULT_PARAMS }));
@@ -128,7 +135,8 @@ export const useCustomizerParams = (): {
     updateBackingSize,
     selectTemplate,
     reset,
-    showsParameter: (parameter) => hasTemplateParameter(params.templateId, parameter),
+    showsParameter: (parameter) => hasActiveParameter(params, parameter as ShapeParameter),
+    rangeFor: (parameter) => parameterRange(params, parameter),
     setParams,
   };
 };

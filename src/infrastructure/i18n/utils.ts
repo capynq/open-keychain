@@ -10,7 +10,7 @@ const keyByIssueCode: Record<string, string> = {
   'articulated-font': 'errorArticulatedFont',
   'empty-outline': 'errorEmptyOutline',
   'text-too-wide': 'errorTooWide',
-  disconnected: 'errorDisconnected',
+  disconnected: 'warningDisconnected',
   'relief-outside-backing': 'errorReliefOutsideBacking',
   'nameplate-text-outside-plate': 'errorNameplateTextOutside',
   'nameplate-embedding': 'errorNameplateEmbedding',

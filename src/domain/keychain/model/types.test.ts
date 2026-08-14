@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { templateParameterKeys } from './parameters';
+import { hasActiveParameter, parameterRange, templateParameterKeys } from './parameters';
 import {
   DEFAULT_PARAMS,
   keyringMetrics,
@@ -20,6 +20,14 @@ describe('keychain parameters', () => {
     expect(result.holeDiameterMm).toBe(3);
     expect(result.letterSpacingMm).toBe(1);
     expect(normalizeParams({ ...DEFAULT_PARAMS, nameplateTiltDeg: 90 }).nameplateTiltDeg).toBe(45);
+    expect(
+      normalizeParams({
+        ...DEFAULT_PARAMS,
+        templateId: 'nameplate',
+        baseThicknessMm: 1.6,
+        nameplateEmbedMm: 1.8,
+      }).nameplateEmbedMm,
+    ).toBeCloseTo(1.3);
   });
   it('exposes only controls that affect each template', () => {
     expect(templateParameterKeys('plant-label')).not.toContain('holeDiameterMm');
@@ -30,6 +38,27 @@ describe('keychain parameters', () => {
     expect(templateParameterKeys('nameplate')).toContain('nameplateEmbedMm');
     expect(templateParameterKeys('nameplate')).not.toContain('holeDiameterMm');
     expect(templateParameterKeys('nameplate')).toContain('reliefDepthMm');
+    expect(
+      hasActiveParameter(
+        { ...DEFAULT_PARAMS, templateId: 'plant-label', styleId: 'capsule' },
+        'cornerRadiusMm',
+      ),
+    ).toBe(false);
+    expect(
+      hasActiveParameter(
+        { ...DEFAULT_PARAMS, templateId: 'plant-label', styleId: 'contour' },
+        'cornerRadiusMm',
+      ),
+    ).toBe(true);
+    expect(
+      parameterRange({ ...DEFAULT_PARAMS, templateId: 'articulated-name' }, 'baseThicknessMm').min,
+    ).toBe(3.4);
+    expect(
+      parameterRange(
+        { ...DEFAULT_PARAMS, templateId: 'nameplate', baseThicknessMm: 1.6 },
+        'nameplateEmbedMm',
+      ).max,
+    ).toBeCloseTo(1.3);
   });
   it('derives a printable ring wall', () => {
     expect(ringWallMm(3)).toBe(2.2);

@@ -14,7 +14,7 @@ import {
   type Locale,
 } from '../../../infrastructure/i18n';
 import type { SurfacePresetId } from '../../preview';
-import { PARAMETER_RANGES, type useCustomizerParams } from '../hooks/useCustomizerParams';
+import { type useCustomizerParams } from '../hooks/useCustomizerParams';
 import { RangeControl } from './RangeControl';
 
 export const ControlsPanel = ({
@@ -30,6 +30,7 @@ export const ControlsPanel = ({
     updateBackingSize,
     selectTemplate,
     showsParameter,
+    rangeFor,
   },
   surfacePreset,
   onSurfaceChange,
@@ -158,43 +159,12 @@ export const ControlsPanel = ({
     </section>
     <section className="control-section">
       <h2>{t(locale, 'shape')}</h2>
-      {params.templateId === 'name-keychain' && (
-        <>
-          <div className="backing-mode-grid" aria-label={t(locale, 'backingMode')}>
-            {(['contour', 'bridged', 'solid'] as const).map((mode) => (
-              <button
-                type="button"
-                key={mode}
-                className={params.backingMode === mode ? 'selected' : ''}
-                onClick={() => update('backingMode', mode)}
-              >
-                <span className="backing-mode-copy">
-                  <strong>{t(locale, `backing${mode[0].toUpperCase()}${mode.slice(1)}`)}</strong>
-                  <small>
-                    {t(locale, `backing${mode[0].toUpperCase()}${mode.slice(1)}Description`)}
-                  </small>
-                </span>
-              </button>
-            ))}
-          </div>
-          {params.backingMode === 'bridged' && (
-            <div className="range-grid backing-bridge-control">
-              <RangeControl
-                label={t(locale, 'backingBridge')}
-                value={params.backingBridgeMm}
-                {...PARAMETER_RANGES.backingBridgeMm}
-                onChange={(value) => update('backingBridgeMm', value)}
-              />
-            </div>
-          )}
-        </>
-      )}
       <div className="range-grid">
         {showsParameter('textHeightMm') && (
           <RangeControl
             label={t(locale, 'nameHeight')}
             value={params.textHeightMm}
-            {...PARAMETER_RANGES.textHeightMm}
+            {...rangeFor('textHeightMm')}
             onChange={(value) => update('textHeightMm', value)}
           />
         )}
@@ -202,7 +172,7 @@ export const ControlsPanel = ({
           <RangeControl
             label={t(locale, 'fontWeight')}
             value={params.fontWeightMm}
-            {...PARAMETER_RANGES.fontWeightMm}
+            {...rangeFor('fontWeightMm')}
             onChange={(value) => update('fontWeightMm', value)}
           />
         )}
@@ -213,9 +183,7 @@ export const ControlsPanel = ({
               params.templateId === 'nameplate' ? 'plateThickness' : 'baseThickness',
             )}
             value={params.baseThicknessMm}
-            {...(params.templateId === 'articulated-name'
-              ? { ...PARAMETER_RANGES.baseThicknessMm, min: 3.4 }
-              : PARAMETER_RANGES.baseThicknessMm)}
+            {...rangeFor('baseThicknessMm')}
             onChange={(value) => update('baseThicknessMm', value)}
           />
         )}
@@ -223,7 +191,7 @@ export const ControlsPanel = ({
           <RangeControl
             label={t(locale, params.templateId === 'nameplate' ? 'textLift' : 'raisedText')}
             value={params.reliefDepthMm}
-            {...PARAMETER_RANGES.reliefDepthMm}
+            {...rangeFor('reliefDepthMm')}
             onChange={(value) => update('reliefDepthMm', value)}
           />
         )}
@@ -231,10 +199,7 @@ export const ControlsPanel = ({
           <RangeControl
             label={t(locale, 'backingSize')}
             value={params.edgeInsetMm}
-            min={1.2}
-            max={4}
-            step={0.1}
-            unit="mm"
+            {...{ ...rangeFor('edgeInsetMm'), min: 1.2 }}
             onChange={updateBackingSize}
           />
         )}
@@ -242,7 +207,7 @@ export const ControlsPanel = ({
           <RangeControl
             label={t(locale, 'letterSpacing')}
             value={params.letterSpacingMm}
-            {...PARAMETER_RANGES.letterSpacingMm}
+            {...rangeFor('letterSpacingMm')}
             onChange={(value) => update('letterSpacingMm', value)}
           />
         )}
@@ -250,7 +215,7 @@ export const ControlsPanel = ({
           <RangeControl
             label={t(locale, 'keyringHole')}
             value={params.holeDiameterMm}
-            {...PARAMETER_RANGES.holeDiameterMm}
+            {...rangeFor('holeDiameterMm')}
             onChange={(value) => update('holeDiameterMm', value)}
           />
         )}
@@ -259,25 +224,25 @@ export const ControlsPanel = ({
             <RangeControl
               label={t(locale, 'connectorWidth')}
               value={params.connectorWidthMm}
-              {...PARAMETER_RANGES.connectorWidthMm}
+              {...rangeFor('connectorWidthMm')}
               onChange={(value) => update('connectorWidthMm', value)}
             />
             <RangeControl
               label={t(locale, 'jointClearance')}
               value={params.jointClearanceMm}
-              {...PARAMETER_RANGES.jointClearanceMm}
+              {...rangeFor('jointClearanceMm')}
               onChange={(value) => update('jointClearanceMm', value)}
             />
             <RangeControl
               label={t(locale, 'mechanicalGap')}
               value={params.mechanicalGapMm}
-              {...PARAMETER_RANGES.mechanicalGapMm}
+              {...rangeFor('mechanicalGapMm')}
               onChange={(value) => update('mechanicalGapMm', value)}
             />
             <RangeControl
               label={t(locale, 'maxJointAngle')}
               value={params.maxJointAngleDeg}
-              {...PARAMETER_RANGES.maxJointAngleDeg}
+              {...rangeFor('maxJointAngleDeg')}
               onChange={(value) => update('maxJointAngleDeg', value)}
             />
           </>
@@ -286,7 +251,7 @@ export const ControlsPanel = ({
           <RangeControl
             label={t(locale, 'cornerRadius')}
             value={params.cornerRadiusMm}
-            {...PARAMETER_RANGES.cornerRadiusMm}
+            {...rangeFor('cornerRadiusMm')}
             onChange={(value) => update('cornerRadiusMm', value)}
           />
         )}
@@ -294,7 +259,7 @@ export const ControlsPanel = ({
           <RangeControl
             label={t(locale, 'textTilt')}
             value={params.nameplateTiltDeg}
-            {...PARAMETER_RANGES.nameplateTiltDeg}
+            {...rangeFor('nameplateTiltDeg')}
             onChange={(value) => update('nameplateTiltDeg', value)}
           />
         )}
@@ -302,7 +267,7 @@ export const ControlsPanel = ({
           <RangeControl
             label={t(locale, 'embedDepth')}
             value={params.nameplateEmbedMm}
-            {...PARAMETER_RANGES.nameplateEmbedMm}
+            {...rangeFor('nameplateEmbedMm')}
             onChange={(value) => update('nameplateEmbedMm', value)}
           />
         )}
@@ -310,7 +275,7 @@ export const ControlsPanel = ({
           <RangeControl
             label={t(locale, 'stakeLength')}
             value={params.stakeLengthMm}
-            {...PARAMETER_RANGES.stakeLengthMm}
+            {...rangeFor('stakeLengthMm')}
             onChange={(value) => update('stakeLengthMm', value)}
           />
         )}

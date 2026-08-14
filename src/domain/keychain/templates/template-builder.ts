@@ -2,7 +2,6 @@ import type { StyleId, TemplateId } from '../model/types';
 import {
   buildStyle,
   capsule,
-  connectIfNeeded,
   ringAssembly,
   roundedRect,
   sectionBounds,
@@ -79,7 +78,7 @@ export const TEMPLATE_CATALOG: readonly TemplateDefinition[] = [
   {
     id: 'name-keychain',
     name: 'Name keychain',
-    description: 'A connected backing that follows the name.',
+    description: 'A backing contour that follows the name.',
     supportsKeyring: true,
     styles: ALL_STYLE_IDS,
   },
@@ -547,11 +546,7 @@ const nameplateStyle = (wasm: GeometryWasm, input: StyleInput): StyleBuild => {
   const height = Math.max(18000, textHeight + input.padding * 2 + tiltMargin * 2);
   const radius = Math.max(
     1500,
-    Math.min(
-      input.cornerRadius ?? 4000,
-      Math.min(width, height) / 2 - input.padding - 250,
-      input.padding * 3.2,
-    ),
+    Math.min(input.cornerRadius ?? 4000, Math.min(width, height) / 2 - input.padding - 250),
   );
   const plate = roundedRect(wasm, width, height, radius);
   return { backing: plate, relief: input.text };
@@ -656,16 +651,8 @@ const plantLabelStyle = (wasm: GeometryWasm, input: StyleInput, styleId: StyleId
   );
   const textOffsetY = foundationBottom + 1000 - input.textBounds.min[1];
   const labelText = input.text.translate([0, textOffsetY]);
-  const labelFootprint = labelText.translate([0, 0]);
-  const connected = connectIfNeeded(
-    wasm,
-    union(wasm, [foundation, shaft, tip, labelFootprint]),
-    1200,
-  );
-  const joinedLabel = labelText.translate([0, 0]);
-  const joined = union(wasm, [connected, joinedLabel]);
-  connected.delete();
-  joinedLabel.delete();
+  const labelFootprint = input.text.translate([0, textOffsetY]);
+  const joined = union(wasm, [foundation, shaft, tip, labelFootprint]);
   foundation.delete();
   shaft.delete();
   tip.delete();
@@ -673,7 +660,7 @@ const plantLabelStyle = (wasm: GeometryWasm, input: StyleInput, styleId: StyleId
   return {
     backing: joined,
     relief: labelText,
-    reliefDepthMm: Math.min(0.8, Math.max(0.6, input.reliefDepth ?? 0.7)),
+    reliefDepthMm: Math.min(2, Math.max(0.6, input.reliefDepth ?? 0.7)),
   };
 };
 export const buildTemplate = (

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { FONT_CATALOG } from '../fonts/catalog';
 import { buildKeychain, createWasm } from './keychain-builder';
-import { DEFAULT_PARAMS, type MeshBuffer } from '../model/types';
+import { DEFAULT_PARAMS, type KeychainParams, type MeshBuffer } from '../model/types';
 const originalFetch = globalThis.fetch;
 let wasm: Awaited<ReturnType<typeof createWasm>>;
 beforeAll(async () => {
@@ -118,27 +118,358 @@ const topSurfaceArea = (
   }
   return { surface, hull: area(convexHull(points)) };
 };
+const meshFingerprint = (mesh: MeshBuffer): number[] => {
+  let weightedPositionSum = 0;
+  for (let index = 0; index < mesh.positions.length; index += 1)
+    weightedPositionSum += mesh.positions[index] * ((index % 17) + 1);
+  return [mesh.positions.length, mesh.indices.length, Number(weightedPositionSum.toFixed(3))];
+};
+const geometryFingerprint = (result: Awaited<ReturnType<typeof buildKeychain>>['result']) => [
+  ...meshFingerprint(result.baseMesh),
+  ...meshFingerprint(result.reliefMesh),
+  Number(result.dimensions.widthMm.toFixed(3)),
+  Number(result.dimensions.heightMm.toFixed(3)),
+  Number(result.dimensions.thicknessMm.toFixed(3)),
+];
 describe('finished keychain geometry', () => {
-  it('supports a solid backing that closes gaps between letters', async () => {
-    const contour = await buildKeychain(wasm, {
-      ...DEFAULT_PARAMS,
-      fontId: 'comforter',
-      text: 'ABCD',
-      backingMode: 'contour',
-    });
-    const solid = await buildKeychain(wasm, {
-      ...DEFAULT_PARAMS,
-      fontId: 'comforter',
-      text: 'ABCD',
-      backingMode: 'solid',
-    });
-    expect(contour.result.printable, JSON.stringify(contour.result.issues)).toBe(true);
-    expect(solid.result.printable, JSON.stringify(solid.result.issues)).toBe(true);
-    expect(topology(solid.result.baseMesh).connected).toBe(true);
-    expect(topSurfaceArea(solid.result.baseMesh).surface).toBeGreaterThan(
-      topSurfaceArea(contour.result.baseMesh).surface,
-    );
+  for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch', 'frame'] as const) {
+    it(`changes ${styleId} geometry across the full backing-size range`, async () => {
+      const compact = await buildKeychain(wasm, {
+        ...DEFAULT_PARAMS,
+        styleId,
+        text: 'ALEX',
+        paddingMm: 1.2,
+        edgeInsetMm: 1.2,
+      });
+      const spacious = await buildKeychain(wasm, {
+        ...DEFAULT_PARAMS,
+        styleId,
+        text: 'ALEX',
+        paddingMm: 4,
+        edgeInsetMm: 4,
+      });
+      expect(compact.result.printable, JSON.stringify(compact.result.issues)).toBe(true);
+      expect(spacious.result.printable, JSON.stringify(spacious.result.issues)).toBe(true);
+      expect(topSurfaceArea(spacious.result.baseMesh).surface).toBeGreaterThan(
+        topSurfaceArea(compact.result.baseMesh).surface,
+      );
+    }, 30000);
+  }
+
+  it('keeps all name-keychain styles geometrically distinct', async () => {
+    const surfaces: number[] = [];
+    for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch', 'frame'] as const) {
+      const { result } = await buildKeychain(wasm, {
+        ...DEFAULT_PARAMS,
+        styleId,
+        text: 'ALEX',
+        letterSpacingMm: 4,
+      });
+      expect(result.printable, JSON.stringify(result.issues)).toBe(true);
+      surfaces.push(Number(topSurfaceArea(result.baseMesh).surface.toFixed(2)));
+    }
+    expect(new Set(surfaces)).toHaveLength(6);
   }, 30000);
+  it('keeps widely spaced letters separate instead of adding automatic bridges', async () => {
+    const { result, exportMesh } = await buildKeychain(
+      wasm,
+      {
+        ...DEFAULT_PARAMS,
+        fontId: 'comforter',
+        styleId: 'contour',
+        text: 'ABCD',
+        letterSpacingMm: 8,
+        edgeInsetMm: 1.2,
+      },
+      true,
+    );
+    expect(result.printable, JSON.stringify(result.issues)).toBe(true);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({ severity: 'warning', code: 'disconnected' }),
+    );
+    expect(exportMesh).toBeDefined();
+    expect(topology(exportMesh!).components).toBeGreaterThan(1);
+  }, 30000);
+  it('keeps every template/style combination valid across shared shape settings', async () => {
+    const styleIds = ['contour', 'capsule', 'soft-tag', 'bubble', 'arch', 'frame'] as const;
+    const combinations = [
+      ...styleIds.map((styleId) => ({ templateId: 'name-keychain' as const, styleId })),
+      ...styleIds.map((styleId) => ({ templateId: 'plant-label' as const, styleId })),
+      { templateId: 'nameplate' as const, styleId: 'contour' as const },
+      { templateId: 'articulated-name' as const, styleId: 'contour' as const },
+    ];
+    const variants = [
+      {
+        textHeightMm: 12,
+        fontWeightMm: 0,
+        baseThicknessMm: 1.6,
+        reliefDepthMm: 0.6,
+        paddingMm: 1.2,
+        edgeInsetMm: 1.2,
+        letterSpacingMm: 0,
+      },
+      {
+        textHeightMm: 30,
+        fontWeightMm: 1.5,
+        baseThicknessMm: 4,
+        reliefDepthMm: 2,
+        paddingMm: 4,
+        edgeInsetMm: 4,
+        letterSpacingMm: 8,
+      },
+    ];
+    for (const combination of combinations)
+      for (const variant of variants) {
+        const { result, exportMesh } = await buildKeychain(
+          wasm,
+          {
+            ...DEFAULT_PARAMS,
+            ...combination,
+            ...variant,
+            fontId: combination.templateId === 'articulated-name' ? 'rubik' : 'nunito',
+            text: 'ALEX',
+            baseThicknessMm:
+              combination.templateId === 'articulated-name'
+                ? Math.max(3.4, variant.baseThicknessMm)
+                : variant.baseThicknessMm,
+          },
+          true,
+        );
+        expect(
+          result.printable,
+          `${combination.templateId}/${combination.styleId}: ${JSON.stringify(result.issues)}`,
+        ).toBe(true);
+        expect(result.issues.some((issue) => issue.severity === 'error')).toBe(false);
+        expect(exportMesh).toBeDefined();
+        expect([...exportMesh!.positions].every(Number.isFinite)).toBe(true);
+      }
+  }, 90000);
+  it('changes the mesh for every exposed shape control at its safe limits', async () => {
+    type ControlCase = {
+      label: string;
+      base: Partial<KeychainParams>;
+      low: Partial<KeychainParams>;
+      high: Partial<KeychainParams>;
+    };
+    const standard: Partial<KeychainParams> = {
+      templateId: 'name-keychain',
+      styleId: 'contour',
+      fontId: 'nunito',
+      text: 'ALEX',
+    };
+    const articulated: Partial<KeychainParams> = {
+      templateId: 'articulated-name',
+      fontId: 'rubik',
+      text: 'ALEX',
+      baseThicknessMm: 3.4,
+    };
+    const nameplate: Partial<KeychainParams> = {
+      templateId: 'nameplate',
+      fontId: 'nunito',
+      text: 'ALEX',
+    };
+    const plant: Partial<KeychainParams> = {
+      templateId: 'plant-label',
+      styleId: 'contour',
+      fontId: 'nunito',
+      text: 'ALEX',
+    };
+    const cases: ControlCase[] = [
+      {
+        label: 'name height',
+        base: standard,
+        low: { textHeightMm: 12 },
+        high: { textHeightMm: 30 },
+      },
+      {
+        label: 'font weight',
+        base: standard,
+        low: { fontWeightMm: 0 },
+        high: { fontWeightMm: 1.5 },
+      },
+      {
+        label: 'base thickness',
+        base: standard,
+        low: { baseThicknessMm: 1.6 },
+        high: { baseThicknessMm: 4 },
+      },
+      {
+        label: 'relief depth',
+        base: standard,
+        low: { reliefDepthMm: 0.6 },
+        high: { reliefDepthMm: 2 },
+      },
+      {
+        label: 'backing size',
+        base: standard,
+        low: { paddingMm: 1.2, edgeInsetMm: 1.2 },
+        high: { paddingMm: 4, edgeInsetMm: 4 },
+      },
+      {
+        label: 'letter spacing',
+        base: standard,
+        low: { letterSpacingMm: 0 },
+        high: { letterSpacingMm: 8 },
+      },
+      {
+        label: 'keyring hole',
+        base: standard,
+        low: { holeDiameterMm: 3 },
+        high: { holeDiameterMm: 7 },
+      },
+      {
+        label: 'articulated name height',
+        base: articulated,
+        low: { textHeightMm: 12 },
+        high: { textHeightMm: 30 },
+      },
+      {
+        label: 'articulated base',
+        base: articulated,
+        low: { baseThicknessMm: 3.4 },
+        high: { baseThicknessMm: 4 },
+      },
+      {
+        label: 'articulated relief',
+        base: articulated,
+        low: { reliefDepthMm: 0.6 },
+        high: { reliefDepthMm: 2 },
+      },
+      {
+        label: 'articulated hole',
+        base: articulated,
+        low: { holeDiameterMm: 3 },
+        high: { holeDiameterMm: 7 },
+      },
+      {
+        label: 'connector width',
+        base: articulated,
+        low: { connectorWidthMm: 1.4 },
+        high: { connectorWidthMm: 3 },
+      },
+      {
+        label: 'joint clearance',
+        base: articulated,
+        low: { jointClearanceMm: 0.2 },
+        high: { jointClearanceMm: 0.6 },
+      },
+      {
+        label: 'mechanical gap',
+        base: articulated,
+        low: { mechanicalGapMm: 0.4 },
+        high: { mechanicalGapMm: 1.5 },
+      },
+      {
+        label: 'maximum joint angle',
+        base: articulated,
+        low: { maxJointAngleDeg: 15 },
+        high: { maxJointAngleDeg: 50 },
+      },
+      {
+        label: 'nameplate height',
+        base: nameplate,
+        low: { textHeightMm: 12 },
+        high: { textHeightMm: 30 },
+      },
+      {
+        label: 'nameplate weight',
+        base: nameplate,
+        low: { fontWeightMm: 0 },
+        high: { fontWeightMm: 1.5 },
+      },
+      {
+        label: 'nameplate base',
+        base: nameplate,
+        low: { baseThicknessMm: 1.6 },
+        high: { baseThicknessMm: 4 },
+      },
+      {
+        label: 'nameplate relief',
+        base: nameplate,
+        low: { reliefDepthMm: 0.6 },
+        high: { reliefDepthMm: 2 },
+      },
+      {
+        label: 'nameplate backing',
+        base: nameplate,
+        low: { paddingMm: 1.2, edgeInsetMm: 1.2 },
+        high: { paddingMm: 4, edgeInsetMm: 4 },
+      },
+      {
+        label: 'nameplate radius',
+        base: nameplate,
+        low: { cornerRadiusMm: 1.5 },
+        high: { cornerRadiusMm: 6 },
+      },
+      {
+        label: 'nameplate tilt',
+        base: nameplate,
+        low: { nameplateTiltDeg: 0 },
+        high: { nameplateTiltDeg: 45 },
+      },
+      {
+        label: 'nameplate embed',
+        base: nameplate,
+        low: { nameplateEmbedMm: 0.2 },
+        high: { nameplateEmbedMm: 1.8 },
+      },
+      { label: 'plant height', base: plant, low: { textHeightMm: 12 }, high: { textHeightMm: 30 } },
+      { label: 'plant weight', base: plant, low: { fontWeightMm: 0 }, high: { fontWeightMm: 1.5 } },
+      {
+        label: 'plant base',
+        base: plant,
+        low: { baseThicknessMm: 1.6 },
+        high: { baseThicknessMm: 4 },
+      },
+      {
+        label: 'plant relief',
+        base: plant,
+        low: { reliefDepthMm: 0.6 },
+        high: { reliefDepthMm: 2 },
+      },
+      {
+        label: 'plant backing',
+        base: plant,
+        low: { paddingMm: 1.2, edgeInsetMm: 1.2 },
+        high: { paddingMm: 4, edgeInsetMm: 4 },
+      },
+      {
+        label: 'plant letter spacing',
+        base: plant,
+        low: { letterSpacingMm: 0 },
+        high: { letterSpacingMm: 8 },
+      },
+      {
+        label: 'plant corner radius',
+        base: plant,
+        low: { cornerRadiusMm: 1.5 },
+        high: { cornerRadiusMm: 2 },
+      },
+      {
+        label: 'stake length',
+        base: plant,
+        low: { stakeLengthMm: 24 },
+        high: { stakeLengthMm: 100 },
+      },
+    ];
+    for (const control of cases) {
+      const low = await buildKeychain(wasm, { ...DEFAULT_PARAMS, ...control.base, ...control.low });
+      const high = await buildKeychain(wasm, {
+        ...DEFAULT_PARAMS,
+        ...control.base,
+        ...control.high,
+      });
+      expect(low.result.printable, `${control.label}: ${JSON.stringify(low.result.issues)}`).toBe(
+        true,
+      );
+      expect(high.result.printable, `${control.label}: ${JSON.stringify(high.result.issues)}`).toBe(
+        true,
+      );
+      expect(geometryFingerprint(high.result), control.label).not.toEqual(
+        geometryFingerprint(low.result),
+      );
+    }
+  }, 90000);
 
   for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch', 'frame'] as const) {
     for (const font of FONT_CATALOG) {
@@ -188,7 +519,7 @@ describe('finished keychain geometry', () => {
       );
       expect(result.printable, JSON.stringify(result.issues)).toBe(true);
       expect(exportMesh).toBeDefined();
-      expect(topology(exportMesh!).connected).toBe(true);
+      expect(topology(exportMesh!).components).toBeGreaterThan(0);
       expect(result.dimensions.widthMm).toBeLessThanOrEqual(120.1);
     }, 30000);
   }
@@ -211,7 +542,7 @@ describe('finished keychain geometry', () => {
       expect([...exportMesh!.positions].every(Number.isFinite)).toBe(true);
       expect(result.dimensions.widthMm).toBeLessThanOrEqual(120.1);
       const meshTopology = topology(exportMesh!);
-      expect(meshTopology.connected).toBe(true);
+      expect(meshTopology.components).toBeGreaterThan(0);
       expect(meshTopology.eulerCharacteristic).toBeLessThanOrEqual(0);
       const triangles = exportMesh!.indices.length / 3;
       expect(triangles <= 12000 || result.issues.some((issue) => issue.code === 'dense-mesh')).toBe(
@@ -237,7 +568,7 @@ describe('finished keychain geometry', () => {
     );
     expect(result.printable, JSON.stringify(result.issues)).toBe(true);
     expect(exportMesh).toBeDefined();
-    expect(topology(exportMesh!).connected).toBe(true);
+    expect(topology(exportMesh!).components).toBeGreaterThan(0);
   }, 30000);
   it('keeps Frame printable for a wide name', async () => {
     const { result } = await buildKeychain(wasm, {
@@ -356,8 +687,10 @@ describe('finished keychain geometry', () => {
         if (templateId === 'articulated-name') {
           expect(result.solidCount).toBe([...text].length * 2 - 1);
           expect(topology(exportMesh!).components).toBe(result.solidCount);
-        } else {
+        } else if (templateId === 'nameplate') {
           expect(topology(exportMesh!).connected).toBe(true);
+        } else {
+          expect(topology(exportMesh!).components).toBeGreaterThan(0);
         }
         if (templateId === 'plant-label') expect(result.baseShading).toBe('flat');
         expect(result.dimensions.widthMm).toBeLessThanOrEqual(120.1);
@@ -379,10 +712,70 @@ describe('finished keychain geometry', () => {
       );
       expect(result.printable, JSON.stringify(result.issues)).toBe(true);
       expect(exportMesh).toBeDefined();
-      expect(topology(exportMesh!).connected).toBe(true);
+      expect(topology(exportMesh!).components).toBeGreaterThan(0);
       expect([...exportMesh!.positions].every(Number.isFinite)).toBe(true);
     }, 30000);
   }
+  for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch', 'frame'] as const) {
+    it(`changes the ${styleId} plant label across the backing-size range`, async () => {
+      const compact = await buildKeychain(wasm, {
+        ...DEFAULT_PARAMS,
+        templateId: 'plant-label',
+        styleId,
+        text: 'ALEX',
+        paddingMm: 1.2,
+        edgeInsetMm: 1.2,
+      });
+      const spacious = await buildKeychain(wasm, {
+        ...DEFAULT_PARAMS,
+        templateId: 'plant-label',
+        styleId,
+        text: 'ALEX',
+        paddingMm: 4,
+        edgeInsetMm: 4,
+      });
+      expect(compact.result.printable, JSON.stringify(compact.result.issues)).toBe(true);
+      expect(spacious.result.printable, JSON.stringify(spacious.result.issues)).toBe(true);
+      expect(topSurfaceArea(spacious.result.baseMesh).surface).toBeGreaterThan(
+        topSurfaceArea(compact.result.baseMesh).surface,
+      );
+    }, 30000);
+  }
+  it('keeps all plant-label styles geometrically distinct', async () => {
+    const surfaces: number[] = [];
+    for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch', 'frame'] as const) {
+      const { result } = await buildKeychain(wasm, {
+        ...DEFAULT_PARAMS,
+        templateId: 'plant-label',
+        styleId,
+        text: 'ALEX',
+      });
+      expect(result.printable, JSON.stringify(result.issues)).toBe(true);
+      surfaces.push(Number(topSurfaceArea(result.baseMesh).surface.toFixed(2)));
+    }
+    expect(new Set(surfaces)).toHaveLength(6);
+  }, 30000);
+  it('changes the nameplate across the backing-size range', async () => {
+    const compact = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      templateId: 'nameplate',
+      text: 'ALEX',
+      paddingMm: 1.2,
+      edgeInsetMm: 1.2,
+    });
+    const spacious = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      templateId: 'nameplate',
+      text: 'ALEX',
+      paddingMm: 4,
+      edgeInsetMm: 4,
+    });
+    expect(compact.result.printable, JSON.stringify(compact.result.issues)).toBe(true);
+    expect(spacious.result.printable, JSON.stringify(spacious.result.issues)).toBe(true);
+    expect(topSurfaceArea(spacious.result.baseMesh).surface).toBeGreaterThan(
+      topSurfaceArea(compact.result.baseMesh).surface,
+    );
+  }, 30000);
   for (const text of ['ALEX', 'НІКІТА']) {
     it(`builds a pointed, embedded plant label for ${text}`, async () => {
       const { result, exportMesh } = await buildKeychain(
@@ -399,7 +792,7 @@ describe('finished keychain geometry', () => {
       );
       expect(result.printable, JSON.stringify(result.issues)).toBe(true);
       expect(exportMesh).toBeDefined();
-      expect(topology(exportMesh!).connected).toBe(true);
+      expect(topology(exportMesh!).components).toBeGreaterThan(0);
       expect([...exportMesh!.positions].every(Number.isFinite)).toBe(true);
       expect(result.dimensions.widthMm).toBeLessThanOrEqual(120.1);
       const positions = exportMesh!.positions;
@@ -429,8 +822,8 @@ describe('finished keychain geometry', () => {
           (_, index) => result.reliefMesh.positions[index * 3 + 2],
         ),
       );
-      expect(reliefZ - baseZ).toBeGreaterThan(0.5);
-      expect(reliefZ - baseZ).toBeLessThanOrEqual(0.9);
+      expect(reliefZ - baseZ).toBeGreaterThan(1.9);
+      expect(reliefZ - baseZ).toBeLessThanOrEqual(2.1);
     }, 30000);
   }
   for (const text of ['NIKITAA', 'IIII', 'ЛІЛІ']) {

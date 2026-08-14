@@ -11,7 +11,6 @@ export type KeychainParams = {
   reliefDepthMm: number;
   paddingMm: number;
   edgeInsetMm: number;
-  letterFillMm: number;
   letterSpacingMm: number;
   holeDiameterMm: number;
   connectorWidthMm: number;
@@ -120,7 +119,6 @@ export const DEFAULT_PARAMS: KeychainParams = {
   reliefDepthMm: 1,
   paddingMm: 2.4,
   edgeInsetMm: 2.4,
-  letterFillMm: 2.4,
   letterSpacingMm: 1,
   holeDiameterMm: 5,
   connectorWidthMm: 1.8,
@@ -136,29 +134,33 @@ export const DEFAULT_PARAMS: KeychainParams = {
 };
 export const normalizeParams = (params: KeychainParams): NormalizedParams => {
   const text = params.text.normalize('NFC').trim().replace(/\s+/g, ' ');
+  const baseThicknessMm = clamp(
+    params.baseThicknessMm,
+    params.templateId === 'articulated-name' ? 3.4 : 1.6,
+    4,
+  );
   return {
     ...params,
     text,
     templateId: params.templateId ?? 'name-keychain',
     textHeightMm: clamp(params.textHeightMm, 12, 30),
     fontWeightMm: clamp(params.fontWeightMm ?? 0, 0, 1.5),
-    baseThicknessMm: clamp(
-      params.baseThicknessMm,
-      params.templateId === 'articulated-name' ? 3.4 : 1.6,
-      4,
-    ),
+    baseThicknessMm,
     reliefDepthMm: clamp(params.reliefDepthMm, 0.6, 2),
     paddingMm: clamp(params.paddingMm, 1.2, 5),
     edgeInsetMm: clamp(params.edgeInsetMm ?? params.paddingMm, 0.8, 4),
-    letterFillMm: clamp(params.letterFillMm ?? params.paddingMm, 1.2, 8),
     letterSpacingMm: clamp(params.letterSpacingMm ?? 1, 0, 8),
     holeDiameterMm: clamp(params.holeDiameterMm, 3, 7),
     connectorWidthMm: clamp(params.connectorWidthMm ?? 1.8, 1.4, 3),
     cornerRadiusMm: clamp(params.cornerRadiusMm ?? 4, 1.5, 12),
     stakeLengthMm: clamp(params.stakeLengthMm ?? 48, 24, 100),
     nameplateTiltDeg: clamp(params.nameplateTiltDeg ?? 6, 0, 45),
-    nameplateEmbedMm: clamp(params.nameplateEmbedMm ?? 0.4, 0.2, 1.8),
-    jointClearanceMm: clamp(params.jointClearanceMm ?? 0.35, 0.2, 0.8),
+    nameplateEmbedMm: clamp(
+      params.nameplateEmbedMm ?? 0.4,
+      0.2,
+      Math.max(0.2, baseThicknessMm - 0.3),
+    ),
+    jointClearanceMm: clamp(params.jointClearanceMm ?? 0.35, 0.2, 0.6),
     mechanicalGapMm: clamp(params.mechanicalGapMm ?? 0.6, 0.4, 1.5),
     maxJointAngleDeg: clamp(params.maxJointAngleDeg ?? 35, 15, 50),
     minimumWallMm: clamp(params.minimumWallMm ?? 1.2, 0.8, 3),

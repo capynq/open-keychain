@@ -271,7 +271,6 @@ export const buildKeychain = async (
       padding: params.paddingMm * MANIFOLD_SCALE,
       textInset:
         params.templateId === 'articulated-name' ? undefined : params.edgeInsetMm * MANIFOLD_SCALE,
-      letterFillWidth: params.letterFillMm * MANIFOLD_SCALE,
       letterSpacing: params.letterSpacingMm,
       holeDiameter: params.holeDiameterMm * MANIFOLD_SCALE,
       keyringWall: keyring.wallMm * MANIFOLD_SCALE,
@@ -415,17 +414,16 @@ export const buildKeychain = async (
   deleteAll(components);
   const printable =
     model.status() === 'NoError' &&
-    connected &&
     reliefContained &&
     finiteBounds(bounds) &&
     validateMesh(baseMesh) &&
     validateMesh(reliefMesh);
   if (!connected)
     issues.push({
-      severity: 'error',
+      severity: 'warning',
       code: 'disconnected',
       message:
-        'Some parts of the name are not connected. Increase padding or choose another style.',
+        'The selected style keeps some letters as separate printable parts; no automatic connections were added.',
     });
   if (model.numTri() > 12000)
     issues.push({

@@ -12,7 +12,6 @@ export type ShapeParameter =
   | 'reliefDepthMm'
   | 'paddingMm'
   | 'edgeInsetMm'
-  | 'letterFillMm'
   | 'letterSpacingMm'
   | 'holeDiameterMm'
   | 'connectorWidthMm'
@@ -25,7 +24,6 @@ export type ShapeParameter =
   | 'nameplateEmbedMm';
 export const PARAMETER_RANGES = {
   textHeightMm: { min: 12, max: 30, step: 0.5, unit: 'mm' },
-  letterFillMm: { min: 1.2, max: 8, step: 0.1, unit: 'mm' },
   fontWeightMm: { min: 0, max: 1.5, step: 0.1, unit: 'mm' },
   baseThicknessMm: { min: 1.6, max: 4, step: 0.1, unit: 'mm' },
   reliefDepthMm: { min: 0.6, max: 2, step: 0.1, unit: 'mm' },
@@ -34,7 +32,7 @@ export const PARAMETER_RANGES = {
   letterSpacingMm: { min: 0, max: 8, step: 0.1, unit: 'mm' },
   holeDiameterMm: { min: 3, max: 7, step: 0.1, unit: 'mm' },
   connectorWidthMm: { min: 1.4, max: 3, step: 0.1, unit: 'mm' },
-  jointClearanceMm: { min: 0.2, max: 0.8, step: 0.05, unit: 'mm' },
+  jointClearanceMm: { min: 0.2, max: 0.6, step: 0.05, unit: 'mm' },
   mechanicalGapMm: { min: 0.4, max: 1.5, step: 0.1, unit: 'mm' },
   maxJointAngleDeg: { min: 15, max: 50, step: 1, unit: '°' },
   cornerRadiusMm: { min: 1.5, max: 12, step: 0.5, unit: 'mm' },
@@ -92,10 +90,64 @@ export const hasTemplateParameter = (
   return templateParameterKeys(templateId).includes(parameter as ShapeParameter);
 };
 
-const LETTER_FILL_STYLE_IDS = new Set(['contour', 'bubble', 'arch', 'frame']);
-export const hasLetterFillControl = (
-  templateId: TemplateId,
-  styleId: KeychainParams['styleId'],
-): boolean => {
-  return templateId === 'name-keychain' && LETTER_FILL_STYLE_IDS.has(styleId);
+/** Parameters that are meaningful for the currently selected template and style. */
+export const hasActiveParameter = (params: KeychainParams, parameter: ShapeParameter): boolean => {
+  if (!hasTemplateParameter(params.templateId, parameter)) return false;
+  // Capsule plant labels derive their ends from the board height, so a separate
+  // corner-radius setting cannot change that geometry.
+  return !(
+    parameter === 'cornerRadiusMm' &&
+    params.templateId === 'plant-label' &&
+    params.styleId === 'capsule'
+  );
+};
+
+const roundedDown = (value: number, step: number): number => Math.floor(value / step) * step;
+
+/**
+ * Limits controls to values the active generator can use without silently
+ * clamping them. These formulas mirror the corresponding template builders.
+ */
+export const parameterRange = (
+  params: KeychainParams,
+  parameter: ShapeParameter,
+): ParameterRange => {
+  if (parameter === 'baseThicknessMm' && params.templateId === 'articulated-name')
+    return { ...PARAMETER_RANGES.baseThicknessMm, min: 3.4 };
+
+  if (parameter === 'nameplateEmbedMm') {
+    const range = PARAMETER_RANGES.nameplateEmbedMm;
+    return {
+      ...range,
+      max: Math.max(
+        range.min,
+        roundedDown(Math.min(range.max, params.baseThicknessMm - 0.3), range.step),
+      ),
+    };
+  }
+
+  if (parameter === 'cornerRadiusMm') {
+    const range = PARAMETER_RANGES.cornerRadiusMm;
+    if (params.templateId === 'plant-label') {
+      const foundationHeight = Math.max(5, Math.min(8, params.textHeightMm * 0.26));
+      return {
+        ...range,
+        max: Math.max(range.min, roundedDown(foundationHeight / 2 - 0.5, range.step)),
+      };
+    }
+    if (params.templateId === 'nameplate') {
+      const textDepth = params.nameplateEmbedMm + params.reliefDepthMm;
+      const tiltMargin = Math.abs(Math.sin((params.nameplateTiltDeg * Math.PI) / 180)) * textDepth;
+      const height = Math.max(18, params.textHeightMm + params.paddingMm * 2 + tiltMargin * 2);
+      return {
+        ...range,
+        max: Math.max(
+          range.min,
+          roundedDown(Math.min(range.max, height / 2 - params.paddingMm - 0.25), range.step),
+        ),
+      };
+    }
+  }
+
+  return PARAMETER_RANGES[parameter];
 };
