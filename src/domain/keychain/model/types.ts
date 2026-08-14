@@ -1,4 +1,4 @@
-export type StyleId = 'contour' | 'capsule' | 'soft-tag' | 'bubble' | 'arch' | 'frame';
+export type StyleId = 'contour' | 'capsule' | 'soft-tag' | 'bubble' | 'arch';
 export type TemplateId = 'name-keychain' | 'articulated-name' | 'nameplate' | 'plant-label';
 export type KeychainParams = {
   text: string;

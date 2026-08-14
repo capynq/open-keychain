@@ -4,11 +4,9 @@
   "soft-tag": "М’яка бірка",
   "bubble": "Бульбашка",
   "arch": "Арка",
-  "frame": "Рамка",
   "contour.description": "Підкладка повторює контур тексту",
   "capsule.description": "Проста округла табличка",
   "soft-tag.description": "Табличка з м’яким виступом",
   "bubble.description": "Органічна форма з бульбашками",
-  "arch.description": "Форма з арковим верхом",
-  "frame.description": "Підкладка з внутрішньою рамкою"
+  "arch.description": "Форма з арковим верхом"
 }

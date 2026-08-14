@@ -13,7 +13,7 @@ import {
   t,
   type Locale,
 } from '../../../infrastructure/i18n';
-import type { SurfacePresetId } from '../../preview';
+import { ResetIconButton } from '../../../components/ResetIconButton';
 import { type useCustomizerParams } from '../hooks/useCustomizerParams';
 import { RangeControl } from './RangeControl';
 
@@ -29,22 +29,22 @@ export const ControlsPanel = ({
     updateText,
     updateBackingSize,
     selectTemplate,
+    resetSection,
     showsParameter,
     rangeFor,
   },
-  surfacePreset,
-  onSurfaceChange,
   onReset,
 }: {
   locale: Locale;
   customizer: ReturnType<typeof useCustomizerParams>;
-  surfacePreset: SurfacePresetId;
-  onSurfaceChange: (preset: SurfacePresetId) => void;
   onReset: () => void;
 }) => (
   <aside className="controls-panel">
     <section className="control-section">
-      <h2>{t(locale, 'name')}</h2>
+      <div className="section-heading">
+        <h2>{t(locale, 'name')}</h2>
+        <ResetIconButton label={t(locale, 'resetName')} onClick={() => resetSection('name')} />
+      </div>
       <label className="text-input">
         <span className="sr-only">Name or text</span>
         <input
@@ -57,7 +57,13 @@ export const ControlsPanel = ({
       </label>
     </section>
     <section className="control-section">
-      <h2>{t(locale, 'template')}</h2>
+      <div className="section-heading">
+        <h2>{t(locale, 'template')}</h2>
+        <ResetIconButton
+          label={t(locale, 'resetTemplate')}
+          onClick={() => resetSection('template')}
+        />
+      </div>
       <div className="card-grid template-grid">
         {TEMPLATE_CATALOG.map((template) => (
           <button
@@ -74,7 +80,10 @@ export const ControlsPanel = ({
     </section>
     {availableStyles.length > 0 && (
       <section className="control-section">
-        <h2>{t(locale, 'style')}</h2>
+        <div className="section-heading">
+          <h2>{t(locale, 'style')}</h2>
+          <ResetIconButton label={t(locale, 'resetStyle')} onClick={() => resetSection('style')} />
+        </div>
         <div className="card-grid">
           {availableStyles.map((style) => (
             <button
@@ -94,9 +103,12 @@ export const ControlsPanel = ({
       </section>
     )}
     <section className="control-section">
-      <h2>
-        {t(locale, 'font')} <span className="selected-note">{selectedFont.name}</span>
-      </h2>
+      <div className="section-heading">
+        <h2>
+          {t(locale, 'font')} <span className="selected-note">{selectedFont.name}</span>
+        </h2>
+        <ResetIconButton label={t(locale, 'resetFont')} onClick={() => resetSection('font')} />
+      </div>
       <div className="font-groups">
         {FONT_CATEGORY_ORDER.map((category) => {
           const fonts = FONT_CATALOG.filter(
@@ -143,22 +155,10 @@ export const ControlsPanel = ({
       )}
     </section>
     <section className="control-section">
-      <h2>{t(locale, 'surface')}</h2>
-      <div className="surface-grid">
-        {(['matte', 'graph', 'dark', 'wood', 'metal'] as SurfacePresetId[]).map((preset) => (
-          <button
-            type="button"
-            key={preset}
-            className={surfacePreset === preset ? 'selected' : ''}
-            onClick={() => onSurfaceChange(preset)}
-          >
-            {t(locale, preset)}
-          </button>
-        ))}
+      <div className="section-heading">
+        <h2>{t(locale, 'shape')}</h2>
+        <ResetIconButton label={t(locale, 'resetShape')} onClick={() => resetSection('shape')} />
       </div>
-    </section>
-    <section className="control-section">
-      <h2>{t(locale, 'shape')}</h2>
       <div className="range-grid">
         {showsParameter('textHeightMm') && (
           <RangeControl

@@ -62,14 +62,14 @@ test('treats adjusted NIKITA Bubble geometry as ready and a width failure as an 
   await page.getByLabel('Name or text').fill('NIKITA');
   await page.getByRole('button', { name: 'Bubble' }).click();
   await page.getByRole('button', { name: /Bungee/ }).click();
-  await expect(page.getByText('Ready · adjusted')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('.status-pill')).toHaveText('Ready · adjusted', { timeout: 10000 });
   await expect(page.getByText(/adjusted to .* mm high/)).toBeVisible();
   await page.getByRole('button', { name: 'Export' }).click();
   await expect(page.getByRole('dialog', { name: 'Choose an export' })).toBeVisible();
   await expect(page.getByRole('dialog').getByRole('button', { name: /STL file/ })).toBeEnabled();
   await page.getByLabel('Name height').fill('12');
   await page.getByLabel('Name or text').fill('WWWWWWWWWWWWWWWWWWWWWWWW');
-  await expect(page.getByText('Needs attention')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('.status-pill')).toHaveText('Needs attention', { timeout: 10000 });
   await expect(page.getByText(/cannot fit within 120 mm/)).toBeVisible();
   await expect(page.getByRole('dialog').getByRole('button', { name: /STL file/ })).toBeDisabled();
   await page.getByRole('button', { name: 'Close' }).click();
@@ -103,11 +103,23 @@ test('supports bounded zoom, preview surfaces, locales, and configurable 3MF exp
   page,
 }) => {
   await page.goto('/');
-  await expect(page.getByText('Ready to print')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('.status-pill')).toHaveText('Ready to print', { timeout: 10000 });
+  await expect(page.getByRole('region', { name: 'MODEL SUMMARY' })).toBeVisible();
   for (let click = 0; click < 8; click += 1)
     await page.getByRole('button', { name: 'Zoom in' }).click();
   await page.getByRole('button', { name: 'Zoom out' }).click();
-  await page.getByRole('button', { name: 'Dark' }).click();
+  await page.locator('.surface-trigger').click();
+  await page
+    .getByRole('dialog', { name: 'Preview surface' })
+    .getByRole('button', { name: 'Dark' })
+    .click();
+  await expect(page.locator('.viewer')).toHaveAttribute('data-surface', 'dark');
+  await page.locator('.surface-trigger').click();
+  await page
+    .getByRole('dialog', { name: 'Preview surface' })
+    .getByRole('button', { name: 'Reset surface' })
+    .click();
+  await expect(page.locator('.viewer')).toHaveAttribute('data-surface', 'matte');
   await page.getByRole('combobox', { name: 'Language' }).selectOption('ru');
   await page.getByRole('button', { name: 'Экспорт' }).click();
   await expect(page.getByRole('dialog', { name: 'Выберите экспорт' })).toBeVisible();
@@ -123,15 +135,24 @@ test('supports bounded zoom, preview surfaces, locales, and configurable 3MF exp
 });
 test('supports beta templates and premium local scene presets', async ({ page }) => {
   await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Frame' })).toHaveCount(0);
   for (const template of ['Articulated name', 'Nameplate', 'Plant label', 'Name keychain']) {
     await page.getByRole('button', { name: template }).click();
     await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10000 });
     if (template === 'Nameplate')
       await expect(page.getByRole('heading', { name: 'Style' })).toHaveCount(0);
   }
-  await page.getByRole('button', { name: 'Wood board' }).click();
+  await page.locator('.surface-trigger').click();
+  await page
+    .getByRole('dialog', { name: 'Preview surface' })
+    .getByRole('button', { name: 'Wood board' })
+    .click();
   await expect(page.locator('.viewer')).toHaveAttribute('data-surface', 'wood');
-  await page.getByRole('button', { name: 'Metal board' }).click();
+  await page.locator('.surface-trigger').click();
+  await page
+    .getByRole('dialog', { name: 'Preview surface' })
+    .getByRole('button', { name: 'Metal board' })
+    .click();
   await expect(page.locator('.viewer')).toHaveAttribute('data-surface', 'metal');
   await expect(page.locator('.viewer-surface canvas')).toBeVisible();
 });
@@ -193,6 +214,33 @@ test('shows only template-relevant shape controls', async ({ page }) => {
   await page.getByRole('button', { name: 'Nameplate' }).click();
   await expect(page.getByLabel('Corner radius')).toBeVisible();
 });
+test('resets each model section without changing unrelated choices', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Name or text').fill('OLIVER');
+  await page.getByRole('button', { name: /Caveat/ }).click();
+  await page.getByRole('button', { name: 'Plant label' }).click();
+  await page.getByRole('button', { name: 'Bubble' }).click();
+  await page.getByLabel('Name height').fill('30');
+
+  await page.getByRole('button', { name: 'Reset shape' }).click();
+  await expect(page.getByLabel('Name height')).toHaveValue('20');
+  await expect(page.getByRole('button', { name: 'Plant label' })).toHaveClass(/selected/);
+  await expect(page.getByRole('button', { name: 'Bubble' })).toHaveClass(/selected/);
+
+  await page.getByRole('button', { name: 'Reset style' }).click();
+  await expect(page.getByRole('button', { name: 'Contour' })).toHaveClass(/selected/);
+
+  await page.getByRole('button', { name: 'Reset font' }).click();
+  await expect(page.getByRole('button', { name: /Nunito/ })).toHaveClass(/selected/);
+  await expect(page.getByLabel('Name or text')).toHaveValue('OLIVER');
+
+  await page.getByRole('button', { name: 'Reset name' }).click();
+  await expect(page.getByLabel('Name or text')).toHaveValue('ALEX');
+
+  await page.getByRole('button', { name: 'Reset template' }).click();
+  await expect(page.getByRole('button', { name: 'Name keychain' })).toHaveClass(/selected/);
+  await expect(page.getByRole('button', { name: 'Contour' })).toHaveClass(/selected/);
+});
 for (const viewport of [
   { width: 1440, height: 900 },
   { width: 1280, height: 800 },
@@ -203,7 +251,7 @@ for (const viewport of [
   }) => {
     await page.setViewportSize(viewport);
     await page.goto('/');
-    await expect(page.getByText('Ready to print')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('.status-pill')).toHaveText('Ready to print', { timeout: 10000 });
     const layout = await page.evaluate(() => {
       const controls = document.querySelector('.controls-panel')!.getBoundingClientRect();
       const header = document.querySelector('.topbar')!.getBoundingClientRect();
@@ -263,4 +311,8 @@ test('keeps the preview prominent and touch targets comfortable at 390 px', asyn
     .getByRole('button', { name: 'Home view' })
     .evaluate((element) => element.getBoundingClientRect().height);
   expect(cameraButtonHeight).toBeGreaterThanOrEqual(44);
+  const surfaceButtonHeight = await page
+    .locator('.surface-trigger')
+    .evaluate((element) => element.getBoundingClientRect().height);
+  expect(surfaceButtonHeight).toBeGreaterThanOrEqual(44);
 });

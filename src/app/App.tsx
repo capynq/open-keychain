@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { DEFAULT_PARAMS, normalizeParams } from '../domain/keychain';
-import { detectLocale, type Locale } from '../infrastructure/i18n';
+import { detectLocale, styleName, templateName, type Locale } from '../infrastructure/i18n';
 import { AppHeader } from './components/AppHeader';
 import { PreviewPanel } from './components/PreviewPanel';
 import { ControlsPanel, useCustomizerParams, useGeometryGeneration } from '../features/customizer';
@@ -23,6 +23,15 @@ const App = () => {
   });
 
   const exportState = useExportActions({ geometry, params: customizer.params });
+
+  const activeStyle = customizer.availableStyles.find(
+    (style) => style.id === customizer.params.styleId,
+  );
+  const modelInfo = {
+    template: templateName(locale, customizer.activeTemplate.id, customizer.activeTemplate.name),
+    style: activeStyle ? styleName(locale, activeStyle.id, activeStyle.name) : undefined,
+    font: customizer.selectedFont.name,
+  };
 
   useEffect(() => {
     if (!exportOpen) return;
@@ -49,8 +58,6 @@ const App = () => {
         <ControlsPanel
           locale={locale}
           customizer={customizer}
-          surfacePreset={surfacePreset}
-          onSurfaceChange={setSurfacePreset}
           onReset={() => {
             customizer.reset();
             setSurfacePreset('matte');
@@ -61,6 +68,9 @@ const App = () => {
           geometry={geometry}
           surfacePreset={surfacePreset}
           status={status}
+          modelInfo={modelInfo}
+          onSurfaceChange={setSurfacePreset}
+          onSurfaceReset={() => setSurfacePreset('matte')}
         />
       </div>
       <ExportDialog

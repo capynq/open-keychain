@@ -17,6 +17,7 @@ import {
 import { DEFAULT_PARAMS, type KeychainParams, type TemplateId } from '../../../domain/keychain';
 import { STYLE_CATALOG, TEMPLATE_CATALOG } from '../../../domain/keychain';
 import type { FontNotice } from '../model/customizer-types';
+import { resetParamsForSection, type CustomizerResetSection } from '../model/reset';
 
 export const useCustomizerParams = (): {
   params: KeychainParams;
@@ -29,6 +30,7 @@ export const useCustomizerParams = (): {
   updateText: (text: string) => void;
   selectTemplate: (templateId: TemplateId) => void;
   updateBackingSize: (value: number) => void;
+  resetSection: (section: CustomizerResetSection) => void;
   reset: () => void;
   showsParameter: (parameter: keyof KeychainParams) => boolean;
   rangeFor: (parameter: ShapeParameter) => ParameterRange;
@@ -118,6 +120,11 @@ export const useCustomizerParams = (): {
     });
   };
 
+  const resetSection = (section: CustomizerResetSection): void => {
+    setFontNotice(undefined);
+    setParams((current) => resetParamsForSection(current, section));
+  };
+
   const reset = (): void => {
     setFontNotice(undefined);
     setParams({ ...DEFAULT_PARAMS });
@@ -134,6 +141,7 @@ export const useCustomizerParams = (): {
     updateText,
     updateBackingSize,
     selectTemplate,
+    resetSection,
     reset,
     showsParameter: (parameter) => hasActiveParameter(params, parameter as ShapeParameter),
     rangeFor: (parameter) => parameterRange(params, parameter),

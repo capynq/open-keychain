@@ -259,25 +259,6 @@ export const buildStyle = (wasm: GeometryWasm, styleId: StyleId, input: StyleInp
     const backing = relief.offset(textInset, 'Round', 2, 64);
     return finishStyle(wasm, backing, relief, input, 'left');
   }
-  if (styleId === 'frame') {
-    const width = Math.max(38000, textWidth + textInset * 2 + 10000);
-    const height = Math.max(20000, textHeight + textInset * 2 + 2000);
-    const outer = roundedRect(wasm, width, height, 4000);
-    const innerCut = roundedRect(wasm, width - 8000, height - 8000, 1500);
-    const frame = outer.subtract(innerCut);
-    const textPad = input.text.offset(textInset, 'Round', 2, 64);
-    const rawCombined = union(wasm, [frame, textPad]);
-    const combined = rawCombined.simplify(20);
-    rawCombined.delete();
-    const recessPad = input.text.offset(500, 'Round', 2, 64);
-    outer.delete();
-    innerCut.delete();
-    frame.delete();
-    textPad.delete();
-    return finishStyle(wasm, combined, input.text, input, 'right', [
-      { section: recessPad, depthMm: 0.2 },
-    ]);
-  }
   const offset = input.text.offset(textInset, 'Round', 2, 64);
   return finishStyle(wasm, offset, input.text, input, 'left');
 };
@@ -291,5 +272,4 @@ export const STYLE_CATALOG: Array<{
   { id: 'soft-tag', name: 'Soft tag', description: 'A rounded tag with a playful end.' },
   { id: 'bubble', name: 'Bubble', description: 'An organic, connected silhouette.' },
   { id: 'arch', name: 'Arch', description: 'A gently curved nameplate.' },
-  { id: 'frame', name: 'Frame', description: 'A bold plate with an inset border.' },
 ];

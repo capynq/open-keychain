@@ -6,7 +6,7 @@ describe('i18n utilities', () => {
     expect(t('ru', 'ready')).toContain('Готово');
   });
   it('localizes style names and geometry issues', () => {
-    expect(styleName('uk', 'frame', 'Frame')).not.toBe('Frame');
+    expect(styleName('uk', 'arch', 'Arch')).not.toBe('Arch');
     expect(
       issueMessage('en', { code: 'missing-glyph', message: 'The font does not contain “Ж”.' }),
     ).toContain('Ж');

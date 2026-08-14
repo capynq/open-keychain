@@ -132,7 +132,7 @@ const geometryFingerprint = (result: Awaited<ReturnType<typeof buildKeychain>>['
   Number(result.dimensions.thicknessMm.toFixed(3)),
 ];
 describe('finished keychain geometry', () => {
-  for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch', 'frame'] as const) {
+  for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'] as const) {
     it(`changes ${styleId} geometry across the full backing-size range`, async () => {
       const compact = await buildKeychain(wasm, {
         ...DEFAULT_PARAMS,
@@ -158,7 +158,7 @@ describe('finished keychain geometry', () => {
 
   it('keeps all name-keychain styles geometrically distinct', async () => {
     const surfaces: number[] = [];
-    for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch', 'frame'] as const) {
+    for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'] as const) {
       const { result } = await buildKeychain(wasm, {
         ...DEFAULT_PARAMS,
         styleId,
@@ -168,7 +168,7 @@ describe('finished keychain geometry', () => {
       expect(result.printable, JSON.stringify(result.issues)).toBe(true);
       surfaces.push(Number(topSurfaceArea(result.baseMesh).surface.toFixed(2)));
     }
-    expect(new Set(surfaces)).toHaveLength(6);
+    expect(new Set(surfaces)).toHaveLength(5);
   }, 30000);
   it('keeps widely spaced letters separate instead of adding automatic bridges', async () => {
     const { result, exportMesh } = await buildKeychain(
@@ -191,7 +191,7 @@ describe('finished keychain geometry', () => {
     expect(topology(exportMesh!).components).toBeGreaterThan(1);
   }, 30000);
   it('keeps every template/style combination valid across shared shape settings', async () => {
-    const styleIds = ['contour', 'capsule', 'soft-tag', 'bubble', 'arch', 'frame'] as const;
+    const styleIds = ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'] as const;
     const combinations = [
       ...styleIds.map((styleId) => ({ templateId: 'name-keychain' as const, styleId })),
       ...styleIds.map((styleId) => ({ templateId: 'plant-label' as const, styleId })),
@@ -471,7 +471,7 @@ describe('finished keychain geometry', () => {
     }
   }, 90000);
 
-  for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch', 'frame'] as const) {
+  for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'] as const) {
     for (const font of FONT_CATALOG) {
       it(`contains Latin relief for ${font.name} ${styleId}`, async () => {
         const { result } = await buildKeychain(wasm, {
@@ -486,7 +486,7 @@ describe('finished keychain geometry', () => {
       }, 30000);
     }
   }
-  for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch', 'frame'] as const) {
+  for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'] as const) {
     for (const font of FONT_CATALOG.filter((font) => font.scripts.includes('cyrillic'))) {
       it(`contains Cyrillic relief for ${font.name} ${styleId}`, async () => {
         const { result } = await buildKeychain(wasm, {
@@ -559,25 +559,6 @@ describe('finished keychain geometry', () => {
     });
     const projected = topSurfaceArea(result.baseMesh);
     expect(projected.surface / projected.hull).toBeLessThan(0.9);
-  }, 30000);
-  it('keeps Frame printable with a recessed text panel', async () => {
-    const { result, exportMesh } = await buildKeychain(
-      wasm,
-      { ...DEFAULT_PARAMS, fontId: 'nunito', styleId: 'frame', text: 'NIKITA' },
-      true,
-    );
-    expect(result.printable, JSON.stringify(result.issues)).toBe(true);
-    expect(exportMesh).toBeDefined();
-    expect(topology(exportMesh!).components).toBeGreaterThan(0);
-  }, 30000);
-  it('keeps Frame printable for a wide name', async () => {
-    const { result } = await buildKeychain(wasm, {
-      ...DEFAULT_PARAMS,
-      fontId: 'nunito',
-      styleId: 'frame',
-      text: 'OLIVER',
-    });
-    expect(result.printable, JSON.stringify(result.issues)).toBe(true);
   }, 30000);
   it('builds a tilted, embedded Nameplate without a keyring', async () => {
     const { result, exportMesh } = await buildKeychain(
@@ -698,7 +679,7 @@ describe('finished keychain geometry', () => {
       }, 30000);
     }
   }
-  for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch', 'frame'] as const) {
+  for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'] as const) {
     it(`builds the ${styleId} plant label shape`, async () => {
       const { result, exportMesh } = await buildKeychain(
         wasm,
@@ -716,7 +697,7 @@ describe('finished keychain geometry', () => {
       expect([...exportMesh!.positions].every(Number.isFinite)).toBe(true);
     }, 30000);
   }
-  for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch', 'frame'] as const) {
+  for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'] as const) {
     it(`changes the ${styleId} plant label across the backing-size range`, async () => {
       const compact = await buildKeychain(wasm, {
         ...DEFAULT_PARAMS,
@@ -743,7 +724,7 @@ describe('finished keychain geometry', () => {
   }
   it('keeps all plant-label styles geometrically distinct', async () => {
     const surfaces: number[] = [];
-    for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch', 'frame'] as const) {
+    for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'] as const) {
       const { result } = await buildKeychain(wasm, {
         ...DEFAULT_PARAMS,
         templateId: 'plant-label',
@@ -753,7 +734,7 @@ describe('finished keychain geometry', () => {
       expect(result.printable, JSON.stringify(result.issues)).toBe(true);
       surfaces.push(Number(topSurfaceArea(result.baseMesh).surface.toFixed(2)));
     }
-    expect(new Set(surfaces)).toHaveLength(6);
+    expect(new Set(surfaces)).toHaveLength(5);
   }, 30000);
   it('changes the nameplate across the backing-size range', async () => {
     const compact = await buildKeychain(wasm, {

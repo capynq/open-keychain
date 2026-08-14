@@ -25,14 +25,7 @@ export type TemplateDefinition = {
   supportsKeyring: boolean;
   styles: readonly StyleId[];
 };
-const ALL_STYLE_IDS: readonly StyleId[] = [
-  'contour',
-  'capsule',
-  'soft-tag',
-  'bubble',
-  'arch',
-  'frame',
-];
+const ALL_STYLE_IDS: readonly StyleId[] = ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'];
 export type ArticulatedPart = {
   body: Solid;
   cap: Solid;
