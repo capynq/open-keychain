@@ -7,14 +7,24 @@ import { ConfiguratorShowcase } from './ConfiguratorShowcase';
 
 const stepNumber = (index: number) => String(index + 1).padStart(2, '0');
 
-export const LandingHero = ({ locale }: { locale: Locale }) => (
+export const LandingHero = ({
+  locale,
+  onStartDesigning,
+}: {
+  locale: Locale;
+  onStartDesigning?: () => void;
+}) => (
   <section className="landing-hero" aria-labelledby="landing-title">
     <div className="landing-hero-copy">
       <p className="landing-kicker">{t(locale, 'landing.heroKicker')}</p>
       <h1 id="landing-title">{t(locale, 'landing.heroTitle')}</h1>
       <p className="landing-lede">{t(locale, 'landing.heroBody')}</p>
       <div className="landing-actions">
-        <Link className="landing-button landing-button-primary" to={CREATE_ROUTE}>
+        <Link
+          className="landing-button landing-button-primary"
+          to={CREATE_ROUTE}
+          onClick={onStartDesigning}
+        >
           {t(locale, 'landing.startDesigning')}
           <span aria-hidden="true">→</span>
         </Link>

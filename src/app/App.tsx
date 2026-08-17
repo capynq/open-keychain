@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router';
+import { useAnalytics } from '../infrastructure/analytics';
 import { detectLocale, setLocale, t, type Locale } from '../infrastructure/i18n';
 import { CustomizerPage } from './pages/CustomizerPage';
 import { LandingPage } from './pages/LandingPage';
 import { CREATE_ROUTE, LANDING_ROUTE } from './routes';
 import './styles/app.css';
+import { AnalyticsConsentBanner } from './components/AnalyticsConsentBanner';
 
 const SITE_URL = 'https://open-keychain.com';
 
@@ -18,6 +20,7 @@ const App = () => {
   const location = useLocation();
   const normalizedPath = location.pathname.replace(/\/+$/, '') || '/';
   const isCustomizer = normalizedPath === CREATE_ROUTE;
+  const { consent, track } = useAnalytics();
 
   useEffect(() => {
     document.documentElement.lang = locale;
@@ -39,23 +42,34 @@ const App = () => {
     setMetaContent('meta[name="twitter:description"]', description);
   }, [isCustomizer, locale, normalizedPath]);
 
+  useEffect(() => {
+    track(normalizedPath === '/' ? 'landing_view' : 'page_view', {
+      locale,
+      path: normalizedPath,
+    });
+  }, [consent, isCustomizer, locale, normalizedPath, track]);
+
   const onLocaleChange = (nextLocale: Locale): void => {
+    track('language_changed', { from: locale, to: nextLocale });
     setActiveLocale(nextLocale);
     void setLocale(nextLocale);
   };
 
   return (
-    <Routes>
-      <Route
-        path={LANDING_ROUTE}
-        element={<LandingPage locale={locale} onLocaleChange={onLocaleChange} />}
-      />
-      <Route
-        path={CREATE_ROUTE}
-        element={<CustomizerPage locale={locale} onLocaleChange={onLocaleChange} />}
-      />
-      <Route path="*" element={<Navigate to={LANDING_ROUTE} replace />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route
+          path={LANDING_ROUTE}
+          element={<LandingPage locale={locale} onLocaleChange={onLocaleChange} />}
+        />
+        <Route
+          path={CREATE_ROUTE}
+          element={<CustomizerPage locale={locale} onLocaleChange={onLocaleChange} />}
+        />
+        <Route path="*" element={<Navigate to={LANDING_ROUTE} replace />} />
+      </Routes>
+      <AnalyticsConsentBanner locale={locale} />
+    </>
   );
 };
 

@@ -7,6 +7,7 @@ import type {
   KeychainParams,
   ThreeMfMode,
 } from '../../../domain/keychain';
+import { useAnalytics } from '../../../infrastructure/analytics';
 
 export type ExportActionsState = {
   downloading: boolean;
@@ -28,6 +29,7 @@ export const useExportActions = ({
   params: KeychainParams;
 }): ExportActionsState => {
   const [downloading, setDownloading] = useState(false);
+  const { track } = useAnalytics();
 
   const download = async (
     format: ExportFormat,
@@ -35,6 +37,7 @@ export const useExportActions = ({
   ): Promise<void> => {
     if (!geometry.result?.printable || downloading) return;
     setDownloading(true);
+    track('export_started', { format, mode, template: params.templateId });
     let exportToken: string | undefined;
     try {
       if (hostedMode) exportToken = (await requestExportIntent()).token;
@@ -48,8 +51,10 @@ export const useExportActions = ({
       anchor.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       if (exportToken) await completeExportIntent(exportToken);
+      track('export_completed', { format, mode, template: params.templateId });
     } catch (cause) {
       geometry.setError(cause instanceof Error ? cause.message : 'The file could not be created.');
+      track('export_failed', { format, mode, template: params.templateId, category: 'generation' });
     } finally {
       setDownloading(false);
     }
