@@ -4,8 +4,8 @@ const externalBaseUrl = process.env.PLAYWRIGHT_BASE_URL;
 
 export default defineConfig({
   testDir: './e2e',
-  testIgnore: /(deployment|capture)\.spec\.ts/,
-  timeout: 30_000,
+  testMatch: /capture\.spec\.ts/,
+  timeout: 45_000,
   use: {
     baseURL: externalBaseUrl ?? 'http://127.0.0.1:4173',
     browserName: 'chromium',
@@ -14,6 +14,14 @@ export default defineConfig({
     locale: 'en-US',
     timezoneId: 'UTC',
     trace: 'retain-on-failure',
+    launchOptions: {
+      args: [
+        '--use-angle=swiftshader',
+        '--use-gl=angle',
+        '--enable-webgl',
+        '--force-color-profile=srgb',
+      ],
+    },
   },
   webServer: externalBaseUrl
     ? undefined
@@ -23,9 +31,9 @@ export default defineConfig({
         reuseExistingServer: true,
       },
   projects: [
-    { name: 'desktop', use: { viewport: { width: 1440, height: 900 } } },
+    { name: 'capture-desktop', use: { viewport: { width: 1440, height: 900 } } },
     {
-      name: 'mobile',
+      name: 'capture-mobile',
       use: { hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } },
     },
   ],

@@ -1,0 +1,158 @@
+import { expect, test } from '@playwright/test';
+import { ROUTE_MANIFEST } from '../src/app/routes';
+import { waitForLocalFonts, waitForReadyGeometry, watchBrowserErrors } from './helpers';
+
+test('renders every declared route without browser errors', async ({ page }) => {
+  const assertNoBrowserErrors = watchBrowserErrors(page);
+
+  for (const route of ROUTE_MANIFEST) {
+    await page.goto(route.path);
+    await waitForLocalFonts(page);
+    await expect(page.getByRole('main')).toBeVisible();
+
+    if (route.id === 'landing') {
+      await expect(page).toHaveTitle('Open Keychain — design a printable name keychain');
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await expect(page.locator('.landing-button-primary')).toBeVisible();
+    } else {
+      await expect(page).toHaveTitle('Create a printable keychain — Open Keychain');
+      await expect(page.getByRole('main', { name: 'Customizer' })).toBeVisible();
+      await waitForReadyGeometry(page);
+    }
+  }
+
+  assertNoBrowserErrors();
+});
+
+test('takes the primary landing call to action to the customizer', async ({ page }) => {
+  const assertNoBrowserErrors = watchBrowserErrors(page);
+
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Start designing' }).first().click();
+  await expect(page).toHaveURL(/\/create$/);
+  await waitForReadyGeometry(page);
+  assertNoBrowserErrors();
+});
+
+test('loads all reviewed landing visuals at the active responsive breakpoint', async ({
+  page,
+}, testInfo) => {
+  const assertNoBrowserErrors = watchBrowserErrors(page);
+
+  await page.goto('/');
+  await expect(page.locator('.landing-template-card img')).toHaveCount(4);
+  const images = await page.locator('.landing-template-card img').evaluateAll((elements) =>
+    elements.map((element) => {
+      const image = element as HTMLImageElement;
+      return { src: image.currentSrc, width: image.naturalWidth, height: image.naturalHeight };
+    }),
+  );
+
+  expect(images.every((image) => image.src.includes('/showcase/templates/'))).toBe(true);
+  expect(images.every((image) => image.width > 0 && image.height > 0)).toBe(true);
+  const expectedHeroAsset =
+    testInfo.project.name === 'mobile' ? 'create-mobile.png' : 'create-desktop.png';
+  expect(
+    await page
+      .locator('.configurator-window img')
+      .evaluate((element) => (element as HTMLImageElement).currentSrc),
+  ).toContain(expectedHeroAsset);
+  const heroImageState = await page.locator('.configurator-window img').evaluate((element) => {
+    const image = element as HTMLImageElement;
+    return { width: image.naturalWidth, height: image.naturalHeight, complete: image.complete };
+  });
+  expect(heroImageState.complete).toBe(true);
+  expect(heroImageState.width).toBeGreaterThan(0);
+  expect(heroImageState.height).toBeGreaterThan(0);
+  assertNoBrowserErrors();
+});
+
+test('uses the mobile customizer capture on a mobile landing viewport', async ({ page }) => {
+  const assertNoBrowserErrors = watchBrowserErrors(page);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await expect(page.locator('.landing-template-card img')).toHaveCount(4);
+  expect(
+    await page
+      .locator('.configurator-window img')
+      .evaluate((element) => (element as HTMLImageElement).currentSrc),
+  ).toContain('create-mobile.png');
+  const imageState = await page.locator('.configurator-window img').evaluate((element) => {
+    const image = element as HTMLImageElement;
+    return { width: image.naturalWidth, height: image.naturalHeight };
+  });
+  expect(imageState.width).toBeGreaterThan(0);
+  expect(imageState.height).toBeGreaterThan(0);
+  assertNoBrowserErrors();
+});
+
+test('redirects an unknown path to the landing page', async ({ page }) => {
+  const assertNoBrowserErrors = watchBrowserErrors(page);
+
+  await page.goto('/not-a-route');
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  assertNoBrowserErrors();
+});
+
+test('keeps the customizer title when its path has a trailing slash', async ({ page }) => {
+  const assertNoBrowserErrors = watchBrowserErrors(page);
+
+  await page.goto('/create/');
+  await expect(page).toHaveTitle('Create a printable keychain — Open Keychain');
+  assertNoBrowserErrors();
+});
+
+test('updates the localized landing title', async ({ page }) => {
+  const assertNoBrowserErrors = watchBrowserErrors(page);
+
+  await page.goto('/');
+  await page.getByRole('combobox', { name: 'Language' }).selectOption('ru');
+  await expect(page).toHaveTitle('Open Keychain — создавайте именные брелоки для печати');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
+  assertNoBrowserErrors();
+});
+
+for (const locale of ['en', 'ru', 'uk'] as const) {
+  test(`keeps the ${locale.toUpperCase()} landing chrome readable`, async ({ page }) => {
+    const assertNoBrowserErrors = watchBrowserErrors(page);
+
+    await page.goto('/');
+    await page.getByRole('combobox', { name: 'Language' }).selectOption(locale);
+    await expect(page.locator('.configurator-showcase-caption')).toBeVisible();
+    await expect(page.locator('.landing-process span').first()).toHaveCSS('font-size', '13px');
+    const gap = await page.locator('.configurator-showcase').evaluate((showcase) => {
+      const windowBox = showcase.querySelector('.configurator-window')?.getBoundingClientRect();
+      const captionBox = showcase
+        .querySelector('.configurator-showcase-caption')
+        ?.getBoundingClientRect();
+      return windowBox && captionBox ? captionBox.top - windowBox.bottom : -1;
+    });
+    expect(gap).toBeGreaterThanOrEqual(24);
+    const layout = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }));
+    expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth + 1);
+    assertNoBrowserErrors();
+  });
+}
+
+for (const width of [760, 761, 1000, 1001]) {
+  test(`keeps the landing route usable at the ${width}px layout boundary`, async ({ page }) => {
+    const assertNoBrowserErrors = watchBrowserErrors(page);
+
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    await expect(page.getByRole('link', { name: 'Start designing' }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    const layout = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }));
+
+    expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth + 1);
+    assertNoBrowserErrors();
+  });
+}

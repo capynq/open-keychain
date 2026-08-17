@@ -1,17 +1,17 @@
 {
   "name": "open-keychain",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.0-beta.1",
   "type": "module",
   "packageManager": "pnpm@10.27.0",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/WilfredoN/open-keychain.git"
+    "url": "https://github.com/capynq/open-keychain.git"
   },
-  "homepage": "https://github.com/WilfredoN/open-keychain#readme",
+  "homepage": "https://github.com/capynq/open-keychain#readme",
   "bugs": {
-    "url": "https://github.com/WilfredoN/open-keychain/issues"
+    "url": "https://github.com/capynq/open-keychain/issues"
   },
   "engines": {
     "node": ">=22.22.1",
@@ -24,9 +24,14 @@
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:deployed": "playwright test --config playwright.deployment.config.ts",
+    "capture:ui": "pnpm build && playwright test --config playwright.capture.config.ts",
     "test:watch": "vitest",
     "bench:geometry": "node --import tsx scripts/bench-geometry.ts",
-    "bench:matrix": "node --import tsx scripts/bench-matrix.ts",
+    "bench:matrix": "node --import tsx scripts/bench-matrix-parent.ts",
+    "validation:fixtures": "node --import tsx scripts/generate-validation-fixtures.ts",
+    "validate:self-hosted": "node --import tsx scripts/validate-static-deployment.ts && pnpm test:e2e:deployed",
+    "package:self-hosted-evidence": "node --import tsx scripts/package-self-hosted-evidence.ts",
     "server": "tsx server/index.ts",
     "server:typecheck": "tsc -p tsconfig.node.json --pretty false",
     "format": "prettier . --write",
@@ -48,6 +53,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-i18next": "^17.0.11",
+    "react-router": "^7.18.2",
     "three": "0.185.1"
   },
   "devDependencies": {

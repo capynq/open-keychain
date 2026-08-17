@@ -9,7 +9,7 @@ const cameraViews = [
   'Bottom view',
 ];
 test('customizes a name, uses every icon camera preset, and downloads STL', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/create');
   await expect(page.getByText('Open Keychain')).toBeVisible();
   await expect(page.locator('.brand-mark small')).toHaveCount(0);
   await expect(page.locator('.preview-heading h2')).toHaveText('LIVE PREVIEW');
@@ -58,7 +58,7 @@ test('customizes a name, uses every icon camera preset, and downloads STL', asyn
 test('treats adjusted NIKITA Bubble geometry as ready and a width failure as an error', async ({
   page,
 }) => {
-  await page.goto('/');
+  await page.goto('/create');
   await page.getByLabel('Name or text').fill('NIKITA');
   await page.getByRole('button', { name: 'Bubble' }).click();
   await page.getByRole('button', { name: /Bungee/ }).click();
@@ -75,7 +75,7 @@ test('treats adjusted NIKITA Bubble geometry as ready and a width failure as an 
   await page.getByRole('button', { name: 'Close' }).click();
 });
 test('switches to a bilingual font when Cyrillic text is entered', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/create');
   await page.getByRole('button', { name: /Bungee/ }).click();
   await page.getByLabel('Name or text').fill('НИКИТА');
   await expect(page.getByRole('button', { name: /Bungee/ })).toHaveCount(0);
@@ -86,7 +86,7 @@ test('switches to a bilingual font when Cyrillic text is entered', async ({ page
 test('selects a printable heavy font for articulated names and hides unsuitable choices', async ({
   page,
 }) => {
-  await page.goto('/');
+  await page.goto('/create');
   await page.getByRole('button', { name: /Caveat/ }).click();
   await expect(page.getByRole('button', { name: /Caveat/ })).toHaveClass(/selected/);
   await page.getByRole('button', { name: 'Articulated name' }).click();
@@ -102,7 +102,7 @@ test('selects a printable heavy font for articulated names and hides unsuitable 
 test('supports bounded zoom, preview surfaces, locales, and configurable 3MF export', async ({
   page,
 }) => {
-  await page.goto('/');
+  await page.goto('/create');
   await expect(page.locator('.status-pill')).toHaveText('Ready to print', { timeout: 10000 });
   await expect(page.getByRole('region', { name: 'MODEL SUMMARY' })).toBeVisible();
   for (let click = 0; click < 8; click += 1)
@@ -134,7 +134,7 @@ test('supports bounded zoom, preview surfaces, locales, and configurable 3MF exp
   expect((await download).suggestedFilename()).toMatch(/\.3mf$/);
 });
 test('supports beta templates and premium local scene presets', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/create');
   await expect(page.getByRole('button', { name: 'Frame' })).toHaveCount(0);
   for (const template of ['Articulated name', 'Nameplate', 'Plant label', 'Name keychain']) {
     await page.getByRole('button', { name: template }).click();
@@ -159,7 +159,7 @@ test('supports beta templates and premium local scene presets', async ({ page })
 test('scopes styles to supported templates and keeps the Montserrat preview visible', async ({
   page,
 }) => {
-  await page.goto('/');
+  await page.goto('/create');
   const readMontserratPreview = async () => {
     const montserrat = page.getByRole('button', { name: /Montserrat Black/ });
 
@@ -193,7 +193,7 @@ test('scopes styles to supported templates and keeps the Montserrat preview visi
   await expect(page.getByLabel('Embed depth')).toBeVisible();
 });
 test('renders the plant label as a pointed T-shaped printable template', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/create');
   await page.getByRole('button', { name: 'Plant label' }).click();
   await expect(page.getByLabel('Stake length')).toBeVisible();
   await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10000 });
@@ -202,7 +202,7 @@ test('renders the plant label as a pointed T-shaped printable template', async (
   await expect(page.getByRole('dialog').getByRole('button', { name: /STL file/ })).toBeEnabled();
 });
 test('shows only template-relevant shape controls', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/create');
   await page.getByRole('button', { name: 'Plant label' }).click();
   await expect(page.getByLabel('Keyring hole')).toHaveCount(0);
   await expect(page.getByLabel('Letter spacing')).toBeVisible();
@@ -215,7 +215,7 @@ test('shows only template-relevant shape controls', async ({ page }) => {
   await expect(page.getByLabel('Corner radius')).toBeVisible();
 });
 test('resets each model section without changing unrelated choices', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/create');
   await page.getByLabel('Name or text').fill('OLIVER');
   await page.getByRole('button', { name: /Caveat/ }).click();
   await page.getByRole('button', { name: 'Plant label' }).click();
@@ -250,7 +250,7 @@ for (const viewport of [
     page,
   }) => {
     await page.setViewportSize(viewport);
-    await page.goto('/');
+    await page.goto('/create');
     await expect(page.locator('.status-pill')).toHaveText('Ready to print', { timeout: 10000 });
     const layout = await page.evaluate(() => {
       const controls = document.querySelector('.controls-panel')!.getBoundingClientRect();
@@ -285,7 +285,7 @@ test('keeps the complete articulated shape control set reachable in the scrollab
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 600 });
-  await page.goto('/');
+  await page.goto('/create');
   await page.getByRole('button', { name: 'Articulated name' }).click();
   const controls = page.locator('.controls-panel');
   const metrics = await controls.evaluate((element) => ({
@@ -300,7 +300,7 @@ test('keeps the complete articulated shape control set reachable in the scrollab
 });
 test('keeps the preview prominent and touch targets comfortable at 390 px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/');
+  await page.goto('/create');
   await expect(page.locator('.viewer')).toBeVisible();
   const dimensions = await page
     .locator('.viewer')
