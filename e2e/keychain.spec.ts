@@ -8,6 +8,85 @@ const cameraViews = [
   'Top view',
   'Bottom view',
 ];
+
+for (const flow of [
+  {
+    locale: 'EN',
+    name: 'OLIVER',
+    template: 'Nameplate',
+    camera: 'Top view',
+    exportButton: 'Export',
+    dialog: 'Choose an export',
+    format: /STL file/,
+    filename: /^keychain-oliver-contour\.stl$/,
+  },
+  {
+    locale: 'RU',
+    name: 'НИКИТА',
+    template: 'Именная табличка',
+    camera: 'Сверху',
+    exportButton: 'Экспорт',
+    dialog: 'Выберите экспорт',
+    format: /3MF · единый объект/,
+    filename: /^keychain-name-contour\.3mf$/,
+  },
+] as const) {
+  test(`supports the ${flow.locale} localized keyboard workflow and downloads ${flow.locale === 'EN' ? 'STL' : '3MF'}`, async ({
+    page,
+  }) => {
+    await page.goto('/create');
+
+    if (flow.locale === 'RU') {
+      const language = page.getByRole('combobox', { name: 'Language' });
+      await language.selectOption('ru');
+      await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
+    }
+
+    const name = page.getByLabel('Name or text');
+    await name.focus();
+    await page.keyboard.press('ControlOrMeta+A');
+    await page.keyboard.type(flow.name);
+    await expect(name).toHaveValue(flow.name);
+
+    const template = page.getByRole('button', { name: flow.template });
+    await template.focus();
+    await page.keyboard.press('Enter');
+    await expect(template).toHaveClass(/selected/);
+    await expect(page.locator('.status-pill')).toHaveText(/Ready|Готово/, { timeout: 10000 });
+
+    const camera = page.getByRole('button', { name: flow.camera });
+    await camera.focus();
+    await page.keyboard.press('Enter');
+    await expect(camera).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.viewer')).toHaveAttribute('data-view', 'top');
+
+    const exportTrigger = page.locator('.export-header-button');
+    await expect(exportTrigger).toBeVisible();
+    await exportTrigger.focus();
+    await exportTrigger.press('Enter');
+    if ((await exportTrigger.getAttribute('aria-expanded')) !== 'true')
+      await exportTrigger.press('Space');
+    const dialog = page.getByRole('dialog', { name: flow.dialog });
+    await expect(dialog).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+
+    await exportTrigger.focus();
+    await exportTrigger.press('Enter');
+    if ((await exportTrigger.getAttribute('aria-expanded')) !== 'true')
+      await exportTrigger.press('Space');
+    await expect(dialog).toBeVisible();
+    const formatButton = dialog.getByRole('button', { name: flow.format });
+    await expect(formatButton).toBeEnabled();
+    const download = page.waitForEvent('download');
+    await formatButton.focus();
+    await page.keyboard.press('Enter');
+    expect((await download).suggestedFilename()).toMatch(flow.filename);
+    await expect(dialog).toBeHidden();
+  });
+}
+
 test('customizes a name, uses every icon camera preset, and downloads STL', async ({ page }) => {
   await page.goto('/create');
   await expect(page.getByText('Open Keychain')).toBeVisible();
@@ -138,7 +217,7 @@ test('supports beta templates and premium local scene presets', async ({ page })
   await expect(page.getByRole('button', { name: 'Frame' })).toHaveCount(0);
   for (const template of ['Articulated name', 'Nameplate', 'Plant label', 'Name keychain']) {
     await page.getByRole('button', { name: template }).click();
-    await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10000 });
+    await expect(page.locator('.status-pill')).toHaveText(/Ready|Готово/, { timeout: 10000 });
     if (template === 'Nameplate')
       await expect(page.getByRole('heading', { name: 'Style' })).toHaveCount(0);
   }

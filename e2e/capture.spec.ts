@@ -22,7 +22,7 @@ test('captures the reviewed customizer showcase', async ({ page }, testInfo) => 
   await waitForReadyGeometry(page);
   await prepareForCapture(page);
   const screenshot = await page.screenshot({ path: target, animations: 'disabled' });
-  assertPngCapture(
+  await assertPngCapture(
     screenshot,
     testInfo.project.name === 'capture-mobile'
       ? { width: 390, height: 844 }
@@ -58,7 +58,7 @@ for (const template of templatePreviews) {
       .toBuffer();
     const assetTarget = `public/showcase/templates/${template.file}${suffix === 'mobile' ? '-mobile' : ''}.png`;
     await sharp(screenshot).toFile(assetTarget);
-    assertPngCapture(screenshot, { width: 640, height: 360 });
+    await assertPngCapture(screenshot, { width: 640, height: 360 });
     assertNoBrowserErrors();
   });
 }

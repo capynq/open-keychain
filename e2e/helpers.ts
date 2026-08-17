@@ -1,9 +1,13 @@
 import { expect, type Page } from '@playwright/test';
+import sharp from 'sharp';
 
 export type PngDimensions = { width: number; height: number };
 
 /** Validate that a captured PNG is non-empty and has the expected viewport size. */
-export const assertPngCapture = (image: Buffer, expected: PngDimensions): PngDimensions => {
+export const assertPngCapture = async (
+  image: Buffer,
+  expected: PngDimensions,
+): Promise<PngDimensions> => {
   expect(image.byteLength).toBeGreaterThan(1024);
   expect(image.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
   expect(image.toString('ascii', 12, 16)).toBe('IHDR');
@@ -13,6 +17,8 @@ export const assertPngCapture = (image: Buffer, expected: PngDimensions): PngDim
     height: image.readUInt32BE(20),
   };
   expect(dimensions).toEqual(expected);
+  const stats = await sharp(image).stats();
+  expect(stats.channels.some((channel) => channel.max - channel.min > 8)).toBe(true);
   return dimensions;
 };
 
