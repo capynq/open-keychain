@@ -15,6 +15,8 @@ test('generates and exports through the deployed nginx image', async ({ page }) 
   await dialog.getByRole('button', { name: /STL file/ }).click();
   expect((await stlDownload).suggestedFilename()).toMatch(/\.stl$/);
 
+  await page.getByRole('button', { name: 'Export' }).click();
+  await expect(dialog).toBeVisible();
   const threeMfDownload = page.waitForEvent('download');
   await dialog.getByRole('button', { name: /3MF · merged object/ }).click();
   expect((await threeMfDownload).suggestedFilename()).toMatch(/\.3mf$/);
