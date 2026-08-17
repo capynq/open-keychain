@@ -6,6 +6,13 @@ import { LandingPage } from './pages/LandingPage';
 import { CREATE_ROUTE, LANDING_ROUTE } from './routes';
 import './styles/app.css';
 
+const SITE_URL = 'https://open-keychain.com';
+
+const setMetaContent = (selector: string, content: string): void => {
+  const meta = document.querySelector<HTMLMetaElement>(selector);
+  if (meta) meta.content = content;
+};
+
 const App = () => {
   const [locale, setActiveLocale] = useState<Locale>(detectLocale);
   const location = useLocation();
@@ -14,10 +21,23 @@ const App = () => {
 
   useEffect(() => {
     document.documentElement.lang = locale;
-    document.title = isCustomizer
-      ? t(locale, 'documentCreateTitle')
-      : t(locale, 'documentLandingTitle');
-  }, [isCustomizer, locale]);
+    const titleKey = isCustomizer ? 'documentCreateTitle' : 'documentLandingTitle';
+    const descriptionKey = isCustomizer ? 'metaCreateDescription' : 'metaLandingDescription';
+    const title = t(locale, titleKey);
+    const description = t(locale, descriptionKey);
+    const canonicalPath = normalizedPath === '/' ? '/' : normalizedPath;
+    const canonicalUrl = `${SITE_URL}${canonicalPath}`;
+
+    document.title = title;
+    const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (canonical) canonical.href = canonicalUrl;
+    setMetaContent('meta[name="description"]', description);
+    setMetaContent('meta[property="og:url"]', canonicalUrl);
+    setMetaContent('meta[property="og:title"]', title);
+    setMetaContent('meta[property="og:description"]', description);
+    setMetaContent('meta[name="twitter:title"]', title);
+    setMetaContent('meta[name="twitter:description"]', description);
+  }, [isCustomizer, locale, normalizedPath]);
 
   const onLocaleChange = (nextLocale: Locale): void => {
     setActiveLocale(nextLocale);

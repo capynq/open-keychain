@@ -114,6 +114,45 @@ test('updates the localized landing title', async ({ page }) => {
   assertNoBrowserErrors();
 });
 
+test('publishes crawler metadata and route-aware canonical URLs', async ({ page }) => {
+  const assertNoBrowserErrors = watchBrowserErrors(page);
+
+  const robots = await page.request.get('/robots.txt');
+  expect(robots.ok()).toBe(true);
+  expect(await robots.text()).toContain('Sitemap: https://open-keychain.com/sitemap.xml');
+
+  const sitemap = await page.request.get('/sitemap.xml');
+  expect(sitemap.ok()).toBe(true);
+  expect(await sitemap.text()).toContain('<loc>https://open-keychain.com/</loc>');
+
+  await page.goto('/');
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    'href',
+    'https://open-keychain.com/',
+  );
+  expect(
+    await page
+      .locator('script[type="application/ld+json"]')
+      .evaluate((element) => element.textContent),
+  ).toContain('WebApplication');
+  await page.getByRole('combobox', { name: 'Language' }).selectOption('ru');
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+    'content',
+    /Создавайте персонализированные/,
+  );
+
+  await page.goto('/create');
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    'href',
+    'https://open-keychain.com/create',
+  );
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+    'content',
+    /Design a personalized printable keychain/,
+  );
+  assertNoBrowserErrors();
+});
+
 for (const locale of ['en', 'ru', 'uk'] as const) {
   test(`keeps the ${locale.toUpperCase()} landing chrome readable`, async ({ page }) => {
     const assertNoBrowserErrors = watchBrowserErrors(page);

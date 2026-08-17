@@ -36,6 +36,16 @@ expectHeader(root, 'permissions-policy', 'camera=(), microphone=(), geolocation=
 const html = await root.text();
 if (!html.includes('id="root"')) throw new Error('/ does not contain the application root');
 
+const robots = await fetchChecked('/robots.txt');
+expectContentType(robots, 'text/plain', '/robots.txt');
+if (!(await robots.text()).includes('Sitemap: https://open-keychain.com/sitemap.xml'))
+  throw new Error('/robots.txt does not advertise the sitemap');
+
+const sitemap = await fetchChecked('/sitemap.xml');
+expectContentType(sitemap, 'application/xml', '/sitemap.xml');
+if (!(await sitemap.text()).includes('<loc>https://open-keychain.com/</loc>'))
+  throw new Error('/sitemap.xml does not contain the canonical landing URL');
+
 const assetPath = html.match(/(?:src|href)="(\/assets\/[^"?]+\.(?:js|css))"/)?.[1];
 if (!assetPath) throw new Error('Could not find a hashed JS/CSS asset in index.html');
 const asset = await fetchChecked(assetPath);

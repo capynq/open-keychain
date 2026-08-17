@@ -120,6 +120,8 @@
   "errorArticulatedJoint": "The articulated joint could not be validated. Try a shorter name or increase the joint clearance.",
   "documentLandingTitle": "Open Keychain — design a printable name keychain",
   "documentCreateTitle": "Create a printable keychain — Open Keychain",
+  "metaLandingDescription": "Create personalized printable keychains and labels in your browser. Choose a template, preview the model, and export STL or 3MF for your 3D printer.",
+  "metaCreateDescription": "Design a personalized printable keychain or label, preview the geometry, and export STL or 3MF locally.",
   "landing": {
     "navigation": "Main navigation",
     "navHow": "How it works",
