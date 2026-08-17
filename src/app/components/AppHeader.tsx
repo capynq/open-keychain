@@ -1,78 +1,31 @@
-import { useTranslation } from 'react-i18next';
-import { hostedMode, type HostedAccountState } from '../../features/hosted';
+import type { HostedAccountState } from '../../features/hosted';
 import type { Locale } from '../../infrastructure/i18n';
-import { t } from '../../infrastructure/i18n';
-import { AccountPopover } from './AccountPopover';
+import { CustomizerNavigationHeader } from './CustomizerNavigationHeader';
+import { LandingNavigationHeader } from './LandingNavigationHeader';
 
 export const AppHeader = ({
+  variant,
   locale,
   onLocaleChange,
-  exportOpen,
+  exportOpen = false,
   onExportOpen,
   hosted,
 }: {
+  variant: 'landing' | 'customizer';
   locale: Locale;
   onLocaleChange: (locale: Locale) => void;
-  exportOpen: boolean;
-  onExportOpen: () => void;
-  hosted: HostedAccountState;
-}) => {
-  const { i18n } = useTranslation();
-
-  return (
-    <header className="topbar">
-      <div className="brand-mark">
-        <img src="/brand/open-keychain-mark.svg" alt="" width="34" height="34" />
-        <div>
-          <h1>Open Keychain</h1>
-        </div>
-      </div>
-      <button
-        type="button"
-        className="export-header-button"
-        onClick={onExportOpen}
-        aria-haspopup="dialog"
-        aria-expanded={exportOpen}
-      >
-        {t(locale, 'export')}
-      </button>
-      <div className="topbar-actions">
-        <label className="language-picker">
-          <span className="sr-only">{t(locale, 'language')}</span>
-          <select
-            value={locale}
-            onChange={(event) => {
-              const next = event.target.value as Locale;
-
-              onLocaleChange(next);
-              void i18n.changeLanguage(next);
-            }}
-          >
-            <option value="en">EN</option>
-            <option value="ru">RU</option>
-            <option value="uk">UK</option>
-          </select>
-        </label>
-        <a href="https://github.com/WilfredoN/open-keychain" className="github-link">
-          {t(locale, 'openSource')}
-        </a>
-        {hostedMode && (
-          <div className="account-menu">
-            <button
-              type="button"
-              className="account-button"
-              onClick={() => hosted.setAccountOpen(!hosted.accountOpen)}
-            >
-              {hosted.account ? hosted.account.name : t(locale, 'signIn')}
-            </button>
-            {hosted.accountOpen && (
-              <div className="account-popover">
-                <AccountPopover locale={locale} state={hosted} />
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </header>
+  exportOpen?: boolean;
+  onExportOpen?: () => void;
+  hosted?: HostedAccountState;
+}) =>
+  variant === 'landing' ? (
+    <LandingNavigationHeader locale={locale} onLocaleChange={onLocaleChange} />
+  ) : (
+    <CustomizerNavigationHeader
+      locale={locale}
+      onLocaleChange={onLocaleChange}
+      exportOpen={exportOpen}
+      onExportOpen={onExportOpen}
+      hosted={hosted}
+    />
   );
-};

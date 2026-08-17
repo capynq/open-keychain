@@ -117,5 +117,95 @@
   "warningDense": "This curved model exceeds 12,000 triangles and may take longer to slice.",
   "warningShallow": "A slightly taller text relief is easier to see after printing.",
   "warningArticulatedBaseAdjusted": "Base thickness was adjusted to retain printable captive joints.",
-  "errorArticulatedJoint": "The articulated joint could not be validated. Try a shorter name or increase the joint clearance."
+  "errorArticulatedJoint": "The articulated joint could not be validated. Try a shorter name or increase the joint clearance.",
+  "documentLandingTitle": "Open Keychain — design a printable name keychain",
+  "documentCreateTitle": "Create a printable keychain — Open Keychain",
+  "landing": {
+    "navigation": "Main navigation",
+    "navHow": "How it works",
+    "navProducts": "Templates",
+    "navRun": "Run it",
+    "heroKicker": "Local-first 3D product maker",
+    "heroTitle": "Turn a name into something you can print.",
+    "heroBody": "Make a personalized product in minutes, export STL or 3MF, and take the file straight to your slicer.",
+    "startDesigning": "Start designing",
+    "viewSource": "View source",
+    "workflowLabel": "The design workflow",
+    "previewLabel": "Open Keychain customizer preview",
+    "previewTag": "The real customizer",
+    "previewAlt": "Open Keychain customizer showing a printable name keychain preview",
+    "previewCaption": "Change the name, template and material look",
+    "localBadge": "Runs in your browser",
+    "desktopWorkspace": "Desktop workspace",
+    "mobileWorkspace": "Mobile workspace",
+    "templatePreviewAlt": {
+      "nameKeychain": "ALEX name keychain preview with a raised name and keyring hole",
+      "articulatedName": "ALEX articulated name preview with linked printable letters",
+      "nameplate": "ALEX nameplate preview on a compact printable plaque",
+      "plantLabel": "ALEX plant label preview with a pointed stake"
+    },
+    "howKicker": "A repeatable maker workflow",
+    "howTitle": "From customer idea to a file for printing.",
+    "howBody": "Keep the creative part simple: choose a template, tune the look, and export a model your home printer workflow can use.",
+    "steps": {
+      "name": {
+        "title": "Name it",
+        "body": "Enter the text",
+        "detail": "Start with a name, short label or friendly phrase. The editor keeps the input focused on printable proportions."
+      },
+      "shape": {
+        "title": "Shape it",
+        "body": "Choose a template",
+        "detail": "Pick a keychain, articulated name, nameplate or plant label, then tune font, style and dimensions."
+      },
+      "export": {
+        "title": "Export it",
+        "body": "STL or 3MF",
+        "detail": "Download a local file, inspect it in your slicer and prepare it for the printer and material you use."
+      }
+    },
+    "productsKicker": "Start with a proven shape",
+    "productsTitle": "Four templates for the names people ask for.",
+    "products": {
+      "keychain": { "title": "Name keychain", "body": "A familiar tag with a keyring hole and a raised name." },
+      "articulated": { "title": "Articulated name", "body": "Linked letters for a flexible, playful keyring." },
+      "nameplate": { "title": "Nameplate", "body": "A compact plaque for desks, drawers and makers' shelves." },
+      "plantLabel": { "title": "Plant label", "body": "A pointed label for pots, herbs and small garden rows." }
+    },
+    "runKicker": "Made for your setup",
+    "runTitle": "Print one today. Build a repeatable workflow tomorrow.",
+    "runBody": "Use the local browser generator for one-off gifts, shop samples and repeatable home-business work. Self-host the same workflow when you want your own address; a hosted workspace is only planned.",
+    "run": {
+      "browser": {
+        "eyebrow": "Available now",
+        "title": "Use it in your browser",
+        "status": "Free local generator",
+        "items": ["No account needed", "Geometry and exports stay on this device", "Download STL or 3MF"]
+      },
+      "selfHost": {
+        "eyebrow": "Available now",
+        "title": "Self-host the static app",
+        "status": "Docker or static hosting",
+        "items": [
+          "Serve the built files from your own infrastructure",
+          "Keep the same local browser workflow",
+          "Read the Docker and static setup in the README"
+        ]
+      },
+      "hosted": {
+        "eyebrow": "Planned, not for sale",
+        "title": "Hosted workspace",
+        "status": "Future concept",
+        "items": ["Saved projects across devices", "Seller presets for repeat work", "Batch tools for recurring orders"]
+      }
+    },
+    "trustLabel": "Privacy and beta notes",
+    "localFirstKicker": "Local-first by default",
+    "localFirstTitle": "Your design work stays close to you.",
+    "localFirstBody": "In the default browser and self-hosted workflows, fonts, geometry generation and exports run locally. Open Keychain is MIT-licensed open source.",
+    "betaKicker": "Beta, with honest limits",
+    "betaTitle": "A generated file is not a physical-print guarantee.",
+    "betaBody": "Check every export in your slicer and test it on your own printer. Printer, material and settings can all change the result.",
+    "footerLicense": "MIT licensed · open source"
+  }
 }
