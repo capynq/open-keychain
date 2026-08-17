@@ -20,9 +20,19 @@ const expectCache = (response: Response, expectation: RegExp, pathname: string):
     throw new Error(`${pathname} has cache-control ${actual || '<missing>'}`);
 };
 
+const expectHeader = (response: Response, name: string, expected: string): void => {
+  const actual = response.headers.get(name) ?? '';
+  if (actual.toLowerCase() !== expected.toLowerCase())
+    throw new Error(`/: header ${name} is ${actual || '<missing>'}; expected ${expected}`);
+};
+
 const root = await fetchChecked('/');
 expectContentType(root, 'text/html', '/');
 expectCache(root, /(?:no-cache|max-age=0|must-revalidate)/i, '/');
+expectHeader(root, 'x-content-type-options', 'nosniff');
+expectHeader(root, 'x-frame-options', 'DENY');
+expectHeader(root, 'referrer-policy', 'strict-origin-when-cross-origin');
+expectHeader(root, 'permissions-policy', 'camera=(), microphone=(), geolocation=()');
 const html = await root.text();
 if (!html.includes('id="root"')) throw new Error('/ does not contain the application root');
 

@@ -10,6 +10,26 @@ type ProjectBody = {
   params?: unknown;
   thumbnail?: string;
 };
+const MAX_PROJECT_BODY_BYTES = 256 * 1024;
+const MAX_PROJECT_NAME_LENGTH = 120;
+const MAX_PROJECT_THUMBNAIL_LENGTH = 192 * 1024;
+
+const isJsonObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+export const projectBodyError = (body: ProjectBody): string | undefined => {
+  if (!body.name?.trim() || !isJsonObject(body.params)) return 'INVALID_PROJECT';
+  if (body.name.trim().length > MAX_PROJECT_NAME_LENGTH) return 'PROJECT_NAME_TOO_LONG';
+  if (body.thumbnail && body.thumbnail.length > MAX_PROJECT_THUMBNAIL_LENGTH)
+    return 'PROJECT_THUMBNAIL_TOO_LARGE';
+  try {
+    if (Buffer.byteLength(JSON.stringify(body.params), 'utf8') > MAX_PROJECT_BODY_BYTES)
+      return 'PROJECT_TOO_LARGE';
+  } catch {
+    return 'INVALID_PROJECT';
+  }
+  return undefined;
+};
 const cookieValue = (request: FastifyRequest, name: string): string | undefined => {
   const match = request.headers.cookie?.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
   return match ? decodeURIComponent(match[1]) : undefined;
@@ -66,7 +86,7 @@ const userPlan = async (pool: pg.Pool, userId: string): Promise<PlanId> => {
   return result.rows[0]?.plan_id === 'maker' ? 'maker' : 'free';
 };
 export const createApp = (pool: pg.Pool, config: ServerConfig): FastifyInstance => {
-  const app = Fastify({ logger: true });
+  const app = Fastify({ logger: true, bodyLimit: MAX_PROJECT_BODY_BYTES });
   const auth = createAuth(pool, config);
   app.get('/api/health', async () => ({ status: 'ok' }));
   app.route({
@@ -175,8 +195,8 @@ export const createApp = (pool: pg.Pool, config: ServerConfig): FastifyInstance 
     const user = await currentUser(auth, request);
     if (!user) return reply.status(401).send({ error: 'UNAUTHORIZED' });
     const body = jsonBody(request);
-    if (!body.name?.trim() || !body.params)
-      return reply.status(400).send({ error: 'INVALID_PROJECT' });
+    const validationError = projectBodyError(body);
+    if (validationError) return reply.status(400).send({ error: validationError });
     const result = await pool.query(
       `INSERT INTO projects(id, user_id, name, params, thumbnail)
        VALUES ($1, $2, $3, $4, $5)
@@ -184,7 +204,7 @@ export const createApp = (pool: pg.Pool, config: ServerConfig): FastifyInstance 
       [
         randomUUID(),
         user.id,
-        body.name.trim().slice(0, 120),
+        body.name!.trim().slice(0, MAX_PROJECT_NAME_LENGTH),
         JSON.stringify(body.params),
         body.thumbnail ?? null,
       ],
@@ -199,6 +219,22 @@ export const createApp = (pool: pg.Pool, config: ServerConfig): FastifyInstance 
     const user = await currentUser(auth, request);
     if (!user) return reply.status(401).send({ error: 'UNAUTHORIZED' });
     const body = jsonBody(request);
+    if (body.name !== undefined && !body.name.trim())
+      return reply.status(400).send({ error: 'INVALID_PROJECT' });
+    if (body.name && body.name.trim().length > MAX_PROJECT_NAME_LENGTH)
+      return reply.status(400).send({ error: 'PROJECT_NAME_TOO_LONG' });
+    if (body.params !== undefined && !isJsonObject(body.params))
+      return reply.status(400).send({ error: 'INVALID_PROJECT' });
+    if (body.thumbnail && body.thumbnail.length > MAX_PROJECT_THUMBNAIL_LENGTH)
+      return reply.status(400).send({ error: 'PROJECT_THUMBNAIL_TOO_LARGE' });
+    if (body.params !== undefined) {
+      try {
+        if (Buffer.byteLength(JSON.stringify(body.params), 'utf8') > MAX_PROJECT_BODY_BYTES)
+          return reply.status(400).send({ error: 'PROJECT_TOO_LARGE' });
+      } catch {
+        return reply.status(400).send({ error: 'INVALID_PROJECT' });
+      }
+    }
     const result = await pool.query(
       `UPDATE projects SET
         name = COALESCE($1, name),
@@ -208,7 +244,7 @@ export const createApp = (pool: pg.Pool, config: ServerConfig): FastifyInstance 
        WHERE id = $4 AND user_id = $5
        RETURNING id, name, params, thumbnail, schema_version, created_at, updated_at`,
       [
-        body.name?.trim().slice(0, 120) ?? null,
+        body.name?.trim().slice(0, MAX_PROJECT_NAME_LENGTH) ?? null,
         body.params ? JSON.stringify(body.params) : null,
         body.thumbnail ?? null,
         request.params.id,

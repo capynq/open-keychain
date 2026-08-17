@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { createApp } from './app';
+import { createApp, projectBodyError } from './app';
 import type { ServerConfig } from './config';
 const config: ServerConfig = {
   port: 3000,
@@ -29,5 +29,17 @@ describe('hosted API', () => {
     const response = await app.inject({ method: 'GET', url: '/api/health' });
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({ status: 'ok' });
+  });
+
+  it('rejects malformed or oversized saved projects before persistence', () => {
+    expect(projectBodyError({ name: 'ALEX', params: { text: 'ALEX' } })).toBeUndefined();
+    expect(projectBodyError({ name: 'ALEX', params: [] })).toBe('INVALID_PROJECT');
+    expect(projectBodyError({ name: 'A'.repeat(121), params: {} })).toBe('PROJECT_NAME_TOO_LONG');
+    expect(
+      projectBodyError({ name: 'ALEX', params: {}, thumbnail: 'x'.repeat(192 * 1024 + 1) }),
+    ).toBe('PROJECT_THUMBNAIL_TOO_LARGE');
+    expect(projectBodyError({ name: 'ALEX', params: { text: 'x'.repeat(256 * 1024) } })).toBe(
+      'PROJECT_TOO_LARGE',
+    );
   });
 });
