@@ -40,3 +40,26 @@ jobs:
         run: pnpm exec commitlint --from "${{ github.event.pull_request.base.sha }}" --to "${{ github.sha }}"
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e --workers=1
+      - name: Build and start the self-hosted image
+        run: docker compose up -d --build --wait --wait-timeout 120
+      - name: Validate the deployed self-hosted image
+        run: pnpm validate:self-hosted
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:8080
+          SELF_HOSTED_BASE_URL: http://127.0.0.1:8080
+      - name: Show self-hosted logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+      - name: Stop the self-hosted image
+        if: always()
+        run: docker compose down --volumes --remove-orphans
+      - name: Upload browser artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+        with:
+          name: playwright-artifacts
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7

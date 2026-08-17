@@ -1,5 +1,6 @@
 services:
   open-keychain:
+    image: open-keychain:local
     build: .
     ports:
       - '8080:80'
