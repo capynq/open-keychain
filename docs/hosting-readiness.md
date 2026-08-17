@@ -26,6 +26,17 @@ The hosted frontend proxies `/api/` to the API service. Keep PostgreSQL private 
 Compose network and terminate HTTPS before the web container. `APP_URL` must match the
 public HTTPS origin so secure session cookies are enabled.
 
+## Netlify continuous deployment
+
+The static production site can deploy without the Netlify GitHub App through
+`.github/workflows/netlify.yml`. Add these repository secrets in GitHub:
+
+- `NETLIFY_SITE_ID`: `6207cf36-da44-49e3-9639-1855c0be9cea`
+- `NETLIFY_AUTH_TOKEN`: a Netlify personal access token with deploy permission
+
+The workflow runs `pnpm build` and publishes `dist` on every push to `main`. Keep the
+token only in GitHub Actions secrets; never place it in the repository or in a public log.
+
 ## Backup and recovery gate
 
 Before inviting users:
