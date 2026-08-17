@@ -40,6 +40,8 @@ pnpm build
 
 Serve `dist/` from any static host. Configure an SPA fallback to `index.html` for `/` and `/create`, and allow normal static access to `/manifold.wasm`, `/fonts/`, `/showcase/`, and hashed `/assets/` files. [`nginx.conf`](nginx.conf) is a working reference.
 
+For the optional hosted profile, use [`docs/hosting-readiness.md`](docs/hosting-readiness.md) for domain, HTTPS, secrets, backup, and private-pilot gates. Billing is not enabled.
+
 ## What you can make
 
 - Name keychains with a keyring hole and raised lettering
