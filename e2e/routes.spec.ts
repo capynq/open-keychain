@@ -153,6 +153,34 @@ test('publishes crawler metadata and route-aware canonical URLs', async ({ page 
   assertNoBrowserErrors();
 });
 
+test('requires explicit analytics consent and remembers the choice', async ({ page }) => {
+  const assertNoBrowserErrors = watchBrowserErrors(page);
+
+  await page.goto('/');
+  const banner = page.locator('.analytics-consent');
+  await expect(banner).toBeVisible();
+  await banner.getByRole('button', { name: 'No thanks' }).click();
+  await expect(banner).toBeHidden();
+  expect(await page.evaluate(() => localStorage.getItem('open-keychain.analytics-consent'))).toBe(
+    'declined',
+  );
+  assertNoBrowserErrors();
+});
+
+test('accepts analytics consent without blocking the primary action', async ({ page }) => {
+  const assertNoBrowserErrors = watchBrowserErrors(page);
+
+  await page.goto('/');
+  await page.locator('.analytics-consent').getByRole('button', { name: 'Allow analytics' }).click();
+  await expect(page.locator('.analytics-consent')).toBeHidden();
+  expect(await page.evaluate(() => localStorage.getItem('open-keychain.analytics-consent'))).toBe(
+    'accepted',
+  );
+  await page.getByRole('link', { name: 'Start designing' }).first().click();
+  await expect(page).toHaveURL(/\/create$/);
+  assertNoBrowserErrors();
+});
+
 for (const locale of ['en', 'ru', 'uk'] as const) {
   test(`keeps the ${locale.toUpperCase()} landing chrome readable`, async ({ page }) => {
     const assertNoBrowserErrors = watchBrowserErrors(page);
