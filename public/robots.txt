@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://open-keychain.com/sitemap.xml
