@@ -15,6 +15,6 @@ Harassment, discrimination, threats, personal attacks, doxxing, sexualized langu
 
 ## Reporting and enforcement
 
-Report conduct concerns privately to the maintainer through the [WilfredoN GitHub profile](https://github.com/WilfredoN). Do not open a public issue containing private or sensitive details. The maintainer will review reports, protect the reporter's privacy where practical, and take proportionate action, including removing content or restricting participation.
+Report conduct concerns privately to the maintainer through the [capynq GitHub profile](https://github.com/capynq). Do not open a public issue containing private or sensitive details. The maintainer will review reports, protect the reporter's privacy where practical, and take proportionate action, including removing content or restricting participation.
 
 This policy applies to project spaces and to interactions where someone is representing Open Keychain or materially affecting its community.

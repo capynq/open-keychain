@@ -32,4 +32,4 @@ Use the existing style and camera tests as templates for new geometry cases. Add
 
 Use conventional commit messages such as `feat(geometry): preserve counters during bridging` or `fix(viewer): keep long models inside the camera bounds`. Husky and lint-staged run staged-file checks before commits; Commitlint rejects messages outside the conventional format.
 
-Keep pull requests focused, explain user-facing behavior, link related issues, and update README, roadmap, or localization when the public behavior changes. Never commit credentials, production environment files, generated meshes, or browser test artifacts.
+Keep pull requests focused, explain user-facing behavior, and update README or localization when the public behavior changes. Never commit credentials, production environment files, generated meshes, or browser test artifacts.
