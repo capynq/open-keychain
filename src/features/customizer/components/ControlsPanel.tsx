@@ -74,12 +74,14 @@ export const ControlsPanel = ({
           font.category.toLocaleLowerCase().includes(query)),
     );
   }, [compatibleFonts, fontCategory, fontSearch]);
-  const pageCount = Math.max(1, Math.ceil(filteredFonts.length / fontsPerPage));
+  const shouldPaginate = fontSource === 'google';
+  const pageCount = shouldPaginate
+    ? Math.max(1, Math.ceil(filteredFonts.length / fontsPerPage))
+    : 1;
   const currentPage = Math.min(fontPage, pageCount);
-  const visibleFonts = filteredFonts.slice(
-    (currentPage - 1) * fontsPerPage,
-    currentPage * fontsPerPage,
-  );
+  const visibleFonts = shouldPaginate
+    ? filteredFonts.slice((currentPage - 1) * fontsPerPage, currentPage * fontsPerPage)
+    : filteredFonts;
   const selectFont = async (font: (typeof FONT_CATALOG)[number]): Promise<void> => {
     setFontLoadError(false);
     setLoadingFontId(font.id);
@@ -145,6 +147,7 @@ export const ControlsPanel = ({
       <label>
         <span>{t(locale, 'fontCategoryFilter')}</span>
         <select
+          aria-label={t(locale, 'fontCategoryFilter')}
           value={fontCategory}
           onChange={(event) => {
             setFontCategory(event.target.value as FontCategory | 'all');
