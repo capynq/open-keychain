@@ -68,6 +68,23 @@ const parseFont = (buffer: ArrayBuffer): opentype.Font => {
   if (!parse) throw new Error('OpenType parser is unavailable.');
   return parse(buffer);
 };
+const fontCache = new Map<string, Promise<opentype.Font>>();
+const loadFont = (definition: FontDefinition): Promise<opentype.Font> => {
+  const cached = fontCache.get(definition.id);
+  if (cached) return cached;
+  const request = fetch(definition.file)
+    .then((response) => {
+      if (!response.ok) throw new Error(`Could not load the ${definition.name} font.`);
+      return response.arrayBuffer();
+    })
+    .then(parseFont)
+    .catch((error) => {
+      fontCache.delete(definition.id);
+      throw error;
+    });
+  fontCache.set(definition.id, request);
+  return request;
+};
 type Wasm = GeometryWasm;
 const scalePolygons = (
   polygons: Array<Array<[number, number]>>,
@@ -229,10 +246,12 @@ export const buildKeychain = async (
       'articulated-font',
       `${definition.name} is not available for articulated letters. Choose a supported heavy font.`,
     );
-  const response = await fetch(definition.file);
-  if (!response.ok)
+  let font: opentype.Font;
+  try {
+    font = await loadFont(definition);
+  } catch {
     return invalidResult(issues, 'font-load', `Could not load the ${definition.name} font.`);
-  const font = parseFont(await response.arrayBuffer());
+  }
   const missing = hasRequiredGlyphs(font, params.text);
   if (missing)
     return invalidResult(

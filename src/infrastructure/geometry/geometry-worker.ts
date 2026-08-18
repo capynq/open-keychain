@@ -12,9 +12,14 @@ const getWasm = () => {
   wasmPromise ??= createWasm();
   return wasmPromise;
 };
+void getWasm();
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   const request = event.data;
   try {
+    if (request.type === 'warmup') {
+      await getWasm();
+      return;
+    }
     const wasm = await getWasm();
     if (request.type === 'generate') {
       const { result } = await buildKeychain(wasm, request.params);
@@ -61,7 +66,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   } catch (error) {
     const response: WorkerResponse = {
       type: 'error',
-      requestId: request.requestId,
+      requestId: request.type === 'warmup' ? 0 : request.requestId,
       message:
         error instanceof Error ? error.message : 'The geometry engine could not create this model.',
     };

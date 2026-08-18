@@ -20,6 +20,7 @@ export class GeometryClient {
     this.worker = new Worker(new URL('./geometry-worker.ts', import.meta.url), { type: 'module' });
     this.worker.onmessage = (event: MessageEvent<WorkerResponse>) =>
       this.handleResponse(event.data);
+    this.worker.postMessage({ type: 'warmup' } satisfies WorkerRequest);
   }
   request(params: KeychainParams): Promise<GeometryResult> {
     this.latestParams = params;

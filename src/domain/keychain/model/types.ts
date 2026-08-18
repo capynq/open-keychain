@@ -80,6 +80,9 @@ export type GeometryResult = {
 };
 export type WorkerRequest =
   | {
+      type: 'warmup';
+    }
+  | {
       type: 'generate';
       requestId: number;
       params: KeychainParams;

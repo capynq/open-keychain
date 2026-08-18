@@ -8,5 +8,8 @@ export default defineConfig({
     baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:8080',
     trace: 'retain-on-failure',
   },
-  projects: [{ name: 'deployed-chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'deployed-desktop', use: { ...devices['Desktop Chrome'] } },
+    { name: 'deployed-mobile', use: { ...devices['Pixel 5'] } },
+  ],
 });
