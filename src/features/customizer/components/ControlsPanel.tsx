@@ -4,6 +4,7 @@ import {
   fontSupportsArticulatedName,
   fontSupportsText,
   TEMPLATE_CATALOG,
+  type FontCategory,
 } from '../../../domain/keychain';
 import type { KeychainParams } from '../../../domain/keychain';
 import {
@@ -49,6 +50,9 @@ export const ControlsPanel = ({
   const [fontSearch, setFontSearch] = useState('');
   const [fontPage, setFontPage] = useState(1);
   const [fontLoadError, setFontLoadError] = useState(false);
+  const [loadingFontId, setLoadingFontId] = useState<string>();
+  const [fontCategory, setFontCategory] = useState<FontCategory | 'all'>('all');
+  const [supportsTextOnly, setSupportsTextOnly] = useState(true);
   const fontsPerPage = 12;
   const sourceFonts = fontSource === 'google' ? customizer.googleFonts : FONT_CATALOG;
   const compatibleFonts = useMemo(
@@ -56,19 +60,20 @@ export const ControlsPanel = ({
       sourceFonts.filter((font) =>
         params.templateId === 'articulated-name'
           ? fontSupportsArticulatedName(font, params.text)
-          : fontSupportsText(font, params.text),
+          : !supportsTextOnly || fontSupportsText(font, params.text),
       ),
-    [params.templateId, params.text, sourceFonts],
+    [params.templateId, params.text, sourceFonts, supportsTextOnly],
   );
   const filteredFonts = useMemo(() => {
     const query = fontSearch.trim().toLocaleLowerCase();
     return compatibleFonts.filter(
       (font) =>
-        !query ||
-        font.name.toLocaleLowerCase().includes(query) ||
-        font.category.toLocaleLowerCase().includes(query),
+        (fontCategory === 'all' || font.category === fontCategory) &&
+        (!query ||
+          font.name.toLocaleLowerCase().includes(query) ||
+          font.category.toLocaleLowerCase().includes(query)),
     );
-  }, [compatibleFonts, fontSearch]);
+  }, [compatibleFonts, fontCategory, fontSearch]);
   const pageCount = Math.max(1, Math.ceil(filteredFonts.length / fontsPerPage));
   const currentPage = Math.min(fontPage, pageCount);
   const visibleFonts = filteredFonts.slice(
@@ -77,6 +82,7 @@ export const ControlsPanel = ({
   );
   const selectFont = async (font: (typeof FONT_CATALOG)[number]): Promise<void> => {
     setFontLoadError(false);
+    setLoadingFontId(font.id);
     if (font.source === 'google' && typeof FontFace !== 'undefined') {
       try {
         const face = new FontFace(font.previewFamily, `url(${font.file})`, {
@@ -86,10 +92,12 @@ export const ControlsPanel = ({
         document.fonts.add(face);
       } catch {
         setFontLoadError(true);
+        setLoadingFontId(undefined);
         return;
       }
     }
     update('fontId', font.id);
+    setLoadingFontId(undefined);
   };
   const renderFontGroups = (fonts: typeof FONT_CATALOG) => (
     <div className="font-groups">
@@ -103,23 +111,67 @@ export const ControlsPanel = ({
               className={`font-grid ${params.templateId === 'articulated-name' ? 'articulated-font-grid' : ''}`}
             >
               {categoryFonts.map((font) => (
-                <button
-                  type="button"
-                  key={font.id}
-                  className={`font-card ${params.fontId === font.id ? 'selected' : ''}`}
-                  onClick={() => void selectFont(font)}
-                  title={font.name}
-                >
-                  <span style={{ fontFamily: font.previewFamily, fontWeight: font.weight }}>
-                    {params.text || (usesCyrillic ? font.sampleCyrillic : font.sampleLatin)}
-                  </span>
-                  <small>{font.name}</small>
-                </button>
+                <div className="font-card-wrap" key={font.id}>
+                  <button
+                    type="button"
+                    className={`font-card ${params.fontId === font.id ? 'selected' : ''}`}
+                    onClick={() => void selectFont(font)}
+                    disabled={loadingFontId !== undefined}
+                    aria-busy={loadingFontId === font.id}
+                    title={font.name}
+                  >
+                    <span style={{ fontFamily: font.previewFamily, fontWeight: font.weight }}>
+                      {params.text || (usesCyrillic ? font.sampleCyrillic : font.sampleLatin)}
+                    </span>
+                    <small>
+                      {loadingFontId === font.id ? t(locale, 'fontLoading') : font.name}
+                    </small>
+                  </button>
+                  {font.specimenUrl && (
+                    <a href={font.specimenUrl} target="_blank" rel="noreferrer">
+                      {t(locale, 'fontSpecimen')} ↗
+                    </a>
+                  )}
+                </div>
               ))}
             </div>
           </div>
         );
       })}
+    </div>
+  );
+  const fontFilters = (
+    <div className="font-filter-row">
+      <label>
+        <span>{t(locale, 'fontCategoryFilter')}</span>
+        <select
+          value={fontCategory}
+          onChange={(event) => {
+            setFontCategory(event.target.value as FontCategory | 'all');
+            setFontPage(1);
+          }}
+        >
+          <option value="all">{t(locale, 'fontCategoryAll')}</option>
+          {FONT_CATEGORY_ORDER.map((category) => (
+            <option key={category} value={category}>
+              {t(locale, `fontCategory${category.replace(/[^A-Za-z]/g, '')}`)}
+            </option>
+          ))}
+        </select>
+      </label>
+      {params.templateId !== 'articulated-name' && (
+        <label className="font-compatibility-toggle">
+          <input
+            type="checkbox"
+            checked={supportsTextOnly}
+            onChange={(event) => {
+              setSupportsTextOnly(event.target.checked);
+              setFontPage(1);
+            }}
+          />
+          <span>{t(locale, 'fontSupportsText')}</span>
+        </label>
+      )}
     </div>
   );
 
@@ -251,6 +303,7 @@ export const ControlsPanel = ({
                   aria-label={t(locale, 'fontSearch')}
                 />
               </label>
+              {fontFilters}
               {params.templateId === 'articulated-name' && (
                 <p className="font-restriction">{t(locale, 'fontArticulatedRestriction')}</p>
               )}
@@ -295,6 +348,7 @@ export const ControlsPanel = ({
                 aria-label={t(locale, 'fontSearch')}
               />
             </label>
+            {fontFilters}
             {params.templateId === 'articulated-name' && (
               <p className="font-restriction">{t(locale, 'fontArticulatedRestriction')}</p>
             )}

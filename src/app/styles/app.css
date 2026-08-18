@@ -449,7 +449,7 @@ p {
 .font-grid {
   display: flex;
   flex-wrap: wrap;
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
   gap: 8px;
 }
@@ -503,6 +503,49 @@ p {
   border-color: #ef815e;
   outline: none;
   box-shadow: 0 0 0 3px #ef815e33;
+}
+
+.font-filter-row {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+
+.font-filter-row label:first-child {
+  display: grid;
+  flex: 1 1 0;
+  gap: 3px;
+  color: #858791;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.font-filter-row select {
+  width: 100%;
+  min-height: 30px;
+  border: 1px solid #dfddd6;
+  border-radius: 8px;
+  padding: 4px 7px;
+  color: #3e4656;
+  background: #fffdf8;
+  font: inherit;
+  font-size: 10px;
+}
+
+.font-compatibility-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  color: #858791;
+  font-size: 9px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.font-compatibility-toggle input {
+  accent-color: #ef7656;
 }
 
 .font-restriction,
@@ -560,14 +603,34 @@ p {
 }
 
 .font-card {
-  flex: 0 1 132px;
-  width: 132px;
+  flex: 1 1 120px;
+  width: 120px;
   min-width: 0;
   min-height: 44px;
   display: flex;
   align-items: center;
   gap: 7px;
   padding: 7px 8px;
+}
+
+.font-card-wrap {
+  min-width: 0;
+  flex: 1 1 120px;
+  width: 120px;
+}
+
+.font-card-wrap .font-card {
+  width: 100%;
+}
+
+.font-card-wrap > a {
+  display: block;
+  margin: 3px 2px 0;
+  overflow: hidden;
+  color: #9a6b57;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .font-card > span {
@@ -595,6 +658,10 @@ p {
   flex-direction: column;
   align-items: stretch;
   gap: 3px;
+}
+
+.articulated-font-grid .font-card-wrap {
+  flex-basis: 120px;
 }
 
 .articulated-font-grid .font-card > span {
