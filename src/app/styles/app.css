@@ -154,10 +154,114 @@
 .workspace {
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(370px, 420px) minmax(0, 1fr);
-  gap: clamp(24px, 3vw, 48px);
+  grid-template-columns: minmax(min(100%, 360px), clamp(360px, 29vw, 460px)) minmax(0, 1fr);
+  gap: clamp(30px, 4vw, 64px);
   flex: 1;
-  padding: 14px clamp(24px, 3vw, 48px);
+  padding: 18px clamp(30px, 4vw, 64px);
+}
+
+.workspace > * {
+  min-width: 0;
+}
+
+.customizer-guide {
+  margin: 18px clamp(30px, 4vw, 64px) 0;
+  padding: 18px 22px;
+  border: 1px solid #ead9c9;
+  border-radius: 14px;
+  background: linear-gradient(110deg, #fff8ed, #fffdf8 72%);
+  box-shadow: 0 8px 24px #b65a3c12;
+}
+
+.customizer-guide-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.customizer-guide-heading h2 {
+  margin: 0;
+  color: #303545;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.customizer-guide-dismiss {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #dfcfc1;
+  border-radius: 8px;
+  color: #6c6f79;
+  background: #fffdf8;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.customizer-guide-dismiss:focus-visible,
+.customizer-guide-steps button:focus-visible {
+  outline: 2px solid #ef815e;
+  outline-offset: 2px;
+}
+
+.customizer-guide-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.customizer-guide-steps li {
+  min-width: 0;
+  border-top: 2px solid #e5d9ce;
+}
+
+.customizer-guide-steps li.active {
+  border-color: #ef815e;
+}
+
+.customizer-guide-steps button {
+  display: flex;
+  width: 100%;
+  gap: 12px;
+  padding: 12px 6px 6px;
+  border: 0;
+  color: #303545;
+  background: transparent;
+  text-align: left;
+}
+
+.customizer-guide-number {
+  color: #d35c3e;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.customizer-guide-steps button span:last-child {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.customizer-guide-steps strong {
+  font-size: 12px;
+}
+
+.customizer-guide-steps small {
+  color: #777a84;
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .customizer-guide,
+  .customizer-guide * {
+    scroll-behavior: auto;
+    transition: none;
+  }
 }
 
 .controls-panel {
@@ -168,12 +272,12 @@
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding-right: 10px;
-  scrollbar-gutter: stable;
+  padding: 0 18px 0 2px;
+  scrollbar-gutter: stable both-edges;
 }
 
 .controls-scroll-spacer {
-  height: 48px;
+  height: 64px;
 }
 
 .eyebrow {
@@ -190,7 +294,7 @@ p {
 }
 
 .control-section {
-  padding: 8px 0;
+  padding: 12px 0;
   border-top: 1px solid #dfddd6;
 }
 
@@ -198,9 +302,9 @@ p {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
   min-height: 24px;
-  margin-bottom: 4px;
+  margin-bottom: 7px;
 }
 
 .section-heading h2 {
@@ -235,7 +339,7 @@ p {
 .card-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  gap: 8px;
 }
 
 .template-grid {
@@ -256,8 +360,8 @@ p {
   min-height: 40px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 7px;
+  gap: 8px;
+  padding: 7px 9px;
 }
 
 .choice-card-copy {
@@ -347,14 +451,14 @@ p {
   flex-wrap: wrap;
   width: fit-content;
   max-width: 100%;
-  gap: 5px;
+  gap: 8px;
 }
 
 .font-groups {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
-  gap: 10px 8px;
+  gap: 14px 10px;
 }
 
 .font-group {
@@ -364,7 +468,7 @@ p {
 
 .font-group h3 {
   margin: 0;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   color: #858791;
   font-size: 9px;
   font-weight: 900;
@@ -376,11 +480,11 @@ p {
   flex: 0 1 132px;
   width: 132px;
   min-width: 0;
-  min-height: 40px;
+  min-height: 44px;
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 6px;
+  gap: 7px;
+  padding: 7px 8px;
 }
 
 .font-card > span {
@@ -429,7 +533,7 @@ p {
 .reset-settings {
   width: 100%;
   min-height: 36px;
-  margin: 8px 0 0;
+  margin: 12px 0 0;
   border: 1px solid #cecbc2;
   border-radius: 9px;
   background: transparent;
@@ -489,15 +593,15 @@ p {
 .range-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  column-gap: 18px;
-  row-gap: 3px;
+  column-gap: 24px;
+  row-gap: 7px;
 }
 
 .range-control {
   display: block;
   min-width: 0;
   margin: 0;
-  padding: 2px 0;
+  padding: 4px 0;
 }
 
 .control-label {
@@ -557,7 +661,7 @@ input[type='range'] {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 0 0 10px;
+  margin: 0 0 14px;
 }
 
 .status-pill {
@@ -1021,9 +1125,9 @@ input[type='range'] {
 
 @media (max-width: 1000px) and (min-width: 761px) {
   .workspace {
-    grid-template-columns: minmax(340px, 380px) minmax(0, 1fr);
-    gap: 24px;
-    padding-inline: 24px;
+    grid-template-columns: minmax(320px, 38vw) minmax(0, 1fr);
+    gap: 30px;
+    padding-inline: 30px;
   }
 
   .font-card {
@@ -1034,7 +1138,7 @@ input[type='range'] {
 
 @media (max-height: 760px) and (min-width: 761px) {
   .topbar {
-    padding-block: 8px;
+    padding-block: 10px;
   }
 
   .brand-mark > img {
@@ -1045,12 +1149,12 @@ input[type='range'] {
   }
 
   .workspace {
-    gap: 20px;
-    padding-block: 8px;
+    gap: 28px;
+    padding-block: 12px;
   }
 
   .control-section {
-    padding-block: 5px;
+    padding-block: 8px;
   }
 
   .text-input input {
@@ -1059,7 +1163,7 @@ input[type='range'] {
 
   .choice-card,
   .font-card {
-    min-height: 34px;
+    min-height: 40px;
   }
 
   .style-swatch {
@@ -1072,7 +1176,7 @@ input[type='range'] {
   }
 
   .range-control {
-    padding-block: 0;
+    padding-block: 2px;
   }
 
   .control-label {
@@ -1088,7 +1192,7 @@ input[type='range'] {
   }
 
   .preview-heading {
-    margin-bottom: 6px;
+    margin-bottom: 10px;
   }
 }
 
@@ -1137,15 +1241,29 @@ input[type='range'] {
   .workspace {
     display: flex;
     flex-direction: column-reverse;
-    padding: 18px 18px 92px;
-    gap: 28px;
+    padding: 24px 18px 104px;
+    gap: 36px;
+  }
+
+  .customizer-guide {
+    margin: 14px 18px 0;
+    padding: 18px;
+  }
+
+  .customizer-guide-steps {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .customizer-guide-steps li {
+    border-top-width: 1px;
   }
 
   .controls-panel {
     max-width: none;
     height: auto;
     overflow: visible;
-    padding-right: 0;
+    padding: 0;
   }
 
   .controls-scroll-spacer {
