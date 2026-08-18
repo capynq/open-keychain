@@ -1,6 +1,11 @@
 import { expect, test } from '@playwright/test';
 import { ROUTE_MANIFEST } from '../src/app/routes';
-import { waitForLocalFonts, waitForReadyGeometry, watchBrowserErrors } from './helpers';
+import {
+  waitForImageToLoad,
+  waitForLocalFonts,
+  waitForReadyGeometry,
+  watchBrowserErrors,
+} from './helpers';
 
 test('renders every declared route without browser errors', async ({ page }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
@@ -41,6 +46,12 @@ test('loads all reviewed landing visuals at the active responsive breakpoint', a
 
   await page.goto('/');
   await expect(page.locator('.landing-template-card img')).toHaveCount(4);
+  await Promise.all([
+    ...Array.from({ length: 4 }, (_, index) =>
+      waitForImageToLoad(page.locator('.landing-template-card img').nth(index)),
+    ),
+    waitForImageToLoad(page.locator('.configurator-window img')),
+  ]);
   const images = await page.locator('.landing-template-card img').evaluateAll((elements) =>
     elements.map((element) => {
       const image = element as HTMLImageElement;
@@ -73,6 +84,12 @@ test('uses the mobile customizer capture on a mobile landing viewport', async ({
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await expect(page.locator('.landing-template-card img')).toHaveCount(4);
+  await Promise.all([
+    ...Array.from({ length: 4 }, (_, index) =>
+      waitForImageToLoad(page.locator('.landing-template-card img').nth(index)),
+    ),
+    waitForImageToLoad(page.locator('.configurator-window img')),
+  ]);
   expect(
     await page
       .locator('.configurator-window img')

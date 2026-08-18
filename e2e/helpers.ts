@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import sharp from 'sharp';
 
 export type PngDimensions = { width: number; height: number };
@@ -46,6 +46,22 @@ export const waitForLocalFonts = async (page: Page): Promise<void> => {
 export const waitForReadyGeometry = async (page: Page): Promise<void> => {
   await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 15_000 });
   await expect(page.locator('.viewer-surface canvas')).toBeVisible();
+};
+
+/** Wait until a responsive image has selected a source and decoded pixels. */
+export const waitForImageToLoad = async (image: Locator): Promise<void> => {
+  await expect
+    .poll(
+      async () =>
+        image.evaluate((element) => {
+          const candidate = element as HTMLImageElement;
+          return (
+            candidate.complete && candidate.naturalWidth > 0 && candidate.currentSrc.length > 0
+          );
+        }),
+      { timeout: 15_000 },
+    )
+    .toBe(true);
 };
 
 export const prepareForCapture = async (page: Page): Promise<void> => {
