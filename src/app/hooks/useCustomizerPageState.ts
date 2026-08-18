@@ -13,11 +13,15 @@ export const useCustomizerPageState = (locale: Locale) => {
   const [exportOpen, setExportOpen] = useState(false);
   const { track } = useAnalytics();
   const customizer = useCustomizerParams();
-  const geometry = useGeometryGeneration(customizer.params);
+  const geometry = useGeometryGeneration(customizer.params, customizer.selectedFont);
   const hosted = useHostedAccount(customizer.params, (projectParams) => {
     customizer.setParams(normalizeParams({ ...DEFAULT_PARAMS, ...projectParams }));
   });
-  const exportState = useExportActions({ geometry, params: customizer.params });
+  const exportState = useExportActions({
+    geometry,
+    params: customizer.params,
+    fontDefinition: customizer.selectedFont,
+  });
   const guide = useCustomizerGuide();
   const activeStyle = customizer.availableStyles.find(
     (style) => style.id === customizer.params.styleId,

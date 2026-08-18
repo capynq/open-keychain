@@ -7,6 +7,7 @@ import type {
   KeychainParams,
   ThreeMfMode,
 } from '../../../domain/keychain';
+import type { FontDefinition } from '../../../domain/keychain/fonts/catalog';
 import { useAnalytics } from '../../../infrastructure/telemetry';
 
 export type ExportActionsState = {
@@ -24,9 +25,11 @@ type ExportSource = {
 export const useExportActions = ({
   geometry,
   params,
+  fontDefinition,
 }: {
   geometry: ExportSource;
   params: KeychainParams;
+  fontDefinition?: FontDefinition;
 }): ExportActionsState => {
   const [downloading, setDownloading] = useState(false);
   const { track } = useAnalytics();
@@ -41,7 +44,7 @@ export const useExportActions = ({
     let exportToken: string | undefined;
     try {
       if (hostedMode) exportToken = (await requestExportIntent()).token;
-      const file = await geometry.clientRef.current?.export(params, format, mode);
+      const file = await geometry.clientRef.current?.export(params, format, mode, fontDefinition);
       if (!file) return;
       const url = URL.createObjectURL(new Blob([file.data], { type: file.mimeType }));
       const anchor = document.createElement('a');

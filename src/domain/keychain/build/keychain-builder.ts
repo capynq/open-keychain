@@ -70,7 +70,8 @@ const parseFont = (buffer: ArrayBuffer): opentype.Font => {
 };
 const fontCache = new Map<string, Promise<opentype.Font>>();
 const loadFont = (definition: FontDefinition): Promise<opentype.Font> => {
-  const cached = fontCache.get(definition.id);
+  const cacheKey = `${definition.id}\u0000${definition.file}`;
+  const cached = fontCache.get(cacheKey);
   if (cached) return cached;
   const request = fetch(definition.file)
     .then((response) => {
@@ -79,10 +80,10 @@ const loadFont = (definition: FontDefinition): Promise<opentype.Font> => {
     })
     .then(parseFont)
     .catch((error) => {
-      fontCache.delete(definition.id);
+      fontCache.delete(cacheKey);
       throw error;
     });
-  fontCache.set(definition.id, request);
+  fontCache.set(cacheKey, request);
   return request;
 };
 type Wasm = GeometryWasm;
@@ -219,6 +220,7 @@ export const buildKeychain = async (
   wasm: Wasm,
   input: KeychainParams,
   includeExport = false,
+  fontOverride?: FontDefinition,
 ): Promise<{
   result: GeometryResult;
   exportMesh?: MeshBuffer;
@@ -236,7 +238,7 @@ export const buildKeychain = async (
     return invalidResult(issues, 'empty-text', 'Enter a name to create your keychain.');
   if ([...params.text].length > 24)
     return invalidResult(issues, 'text-too-long', 'Shorten the name to 24 characters or fewer.');
-  const definition = fontDefinition(params.fontId);
+  const definition = fontOverride ?? fontDefinition(params.fontId);
   if (
     params.templateId === 'articulated-name' &&
     !fontSupportsArticulatedName(definition, params.text)

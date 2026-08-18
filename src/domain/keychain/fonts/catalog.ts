@@ -14,7 +14,13 @@ export type FontDefinition = {
   minimumFittedTextHeightMm?: number;
   sampleLatin: string;
   sampleCyrillic: string;
+  source: FontSource;
+  provider: FontProvider;
+  specimenUrl?: string;
+  licenseUrl?: string;
 };
+export type FontSource = 'bundled' | 'google';
+export type FontProvider = 'bundled' | 'google-fonts';
 export type FontScript = 'latin' | 'cyrillic';
 export type FontCategory =
   | 'Rounded'
@@ -41,7 +47,7 @@ export const FONT_CATEGORY_ORDER: readonly FontCategory[] = [
   'Calligraphic',
   'Marker',
 ];
-export const FONT_CATALOG: FontDefinition[] = [
+const BUNDLED_FONT_CATALOG: Omit<FontDefinition, 'source' | 'provider'>[] = [
   {
     id: 'nunito',
     name: 'Nunito',
@@ -334,6 +340,11 @@ export const FONT_CATALOG: FontDefinition[] = [
     sampleCyrillic: 'АБВГ',
   },
 ];
+export const FONT_CATALOG: FontDefinition[] = BUNDLED_FONT_CATALOG.map((font) => ({
+  ...font,
+  source: 'bundled',
+  provider: 'bundled',
+}));
 export const FONT_BY_ID = new Map(FONT_CATALOG.map((font) => [font.id, font]));
 export const fontDefinition = (id: string): FontDefinition => {
   return FONT_BY_ID.get(id) ?? FONT_CATALOG[0];

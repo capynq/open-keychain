@@ -22,7 +22,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     }
     const wasm = await getWasm();
     if (request.type === 'generate') {
-      const { result } = await buildKeychain(wasm, request.params);
+      const { result } = await buildKeychain(wasm, request.params, false, request.fontDefinition);
       const response: WorkerResponse = { type: 'geometry', requestId: request.requestId, result };
       self.postMessage(response, {
         transfer: [
@@ -33,7 +33,12 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         ],
       });
     } else {
-      const { result, exportMesh } = await buildKeychain(wasm, request.params, true);
+      const { result, exportMesh } = await buildKeychain(
+        wasm,
+        request.params,
+        true,
+        request.fontDefinition,
+      );
       if (!exportMesh || !result.printable) {
         const message =
           result.issues.find((issue) => issue.severity === 'error')?.message ??

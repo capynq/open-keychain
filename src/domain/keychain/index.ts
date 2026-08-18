@@ -2,6 +2,7 @@ export * from './model/types';
 export * from './model/parameters';
 export * from './text/outline';
 export * from './fonts/catalog';
+export * from './fonts/google-provider';
 export * from './styles/style-builder';
 export * from './templates/template-builder';
 export * from './build/keychain-builder';

@@ -8,9 +8,11 @@ import {
 } from 'react';
 import { GeometryClient } from '../../../infrastructure/geometry';
 import type { GeometryResult, KeychainParams } from '../../../domain/keychain';
+import type { FontDefinition } from '../../../domain/keychain/fonts/catalog';
 
 export const useGeometryGeneration = (
   params: KeychainParams,
+  fontDefinition?: FontDefinition,
 ): {
   clientRef: MutableRefObject<GeometryClient | undefined>;
   result: GeometryResult | undefined;
@@ -41,7 +43,7 @@ export const useGeometryGeneration = (
         setBusy(true);
         setError(undefined);
         clientRef.current
-          ?.request(params)
+          ?.request(params, fontDefinition)
           .then((next) => {
             setResult(next);
             setBusy(false);
@@ -55,7 +57,7 @@ export const useGeometryGeneration = (
     );
 
     return () => window.clearTimeout(timer);
-  }, [params]);
+  }, [params, fontDefinition]);
 
   return { clientRef, result, busy, error, setError };
 };

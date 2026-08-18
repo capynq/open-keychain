@@ -6,6 +6,8 @@ import {
   fontSupportsArticulatedName,
   fontSupportsText,
   textUsesCyrillic,
+  createGoogleFontProvider,
+  type FontDefinition,
 } from '../../../domain/keychain';
 import {
   PARAMETER_RANGES,
@@ -22,7 +24,11 @@ import { resetParamsForSection, type CustomizerResetSection } from '../model/res
 
 export const useCustomizerParams = (): {
   params: KeychainParams;
-  selectedFont: (typeof FONT_CATALOG)[number];
+  selectedFont: FontDefinition;
+  googleFonts: FontDefinition[];
+  googleLoading: boolean;
+  googleError: string | undefined;
+  loadGoogleFonts: () => Promise<void>;
   activeTemplate: (typeof TEMPLATE_CATALOG)[number];
   availableStyles: typeof STYLE_CATALOG;
   usesCyrillic: boolean;
@@ -40,10 +46,31 @@ export const useCustomizerParams = (): {
   const [params, setParams] = useState<KeychainParams>(() => ({ ...DEFAULT_PARAMS }));
 
   const [fontNotice, setFontNotice] = useState<FontNotice>();
+  const [googleFonts, setGoogleFonts] = useState<FontDefinition[]>([]);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleError, setGoogleError] = useState<string>();
+  const [provider] = useState(() =>
+    createGoogleFontProvider({
+      apiKey: import.meta.env.VITE_GOOGLE_FONTS_API_KEY,
+    }),
+  );
+  const loadGoogleFonts = async (): Promise<void> => {
+    if (googleLoading) return;
+    setGoogleLoading(true);
+    setGoogleError(undefined);
+    try {
+      setGoogleFonts(await provider.list());
+    } catch (error) {
+      setGoogleError(error instanceof Error ? error.message : 'Google Fonts are unavailable.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+  const allFonts = useMemo(() => [...FONT_CATALOG, ...googleFonts], [googleFonts]);
 
   const selectedFont = useMemo(
-    () => FONT_CATALOG.find((font) => font.id === params.fontId) ?? FONT_CATALOG[0],
-    [params.fontId],
+    () => allFonts.find((font) => font.id === params.fontId) ?? FONT_CATALOG[0],
+    [allFonts, params.fontId],
   );
 
   const activeTemplate = useMemo(
@@ -65,7 +92,8 @@ export const useCustomizerParams = (): {
   };
 
   const updateText = (text: string): void => {
-    const currentFont = fontDefinition(params.fontId);
+    const currentFont =
+      allFonts.find((font) => font.id === params.fontId) ?? fontDefinition(params.fontId);
     const articulated = params.templateId === 'articulated-name';
     const compatible = articulated
       ? fontSupportsArticulatedName(currentFont, text)
@@ -74,7 +102,7 @@ export const useCustomizerParams = (): {
       ? undefined
       : articulated
         ? articulatedFallbackFont(text)
-        : FONT_CATALOG.find((font) => fontSupportsText(font, text));
+        : allFonts.find((font) => fontSupportsText(font, text));
     if (replacement)
       setFontNotice({ font: currentFont.name, replacement: replacement.name, articulated });
     setParams((current) => ({ ...current, text, fontId: replacement?.id ?? current.fontId }));
@@ -91,7 +119,8 @@ export const useCustomizerParams = (): {
 
   const selectTemplate = (templateId: TemplateId): void => {
     setFontNotice(undefined);
-    const selected = fontDefinition(params.fontId);
+    const selected =
+      allFonts.find((font) => font.id === params.fontId) ?? fontDefinition(params.fontId);
     const previewReplacement =
       templateId === 'articulated-name' && !fontSupportsArticulatedName(selected, params.text)
         ? articulatedFallbackFont(params.text)
@@ -103,7 +132,8 @@ export const useCustomizerParams = (): {
         articulated: true,
       });
     setParams((current) => {
-      const currentFont = fontDefinition(current.fontId);
+      const currentFont =
+        allFonts.find((font) => font.id === current.fontId) ?? fontDefinition(current.fontId);
       const replacement =
         templateId === 'articulated-name' && !fontSupportsArticulatedName(currentFont, current.text)
           ? articulatedFallbackFont(current.text)
@@ -134,6 +164,10 @@ export const useCustomizerParams = (): {
   return {
     params,
     selectedFont,
+    googleFonts,
+    googleLoading,
+    googleError,
+    loadGoogleFonts,
     activeTemplate,
     availableStyles,
     usesCyrillic,

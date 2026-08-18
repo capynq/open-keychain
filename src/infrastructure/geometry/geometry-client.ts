@@ -6,10 +6,12 @@ import type {
   WorkerRequest,
   WorkerResponse,
 } from '../../domain/keychain/model/types';
+import type { FontDefinition } from '../../domain/keychain/fonts/catalog';
 export class GeometryClient {
   private readonly worker: Worker;
   private nextRequestId = 1;
   private latestParams: KeychainParams | undefined;
+  private latestFontDefinition: FontDefinition | undefined;
   private busy = false;
   private resolveGeometry: ((result: GeometryResult) => void) | undefined;
   private rejectGeometry: ((error: Error) => void) | undefined;
@@ -22,20 +24,24 @@ export class GeometryClient {
       this.handleResponse(event.data);
     this.worker.postMessage({ type: 'warmup' } satisfies WorkerRequest);
   }
-  request(params: KeychainParams): Promise<GeometryResult> {
-    this.latestParams = params;
+  request(params: KeychainParams, fontDefinition?: FontDefinition): Promise<GeometryResult> {
     if (this.busy && this.resolveGeometry) {
+      this.latestParams = params;
+      this.latestFontDefinition = fontDefinition;
       return new Promise((resolve, reject) => {
         this.resolveGeometry = resolve;
         this.rejectGeometry = reject;
       });
     }
-    return this.sendGenerate(params);
+    this.latestParams = undefined;
+    this.latestFontDefinition = undefined;
+    return this.sendGenerate(params, fontDefinition);
   }
   export(
     params: KeychainParams,
     format: ExportFormat = 'stl',
     mode: ThreeMfMode = 'separate-colors',
+    fontDefinition?: FontDefinition,
   ): Promise<{
     filename: string;
     mimeType: string;
@@ -50,6 +56,7 @@ export class GeometryClient {
       params,
       format,
       mode,
+      fontDefinition,
     } satisfies WorkerRequest);
     return new Promise((resolve, reject) => {
       this.resolveExport = resolve;
@@ -59,10 +66,18 @@ export class GeometryClient {
   dispose(): void {
     this.worker.terminate();
   }
-  private sendGenerate(params: KeychainParams): Promise<GeometryResult> {
+  private sendGenerate(
+    params: KeychainParams,
+    fontDefinition?: FontDefinition,
+  ): Promise<GeometryResult> {
     const requestId = this.nextRequestId++;
     this.busy = true;
-    this.worker.postMessage({ type: 'generate', requestId, params } satisfies WorkerRequest);
+    this.worker.postMessage({
+      type: 'generate',
+      requestId,
+      params,
+      fontDefinition,
+    } satisfies WorkerRequest);
     return new Promise((resolve, reject) => {
       this.resolveGeometry = resolve;
       this.rejectGeometry = reject;
@@ -76,8 +91,10 @@ export class GeometryClient {
       this.rejectGeometry = undefined;
       const latest = this.latestParams;
       if (latest) {
+        const latestFontDefinition = this.latestFontDefinition;
         this.latestParams = undefined;
-        this.sendGenerate(latest);
+        this.latestFontDefinition = undefined;
+        this.sendGenerate(latest, latestFontDefinition);
       }
       return;
     }

@@ -1,3 +1,5 @@
+import type { FontDefinition } from '../fonts/catalog';
+
 export type StyleId = 'contour' | 'capsule' | 'soft-tag' | 'bubble' | 'arch';
 export type TemplateId = 'name-keychain' | 'articulated-name' | 'nameplate' | 'plant-label';
 export type KeychainParams = {
@@ -86,6 +88,7 @@ export type WorkerRequest =
       type: 'generate';
       requestId: number;
       params: KeychainParams;
+      fontDefinition?: FontDefinition;
     }
   | {
       type: 'export';
@@ -93,6 +96,7 @@ export type WorkerRequest =
       params: KeychainParams;
       format?: ExportFormat;
       mode?: ThreeMfMode;
+      fontDefinition?: FontDefinition;
     };
 export type WorkerResponse =
   | {

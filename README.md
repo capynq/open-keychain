@@ -21,6 +21,15 @@ pnpm dev
 
 Open the local address printed by Vite, then visit `/create` to start designing.
 
+### Optional Google Fonts
+
+The included catalog works offline. To enable the opt-in Google Fonts browser, set
+`VITE_GOOGLE_FONTS_API_KEY` before starting Vite or building the app. This browser-visible key
+is public by design; restrict it in Google Cloud by HTTP referrer to your production domain and
+local development origins. The app requests only Google family metadata and selected font files,
+never the entered name or preview text. If the key is missing or requests are blocked, the
+customizer keeps using the included fonts.
+
 ## Self-host it
 
 ### Docker
