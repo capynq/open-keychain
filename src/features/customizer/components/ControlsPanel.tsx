@@ -34,10 +34,14 @@ export const ControlsPanel = ({
     rangeFor,
   },
   onReset,
+  onNameEdited,
+  onTemplateSelected,
 }: {
   locale: Locale;
   customizer: ReturnType<typeof useCustomizerParams>;
   onReset: () => void;
+  onNameEdited: () => void;
+  onTemplateSelected: () => void;
 }) => (
   <aside className="controls-panel">
     <section className="control-section">
@@ -45,13 +49,16 @@ export const ControlsPanel = ({
         <h2>{t(locale, 'name')}</h2>
         <ResetIconButton label={t(locale, 'resetName')} onClick={() => resetSection('name')} />
       </div>
-      <label className="text-input">
+      <label className="text-input" data-guide-target="name">
         <span className="sr-only">Name or text</span>
         <input
           aria-label="Name or text"
           value={params.text}
           maxLength={24}
-          onChange={(event) => updateText(event.target.value)}
+          onChange={(event) => {
+            onNameEdited();
+            updateText(event.target.value);
+          }}
           placeholder={t(locale, 'namePlaceholder')}
         />
       </label>
@@ -64,13 +71,17 @@ export const ControlsPanel = ({
           onClick={() => resetSection('template')}
         />
       </div>
-      <div className="card-grid template-grid">
+      <div className="card-grid template-grid" data-guide-target="shape">
         {TEMPLATE_CATALOG.map((template) => (
           <button
             type="button"
             key={template.id}
             className={`choice-card ${params.templateId === template.id ? 'selected' : ''}`}
-            onClick={() => selectTemplate(template.id)}
+            data-guide-target={params.templateId === template.id ? 'shape-control' : undefined}
+            onClick={() => {
+              onTemplateSelected();
+              selectTemplate(template.id);
+            }}
           >
             <span className={`style-swatch template-${template.id}`} />
             <strong>{templateName(locale, template.id, template.name)}</strong>

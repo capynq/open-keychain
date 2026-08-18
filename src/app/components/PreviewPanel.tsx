@@ -185,7 +185,7 @@ export const PreviewPanel = ({
   onSurfaceChange: (preset: SurfacePresetId) => void;
   onSurfaceReset: () => void;
 }) => (
-  <section className="preview-panel">
+  <section className="preview-panel" data-guide-target="preview">
     <div className="preview-heading">
       <h2 className="eyebrow">{t(locale, 'livePreview')}</h2>
       <span className={`status-pill ${status.className}`}>{status.text}</span>

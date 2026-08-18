@@ -7,7 +7,7 @@ import { LandingRunModes } from '../components/landing/LandingRunModes';
 import { LandingTemplates } from '../components/landing/LandingTemplates';
 import { LandingTrust } from '../components/landing/LandingTrust';
 import { LandingWorkflow } from '../components/landing/LandingWorkflow';
-import { useAnalytics } from '../../infrastructure/analytics';
+import { useAnalytics } from '../../infrastructure/telemetry';
 import '../styles/landing.css';
 
 export const LandingPage = ({

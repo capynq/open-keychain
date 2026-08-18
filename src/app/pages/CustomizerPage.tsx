@@ -1,6 +1,7 @@
 import type { Locale } from '../../infrastructure/i18n';
 import { ExportDialog } from '../../features/export';
 import { AppHeader } from '../components/AppHeader';
+import { CustomizerOnboarding } from '../components/CustomizerOnboarding';
 import { CustomizerWorkspace } from '../components/CustomizerWorkspace';
 import { useCustomizerPageState } from '../hooks/useCustomizerPageState';
 
@@ -22,6 +23,12 @@ export const CustomizerPage = ({
         exportOpen={state.exportOpen}
         onExportOpen={() => state.setExportOpen(true)}
         hosted={state.hosted}
+      />
+      <CustomizerOnboarding
+        locale={locale}
+        guide={state.guide}
+        printable={state.exportState.printable}
+        onExportOpen={() => state.setExportOpen(true)}
       />
       <CustomizerWorkspace locale={locale} state={state} />
       <ExportDialog

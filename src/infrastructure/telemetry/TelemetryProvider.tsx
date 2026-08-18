@@ -1,6 +1,6 @@
 import posthog from 'posthog-js';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { AnalyticsContext, type AnalyticsConsent } from './analytics-context';
+import { AnalyticsContext, type AnalyticsConsent } from './telemetry-context';
 import { sanitizeProperties, type AnalyticsEvent, type AnalyticsProperties } from './events';
 
 const CONSENT_KEY = 'open-keychain.analytics-consent';
@@ -10,21 +10,29 @@ const POSTHOG_HOST =
 
 const readConsent = (): AnalyticsConsent => {
   if (typeof window === 'undefined') return 'unknown';
-  const value = window.localStorage.getItem(CONSENT_KEY);
-  return value === 'accepted' || value === 'declined' ? value : 'unknown';
+  try {
+    const value = window.localStorage.getItem(CONSENT_KEY);
+    return value === 'accepted' || value === 'declined' ? value : 'unknown';
+  } catch {
+    return 'unknown';
+  }
 };
 
 const configurePostHog = (): void => {
   if (!POSTHOG_KEY || posthog.__loaded) return;
-  posthog.init(POSTHOG_KEY, {
-    api_host: POSTHOG_HOST,
-    capture_pageview: false,
-    capture_pageleave: false,
-    autocapture: false,
-    disable_session_recording: true,
-    persistence: 'localStorage',
-    disable_cookie: true,
-  });
+  try {
+    posthog.init(POSTHOG_KEY, {
+      api_host: POSTHOG_HOST,
+      capture_pageview: false,
+      capture_pageleave: false,
+      autocapture: false,
+      disable_session_recording: true,
+      persistence: 'localStorage',
+      disable_cookie: true,
+    });
+  } catch {
+    return;
+  }
 };
 
 export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
@@ -35,13 +43,21 @@ export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
   }, [consent]);
 
   const setConsent = useCallback((nextConsent: Exclude<AnalyticsConsent, 'unknown'>): void => {
-    window.localStorage.setItem(CONSENT_KEY, nextConsent);
-    if (nextConsent === 'accepted') {
-      configurePostHog();
-      posthog.opt_in_capturing();
-    } else if (posthog.__loaded) {
-      posthog.opt_out_capturing();
-      posthog.reset();
+    try {
+      window.localStorage.setItem(CONSENT_KEY, nextConsent);
+    } catch {
+      return setConsentState(nextConsent);
+    }
+    try {
+      if (nextConsent === 'accepted') {
+        configurePostHog();
+        if (posthog.__loaded) posthog.opt_in_capturing();
+      } else if (posthog.__loaded) {
+        posthog.opt_out_capturing();
+        posthog.reset();
+      }
+    } catch {
+      return setConsentState(nextConsent);
     }
     setConsentState(nextConsent);
   }, []);
@@ -49,7 +65,11 @@ export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
   const track = useCallback(
     (event: AnalyticsEvent, properties: AnalyticsProperties = {}): void => {
       if (consent !== 'accepted' || !POSTHOG_KEY || !posthog.__loaded) return;
-      posthog.capture(event, sanitizeProperties(properties));
+      try {
+        posthog.capture(event, sanitizeProperties(properties));
+      } catch {
+        return;
+      }
     },
     [consent],
   );

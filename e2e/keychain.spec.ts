@@ -89,7 +89,7 @@ for (const flow of [
 
 test('customizes a name, uses every icon camera preset, and downloads STL', async ({ page }) => {
   await page.goto('/create');
-  await expect(page.getByText('Open Keychain')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open Keychain' })).toBeVisible();
   await expect(page.locator('.brand-mark small')).toHaveCount(0);
   await expect(page.locator('.preview-heading h2')).toHaveText('LIVE PREVIEW');
   await expect(page.getByRole('heading', { name: 'ALEX' })).toHaveCount(0);

@@ -129,6 +129,17 @@
     "accept": "Allow analytics",
     "decline": "No thanks"
   },
+  "customizerGuide": {
+    "label": "Quick start",
+    "title": "Make your first printable product",
+    "dismiss": "Dismiss quick start",
+    "stepAction": "Quick start step",
+    "steps": {
+      "name": { "title": "Name it", "body": "Enter the name or label" },
+      "shape": { "title": "Shape it", "body": "Choose a proven template" },
+      "export": { "title": "Export it", "body": "Download STL or 3MF" }
+    }
+  },
   "landing": {
     "navigation": "Main navigation",
     "navHow": "How it works",

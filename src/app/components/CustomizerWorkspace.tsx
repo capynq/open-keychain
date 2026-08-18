@@ -1,6 +1,6 @@
 import { ControlsPanel } from '../../features/customizer';
 import type { Locale } from '../../infrastructure/i18n';
-import { useAnalytics } from '../../infrastructure/analytics';
+import { useAnalytics } from '../../infrastructure/telemetry';
 import { PreviewPanel } from './PreviewPanel';
 import type { CustomizerPageState } from '../hooks/useCustomizerPageState';
 
@@ -24,6 +24,8 @@ const WorkspaceContent = ({ locale, state }: { locale: Locale; state: Customizer
       <ControlsPanel
         locale={locale}
         customizer={state.customizer}
+        onNameEdited={state.guide.markNameEdited}
+        onTemplateSelected={state.guide.markTemplateEdited}
         onReset={() => {
           state.customizer.reset();
           setSurface('matte');

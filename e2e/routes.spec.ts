@@ -198,6 +198,60 @@ test('accepts analytics consent without blocking the primary action', async ({ p
   assertNoBrowserErrors();
 });
 
+test('loads when analytics module URLs and transport requests are blocked', async ({ page }) => {
+  const assertNoBrowserErrors = watchBrowserErrors(page);
+
+  await page.route(/\/src\/infrastructure\/analytics\/|posthog/, (route) => route.abort());
+  await page.goto('/create');
+  await expect(page.getByRole('main', { name: 'Customizer' })).toBeVisible();
+  await waitForReadyGeometry(page);
+  assertNoBrowserErrors();
+});
+
+test('guides a first-time customizer visitor from name to export', async ({ page }) => {
+  const assertNoBrowserErrors = watchBrowserErrors(page);
+
+  await page.goto('/create');
+  await page.evaluate(() => localStorage.removeItem('open-keychain.customizer-guide'));
+  await page.reload();
+  await expect(page.locator('.customizer-guide')).toBeVisible();
+
+  await page.locator('.customizer-guide-steps li').nth(0).getByRole('button').click();
+  await expect(page.locator('[data-guide-target="name"] input')).toBeFocused();
+  await page.locator('.customizer-guide-steps li').nth(1).getByRole('button').click();
+  await expect(page.locator('[data-guide-target="shape-control"]')).toBeFocused();
+  await waitForReadyGeometry(page);
+  await page.locator('.customizer-guide-steps li').nth(2).getByRole('button').click();
+  await expect(page.getByRole('dialog', { name: 'Choose an export' })).toBeVisible();
+  await page.getByRole('button', { name: 'Close' }).click();
+
+  await page.getByRole('button', { name: 'Dismiss quick start' }).click();
+  await expect(page.locator('.customizer-guide')).toBeHidden();
+  await page.reload();
+  await expect(page.locator('.customizer-guide')).toBeHidden();
+  assertNoBrowserErrors();
+});
+
+for (const locale of ['en', 'ru', 'uk'] as const) {
+  test(`keeps the customizer guide readable in ${locale.toUpperCase()}`, async ({ page }) => {
+    const assertNoBrowserErrors = watchBrowserErrors(page);
+
+    await page.goto('/create');
+    await page.evaluate(() => localStorage.removeItem('open-keychain.customizer-guide'));
+    await page.reload();
+    await page.locator('.language-picker select').selectOption(locale);
+    await expect(page.locator('html')).toHaveAttribute('lang', locale);
+    await expect(page.locator('.customizer-guide')).toBeVisible();
+    await expect(page.locator('.customizer-guide-steps button')).toHaveCount(3);
+    const layout = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }));
+    expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
+    assertNoBrowserErrors();
+  });
+}
+
 for (const locale of ['en', 'ru', 'uk'] as const) {
   test(`keeps the ${locale.toUpperCase()} landing chrome readable`, async ({ page }) => {
     const assertNoBrowserErrors = watchBrowserErrors(page);

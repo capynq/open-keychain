@@ -7,7 +7,7 @@ import type {
   KeychainParams,
   ThreeMfMode,
 } from '../../../domain/keychain';
-import { useAnalytics } from '../../../infrastructure/analytics';
+import { useAnalytics } from '../../../infrastructure/telemetry';
 
 export type ExportActionsState = {
   downloading: boolean;

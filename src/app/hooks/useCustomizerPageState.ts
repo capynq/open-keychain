@@ -5,7 +5,8 @@ import { useCustomizerParams, useGeometryGeneration } from '../../features/custo
 import { useExportActions } from '../../features/export';
 import { useHostedAccount } from '../../features/hosted';
 import { previewStatus, type SurfacePresetId } from '../../features/preview';
-import { useAnalytics } from '../../infrastructure/analytics';
+import { useAnalytics } from '../../infrastructure/telemetry';
+import { useCustomizerGuide } from './useCustomizerGuide';
 
 export const useCustomizerPageState = (locale: Locale) => {
   const [surfacePreset, setSurfacePreset] = useState<SurfacePresetId>('matte');
@@ -17,6 +18,7 @@ export const useCustomizerPageState = (locale: Locale) => {
     customizer.setParams(normalizeParams({ ...DEFAULT_PARAMS, ...projectParams }));
   });
   const exportState = useExportActions({ geometry, params: customizer.params });
+  const guide = useCustomizerGuide();
   const activeStyle = customizer.availableStyles.find(
     (style) => style.id === customizer.params.styleId,
   );
@@ -69,6 +71,7 @@ export const useCustomizerPageState = (locale: Locale) => {
       style: activeStyle ? styleName(locale, activeStyle.id, activeStyle.name) : undefined,
       font: customizer.selectedFont.name,
     },
+    guide,
   };
 };
 

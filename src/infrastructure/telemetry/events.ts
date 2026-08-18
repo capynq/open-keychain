@@ -9,7 +9,9 @@ export type AnalyticsEvent =
   | 'export_started'
   | 'export_completed'
   | 'export_failed'
-  | 'surface_preset_changed';
+  | 'surface_preset_changed'
+  | 'customizer_guide_step_clicked'
+  | 'customizer_guide_dismissed';
 
 export type AnalyticsProperties = Record<string, string | number | boolean | undefined>;
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router';
-import { useAnalytics } from '../infrastructure/analytics';
+import { useAnalytics } from '../infrastructure/telemetry';
 import { detectLocale, setLocale, t, type Locale } from '../infrastructure/i18n';
 import { CustomizerPage } from './pages/CustomizerPage';
 import { LandingPage } from './pages/LandingPage';
