@@ -3,7 +3,6 @@ import sharp from 'sharp';
 
 export type PngDimensions = { width: number; height: number };
 
-/** Validate that a captured PNG is non-empty and has the expected viewport size. */
 export const assertPngCapture = async (
   image: Buffer,
   expected: PngDimensions,
@@ -48,7 +47,6 @@ export const waitForReadyGeometry = async (page: Page): Promise<void> => {
   await expect(page.locator('.viewer-surface canvas')).toBeVisible();
 };
 
-/** Wait until a responsive image has selected a source and decoded pixels. */
 export const waitForImageToLoad = async (image: Locator): Promise<void> => {
   await expect
     .poll(

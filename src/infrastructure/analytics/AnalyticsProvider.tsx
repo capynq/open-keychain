@@ -1,29 +1,12 @@
 import posthog from 'posthog-js';
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { AnalyticsContext, type AnalyticsConsent } from './analytics-context';
 import { sanitizeProperties, type AnalyticsEvent, type AnalyticsProperties } from './events';
 
 const CONSENT_KEY = 'open-keychain.analytics-consent';
 const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY as string | undefined;
 const POSTHOG_HOST =
   (import.meta.env.VITE_POSTHOG_HOST as string | undefined) ?? 'https://eu.i.posthog.com';
-
-export type AnalyticsConsent = 'unknown' | 'accepted' | 'declined';
-
-type AnalyticsContextValue = {
-  consent: AnalyticsConsent;
-  setConsent: (consent: Exclude<AnalyticsConsent, 'unknown'>) => void;
-  track: (event: AnalyticsEvent, properties?: AnalyticsProperties) => void;
-};
-
-const AnalyticsContext = createContext<AnalyticsContextValue | undefined>(undefined);
 
 const readConsent = (): AnalyticsConsent => {
   if (typeof window === 'undefined') return 'unknown';
@@ -73,11 +56,4 @@ export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
 
   const value = useMemo(() => ({ consent, setConsent, track }), [consent, setConsent, track]);
   return <AnalyticsContext.Provider value={value}>{children}</AnalyticsContext.Provider>;
-};
-
-// eslint-disable-next-line react-refresh/only-export-components
-export const useAnalytics = (): AnalyticsContextValue => {
-  const value = useContext(AnalyticsContext);
-  if (!value) throw new Error('useAnalytics must be used inside AnalyticsProvider');
-  return value;
 };
