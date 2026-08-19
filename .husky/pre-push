@@ -1,12 +1,13 @@
+set -e
+
 if command -v pnpm >/dev/null 2>&1; then
   if ! git diff --quiet || ! git diff --cached --quiet; then
     echo "pre-push: commit or stash tracked changes before automatic repair." >&2
     exit 1
   fi
 
-  # Repair tracked files before validation so a formatter-only failure does
-  # not block a push. The repaired files are folded into the commit being
-  # pushed, while untracked files are intentionally left alone.
+  # Repair tracked files before validation so fixable formatting/lint issues
+  # are folded into the commit being pushed. Untracked files are left alone.
   pnpm fix
   git add -u
 
