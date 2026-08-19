@@ -14,10 +14,12 @@ import {
   t,
   type Locale,
 } from '../../../infrastructure/i18n';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ResetIconButton } from '../../../components/ResetIconButton';
 import { type useCustomizerParams } from '../hooks/useCustomizerParams';
 import { RangeControl } from './RangeControl';
+import { DesignCardRail, DesignSelectCard } from './DesignSelectCard';
+import { stylePreviewAsset, TEMPLATE_PREVIEW_ASSETS } from './design-card-assets';
 
 type FontSourceTab = 'bundled' | 'google' | 'local';
 type FontBrowserState = {
@@ -70,6 +72,8 @@ export const ControlsPanel = ({
   const [openCategories, setOpenCategories] = useState<Set<FontCategory>>(
     () => new Set(FONT_CATEGORY_ORDER),
   );
+  const controlsRef = useRef<HTMLElement>(null);
+  const [scrollState, setScrollState] = useState<'top' | 'middle' | 'bottom' | 'none'>('none');
   const fileSystemPickerAvailable =
     typeof window !== 'undefined' && typeof window.showOpenFilePicker === 'function';
   const fontsPerPage = 12;
@@ -113,6 +117,31 @@ export const ControlsPanel = ({
       [fontSource]: { ...current[fontSource], ...changes },
     }));
   };
+
+  useEffect(() => {
+    const controls = controlsRef.current;
+    if (!controls) return undefined;
+    const updateScrollState = (): void => {
+      const atTop = controls.scrollTop <= 1;
+      const atBottom = controls.scrollHeight - controls.clientHeight - controls.scrollTop <= 1;
+      setScrollState(
+        controls.scrollHeight <= controls.clientHeight
+          ? 'none'
+          : atTop
+            ? 'top'
+            : atBottom
+              ? 'bottom'
+              : 'middle',
+      );
+    };
+    updateScrollState();
+    controls.addEventListener('scroll', updateScrollState, { passive: true });
+    window.addEventListener('resize', updateScrollState);
+    return () => {
+      controls.removeEventListener('scroll', updateScrollState);
+      window.removeEventListener('resize', updateScrollState);
+    };
+  }, []);
   const activateFontSource = (source: FontSourceTab): void => {
     setFontSource(source);
     if (source === 'google' && !customizer.googleFonts.length && !customizer.googleError)
@@ -294,7 +323,21 @@ export const ControlsPanel = ({
   );
 
   return (
-    <aside className="controls-panel" aria-label={t(locale, 'customizerControls')}>
+    <aside
+      ref={controlsRef}
+      className="controls-panel"
+      aria-label={t(locale, 'customizerControls')}
+      data-scroll-state={scrollState}
+    >
+      <span className="controls-scroll-state sr-only" role="status" aria-live="polite">
+        {scrollState === 'middle'
+          ? t(locale, 'controlsScrollMiddle')
+          : scrollState === 'bottom'
+            ? t(locale, 'controlsScrollBottom')
+            : scrollState === 'top'
+              ? t(locale, 'controlsScrollTop')
+              : ''}
+      </span>
       <section className="control-section">
         <div className="section-heading">
           <h2>{t(locale, 'name')}</h2>
@@ -314,7 +357,7 @@ export const ControlsPanel = ({
           />
         </label>
       </section>
-      <section className="control-section">
+      <section className="control-section" data-guide-target="shape">
         <div className="section-heading">
           <h2>{t(locale, 'template')}</h2>
           <ResetIconButton
@@ -322,24 +365,23 @@ export const ControlsPanel = ({
             onClick={() => resetSection('template')}
           />
         </div>
-        <div className="card-grid template-grid" data-guide-target="shape">
+        <DesignCardRail className="template-grid" label={t(locale, 'templateChoices')}>
           {TEMPLATE_CATALOG.map((template) => (
-            <button
-              type="button"
+            <DesignSelectCard
               key={template.id}
-              className={`choice-card ${params.templateId === template.id ? 'selected' : ''}`}
-              aria-pressed={params.templateId === template.id}
-              data-guide-target={params.templateId === template.id ? 'shape-control' : undefined}
-              onClick={() => {
+              title={templateName(locale, template.id, template.name)}
+              description={template.description}
+              previewSrc={TEMPLATE_PREVIEW_ASSETS[template.id]}
+              selected={params.templateId === template.id}
+              guideTarget={params.templateId === template.id ? 'shape-control' : undefined}
+              testId={`template-card-${template.id}`}
+              onSelect={() => {
                 onTemplateSelected();
                 selectTemplate(template.id);
               }}
-            >
-              <span className={`style-swatch template-${template.id}`} />
-              <strong>{templateName(locale, template.id, template.name)}</strong>
-            </button>
+            />
           ))}
-        </div>
+        </DesignCardRail>
       </section>
       {availableStyles.length > 0 && (
         <section className="control-section">
@@ -350,23 +392,19 @@ export const ControlsPanel = ({
               onClick={() => resetSection('style')}
             />
           </div>
-          <div className="card-grid">
+          <DesignCardRail label={t(locale, 'styleChoices')}>
             {availableStyles.map((style) => (
-              <button
-                type="button"
+              <DesignSelectCard
                 key={style.id}
-                className={`choice-card ${params.styleId === style.id ? 'selected' : ''}`}
-                aria-pressed={params.styleId === style.id}
-                onClick={() => update('styleId', style.id as KeychainParams['styleId'])}
-              >
-                <span className={`style-swatch style-${style.id}`} />
-                <span className="choice-card-copy">
-                  <strong>{styleName(locale, style.id, style.name)}</strong>
-                  <small>{styleDescription(locale, style.id, style.description)}</small>
-                </span>
-              </button>
+                title={styleName(locale, style.id, style.name)}
+                description={styleDescription(locale, style.id, style.description)}
+                previewSrc={stylePreviewAsset(params.templateId, style.id)}
+                selected={params.styleId === style.id}
+                testId={`style-card-${style.id}`}
+                onSelect={() => update('styleId', style.id as KeychainParams['styleId'])}
+              />
             ))}
-          </div>
+          </DesignCardRail>
         </section>
       )}
       <section className="control-section">
@@ -478,34 +516,36 @@ export const ControlsPanel = ({
           ) : (
             <>
               {fontSource === 'local' && (
-                <div className="font-provider-state">
+                <div className="font-provider-state font-local-provider-state">
                   <p>{t(locale, 'fontLocalDescription')}</p>
-                  {!fileSystemPickerAvailable && (
-                    <input
-                      type="file"
-                      accept=".ttf,.otf,font/ttf,font/otf"
-                      multiple
-                      onChange={(event) => {
-                        if (event.target.files)
-                          void customizer.importLocalFonts(event.target.files);
-                        event.currentTarget.value = '';
-                      }}
-                    />
-                  )}
-                  {fileSystemPickerAvailable && (
-                    <button type="button" onClick={() => void customizer.pickLocalFonts()}>
-                      {t(locale, 'fontLocalChoose')}
-                    </button>
-                  )}
-                  <details className="font-local-about">
-                    <summary
-                      aria-label={t(locale, 'fontLocalAbout')}
-                      title={t(locale, 'fontLocalAbout')}
-                    >
-                      ⓘ
-                    </summary>
-                    <p>{t(locale, 'fontLocalAboutDescription')}</p>
-                  </details>
+                  <div className="font-local-actions">
+                    {!fileSystemPickerAvailable && (
+                      <input
+                        type="file"
+                        accept=".ttf,.otf,font/ttf,font/otf"
+                        multiple
+                        onChange={(event) => {
+                          if (event.target.files)
+                            void customizer.importLocalFonts(event.target.files);
+                          event.currentTarget.value = '';
+                        }}
+                      />
+                    )}
+                    {fileSystemPickerAvailable && (
+                      <button type="button" onClick={() => void customizer.pickLocalFonts()}>
+                        {t(locale, 'fontLocalChoose')}
+                      </button>
+                    )}
+                    <details className="font-local-about">
+                      <summary
+                        aria-label={t(locale, 'fontLocalAbout')}
+                        title={t(locale, 'fontLocalAbout')}
+                      >
+                        ⓘ
+                      </summary>
+                      <p>{t(locale, 'fontLocalAboutDescription')}</p>
+                    </details>
+                  </div>
                   {customizer.localFonts
                     .filter((record) => record.status === 'unavailable')
                     .map((record) => (

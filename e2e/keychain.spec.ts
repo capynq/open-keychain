@@ -85,6 +85,8 @@ for (const flow of [
     await formatButton.focus();
     await page.keyboard.press('Enter');
     expect((await download).suggestedFilename()).toMatch(flow.filename);
+    await expect(dialog).toContainText(/Download ready|Загрузка готова/);
+    await dialog.getByLabel(flow.locale === 'EN' ? 'Close' : 'Закрыть').click();
     await expect(dialog).toBeHidden();
   });
 }

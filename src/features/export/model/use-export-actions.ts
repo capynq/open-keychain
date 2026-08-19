@@ -1,4 +1,4 @@
-import { useState, type MutableRefObject, type Dispatch, type SetStateAction } from 'react';
+import { useRef, useState, type MutableRefObject, type Dispatch, type SetStateAction } from 'react';
 import { completeExportIntent, hostedMode, requestExportIntent } from '../../hosted';
 import type { GeometryClient } from '../../../infrastructure/geometry';
 import type {
@@ -13,7 +13,11 @@ import { useAnalytics } from '../../../infrastructure/telemetry';
 export type ExportActionsState = {
   downloading: boolean;
   printable: boolean;
+  status: 'idle' | 'exporting' | 'success' | 'error';
+  error?: string;
   download: (format: ExportFormat, mode?: ThreeMfMode) => Promise<void>;
+  retry: () => Promise<void>;
+  clearStatus: () => void;
 };
 
 type ExportSource = {
@@ -32,6 +36,9 @@ export const useExportActions = ({
   fontDefinition?: FontDefinition;
 }): ExportActionsState => {
   const [downloading, setDownloading] = useState(false);
+  const [status, setStatus] = useState<ExportActionsState['status']>('idle');
+  const [error, setError] = useState<string>();
+  const lastRequest = useRef<{ format: ExportFormat; mode: ThreeMfMode } | undefined>(undefined);
   const { track } = useAnalytics();
 
   const download = async (
@@ -39,13 +46,16 @@ export const useExportActions = ({
     mode: ThreeMfMode = 'separate-colors',
   ): Promise<void> => {
     if (!geometry.result?.printable || downloading) return;
+    lastRequest.current = { format, mode };
     setDownloading(true);
+    setStatus('exporting');
+    setError(undefined);
     track('export_started', { format, mode, template: params.templateId });
     let exportToken: string | undefined;
     try {
       if (hostedMode) exportToken = (await requestExportIntent()).token;
       const file = await geometry.clientRef.current?.export(params, format, mode, fontDefinition);
-      if (!file) return;
+      if (!file) throw new Error('The file could not be created.');
       const url = URL.createObjectURL(new Blob([file.data], { type: file.mimeType }));
       const anchor = document.createElement('a');
 
@@ -55,13 +65,33 @@ export const useExportActions = ({
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       if (exportToken) await completeExportIntent(exportToken);
       track('export_completed', { format, mode, template: params.templateId });
+      setStatus('success');
     } catch (cause) {
-      geometry.setError(cause instanceof Error ? cause.message : 'The file could not be created.');
+      const message = cause instanceof Error ? cause.message : 'The file could not be created.';
+
+      setError(message);
+      setStatus('error');
+      geometry.setError(message);
       track('export_failed', { format, mode, template: params.templateId, category: 'generation' });
     } finally {
       setDownloading(false);
     }
   };
 
-  return { downloading, printable: Boolean(geometry.result?.printable), download };
+  const retry = async (): Promise<void> => {
+    if (lastRequest.current) await download(lastRequest.current.format, lastRequest.current.mode);
+  };
+
+  return {
+    downloading,
+    printable: Boolean(geometry.result?.printable),
+    status,
+    error,
+    download,
+    retry,
+    clearStatus: () => {
+      setStatus('idle');
+      setError(undefined);
+    },
+  };
 };

@@ -153,7 +153,11 @@ const PreviewSummary = ({
         </span>
       </div>
       {status.feedback && (
-        <p className="summary-feedback" aria-live="polite">
+        <p
+          className="summary-feedback"
+          role={status.className === 'attention' ? 'alert' : 'status'}
+          aria-live="polite"
+        >
           {status.feedback}
         </p>
       )}
@@ -185,10 +189,17 @@ export const PreviewPanel = ({
   onSurfaceChange: (preset: SurfacePresetId) => void;
   onSurfaceReset: () => void;
 }) => (
-  <section className="preview-panel" data-guide-target="preview">
+  <section
+    className="preview-panel"
+    data-guide-target="preview"
+    aria-busy={geometry.busy}
+    data-generation-id={geometry.result?.generationId ?? ''}
+  >
     <div className="preview-heading">
       <h2 className="eyebrow">{t(locale, 'livePreview')}</h2>
-      <span className={`status-pill ${status.className}`}>{status.text}</span>
+      <span className={`status-pill ${status.className}`} role="status" aria-live="polite">
+        {status.text}
+      </span>
     </div>
     <div className="viewer-wrap">
       <Viewer result={geometry.result} surfacePreset={surfacePreset} locale={locale} />
@@ -198,7 +209,12 @@ export const PreviewPanel = ({
         onSurfaceChange={onSurfaceChange}
         onReset={onSurfaceReset}
       />
-      {geometry.busy && <div className="viewer-loading">{t(locale, 'updating')}</div>}
+      {geometry.busy && (
+        <div className="viewer-loading" role="status" aria-live="polite">
+          <span className="viewer-spinner" aria-hidden="true" />
+          <span>{t(locale, 'updating')}</span>
+        </div>
+      )}
     </div>
     <PreviewSummary locale={locale} geometry={geometry} status={status} modelInfo={modelInfo} />
   </section>

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { t, type Locale } from '../../../infrastructure/i18n';
 import type { ExportActionsState } from '../model/use-export-actions';
 
@@ -12,12 +13,16 @@ export const ExportDialog = ({
   exportState: ExportActionsState;
   onClose: () => void;
 }) => {
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (open && !wasOpen.current) exportState.clearStatus();
+    wasOpen.current = open;
+  }, [exportState, open]);
   if (!open) return null;
   const handleDownload = (
     format: Parameters<ExportActionsState['download']>[0],
     mode?: Parameters<ExportActionsState['download']>[1],
   ): void => {
-    onClose();
     void exportState.download(format, mode);
   };
   return (
@@ -44,12 +49,39 @@ export const ExportDialog = ({
             className="modal-close"
             onClick={onClose}
             aria-label={t(locale, 'close')}
-            autoFocus
+            autoFocus={!exportState.downloading}
+            disabled={exportState.downloading}
           >
             ×
           </button>
         </div>
         <p className="export-modal-copy">{t(locale, 'exportDescription')}</p>
+        {!exportState.printable && (
+          <p className="export-inline-state" role="status">
+            {t(locale, 'exportUnavailable')}
+          </p>
+        )}
+        {exportState.status === 'exporting' && (
+          <p className="export-inline-state exporting" role="status" aria-live="polite">
+            {t(locale, 'exporting')}
+          </p>
+        )}
+        {exportState.status === 'success' && (
+          <div className="export-inline-state success" role="status" aria-live="polite">
+            <p>{t(locale, 'exportCompleted')}</p>
+            <button type="button" onClick={onClose}>
+              {t(locale, 'close')}
+            </button>
+          </div>
+        )}
+        {exportState.status === 'error' && (
+          <div className="export-inline-state error" role="alert">
+            <p>{t(locale, 'exportFailed')}</p>
+            <button type="button" onClick={() => void exportState.retry()}>
+              {t(locale, 'retry')}
+            </button>
+          </div>
+        )}
         <div className="export-choice-grid">
           <button
             type="button"
