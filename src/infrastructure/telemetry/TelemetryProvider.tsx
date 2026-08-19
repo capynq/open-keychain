@@ -1,5 +1,5 @@
-import posthog from 'posthog-js';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import type posthog from 'posthog-js';
 import { AnalyticsContext, type AnalyticsConsent } from './telemetry-context';
 import { sanitizeProperties, type AnalyticsEvent, type AnalyticsProperties } from './events';
 
@@ -7,6 +7,9 @@ const CONSENT_KEY = 'open-keychain.analytics-consent';
 const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY as string | undefined;
 const POSTHOG_HOST =
   (import.meta.env.VITE_POSTHOG_HOST as string | undefined) ?? 'https://eu.i.posthog.com';
+type PostHogClient = typeof posthog;
+let posthogClient: PostHogClient | undefined;
+let posthogLoad: Promise<PostHogClient> | undefined;
 
 const readConsent = (): AnalyticsConsent => {
   if (typeof window === 'undefined') return 'unknown';
@@ -18,10 +21,27 @@ const readConsent = (): AnalyticsConsent => {
   }
 };
 
-const configurePostHog = (): void => {
-  if (!POSTHOG_KEY || posthog.__loaded) return;
+const loadPostHog = (): Promise<PostHogClient> => {
+  if (!posthogLoad) {
+    posthogLoad = import('posthog-js')
+      .then(({ default: client }) => {
+        posthogClient = client;
+        return client;
+      })
+      .catch((error: unknown) => {
+        posthogLoad = undefined;
+        throw error;
+      });
+  }
+  return posthogLoad;
+};
+
+const configurePostHog = async (): Promise<void> => {
+  if (!POSTHOG_KEY || posthogClient?.__loaded) return;
   try {
-    posthog.init(POSTHOG_KEY, {
+    const client = await loadPostHog();
+    if (client.__loaded) return;
+    client.init(POSTHOG_KEY, {
       api_host: POSTHOG_HOST,
       capture_pageview: false,
       capture_pageleave: false,
@@ -39,7 +59,7 @@ export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
   const [consent, setConsentState] = useState<AnalyticsConsent>(readConsent);
 
   useEffect(() => {
-    if (consent === 'accepted') configurePostHog();
+    if (consent === 'accepted') void configurePostHog();
   }, [consent]);
 
   const setConsent = useCallback((nextConsent: Exclude<AnalyticsConsent, 'unknown'>): void => {
@@ -50,11 +70,12 @@ export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
     }
     try {
       if (nextConsent === 'accepted') {
-        configurePostHog();
-        if (posthog.__loaded) posthog.opt_in_capturing();
-      } else if (posthog.__loaded) {
-        posthog.opt_out_capturing();
-        posthog.reset();
+        void configurePostHog().then(() => {
+          if (posthogClient?.__loaded) posthogClient.opt_in_capturing();
+        });
+      } else if (posthogClient?.__loaded) {
+        posthogClient.opt_out_capturing();
+        posthogClient.reset();
       }
     } catch {
       return setConsentState(nextConsent);
@@ -64,9 +85,9 @@ export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
 
   const track = useCallback(
     (event: AnalyticsEvent, properties: AnalyticsProperties = {}): void => {
-      if (consent !== 'accepted' || !POSTHOG_KEY || !posthog.__loaded) return;
+      if (consent !== 'accepted' || !POSTHOG_KEY || !posthogClient?.__loaded) return;
       try {
-        posthog.capture(event, sanitizeProperties(properties));
+        posthogClient.capture(event, sanitizeProperties(properties));
       } catch {
         return;
       }

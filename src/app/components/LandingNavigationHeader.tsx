@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { hostedMode } from '../../features/hosted';
+import { hostedMode } from '../../features/hosted/config';
 import type { Locale } from '../../infrastructure/i18n';
 import { t } from '../../infrastructure/i18n';
 import { CREATE_ROUTE, PROFILE_ROUTE } from '../routes';

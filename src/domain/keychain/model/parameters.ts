@@ -100,8 +100,6 @@ export const hasActiveParameter = (
   if (!hasTemplateParameter(params.templateId, parameter)) return false;
   if (parameter === 'plantAccentEnabled')
     return ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'].includes(params.styleId);
-  // Capsule plant labels derive their ends from the board height, so a separate
-  // corner-radius setting cannot change that geometry.
   return !(
     parameter === 'cornerRadiusMm' &&
     params.templateId === 'plant-label' &&

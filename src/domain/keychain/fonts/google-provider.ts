@@ -370,8 +370,6 @@ export const createGoogleFontProvider = (options: GoogleFontProviderOptions) => 
       cached = undefined;
       try {
         globalThis.sessionStorage?.removeItem(storageKey);
-        // Remove the pre-namespaced entry as well so callers retain the old
-        // clearCache behavior after upgrading.
         globalThis.sessionStorage?.removeItem(LEGACY_STORAGE_KEY);
       } catch {
         return;

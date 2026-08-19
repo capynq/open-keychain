@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import {
   currentUser,
-  hostedMode,
   listProjects,
   saveProject,
   signIn,
@@ -10,6 +9,7 @@ import {
   type HostedProject,
   type HostedUser,
 } from '../api/hosted-api';
+import { hostedMode } from '../config';
 import { FONT_CATALOG, isLocalFontId, type KeychainParams } from '../../../domain/keychain';
 
 export type HostedAccountState = {

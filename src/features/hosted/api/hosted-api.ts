@@ -16,7 +16,7 @@ export type HostedProject = {
   created_at: string;
   updated_at: string;
 };
-export const hostedMode = import.meta.env.VITE_HOSTED_MODE === 'true';
+export { hostedMode } from '../config';
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 export class HostedApiError extends Error {
   constructor(

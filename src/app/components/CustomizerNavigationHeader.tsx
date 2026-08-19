@@ -1,4 +1,5 @@
-import { hostedMode, type HostedAccountState } from '../../features/hosted';
+import { hostedMode } from '../../features/hosted/config';
+import type { HostedAccountState } from '../../features/hosted';
 import type { KeychainParams } from '../../domain/keychain';
 import { Link } from 'react-router';
 import type { Locale } from '../../infrastructure/i18n';

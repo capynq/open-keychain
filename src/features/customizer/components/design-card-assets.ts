@@ -7,8 +7,6 @@ export const TEMPLATE_PREVIEW_ASSETS: Record<TemplateId, string> = {
   'plant-label': '/showcase/templates/plant-label.png',
 };
 
-// These previews are deliberately static ALEX captures. They make the rail fast and
-// deterministic while the live viewer remains responsible for the current design.
 export const STYLE_PREVIEW_ASSETS: Partial<Record<TemplateId, Record<StyleId, string>>> = {
   'name-keychain': {
     contour: '/showcase/styles/name-keychain-contour.png',

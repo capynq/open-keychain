@@ -1,3 +1,13 @@
+.route-loading {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  background: #f6f4ef;
+  color: #687080;
+  font-size: 14px;
+  font-weight: 800;
+}
+
 .app-shell {
   height: 100dvh;
   min-height: 100dvh;

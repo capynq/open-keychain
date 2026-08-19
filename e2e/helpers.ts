@@ -45,8 +45,6 @@ export const waitForLocalFonts = async (page: Page): Promise<void> => {
 export const waitForReadyGeometry = async (page: Page): Promise<void> => {
   await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 15_000 });
   await expect(page.locator('.viewer-surface canvas')).toBeVisible();
-  // Geometry state and the Three.js scene commit in adjacent frames. Wait for
-  // both before a capture so the canvas cannot show the previous model.
   await page.evaluate(
     () =>
       new Promise<void>((resolve) => {

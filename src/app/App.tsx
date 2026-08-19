@@ -1,14 +1,21 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router';
 import { useAnalytics } from '../infrastructure/telemetry';
 import { detectLocale, setLocale, t, type Locale } from '../infrastructure/i18n';
-import { CustomizerPage } from './pages/CustomizerPage';
-import { LandingPage } from './pages/LandingPage';
-import { ProfilePage } from './pages/ProfilePage';
 import { CREATE_ROUTE, LANDING_ROUTE, PROFILE_ROUTE } from './routes';
-import { hostedMode } from '../features/hosted';
+import { hostedMode } from '../features/hosted/config';
 import './styles/app.css';
 import { AnalyticsConsentBanner } from './components/AnalyticsConsentBanner';
+
+const LandingPage = lazy(() =>
+  import('./pages/LandingPage').then(({ LandingPage: page }) => ({ default: page })),
+);
+const CustomizerPage = lazy(() =>
+  import('./pages/CustomizerPage').then(({ CustomizerPage: page }) => ({ default: page })),
+);
+const ProfilePage = lazy(() =>
+  import('./pages/ProfilePage').then(({ ProfilePage: page }) => ({ default: page })),
+);
 
 const SITE_URL = 'https://open-keychain.com';
 
@@ -16,6 +23,12 @@ const setMetaContent = (selector: string, content: string): void => {
   const meta = document.querySelector<HTMLMetaElement>(selector);
   if (meta) meta.content = content;
 };
+
+const RouteLoading = ({ locale }: { locale: Locale }) => (
+  <div className="route-loading" role="status" aria-live="polite">
+    {t(locale, 'fontLoading')}
+  </div>
+);
 
 const App = () => {
   const [locale, setActiveLocale] = useState<Locale>(detectLocale);
@@ -68,27 +81,29 @@ const App = () => {
 
   return (
     <>
-      <Routes>
-        <Route
-          path={LANDING_ROUTE}
-          element={<LandingPage locale={locale} onLocaleChange={onLocaleChange} />}
-        />
-        <Route
-          path={CREATE_ROUTE}
-          element={<CustomizerPage locale={locale} onLocaleChange={onLocaleChange} />}
-        />
-        <Route
-          path={PROFILE_ROUTE}
-          element={
-            hostedMode ? (
-              <ProfilePage locale={locale} onLocaleChange={onLocaleChange} />
-            ) : (
-              <Navigate to={LANDING_ROUTE} replace />
-            )
-          }
-        />
-        <Route path="*" element={<Navigate to={LANDING_ROUTE} replace />} />
-      </Routes>
+      <Suspense fallback={<RouteLoading locale={locale} />}>
+        <Routes>
+          <Route
+            path={LANDING_ROUTE}
+            element={<LandingPage locale={locale} onLocaleChange={onLocaleChange} />}
+          />
+          <Route
+            path={CREATE_ROUTE}
+            element={<CustomizerPage locale={locale} onLocaleChange={onLocaleChange} />}
+          />
+          <Route
+            path={PROFILE_ROUTE}
+            element={
+              hostedMode ? (
+                <ProfilePage locale={locale} onLocaleChange={onLocaleChange} />
+              ) : (
+                <Navigate to={LANDING_ROUTE} replace />
+              )
+            }
+          />
+          <Route path="*" element={<Navigate to={LANDING_ROUTE} replace />} />
+        </Routes>
+      </Suspense>
       <AnalyticsConsentBanner locale={locale} />
     </>
   );

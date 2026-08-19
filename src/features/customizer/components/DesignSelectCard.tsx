@@ -24,7 +24,6 @@ export const DesignSelectCard = ({
   const descriptionId = useId();
 
   const keepInView = (): void => {
-    // Older browsers and jsdom do not expose scrollIntoView; focus still works there.
     const reducedMotion =
       typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;

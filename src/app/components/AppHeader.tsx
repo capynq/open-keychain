@@ -1,8 +1,14 @@
+import { lazy, Suspense } from 'react';
 import type { HostedAccountState } from '../../features/hosted';
 import type { KeychainParams } from '../../domain/keychain';
 import type { Locale } from '../../infrastructure/i18n';
-import { CustomizerNavigationHeader } from './CustomizerNavigationHeader';
 import { LandingNavigationHeader } from './LandingNavigationHeader';
+
+const CustomizerNavigationHeader = lazy(() =>
+  import('./CustomizerNavigationHeader').then(({ CustomizerNavigationHeader: header }) => ({
+    default: header,
+  })),
+);
 
 export const AppHeader = ({
   variant,
@@ -24,12 +30,14 @@ export const AppHeader = ({
   variant === 'landing' ? (
     <LandingNavigationHeader locale={locale} onLocaleChange={onLocaleChange} />
   ) : (
-    <CustomizerNavigationHeader
-      locale={locale}
-      onLocaleChange={onLocaleChange}
-      exportOpen={exportOpen}
-      onExportOpen={onExportOpen}
-      hosted={hosted}
-      currentParams={currentParams}
-    />
+    <Suspense fallback={null}>
+      <CustomizerNavigationHeader
+        locale={locale}
+        onLocaleChange={onLocaleChange}
+        exportOpen={exportOpen}
+        onExportOpen={onExportOpen}
+        hosted={hosted}
+        currentParams={currentParams}
+      />
+    </Suspense>
   );

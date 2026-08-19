@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
-import { FONT_CATALOG, isLocalFontId, type KeychainParams } from '../../domain/keychain';
+import { FONT_CATALOG } from '../../domain/keychain/fonts/catalog';
+import { isLocalFontId } from '../../domain/keychain/fonts/local-provider';
+import type { KeychainParams } from '../../domain/keychain/model/types';
 import {
   currentUser,
   deleteProject,
@@ -20,7 +22,6 @@ type ProfileLocationState = { currentParams?: KeychainParams } | null;
 
 const projectParamsForHosting = (params: KeychainParams): Record<string, unknown> => ({
   ...params,
-  // Local font files never leave the browser. A bundled fallback keeps the saved project printable.
   fontId: isLocalFontId(params.fontId) ? FONT_CATALOG[0].id : params.fontId,
 });
 
