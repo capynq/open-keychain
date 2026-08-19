@@ -1794,6 +1794,7 @@ input[type='range'] {
   .workspace {
     display: flex;
     flex-direction: column-reverse;
+    flex: 0 0 auto;
     height: auto;
     padding: 24px 18px 48px;
     gap: 36px;
