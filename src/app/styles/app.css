@@ -1,9 +1,10 @@
 .app-shell {
+  height: 100dvh;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: hidden;
   background: #f6f4ef;
 }
 
@@ -168,8 +169,8 @@
   display: grid;
   grid-template-columns: minmax(min(100%, 360px), clamp(360px, 29vw, 460px)) minmax(0, 1fr);
   gap: clamp(30px, 4vw, 64px);
-  flex: 0 0 auto;
-  height: calc(100dvh - 74px);
+  flex: 1 1 0;
+  height: auto;
   padding: 18px clamp(30px, 4vw, 64px);
 }
 

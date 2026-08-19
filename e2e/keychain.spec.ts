@@ -390,24 +390,30 @@ test('keeps the complete articulated shape control set reachable in the scrollab
   expect(scrollTop).toBeGreaterThan(0);
   await expect(page.getByLabel('Max joint angle')).toBeInViewport();
 });
-test('keeps the customizer footer reachable through page scrolling', async ({ page }) => {
+test('keeps the customizer footer in the desktop viewport with the guide visible', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.addInitScript(() =>
-    window.localStorage.setItem('open-keychain.customizer-guide', 'dismissed'),
-  );
   await page.goto('/create');
   await expect(page.locator('.status-pill')).toHaveText('Ready to print', { timeout: 10000 });
+  await expect(page.locator('.customizer-guide')).toBeVisible();
 
   const pageState = await page.evaluate(() => {
     const footer = document.querySelector('.customizer-footer')!.getBoundingClientRect();
-    const documentHeight = document.documentElement.scrollHeight;
-    window.scrollTo(0, documentHeight);
-    return { documentHeight, footerTop: footer.top, viewportHeight: window.innerHeight };
+    const controls = document.querySelector('.controls-panel')!;
+    return {
+      footerTop: footer.top,
+      footerBottom: footer.bottom,
+      viewportHeight: window.innerHeight,
+      controlsClientHeight: controls.clientHeight,
+      controlsScrollHeight: controls.scrollHeight,
+    };
   });
-  expect(pageState.documentHeight).toBeGreaterThan(pageState.viewportHeight);
-  expect(pageState.footerTop).toBeGreaterThan(0);
+  expect(pageState.footerTop).toBeGreaterThanOrEqual(0);
+  expect(pageState.footerBottom).toBeLessThanOrEqual(pageState.viewportHeight);
+  expect(pageState.controlsScrollHeight).toBeGreaterThan(pageState.controlsClientHeight);
   await expect(page.locator('.customizer-footer')).toBeInViewport();
-  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
 });
 test('keeps the preview prominent and touch targets comfortable at 390 px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
