@@ -1,3 +1,13 @@
 if command -v pnpm >/dev/null 2>&1; then
+  # Repair tracked files before validation so a formatter-only failure does
+  # not block a push. The repaired files are folded into the commit being
+  # pushed, while untracked files are intentionally left alone.
+  pnpm fix
+  git add -u
+
+  if ! git diff --cached --quiet; then
+    git commit --amend --no-edit --no-verify
+  fi
+
   pnpm validate
 fi

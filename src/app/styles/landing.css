@@ -20,7 +20,7 @@
   text-decoration: none;
 }
 
-.brand-mark>span {
+.brand-mark > span {
   display: block;
   font-size: 14px;
   font-weight: 900;
@@ -197,7 +197,7 @@
 }
 
 .landing-process span,
-.landing-step-card>span {
+.landing-step-card > span {
   color: #bf563f;
   font-size: 24px;
   font-weight: 900;
@@ -445,7 +445,7 @@
   background: #f5e6de;
 }
 
-.landing-run-card>p {
+.landing-run-card > p {
   margin: 0;
   color: #777d89;
   font-size: 9px;
@@ -458,7 +458,7 @@
   margin: 13px 0 6px;
 }
 
-.landing-run-card>span {
+.landing-run-card > span {
   color: #a84e3b;
   font-size: 11px;
   font-weight: 900;
@@ -507,13 +507,13 @@
   background: #d8d4cb;
 }
 
-.landing-trust>div {
+.landing-trust > div {
   padding: clamp(32px, 5vw, 56px);
   background: #293141;
   color: #f6f4ef;
 }
 
-.landing-trust>div:last-child {
+.landing-trust > div:last-child {
   background: #384653;
 }
 
