@@ -9,7 +9,7 @@
     "type": "git",
     "url": "https://github.com/capynq/open-keychain.git"
   },
-  "homepage": "https://github.com/capynq/open-keychain#readme",
+  "homepage": "https://open-keychain.com/",
   "bugs": {
     "url": "https://github.com/capynq/open-keychain/issues"
   },
@@ -19,7 +19,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node --import tsx scripts/generate-seo-pages.ts && node --import tsx scripts/validate-seo-build.ts",
+    "validate:seo": "node --import tsx scripts/validate-seo-build.ts",
     "preview": "vite preview",
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",

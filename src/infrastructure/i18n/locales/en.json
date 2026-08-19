@@ -19,7 +19,7 @@
   "profileSaving": "Saving…",
   "profileSaveError": "This project could not be saved. Try again.",
   "profileDeleteError": "This project could not be deleted. Try again.",
-  "documentProfileTitle": "Your projects — Open Keychain",
+  "documentProfileTitle": "Your projects - Open Keychain",
   "metaProfileDescription": "Sign in to manage your saved printable keychain projects.",
   "export": "Export",
   "exportTitle": "Choose an export",
@@ -185,9 +185,9 @@
   "warningShallow": "A slightly taller text relief is easier to see after printing.",
   "warningArticulatedBaseAdjusted": "Base thickness was adjusted to retain printable captive joints.",
   "errorArticulatedJoint": "The articulated joint could not be validated. Try a shorter name or increase the joint clearance.",
-  "documentLandingTitle": "Open Keychain — design a printable name keychain",
-  "documentCreateTitle": "Create a printable keychain — Open Keychain",
-  "metaLandingDescription": "Create personalized printable keychains and labels in your browser. Choose a template, preview the model, and export STL or 3MF for your 3D printer.",
+  "documentLandingTitle": "Open Keychain 3D - free printable name keychain maker",
+  "documentCreateTitle": "Create a printable keychain - Open Keychain 3D",
+  "metaLandingDescription": "Make free 3D printable name keychains, articulated names, nameplates, and plant labels in your browser. Export STL or 3MF locally.",
   "metaCreateDescription": "Design a personalized printable keychain or label, preview the geometry, and export STL or 3MF locally.",
   "analytics": {
     "consentTitle": "Help us improve Open Keychain",
@@ -294,5 +294,135 @@
     "betaTitle": "A generated file is not a physical-print guarantee.",
     "betaBody": "Check every export in your slicer and test it on your own printer. Printer, material and settings can all change the result.",
     "footerLicense": "MIT licensed · open source"
+  },
+  "seo": {
+    "brand": "Open Keychain 3D",
+    "languageLabel": "Language",
+    "home": {
+      "title": "Open Keychain 3D - free printable name keychain maker",
+      "description": "Make free 3D printable name keychains, articulated names, nameplates, and plant labels in your browser. Export STL or 3MF locally.",
+      "heading": "Make a 3D printable keychain from any name.",
+      "intro": "Open Keychain 3D turns a name or short label into a printable model without installing CAD software or uploading your design.",
+      "cta": "Start designing a keychain",
+      "templatesHeading": "Choose a printable template",
+      "templatesBody": "Start with a name keychain, articulated name, nameplate, or plant label, then adjust the style and export a file for your slicer.",
+      "workflowHeading": "A local-first 3D printing workflow",
+      "workflowBody": "Enter text, choose a shape, check the preview, and download STL or 3MF. Geometry and exports stay in your browser.",
+      "privacyHeading": "Your design stays on your device",
+      "privacyBody": "Names, geometry parameters, and exported files are processed locally. Check every file in your slicer before printing.",
+      "faqHeading": "Printable keychain questions",
+      "faq": [
+        {
+          "question": "Can I export an STL file?",
+          "answer": "Yes. The customizer validates the model and lets you download an STL or 3MF file for your slicer."
+        },
+        {
+          "question": "Do I need CAD software?",
+          "answer": "No. Open Keychain 3D creates the parametric model in your browser, so you can start with a name and a template."
+        },
+        {
+          "question": "Is my name uploaded?",
+          "answer": "No. In the browser workflow, your text and generated geometry stay on your device."
+        }
+      ]
+    },
+    "templates": {
+      "nameKeychain": {
+        "title": "Free 3D printable name keychain generator - Open Keychain 3D",
+        "description": "Create a personalized 3D printable name keychain with a keyring hole. Choose a style, preview the geometry, and export STL or 3MF locally.",
+        "heading": "Create a personalized 3D printable name keychain.",
+        "intro": "Turn a first name, nickname, or short word into a practical keychain tag. The name keychain template includes a keyring hole and raised lettering designed for a straightforward home print.",
+        "benefits": [
+          "Keyring hole included",
+          "Raised name lettering",
+          "STL and 3MF export",
+          "Runs locally in your browser"
+        ],
+        "faq": [
+          {
+            "question": "What makes this a printable name keychain?",
+            "answer": "The template combines a backing shape, a keyring hole, and raised lettering that you can inspect before exporting."
+          },
+          {
+            "question": "Can I change the style?",
+            "answer": "Yes. Select from the available contour, arch, bubble, capsule, and soft-tag styles in the customizer."
+          }
+        ]
+      },
+      "articulatedName": {
+        "title": "Articulated name keychain for 3D printing - Open Keychain 3D",
+        "description": "Make a flexible articulated name keychain for 3D printing. Preview linked letters and export a validated STL or 3MF file locally.",
+        "heading": "Make an articulated name keychain for 3D printing.",
+        "intro": "Create a playful linked name with captive joints between letters. The articulated template is designed for a flexible keyring that can move after printing.",
+        "benefits": [
+          "Linked printable letters",
+          "Captive-joint validation",
+          "Adjustable text and font",
+          "Local STL and 3MF export"
+        ],
+        "faq": [
+          {
+            "question": "What is an articulated name keychain?",
+            "answer": "It is a connected name design with movable joints between letters, giving the finished print a flexible feel."
+          },
+          {
+            "question": "Does the model check the joints?",
+            "answer": "The customizer validates articulated clearances and reports when a shorter name or different font is needed."
+          }
+        ]
+      },
+      "nameplate": {
+        "title": "3D printable custom nameplate generator - Open Keychain 3D",
+        "description": "Design a compact 3D printable nameplate for a desk, drawer, shelf, or workspace. Preview the text and export STL or 3MF locally.",
+        "heading": "Design a compact 3D printable nameplate.",
+        "intro": "Make a personalized plaque for a desk, drawer, shelf, or maker workspace. The nameplate template keeps the lettering readable and the backing easy to inspect before export.",
+        "benefits": [
+          "Compact plaque shape",
+          "Readable raised lettering",
+          "Printable thickness checks",
+          "STL and 3MF export"
+        ],
+        "faq": [
+          {
+            "question": "Where can I use the nameplate?",
+            "answer": "It is suited to desks, drawers, shelves, maker spaces, and other places where a compact printed label is useful."
+          },
+          {
+            "question": "Can I adjust the text height?",
+            "answer": "Yes. Use the text and shape controls to tune the lettering and backing within printable limits."
+          }
+        ]
+      },
+      "plantLabel": {
+        "title": "3D printable plant label generator - Open Keychain 3D",
+        "description": "Create a personalized 3D printable plant label with a pointed stake. Choose a style, preview the geometry, and export STL or 3MF locally.",
+        "heading": "Make a personalized 3D printable plant label.",
+        "intro": "Turn a plant name, herb, or garden note into a durable label with a pointed stake. Preview the text and shape before sending the file to your slicer.",
+        "benefits": [
+          "Pointed stake for pots and beds",
+          "Raised readable lettering",
+          "Five available styles",
+          "Local STL and 3MF export"
+        ],
+        "faq": [
+          {
+            "question": "What is the plant label for?",
+            "answer": "Use it for pots, herbs, seedlings, small garden rows, or any plant that needs a clear printed marker."
+          },
+          {
+            "question": "Can I choose a different label style?",
+            "answer": "Yes. Plant labels support the available contour, arch, bubble, capsule, and soft-tag styles."
+          }
+        ]
+      }
+    },
+    "navigation": {
+      "home": "Open Keychain 3D",
+      "templates": "Templates",
+      "howItWorks": "How it works",
+      "github": "View source",
+      "privacy": "Privacy note",
+      "readMore": "Read about this template"
+    }
   }
 }

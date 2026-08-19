@@ -2,6 +2,8 @@
 
 Open Keychain is an open-source, local-first tool for designing personalized 3D-printable keychains and labels. Enter a name, choose a template, preview the model, then export STL or 3MF for your own slicer and printer.
 
+Try the live [Open Keychain 3D printable keychain maker](https://open-keychain.com/) or browse the [name keychain template](https://open-keychain.com/templates/name-keychain/).
+
 > Beta note: generated files still need checking in your slicer and testing on your printer. Filament, machine calibration, orientation, and slicer settings affect the physical result.
 
 ![Open Keychain customizer on desktop](public/showcase/create-desktop.png)

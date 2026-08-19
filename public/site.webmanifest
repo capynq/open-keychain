@@ -1,7 +1,7 @@
 {
-  "name": "Open Keychain",
-  "short_name": "Keychain",
-  "description": "Design printable keychains and parametric name templates.",
+  "name": "Open Keychain 3D",
+  "short_name": "Keychain 3D",
+  "description": "Design free 3D printable name keychains and parametric templates.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f6f4ef",

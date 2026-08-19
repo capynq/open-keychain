@@ -69,6 +69,12 @@ test('keeps analytics gated by consent in production', async ({ page }) => {
   await expect.poll(() => analyticsRequests.length, { timeout: 10_000 }).toBeGreaterThan(0);
 });
 
+test('returns a real 404 for unknown production paths', async ({ page }) => {
+  const response = await page.request.get('/seo-route-that-does-not-exist');
+  expect(response.status()).toBe(404);
+  expect(await response.text()).toContain('Page not found');
+});
+
 test('keeps all supported languages and customizer readiness in production', async ({ page }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
   await page.goto('/');

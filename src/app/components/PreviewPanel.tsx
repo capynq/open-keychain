@@ -124,16 +124,16 @@ const PreviewSummary = ({
           <strong>
             {dimensions
               ? `${dimensions.widthMm.toFixed(0)} × ${dimensions.heightMm.toFixed(0)} mm`
-              : '—'}
+              : '-'}
           </strong>
         </div>
         <div>
           <span>{t(locale, 'thickness')}</span>
-          <strong>{dimensions ? `${dimensions.thicknessMm.toFixed(1)} mm` : '—'}</strong>
+          <strong>{dimensions ? `${dimensions.thicknessMm.toFixed(1)} mm` : '-'}</strong>
         </div>
         <div>
           <span>{t(locale, 'parts')}</span>
-          <strong>{result?.solidCount ?? '—'}</strong>
+          <strong>{result?.solidCount ?? '-'}</strong>
         </div>
       </div>
       <div className="summary-tags">

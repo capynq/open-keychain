@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router';
 import { useAnalytics } from '../infrastructure/telemetry';
-import { detectLocale, setLocale, t, type Locale } from '../infrastructure/i18n';
+import { detectLocale, setLocale, supportedLocales, t, type Locale } from '../infrastructure/i18n';
 import { CREATE_ROUTE, LANDING_ROUTE, PROFILE_ROUTE } from './routes';
 import { hostedMode } from '../features/hosted/config';
 import './styles/app.css';
@@ -19,6 +19,14 @@ const ProfilePage = lazy(() =>
 
 const SITE_URL = 'https://open-keychain.com';
 
+const localeFromSearch = (search: string): Locale | undefined => {
+  const requestedLocale = new URLSearchParams(search).get('lang');
+
+  return requestedLocale && supportedLocales.includes(requestedLocale as Locale)
+    ? (requestedLocale as Locale)
+    : undefined;
+};
+
 const setMetaContent = (selector: string, content: string): void => {
   const meta = document.querySelector<HTMLMetaElement>(selector);
   if (meta) meta.content = content;
@@ -31,12 +39,18 @@ const RouteLoading = ({ locale }: { locale: Locale }) => (
 );
 
 const App = () => {
-  const [locale, setActiveLocale] = useState<Locale>(detectLocale);
+  const [locale, setActiveLocale] = useState<Locale>(
+    () => localeFromSearch(window.location.search) ?? detectLocale(),
+  );
   const location = useLocation();
   const normalizedPath = location.pathname.replace(/\/+$/, '') || '/';
   const isCustomizer = normalizedPath === CREATE_ROUTE;
   const isProfile = normalizedPath === PROFILE_ROUTE;
   const { consent, track } = useAnalytics();
+
+  useEffect(() => {
+    void setLocale(locale);
+  }, [locale]);
 
   useEffect(() => {
     document.documentElement.lang = locale;
@@ -59,6 +73,10 @@ const App = () => {
     const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
     if (canonical) canonical.href = canonicalUrl;
     setMetaContent('meta[name="description"]', description);
+    setMetaContent(
+      'meta[name="robots"]',
+      isCustomizer || isProfile ? 'noindex,follow' : 'index,follow',
+    );
     setMetaContent('meta[property="og:url"]', canonicalUrl);
     setMetaContent('meta[property="og:title"]', title);
     setMetaContent('meta[property="og:description"]', description);

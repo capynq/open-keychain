@@ -1,6 +1,12 @@
 import type { Locale } from '../../infrastructure/i18n';
 import { useLocation } from 'react-router';
-import { DEFAULT_PARAMS, normalizeParams, type KeychainParams } from '../../domain/keychain';
+import {
+  DEFAULT_PARAMS,
+  normalizeParams,
+  TEMPLATE_CATALOG,
+  type KeychainParams,
+  type TemplateId,
+} from '../../domain/keychain';
 import { ExportDialog } from '../../features/export';
 import { AppHeader } from '../components/AppHeader';
 import { CustomizerOnboarding } from '../components/CustomizerOnboarding';
@@ -18,9 +24,15 @@ export const CustomizerPage = ({
   const location = useLocation();
   const projectParams = (location.state as { projectParams?: Record<string, unknown> } | null)
     ?.projectParams;
+  const requestedTemplate = new URLSearchParams(location.search).get('template');
+  const templateId = TEMPLATE_CATALOG.some((template) => template.id === requestedTemplate)
+    ? (requestedTemplate as TemplateId)
+    : undefined;
   const initialParams: KeychainParams | undefined = projectParams
     ? normalizeParams({ ...DEFAULT_PARAMS, ...projectParams } as KeychainParams)
-    : undefined;
+    : templateId
+      ? normalizeParams({ ...DEFAULT_PARAMS, templateId })
+      : undefined;
   const state = useCustomizerPageState(locale, initialParams);
 
   return (

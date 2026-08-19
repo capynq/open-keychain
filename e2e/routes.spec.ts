@@ -16,11 +16,11 @@ test('renders every declared route without browser errors', async ({ page }) => 
     await expect(page.getByRole('main')).toBeVisible();
 
     if (route.id === 'landing') {
-      await expect(page).toHaveTitle('Open Keychain — design a printable name keychain');
+      await expect(page).toHaveTitle('Open Keychain 3D - free printable name keychain maker');
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await expect(page.locator('.landing-button-primary')).toBeVisible();
     } else {
-      await expect(page).toHaveTitle('Create a printable keychain — Open Keychain');
+      await expect(page).toHaveTitle('Create a printable keychain - Open Keychain 3D');
       await expect(page.getByRole('main', { name: 'Customizer' })).toBeVisible();
       await waitForReadyGeometry(page);
     }
@@ -135,7 +135,7 @@ test('keeps the customizer title when its path has a trailing slash', async ({ p
   const assertNoBrowserErrors = watchBrowserErrors(page);
 
   await page.goto('/create/');
-  await expect(page).toHaveTitle('Create a printable keychain — Open Keychain');
+  await expect(page).toHaveTitle('Create a printable keychain - Open Keychain 3D');
   assertNoBrowserErrors();
 });
 
@@ -144,7 +144,9 @@ test('updates the localized landing title', async ({ page }) => {
 
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Language' }).selectOption('ru');
-  await expect(page).toHaveTitle('Open Keychain — создавайте именные брелоки для печати');
+  await expect(page).toHaveTitle(
+    'Open Keychain 3D - бесплатный генератор именных брелоков для 3D-печати',
+  );
   await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
   assertNoBrowserErrors();
 });
@@ -173,7 +175,7 @@ test('publishes crawler metadata and route-aware canonical URLs', async ({ page 
   await page.getByRole('combobox', { name: 'Language' }).selectOption('ru');
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     'content',
-    /Создавайте персонализированные/,
+    /Создавайте бесплатные/,
   );
 
   await page.goto('/create');
@@ -277,7 +279,7 @@ for (const locale of ['en', 'ru', 'uk'] as const) {
     await page.goto('/');
     await page.getByRole('combobox', { name: 'Language' }).selectOption(locale);
     await expect(page.locator('.configurator-showcase-caption')).toBeVisible();
-    await expect(page.locator('.landing-process span').first()).toHaveCSS('font-size', '13px');
+    await expect(page.locator('.landing-process span').first()).toHaveCSS('font-size', '24px');
     const gap = await page.locator('.configurator-showcase').evaluate((showcase) => {
       const windowBox = showcase.querySelector('.configurator-window')?.getBoundingClientRect();
       const captionBox = showcase
