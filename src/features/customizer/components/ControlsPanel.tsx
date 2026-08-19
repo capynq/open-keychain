@@ -19,6 +19,19 @@ import { ResetIconButton } from '../../../components/ResetIconButton';
 import { type useCustomizerParams } from '../hooks/useCustomizerParams';
 import { RangeControl } from './RangeControl';
 
+type FontSourceTab = 'local' | 'google';
+type FontBrowserState = {
+  search: string;
+  page: number;
+  category: FontCategory | 'all';
+  supportsTextOnly: boolean;
+};
+
+const INITIAL_FONT_BROWSER_STATE: Record<FontSourceTab, FontBrowserState> = {
+  local: { search: '', page: 1, category: 'all', supportsTextOnly: true },
+  google: { search: '', page: 1, category: 'all', supportsTextOnly: true },
+};
+
 export const ControlsPanel = ({
   locale,
   customizer,
@@ -46,57 +59,93 @@ export const ControlsPanel = ({
     showsParameter,
     rangeFor,
   } = customizer;
-  const [fontSource, setFontSource] = useState<'local' | 'google'>('local');
-  const [fontSearch, setFontSearch] = useState('');
-  const [fontPage, setFontPage] = useState(1);
+  const [fontSource, setFontSource] = useState<FontSourceTab>('local');
+  const [fontBrowserState, setFontBrowserState] = useState(INITIAL_FONT_BROWSER_STATE);
   const [fontLoadError, setFontLoadError] = useState(false);
   const [loadingFontId, setLoadingFontId] = useState<string>();
-  const [fontCategory, setFontCategory] = useState<FontCategory | 'all'>('all');
-  const [supportsTextOnly, setSupportsTextOnly] = useState(true);
+  const [loadedGoogleFontIds, setLoadedGoogleFontIds] = useState<Set<string>>(() => new Set());
+  const [googleFontLoadPromises] = useState(() => new Map<string, Promise<boolean>>());
+  const [previewFontId, setPreviewFontId] = useState<string>();
+  const [openCategories, setOpenCategories] = useState<Set<FontCategory>>(
+    () => new Set(FONT_CATEGORY_ORDER),
+  );
   const fontsPerPage = 12;
+  const activeBrowserState = fontBrowserState[fontSource];
   const sourceFonts = fontSource === 'google' ? customizer.googleFonts : FONT_CATALOG;
   const compatibleFonts = useMemo(
     () =>
       sourceFonts.filter((font) =>
         params.templateId === 'articulated-name'
           ? fontSupportsArticulatedName(font, params.text)
-          : !supportsTextOnly || fontSupportsText(font, params.text),
+          : !activeBrowserState.supportsTextOnly || fontSupportsText(font, params.text),
       ),
-    [params.templateId, params.text, sourceFonts, supportsTextOnly],
+    [activeBrowserState.supportsTextOnly, params.templateId, params.text, sourceFonts],
   );
   const filteredFonts = useMemo(() => {
-    const query = fontSearch.trim().toLocaleLowerCase();
+    const query = activeBrowserState.search.trim().toLocaleLowerCase();
     return compatibleFonts.filter(
       (font) =>
-        (fontCategory === 'all' || font.category === fontCategory) &&
+        (activeBrowserState.category === 'all' || font.category === activeBrowserState.category) &&
         (!query ||
           font.name.toLocaleLowerCase().includes(query) ||
           font.category.toLocaleLowerCase().includes(query)),
     );
-  }, [compatibleFonts, fontCategory, fontSearch]);
+  }, [activeBrowserState.category, activeBrowserState.search, compatibleFonts]);
   const shouldPaginate = fontSource === 'google';
   const pageCount = shouldPaginate
     ? Math.max(1, Math.ceil(filteredFonts.length / fontsPerPage))
     : 1;
-  const currentPage = Math.min(fontPage, pageCount);
+  const currentPage = Math.min(activeBrowserState.page, pageCount);
   const visibleFonts = shouldPaginate
     ? filteredFonts.slice((currentPage - 1) * fontsPerPage, currentPage * fontsPerPage)
     : filteredFonts;
-  const selectFont = async (font: (typeof FONT_CATALOG)[number]): Promise<void> => {
-    setFontLoadError(false);
-    setLoadingFontId(font.id);
-    if (font.source === 'google' && typeof FontFace !== 'undefined') {
+  const updateFontBrowserState = (changes: Partial<FontBrowserState>): void => {
+    setFontBrowserState((current) => ({
+      ...current,
+      [fontSource]: { ...current[fontSource], ...changes },
+    }));
+  };
+  const activateFontSource = (source: FontSourceTab): void => {
+    setFontSource(source);
+    if (source === 'google' && !customizer.googleFonts.length && !customizer.googleError)
+      void customizer.loadGoogleFonts();
+  };
+  const loadGoogleFont = async (font: (typeof FONT_CATALOG)[number]): Promise<boolean> => {
+    if (
+      font.source !== 'google' ||
+      loadedGoogleFontIds.has(font.id) ||
+      typeof FontFace === 'undefined'
+    )
+      return true;
+
+    const existingLoad = googleFontLoadPromises.get(font.id);
+    if (existingLoad) return existingLoad;
+
+    const load = (async () => {
       try {
         const face = new FontFace(font.previewFamily, `url(${font.file})`, {
           weight: String(font.weight),
         });
         await face.load();
         document.fonts.add(face);
+        setLoadedGoogleFontIds((current) => new Set(current).add(font.id));
+        return true;
       } catch {
-        setFontLoadError(true);
-        setLoadingFontId(undefined);
-        return;
+        return false;
+      } finally {
+        googleFontLoadPromises.delete(font.id);
       }
+    })();
+    googleFontLoadPromises.set(font.id, load);
+    return load;
+  };
+  const selectFont = async (font: (typeof FONT_CATALOG)[number]): Promise<void> => {
+    setFontLoadError(false);
+    setLoadingFontId(font.id);
+    if (!(await loadGoogleFont(font))) {
+      setFontLoadError(true);
+      setLoadingFontId(undefined);
+      return;
     }
     update('fontId', font.id);
     setLoadingFontId(undefined);
@@ -107,8 +156,20 @@ export const ControlsPanel = ({
         const categoryFonts = fonts.filter((font) => font.category === category);
         if (!categoryFonts.length) return null;
         return (
-          <div className="font-group" key={category}>
-            <h3>{t(locale, `fontCategory${category.replace(/[^A-Za-z]/g, '')}`)}</h3>
+          <details
+            className="font-group"
+            key={category}
+            open={openCategories.has(category)}
+            onToggle={(event) => {
+              const next = new Set(openCategories);
+              if (event.currentTarget.open) next.add(category);
+              else next.delete(category);
+              setOpenCategories(next);
+            }}
+          >
+            <summary>
+              <h3>{t(locale, `fontCategory${category.replace(/[^A-Za-z]/g, '')}`)}</h3>
+            </summary>
             <div
               className={`font-grid ${params.templateId === 'articulated-name' ? 'articulated-font-grid' : ''}`}
             >
@@ -116,17 +177,40 @@ export const ControlsPanel = ({
                 <div className="font-card-wrap" key={font.id}>
                   <button
                     type="button"
-                    className={`font-card ${params.fontId === font.id ? 'selected' : ''}`}
+                    className={`font-card ${params.fontId === font.id ? 'selected' : ''} ${previewFontId === font.id ? 'previewing' : ''}`}
+                    data-font-state={
+                      loadingFontId === font.id
+                        ? 'loading'
+                        : params.fontId === font.id
+                          ? 'selected'
+                          : 'idle'
+                    }
                     onClick={() => void selectFont(font)}
                     disabled={loadingFontId !== undefined}
                     aria-busy={loadingFontId === font.id}
+                    aria-pressed={params.fontId === font.id}
+                    aria-label={`${t(locale, 'selectFont')}: ${font.name}`}
+                    onMouseEnter={() => {
+                      setPreviewFontId(font.id);
+                      void loadGoogleFont(font);
+                    }}
+                    onMouseLeave={() => setPreviewFontId(undefined)}
+                    onFocus={() => {
+                      setPreviewFontId(font.id);
+                      void loadGoogleFont(font);
+                    }}
+                    onBlur={() => setPreviewFontId(undefined)}
                     title={font.name}
                   >
                     <span style={{ fontFamily: font.previewFamily, fontWeight: font.weight }}>
                       {params.text || (usesCyrillic ? font.sampleCyrillic : font.sampleLatin)}
                     </span>
                     <small>
-                      {loadingFontId === font.id ? t(locale, 'fontLoading') : font.name}
+                      {loadingFontId === font.id
+                        ? t(locale, 'fontLoading')
+                        : params.fontId === font.id
+                          ? `${font.name} · ${t(locale, 'fontSelected')}`
+                          : font.name}
                     </small>
                   </button>
                   {font.specimenUrl && (
@@ -137,58 +221,76 @@ export const ControlsPanel = ({
                 </div>
               ))}
             </div>
-          </div>
+          </details>
         );
       })}
     </div>
   );
   const fontFilters = (
-    <div className="font-filter-row">
-      <label>
-        <span>{t(locale, 'fontCategoryFilter')}</span>
-        <select
-          aria-label={t(locale, 'fontCategoryFilter')}
-          value={fontCategory}
-          onChange={(event) => {
-            setFontCategory(event.target.value as FontCategory | 'all');
-            setFontPage(1);
-          }}
-        >
-          <option value="all">{t(locale, 'fontCategoryAll')}</option>
-          {FONT_CATEGORY_ORDER.map((category) => (
-            <option key={category} value={category}>
-              {t(locale, `fontCategory${category.replace(/[^A-Za-z]/g, '')}`)}
-            </option>
-          ))}
-        </select>
-      </label>
-      {params.templateId !== 'articulated-name' && (
-        <label className="font-compatibility-toggle">
-          <input
-            type="checkbox"
-            checked={supportsTextOnly}
+    <details className="font-filter-disclosure">
+      <summary>{t(locale, 'filterFonts')}</summary>
+      <div className="font-filter-row">
+        <label>
+          <span>{t(locale, 'fontCategoryFilter')}</span>
+          <select
+            aria-label={t(locale, 'fontCategoryFilter')}
+            value={activeBrowserState.category}
             onChange={(event) => {
-              setSupportsTextOnly(event.target.checked);
-              setFontPage(1);
+              updateFontBrowserState({
+                category: event.target.value as FontCategory | 'all',
+                page: 1,
+              });
             }}
-          />
-          <span>{t(locale, 'fontSupportsText')}</span>
+          >
+            <option value="all">{t(locale, 'fontCategoryAll')}</option>
+            {FONT_CATEGORY_ORDER.map((category) => (
+              <option key={category} value={category}>
+                {t(locale, `fontCategory${category.replace(/[^A-Za-z]/g, '')}`)}
+              </option>
+            ))}
+          </select>
         </label>
-      )}
-    </div>
+        {params.templateId !== 'articulated-name' && (
+          <label className="font-compatibility-toggle">
+            <input
+              type="checkbox"
+              checked={activeBrowserState.supportsTextOnly}
+              onChange={(event) => {
+                updateFontBrowserState({ supportsTextOnly: event.target.checked, page: 1 });
+              }}
+            />
+            <span>{t(locale, 'fontSupportsText')}</span>
+          </label>
+        )}
+        <button
+          type="button"
+          className="font-filter-clear"
+          disabled={
+            activeBrowserState.category === 'all' &&
+            activeBrowserState.search === '' &&
+            activeBrowserState.supportsTextOnly
+          }
+          onClick={() =>
+            updateFontBrowserState({ search: '', category: 'all', supportsTextOnly: true, page: 1 })
+          }
+        >
+          {t(locale, 'clearFontFilters')}
+        </button>
+      </div>
+    </details>
   );
 
   return (
-    <aside className="controls-panel">
+    <aside className="controls-panel" aria-label={t(locale, 'customizerControls')}>
       <section className="control-section">
         <div className="section-heading">
           <h2>{t(locale, 'name')}</h2>
           <ResetIconButton label={t(locale, 'resetName')} onClick={() => resetSection('name')} />
         </div>
         <label className="text-input" data-guide-target="name">
-          <span className="sr-only">Name or text</span>
+          <span className="sr-only">{t(locale, 'nameInput')}</span>
           <input
-            aria-label="Name or text"
+            aria-label={t(locale, 'nameInput')}
             value={params.text}
             maxLength={24}
             onChange={(event) => {
@@ -213,6 +315,7 @@ export const ControlsPanel = ({
               type="button"
               key={template.id}
               className={`choice-card ${params.templateId === template.id ? 'selected' : ''}`}
+              aria-pressed={params.templateId === template.id}
               data-guide-target={params.templateId === template.id ? 'shape-control' : undefined}
               onClick={() => {
                 onTemplateSelected();
@@ -240,6 +343,7 @@ export const ControlsPanel = ({
                 type="button"
                 key={style.id}
                 className={`choice-card ${params.styleId === style.id ? 'selected' : ''}`}
+                aria-pressed={params.styleId === style.id}
                 onClick={() => update('styleId', style.id as KeychainParams['styleId'])}
               >
                 <span className={`style-swatch style-${style.id}`} />
@@ -260,48 +364,107 @@ export const ControlsPanel = ({
           <ResetIconButton label={t(locale, 'resetFont')} onClick={() => resetSection('font')} />
         </div>
         <div className="font-source-tabs" role="tablist" aria-label={t(locale, 'fontSources')}>
-          {(['local', 'google'] as const).map((source) => (
+          {(['local', 'google'] as const).map((source, index) => (
             <button
               type="button"
               role="tab"
+              id={`font-tab-${source}`}
+              aria-controls={`font-panel-${source}`}
               aria-selected={fontSource === source}
+              tabIndex={fontSource === source ? 0 : -1}
               className={fontSource === source ? 'active' : ''}
               key={source}
-              onClick={() => {
-                setFontSource(source);
-                setFontPage(1);
-                if (
-                  source === 'google' &&
-                  !customizer.googleFonts.length &&
-                  !customizer.googleError
-                )
-                  void customizer.loadGoogleFonts();
+              onClick={() => activateFontSource(source)}
+              onKeyDown={(event) => {
+                if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+                event.preventDefault();
+                const direction = event.key === 'ArrowLeft' ? -1 : 1;
+                const nextIndex =
+                  event.key === 'Home' ? 0 : event.key === 'End' ? 1 : (index + direction + 2) % 2;
+                const nextSource = (['local', 'google'] as const)[nextIndex];
+                activateFontSource(nextSource);
+                document.getElementById(`font-tab-${nextSource}`)?.focus();
               }}
             >
               {t(locale, source === 'local' ? 'fontSourceLocal' : 'fontSourceGoogle')}
             </button>
           ))}
         </div>
-        {fontSource === 'google' ? (
-          customizer.googleLoading ? (
-            <p className="font-provider-state" role="status">
-              {t(locale, 'fontGoogleLoading')}
-            </p>
-          ) : customizer.googleError ? (
-            <div className="font-provider-state" role="status">
-              <p>{t(locale, 'fontGoogleUnavailable')}</p>
-              <button type="button" onClick={() => void customizer.loadGoogleFonts()}>
-                {t(locale, 'retry')}
-              </button>
-            </div>
+        <div
+          id={`font-panel-${fontSource}`}
+          role="tabpanel"
+          aria-labelledby={`font-tab-${fontSource}`}
+        >
+          {fontSource === 'google' ? (
+            customizer.googleLoading ? (
+              <p className="font-provider-state" role="status">
+                {t(locale, 'fontGoogleLoading')}
+              </p>
+            ) : customizer.googleError ? (
+              <div className="font-provider-state" role="status">
+                <p>{t(locale, 'fontGoogleUnavailable')}</p>
+                <button type="button" onClick={() => void customizer.loadGoogleFonts()}>
+                  {t(locale, 'retry')}
+                </button>
+              </div>
+            ) : (
+              <>
+                <label className="font-search">
+                  <span className="sr-only">{t(locale, 'fontSearch')}</span>
+                  <input
+                    type="search"
+                    value={activeBrowserState.search}
+                    onChange={(event) =>
+                      updateFontBrowserState({ search: event.target.value, page: 1 })
+                    }
+                    placeholder={t(locale, 'fontSearchPlaceholder')}
+                    aria-label={t(locale, 'fontSearch')}
+                  />
+                </label>
+                {fontFilters}
+                {params.templateId === 'articulated-name' && (
+                  <p className="font-restriction">{t(locale, 'fontArticulatedRestriction')}</p>
+                )}
+                {visibleFonts.length ? (
+                  renderFontGroups(visibleFonts)
+                ) : (
+                  <p className="font-provider-state">
+                    {customizer.googleFonts.length === 0 && !activeBrowserState.search
+                      ? t(locale, 'fontGoogleEmpty')
+                      : t(locale, 'fontNoResults')}
+                  </p>
+                )}
+                {pageCount > 1 && (
+                  <nav className="font-pagination" aria-label={t(locale, 'fontPagination')}>
+                    <button
+                      type="button"
+                      disabled={currentPage === 1}
+                      onClick={() => updateFontBrowserState({ page: activeBrowserState.page - 1 })}
+                    >
+                      {t(locale, 'previous')}
+                    </button>
+                    <span>{t(locale, 'fontPage', { page: currentPage, pages: pageCount })}</span>
+                    <button
+                      type="button"
+                      disabled={currentPage === pageCount}
+                      onClick={() => updateFontBrowserState({ page: activeBrowserState.page + 1 })}
+                    >
+                      {t(locale, 'next')}
+                    </button>
+                  </nav>
+                )}
+              </>
+            )
           ) : (
             <>
               <label className="font-search">
                 <span className="sr-only">{t(locale, 'fontSearch')}</span>
                 <input
                   type="search"
-                  value={fontSearch}
-                  onChange={(event) => setFontSearch(event.target.value)}
+                  value={activeBrowserState.search}
+                  onChange={(event) => {
+                    updateFontBrowserState({ search: event.target.value, page: 1 });
+                  }}
                   placeholder={t(locale, 'fontSearchPlaceholder')}
                   aria-label={t(locale, 'fontSearch')}
                 />
@@ -310,17 +473,17 @@ export const ControlsPanel = ({
               {params.templateId === 'articulated-name' && (
                 <p className="font-restriction">{t(locale, 'fontArticulatedRestriction')}</p>
               )}
-              {visibleFonts.length ? (
-                renderFontGroups(visibleFonts)
-              ) : (
+              {visibleFonts.length === 0 ? (
                 <p className="font-provider-state">{t(locale, 'fontNoResults')}</p>
+              ) : (
+                renderFontGroups(visibleFonts)
               )}
               {pageCount > 1 && (
                 <nav className="font-pagination" aria-label={t(locale, 'fontPagination')}>
                   <button
                     type="button"
                     disabled={currentPage === 1}
-                    onClick={() => setFontPage((page) => page - 1)}
+                    onClick={() => updateFontBrowserState({ page: activeBrowserState.page - 1 })}
                   >
                     {t(locale, 'previous')}
                   </button>
@@ -328,59 +491,25 @@ export const ControlsPanel = ({
                   <button
                     type="button"
                     disabled={currentPage === pageCount}
-                    onClick={() => setFontPage((page) => page + 1)}
+                    onClick={() => updateFontBrowserState({ page: activeBrowserState.page + 1 })}
                   >
                     {t(locale, 'next')}
                   </button>
                 </nav>
               )}
             </>
-          )
-        ) : (
-          <>
-            <label className="font-search">
-              <span className="sr-only">{t(locale, 'fontSearch')}</span>
-              <input
-                type="search"
-                value={fontSearch}
-                onChange={(event) => {
-                  setFontSearch(event.target.value);
-                  setFontPage(1);
-                }}
-                placeholder={t(locale, 'fontSearchPlaceholder')}
-                aria-label={t(locale, 'fontSearch')}
-              />
-            </label>
-            {fontFilters}
-            {params.templateId === 'articulated-name' && (
-              <p className="font-restriction">{t(locale, 'fontArticulatedRestriction')}</p>
-            )}
-            {visibleFonts.length === 0 ? (
-              <p className="font-provider-state">{t(locale, 'fontNoResults')}</p>
-            ) : (
-              renderFontGroups(visibleFonts)
-            )}
-            {pageCount > 1 && (
-              <nav className="font-pagination" aria-label={t(locale, 'fontPagination')}>
-                <button
-                  type="button"
-                  disabled={currentPage === 1}
-                  onClick={() => setFontPage((page) => page - 1)}
-                >
-                  {t(locale, 'previous')}
-                </button>
-                <span>{t(locale, 'fontPage', { page: currentPage, pages: pageCount })}</span>
-                <button
-                  type="button"
-                  disabled={currentPage === pageCount}
-                  onClick={() => setFontPage((page) => page + 1)}
-                >
-                  {t(locale, 'next')}
-                </button>
-              </nav>
-            )}
-          </>
-        )}
+          )}
+        </div>
+        <footer className="font-attribution">
+          <span>{t(locale, fontSource === 'google' ? 'fontSourceGoogle' : 'fontSourceLocal')}</span>
+          {fontSource === 'google' ? (
+            <a href="https://fonts.google.com" target="_blank" rel="noreferrer">
+              {t(locale, 'fontGoogleAttribution')} ↗
+            </a>
+          ) : (
+            <span>{t(locale, 'fontSourceLocal')}</span>
+          )}
+        </footer>
         {fontNotice && (
           <p className="font-notice" aria-live="polite">
             {t(locale, fontNotice.articulated ? 'fontArticulatedFallback' : 'fontFallback', {

@@ -18,7 +18,8 @@ export default defineConfig({
   webServer: externalBaseUrl
     ? undefined
     : {
-        command: 'pnpm preview --host 127.0.0.1',
+        command:
+          'VITE_GOOGLE_FONTS_API_KEY=playwright-google-fonts-key pnpm build && pnpm preview --host 127.0.0.1',
         url: 'http://127.0.0.1:4173',
         reuseExistingServer: true,
       },
