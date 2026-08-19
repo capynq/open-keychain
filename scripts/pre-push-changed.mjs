@@ -28,7 +28,7 @@ const hookInput = readFileSync(0, 'utf8')
   .map((line) => line.trim())
   .filter(Boolean);
 const [, localSha, , remoteSha] = (hookInput[0] ?? '').split(/\s+/);
-if (isZeroSha(localSha)) process.exit(0);
+if (localSha && isZeroSha(localSha)) process.exit(0);
 const localCommit = localSha || capture(['rev-parse', 'HEAD']).trim();
 const emptyTree = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 const changedArgs = isZeroSha(remoteSha)
