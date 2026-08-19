@@ -42,7 +42,8 @@ a {
   border-bottom: 1px solid #ded9cf;
 }
 
-.seo-brand {
+.seo-brand,
+.seo-brand:visited {
   color: #202433;
   font-weight: 900;
   text-decoration: none;

@@ -31,6 +31,27 @@
   display: flex;
   gap: 10px;
   align-items: center;
+  color: #303545;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  text-decoration: none;
+}
+
+.brand-mark:visited {
+  color: #303545;
+  text-decoration: none;
+}
+
+.brand-mark:hover {
+  color: #bf563f;
+  text-decoration: none;
+}
+
+.brand-mark:focus-visible {
+  border-radius: 8px;
+  outline: 2px solid #ef815e;
+  outline-offset: 4px;
 }
 
 .brand-mark > img {
@@ -41,11 +62,9 @@
   border-radius: 10px;
 }
 
-.brand-mark h1 {
+.brand-mark > span {
   display: block;
   margin: 0;
-  letter-spacing: -0.03em;
-  font-size: 14px;
 }
 
 .github-link {
