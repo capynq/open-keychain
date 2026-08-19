@@ -38,8 +38,12 @@ jobs:
       - name: Validate pull request commit messages
         if: github.event_name == 'pull_request'
         run: pnpm exec commitlint --from "${{ github.event.pull_request.base.sha }}" --to "${{ github.sha }}"
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm test:e2e --workers=1
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install chromium
+      - name: Run browser tests against the existing build
+        run: pnpm test:e2e --workers=1
+        env:
+          PLAYWRIGHT_USE_EXISTING_BUILD: 'true'
       - name: Build and start the self-hosted image
         run: docker compose up -d --build --wait --wait-timeout 120
       - name: Validate the deployed self-hosted image
