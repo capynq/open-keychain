@@ -169,7 +169,7 @@
   grid-template-columns: minmax(min(100%, 360px), clamp(360px, 29vw, 460px)) minmax(0, 1fr);
   gap: clamp(30px, 4vw, 64px);
   flex: 0 0 auto;
-  min-height: calc(100dvh - 74px);
+  height: calc(100dvh - 74px);
   padding: 18px clamp(30px, 4vw, 64px);
 }
 
@@ -1793,6 +1793,7 @@ input[type='range'] {
   .workspace {
     display: flex;
     flex-direction: column-reverse;
+    height: auto;
     padding: 24px 18px 48px;
     gap: 36px;
   }

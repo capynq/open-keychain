@@ -13,6 +13,7 @@ for (const flow of [
   {
     locale: 'EN',
     name: 'OLIVER',
+    nameInput: 'Name or text',
     template: 'Nameplate',
     camera: 'Top view',
     exportButton: 'Export',
@@ -23,6 +24,7 @@ for (const flow of [
   {
     locale: 'RU',
     name: 'НИКИТА',
+    nameInput: 'Имя или текст',
     template: 'Именная табличка',
     camera: 'Сверху',
     exportButton: 'Экспорт',
@@ -42,7 +44,7 @@ for (const flow of [
       await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
     }
 
-    const name = page.getByLabel('Name or text');
+    const name = page.getByLabel(flow.nameInput);
     await name.focus();
     await page.keyboard.press('ControlOrMeta+A');
     await page.keyboard.type(flow.name);
@@ -325,19 +327,21 @@ for (const viewport of [
   { width: 1280, height: 800 },
   { width: 1280, height: 720 },
 ]) {
-  test(`keeps all desktop controls visible at ${viewport.width}×${viewport.height}`, async ({
+  test(`keeps the desktop workspace usable at ${viewport.width}×${viewport.height}`, async ({
     page,
   }) => {
     await page.setViewportSize(viewport);
+    await page.addInitScript(() =>
+      window.localStorage.setItem('open-keychain.customizer-guide', 'dismissed'),
+    );
     await page.goto('/create');
     await expect(page.locator('.status-pill')).toHaveText('Ready to print', { timeout: 10000 });
     const layout = await page.evaluate(() => {
       const controls = document.querySelector('.controls-panel')!.getBoundingClientRect();
       const header = document.querySelector('.topbar')!.getBoundingClientRect();
       const exportButton = document.querySelector('.export-header-button')!.getBoundingClientRect();
+      const viewer = document.querySelector('.viewer')!.getBoundingClientRect();
       return {
-        documentHeight: document.documentElement.scrollHeight,
-        viewportHeight: window.innerHeight,
         headerTop: header.top,
         headerBottom: header.bottom,
         controlsTop: controls.top,
@@ -346,9 +350,10 @@ for (const viewport of [
         exportBottom: exportButton.bottom,
         exportCenter: (exportButton.left + exportButton.right) / 2,
         viewportCenter: window.innerWidth / 2,
+        viewerWidth: viewer.width,
+        viewerHeight: viewer.height,
       };
     });
-    expect(layout.documentHeight).toBeLessThanOrEqual(layout.viewportHeight);
     expect(layout.controlsTop).toBeGreaterThanOrEqual(0);
     expect(layout.headerTop).toBeGreaterThanOrEqual(0);
     expect(layout.headerBottom).toBeLessThanOrEqual(layout.controlsTop);
@@ -356,14 +361,20 @@ for (const viewport of [
     expect(layout.exportBottom).toBeLessThanOrEqual(layout.headerBottom);
     expect(Math.abs(layout.exportCenter - layout.viewportCenter)).toBeLessThanOrEqual(1);
     expect(layout.exportBottom - layout.exportTop).toBeGreaterThanOrEqual(36);
+    expect(layout.viewerWidth).toBeGreaterThan(360);
+    expect(layout.viewerHeight).toBeGreaterThan(260);
     await expect(page.getByRole('button', { name: 'Export' })).toBeVisible();
     await expect(page.getByLabel('Keyring hole')).toBeVisible();
+    await expect(page.locator('.viewer')).toBeInViewport();
   });
 }
 test('keeps the complete articulated shape control set reachable in the scrollable pane', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 600 });
+  await page.addInitScript(() =>
+    window.localStorage.setItem('open-keychain.customizer-guide', 'dismissed'),
+  );
   await page.goto('/create');
   await page.getByRole('button', { name: 'Articulated name' }).click();
   const controls = page.locator('.controls-panel');
@@ -372,10 +383,31 @@ test('keeps the complete articulated shape control set reachable in the scrollab
     scrollHeight: element.scrollHeight,
   }));
   expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
-  await controls.evaluate((element) => {
+  const scrollTop = await controls.evaluate((element) => {
     element.scrollTop = element.scrollHeight;
+    return element.scrollTop;
   });
-  await expect(page.getByLabel('Max joint angle')).toBeVisible();
+  expect(scrollTop).toBeGreaterThan(0);
+  await expect(page.getByLabel('Max joint angle')).toBeInViewport();
+});
+test('keeps the customizer footer reachable through page scrolling', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.addInitScript(() =>
+    window.localStorage.setItem('open-keychain.customizer-guide', 'dismissed'),
+  );
+  await page.goto('/create');
+  await expect(page.locator('.status-pill')).toHaveText('Ready to print', { timeout: 10000 });
+
+  const pageState = await page.evaluate(() => {
+    const footer = document.querySelector('.customizer-footer')!.getBoundingClientRect();
+    const documentHeight = document.documentElement.scrollHeight;
+    window.scrollTo(0, documentHeight);
+    return { documentHeight, footerTop: footer.top, viewportHeight: window.innerHeight };
+  });
+  expect(pageState.documentHeight).toBeGreaterThan(pageState.viewportHeight);
+  expect(pageState.footerTop).toBeGreaterThan(0);
+  await expect(page.locator('.customizer-footer')).toBeInViewport();
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
 });
 test('keeps the preview prominent and touch targets comfortable at 390 px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });

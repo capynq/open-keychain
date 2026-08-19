@@ -151,6 +151,12 @@ test('uses the complete tab keyboard model and exposes pressed choices', async (
 test('imports a local font for this session and keeps local-font guidance collapsed', async ({
   page,
 }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'showOpenFilePicker', {
+      configurable: true,
+      value: undefined,
+    });
+  });
   await page.goto('/create');
 
   const fontSection = page.locator('.control-section').filter({ hasText: /^Font\s/ });
