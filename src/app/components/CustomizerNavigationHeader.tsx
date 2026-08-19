@@ -1,9 +1,11 @@
 import { hostedMode, type HostedAccountState } from '../../features/hosted';
+import type { KeychainParams } from '../../domain/keychain';
+import { Link } from 'react-router';
 import type { Locale } from '../../infrastructure/i18n';
 import { t } from '../../infrastructure/i18n';
-import { AccountPopover } from './AccountPopover';
 import { BrandMark } from './BrandMark';
 import { LanguagePicker } from './LanguagePicker';
+import { PROFILE_ROUTE } from '../routes';
 
 export const CustomizerNavigationHeader = ({
   locale,
@@ -11,12 +13,14 @@ export const CustomizerNavigationHeader = ({
   exportOpen,
   onExportOpen,
   hosted,
+  currentParams,
 }: {
   locale: Locale;
   onLocaleChange: (locale: Locale) => void;
   exportOpen: boolean;
   onExportOpen?: () => void;
   hosted?: HostedAccountState;
+  currentParams?: KeychainParams;
 }) => (
   <header className="topbar">
     <BrandMark />
@@ -31,24 +35,10 @@ export const CustomizerNavigationHeader = ({
     </button>
     <div className="topbar-actions">
       <LanguagePicker locale={locale} onLocaleChange={onLocaleChange} />
-      <a href="https://github.com/capynq/open-keychain" className="github-link">
-        {t(locale, 'openSource')}
-      </a>
       {hostedMode && hosted && (
-        <div className="account-menu">
-          <button
-            type="button"
-            className="account-button"
-            onClick={() => hosted.setAccountOpen(!hosted.accountOpen)}
-          >
-            {hosted.account ? hosted.account.name : t(locale, 'signIn')}
-          </button>
-          {hosted.accountOpen && (
-            <div className="account-popover">
-              <AccountPopover locale={locale} state={hosted} />
-            </div>
-          )}
-        </div>
+        <Link className="header-profile-link" to={PROFILE_ROUTE} state={{ currentParams }}>
+          {hosted.account ? t(locale, 'profile') : t(locale, 'signIn')}
+        </Link>
       )}
     </div>
   </header>

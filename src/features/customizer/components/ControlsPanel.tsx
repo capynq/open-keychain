@@ -19,7 +19,7 @@ import { ResetIconButton } from '../../../components/ResetIconButton';
 import { type useCustomizerParams } from '../hooks/useCustomizerParams';
 import { RangeControl } from './RangeControl';
 
-type FontSourceTab = 'local' | 'google';
+type FontSourceTab = 'bundled' | 'google' | 'local';
 type FontBrowserState = {
   search: string;
   page: number;
@@ -28,8 +28,9 @@ type FontBrowserState = {
 };
 
 const INITIAL_FONT_BROWSER_STATE: Record<FontSourceTab, FontBrowserState> = {
-  local: { search: '', page: 1, category: 'all', supportsTextOnly: true },
+  bundled: { search: '', page: 1, category: 'all', supportsTextOnly: true },
   google: { search: '', page: 1, category: 'all', supportsTextOnly: true },
+  local: { search: '', page: 1, category: 'all', supportsTextOnly: true },
 };
 
 export const ControlsPanel = ({
@@ -59,7 +60,7 @@ export const ControlsPanel = ({
     showsParameter,
     rangeFor,
   } = customizer;
-  const [fontSource, setFontSource] = useState<FontSourceTab>('local');
+  const [fontSource, setFontSource] = useState<FontSourceTab>('bundled');
   const [fontBrowserState, setFontBrowserState] = useState(INITIAL_FONT_BROWSER_STATE);
   const [fontLoadError, setFontLoadError] = useState(false);
   const [loadingFontId, setLoadingFontId] = useState<string>();
@@ -69,9 +70,16 @@ export const ControlsPanel = ({
   const [openCategories, setOpenCategories] = useState<Set<FontCategory>>(
     () => new Set(FONT_CATEGORY_ORDER),
   );
+  const fileSystemPickerAvailable =
+    typeof window !== 'undefined' && typeof window.showOpenFilePicker === 'function';
   const fontsPerPage = 12;
   const activeBrowserState = fontBrowserState[fontSource];
-  const sourceFonts = fontSource === 'google' ? customizer.googleFonts : FONT_CATALOG;
+  const sourceFonts =
+    fontSource === 'google'
+      ? customizer.googleFonts
+      : fontSource === 'local'
+        ? customizer.localFonts.flatMap((record) => (record.font ? [record.font] : []))
+        : FONT_CATALOG;
   const compatibleFonts = useMemo(
     () =>
       sourceFonts.filter((font) =>
@@ -112,7 +120,7 @@ export const ControlsPanel = ({
   };
   const loadGoogleFont = async (font: (typeof FONT_CATALOG)[number]): Promise<boolean> => {
     if (
-      font.source !== 'google' ||
+      (font.source !== 'google' && font.source !== 'local') ||
       loadedGoogleFontIds.has(font.id) ||
       typeof FontFace === 'undefined'
     )
@@ -123,11 +131,16 @@ export const ControlsPanel = ({
 
     const load = (async () => {
       try {
-        const face = new FontFace(font.previewFamily, `url(${font.file})`, {
+        const source =
+          font.source === 'local' && font.data
+            ? URL.createObjectURL(new Blob([font.data], { type: 'font/ttf' }))
+            : font.file;
+        const face = new FontFace(font.previewFamily, `url(${source})`, {
           weight: String(font.weight),
         });
         await face.load();
         document.fonts.add(face);
+        if (font.source === 'local' && source.startsWith('blob:')) URL.revokeObjectURL(source);
         setLoadedGoogleFontIds((current) => new Set(current).add(font.id));
         return true;
       } catch {
@@ -364,7 +377,7 @@ export const ControlsPanel = ({
           <ResetIconButton label={t(locale, 'resetFont')} onClick={() => resetSection('font')} />
         </div>
         <div className="font-source-tabs" role="tablist" aria-label={t(locale, 'fontSources')}>
-          {(['local', 'google'] as const).map((source, index) => (
+          {(['bundled', 'google', 'local'] as const).map((source, index) => (
             <button
               type="button"
               role="tab"
@@ -380,13 +393,20 @@ export const ControlsPanel = ({
                 event.preventDefault();
                 const direction = event.key === 'ArrowLeft' ? -1 : 1;
                 const nextIndex =
-                  event.key === 'Home' ? 0 : event.key === 'End' ? 1 : (index + direction + 2) % 2;
-                const nextSource = (['local', 'google'] as const)[nextIndex];
+                  event.key === 'Home' ? 0 : event.key === 'End' ? 2 : (index + direction + 3) % 3;
+                const nextSource = (['bundled', 'google', 'local'] as const)[nextIndex];
                 activateFontSource(nextSource);
                 document.getElementById(`font-tab-${nextSource}`)?.focus();
               }}
             >
-              {t(locale, source === 'local' ? 'fontSourceLocal' : 'fontSourceGoogle')}
+              {t(
+                locale,
+                source === 'bundled'
+                  ? 'fontSourceLocal'
+                  : source === 'google'
+                    ? 'fontSourceGoogle'
+                    : 'fontSourceImported',
+              )}
             </button>
           ))}
         </div>
@@ -457,6 +477,56 @@ export const ControlsPanel = ({
             )
           ) : (
             <>
+              {fontSource === 'local' && (
+                <div className="font-provider-state">
+                  <p>{t(locale, 'fontLocalDescription')}</p>
+                  {!fileSystemPickerAvailable && (
+                    <input
+                      type="file"
+                      accept=".ttf,.otf,font/ttf,font/otf"
+                      multiple
+                      onChange={(event) => {
+                        if (event.target.files)
+                          void customizer.importLocalFonts(event.target.files);
+                        event.currentTarget.value = '';
+                      }}
+                    />
+                  )}
+                  {fileSystemPickerAvailable && (
+                    <button type="button" onClick={() => void customizer.pickLocalFonts()}>
+                      {t(locale, 'fontLocalChoose')}
+                    </button>
+                  )}
+                  <details className="font-local-about">
+                    <summary
+                      aria-label={t(locale, 'fontLocalAbout')}
+                      title={t(locale, 'fontLocalAbout')}
+                    >
+                      ⓘ
+                    </summary>
+                    <p>{t(locale, 'fontLocalAboutDescription')}</p>
+                  </details>
+                  {customizer.localFonts
+                    .filter((record) => record.status === 'unavailable')
+                    .map((record) => (
+                      <p key={record.id} role="status">
+                        {record.name} · {t(locale, 'fontLocalUnavailable')}{' '}
+                        <button
+                          type="button"
+                          onClick={() => void customizer.reconnectLocalFont(record.id)}
+                        >
+                          {t(locale, 'fontLocalReconnect')}
+                        </button>{' '}
+                        <button
+                          type="button"
+                          onClick={() => void customizer.removeLocalFont(record.id)}
+                        >
+                          {t(locale, 'remove')}
+                        </button>
+                      </p>
+                    ))}
+                </div>
+              )}
               <label className="font-search">
                 <span className="sr-only">{t(locale, 'fontSearch')}</span>
                 <input
@@ -501,7 +571,16 @@ export const ControlsPanel = ({
           )}
         </div>
         <footer className="font-attribution">
-          <span>{t(locale, fontSource === 'google' ? 'fontSourceGoogle' : 'fontSourceLocal')}</span>
+          <span>
+            {t(
+              locale,
+              fontSource === 'google'
+                ? 'fontSourceGoogle'
+                : fontSource === 'local'
+                  ? 'fontSourceImported'
+                  : 'fontSourceLocal',
+            )}
+          </span>
           {fontSource === 'google' ? (
             <a href="https://fonts.google.com" target="_blank" rel="noreferrer">
               {t(locale, 'fontGoogleAttribution')} ↗

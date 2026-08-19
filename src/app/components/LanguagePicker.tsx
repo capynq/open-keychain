@@ -11,9 +11,9 @@ export const LanguagePicker = ({
   <label className="language-picker">
     <span className="sr-only">{t(locale, 'language')}</span>
     <select value={locale} onChange={(event) => onLocaleChange(event.target.value as Locale)}>
-      <option value="en">EN</option>
-      <option value="ru">RU</option>
-      <option value="uk">UK</option>
+      <option value="en">🇬🇧 — English</option>
+      <option value="ru">🇷🇺 — Русский</option>
+      <option value="uk">🇺🇦 — Українська</option>
     </select>
   </label>
 );

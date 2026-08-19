@@ -1,4 +1,5 @@
 import type { HostedAccountState } from '../../features/hosted';
+import type { KeychainParams } from '../../domain/keychain';
 import type { Locale } from '../../infrastructure/i18n';
 import { CustomizerNavigationHeader } from './CustomizerNavigationHeader';
 import { LandingNavigationHeader } from './LandingNavigationHeader';
@@ -10,6 +11,7 @@ export const AppHeader = ({
   exportOpen = false,
   onExportOpen,
   hosted,
+  currentParams,
 }: {
   variant: 'landing' | 'customizer';
   locale: Locale;
@@ -17,6 +19,7 @@ export const AppHeader = ({
   exportOpen?: boolean;
   onExportOpen?: () => void;
   hosted?: HostedAccountState;
+  currentParams?: KeychainParams;
 }) =>
   variant === 'landing' ? (
     <LandingNavigationHeader locale={locale} onLocaleChange={onLocaleChange} />
@@ -27,5 +30,6 @@ export const AppHeader = ({
       exportOpen={exportOpen}
       onExportOpen={onExportOpen}
       hosted={hosted}
+      currentParams={currentParams}
     />
   );

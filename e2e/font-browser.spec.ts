@@ -9,6 +9,7 @@ test('shows the expanded built-in catalog and optional filters', async ({ page }
     'aria-selected',
     'true',
   );
+  await expect(fontSection.getByRole('tab', { name: 'Local fonts' })).toBeVisible();
 
   const pagination = fontSection.getByRole('navigation', { name: 'Font pages' });
   await expect(pagination).toHaveCount(0);
@@ -128,11 +129,15 @@ test('uses the complete tab keyboard model and exposes pressed choices', async (
   await expect(builtIn).toBeFocused();
   await expect(builtIn).toHaveAttribute('aria-selected', 'true');
   await page.keyboard.press('ArrowLeft');
-  await expect(google).toBeFocused();
-  await expect(google).toHaveAttribute('aria-selected', 'true');
+  const localFiles = fontSection.getByRole('tab', { name: 'Local fonts' });
+  await expect(localFiles).toBeFocused();
+  await expect(localFiles).toHaveAttribute('aria-selected', 'true');
   await page.keyboard.press('ArrowRight');
   await expect(builtIn).toBeFocused();
   await expect(builtIn).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('ArrowRight');
+  await expect(google).toBeFocused();
+  await expect(google).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('button', { name: /Name keychain/ })).toHaveAttribute(
     'aria-pressed',
     'true',
@@ -141,6 +146,28 @@ test('uses the complete tab keyboard model and exposes pressed choices', async (
     'aria-pressed',
     'true',
   );
+});
+
+test('imports a local font for this session and keeps local-font guidance collapsed', async ({
+  page,
+}) => {
+  await page.goto('/create');
+
+  const fontSection = page.locator('.control-section').filter({ hasText: /^Font\s/ });
+  await fontSection.getByRole('tab', { name: 'Local fonts' }).click();
+  const about = fontSection.locator('details.font-local-about');
+  await expect(about).not.toHaveAttribute('open', '');
+  await about.locator('summary').focus();
+  await page.keyboard.press('Enter');
+  await expect(about).toHaveAttribute('open', '');
+  await expect(about).toContainText('moved or deleted');
+
+  const chooser = fontSection.locator('input[type="file"]');
+  await chooser.setInputFiles('public/fonts/nunito.ttf');
+  const imported = fontSection.locator('.font-card').first();
+  await expect(imported).toBeVisible();
+  await imported.click();
+  await expect(imported).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('keeps localized control names and touch targets usable', async ({ page }) => {

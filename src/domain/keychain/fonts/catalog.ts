@@ -2,6 +2,10 @@ export type FontDefinition = {
   id: string;
   name: string;
   file: string;
+  /** Bytes for user-supplied fonts. Kept out of persisted metadata and cloned to the worker. */
+  data?: ArrayBuffer;
+  /** Changes when a local font's bytes are reconnected or replaced. */
+  dataRevision?: string;
   previewFamily: string;
   weight: number;
   category: FontCategory;
@@ -19,8 +23,8 @@ export type FontDefinition = {
   specimenUrl?: string;
   licenseUrl?: string;
 };
-export type FontSource = 'bundled' | 'google';
-export type FontProvider = 'bundled' | 'google-fonts';
+export type FontSource = 'bundled' | 'google' | 'local';
+export type FontProvider = 'bundled' | 'google-fonts' | 'local-file';
 export type FontScript = 'latin' | 'cyrillic';
 export type FontCategory =
   | 'Rounded'

@@ -18,6 +18,15 @@ export type HostedProject = {
 };
 export const hostedMode = import.meta.env.VITE_HOSTED_MODE === 'true';
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+export class HostedApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = 'HostedApiError';
+  }
+}
 const apiRequest = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...init,
@@ -28,8 +37,12 @@ const apiRequest = async <T>(path: string, init?: RequestInit): Promise<T> => {
     const body = (await response.json().catch(() => ({}))) as {
       error?: string;
     };
-    throw new Error(body.error ?? `Hosted API request failed (${response.status}).`);
+    throw new HostedApiError(
+      body.error ?? `Hosted API request failed (${response.status}).`,
+      response.status,
+    );
   }
+  if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 };
 export const requestExportIntent = (): Promise<ExportIntent> => {
@@ -53,8 +66,9 @@ export const currentUser = async (): Promise<HostedUser | undefined> => {
         user: HostedUser;
       }>('/api/me')
     ).user;
-  } catch {
-    return undefined;
+  } catch (cause) {
+    if (cause instanceof HostedApiError && cause.status === 401) return undefined;
+    throw cause;
   }
 };
 export const signUp = (
@@ -106,4 +120,8 @@ export const saveProject = (
     method: 'POST',
     body: JSON.stringify({ name, params }),
   });
+};
+
+export const deleteProject = async (projectId: string): Promise<void> => {
+  await apiRequest(`/api/projects/${encodeURIComponent(projectId)}`, { method: 'DELETE' });
 };

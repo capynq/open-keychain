@@ -4,7 +4,9 @@ import { useAnalytics } from '../infrastructure/telemetry';
 import { detectLocale, setLocale, t, type Locale } from '../infrastructure/i18n';
 import { CustomizerPage } from './pages/CustomizerPage';
 import { LandingPage } from './pages/LandingPage';
-import { CREATE_ROUTE, LANDING_ROUTE } from './routes';
+import { ProfilePage } from './pages/ProfilePage';
+import { CREATE_ROUTE, LANDING_ROUTE, PROFILE_ROUTE } from './routes';
+import { hostedMode } from '../features/hosted';
 import './styles/app.css';
 import { AnalyticsConsentBanner } from './components/AnalyticsConsentBanner';
 
@@ -20,12 +22,21 @@ const App = () => {
   const location = useLocation();
   const normalizedPath = location.pathname.replace(/\/+$/, '') || '/';
   const isCustomizer = normalizedPath === CREATE_ROUTE;
+  const isProfile = normalizedPath === PROFILE_ROUTE;
   const { consent, track } = useAnalytics();
 
   useEffect(() => {
     document.documentElement.lang = locale;
-    const titleKey = isCustomizer ? 'documentCreateTitle' : 'documentLandingTitle';
-    const descriptionKey = isCustomizer ? 'metaCreateDescription' : 'metaLandingDescription';
+    const titleKey = isProfile
+      ? 'documentProfileTitle'
+      : isCustomizer
+        ? 'documentCreateTitle'
+        : 'documentLandingTitle';
+    const descriptionKey = isProfile
+      ? 'metaProfileDescription'
+      : isCustomizer
+        ? 'metaCreateDescription'
+        : 'metaLandingDescription';
     const title = t(locale, titleKey);
     const description = t(locale, descriptionKey);
     const canonicalPath = normalizedPath === '/' ? '/' : normalizedPath;
@@ -40,7 +51,7 @@ const App = () => {
     setMetaContent('meta[property="og:description"]', description);
     setMetaContent('meta[name="twitter:title"]', title);
     setMetaContent('meta[name="twitter:description"]', description);
-  }, [isCustomizer, locale, normalizedPath]);
+  }, [isCustomizer, isProfile, locale, normalizedPath]);
 
   useEffect(() => {
     track(normalizedPath === '/' ? 'landing_view' : 'page_view', {
@@ -65,6 +76,16 @@ const App = () => {
         <Route
           path={CREATE_ROUTE}
           element={<CustomizerPage locale={locale} onLocaleChange={onLocaleChange} />}
+        />
+        <Route
+          path={PROFILE_ROUTE}
+          element={
+            hostedMode ? (
+              <ProfilePage locale={locale} onLocaleChange={onLocaleChange} />
+            ) : (
+              <Navigate to={LANDING_ROUTE} replace />
+            )
+          }
         />
         <Route path="*" element={<Navigate to={LANDING_ROUTE} replace />} />
       </Routes>

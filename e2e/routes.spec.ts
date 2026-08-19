@@ -39,6 +39,24 @@ test('takes the primary landing call to action to the customizer', async ({ page
   assertNoBrowserErrors();
 });
 
+test('keeps source navigation in footers, not headers', async ({ page }) => {
+  await page.goto('/');
+  await expect(
+    page.locator('header a[href="https://github.com/capynq/open-keychain"]'),
+  ).toHaveCount(0);
+  await expect(
+    page.locator('footer a[href="https://github.com/capynq/open-keychain"]'),
+  ).toHaveCount(1);
+
+  await page.goto('/create');
+  await expect(
+    page.locator('header a[href="https://github.com/capynq/open-keychain"]'),
+  ).toHaveCount(0);
+  await expect(
+    page.locator('footer a[href="https://github.com/capynq/open-keychain"]'),
+  ).toHaveCount(1);
+});
+
 test('loads all reviewed landing visuals at the active responsive breakpoint', async ({
   page,
 }, testInfo) => {

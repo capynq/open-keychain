@@ -10,7 +10,7 @@ import {
   type HostedProject,
   type HostedUser,
 } from '../api/hosted-api';
-import type { KeychainParams } from '../../../domain/keychain';
+import { FONT_CATALOG, isLocalFontId, type KeychainParams } from '../../../domain/keychain';
 
 export type HostedAccountState = {
   account: HostedUser | undefined;
@@ -84,7 +84,11 @@ export const useHostedAccount = (
     const name = window.prompt('Project name', params.text || 'Untitled keychain')?.trim();
     if (!name) return;
     try {
-      const response = await saveProject(name, params as unknown as Record<string, unknown>);
+      const hostedParams = {
+        ...params,
+        fontId: isLocalFontId(params.fontId) ? FONT_CATALOG[0].id : params.fontId,
+      } as unknown as Record<string, unknown>;
+      const response = await saveProject(name, hostedParams);
 
       setProjects((current) => [
         response.project,

@@ -1,4 +1,4 @@
-import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import {
   FONT_CATALOG,
   articulatedFallbackFont,
@@ -7,6 +7,8 @@ import {
   fontSupportsText,
   textUsesCyrillic,
   createGoogleFontProvider,
+  createLocalFontStore,
+  type LocalFontRecord,
   type FontDefinition,
 } from '../../../domain/keychain';
 import {
@@ -22,13 +24,20 @@ import { STYLE_CATALOG, TEMPLATE_CATALOG } from '../../../domain/keychain';
 import type { FontNotice } from '../model/customizer-types';
 import { resetParamsForSection, type CustomizerResetSection } from '../model/reset';
 
-export const useCustomizerParams = (): {
+export const useCustomizerParams = (
+  initialParams?: KeychainParams,
+): {
   params: KeychainParams;
   selectedFont: FontDefinition;
   googleFonts: FontDefinition[];
   googleLoading: boolean;
   googleError: string | undefined;
   loadGoogleFonts: () => Promise<void>;
+  localFonts: LocalFontRecord[];
+  importLocalFonts: (files: FileList | File[]) => Promise<void>;
+  pickLocalFonts: () => Promise<void>;
+  reconnectLocalFont: (id: string) => Promise<void>;
+  removeLocalFont: (id: string) => Promise<void>;
   activeTemplate: (typeof TEMPLATE_CATALOG)[number];
   availableStyles: typeof STYLE_CATALOG;
   usesCyrillic: boolean;
@@ -43,12 +52,17 @@ export const useCustomizerParams = (): {
   rangeFor: (parameter: ShapeParameter) => ParameterRange;
   setParams: Dispatch<SetStateAction<KeychainParams>>;
 } => {
-  const [params, setParams] = useState<KeychainParams>(() => ({ ...DEFAULT_PARAMS }));
+  const [params, setParams] = useState<KeychainParams>(() => ({
+    ...DEFAULT_PARAMS,
+    ...initialParams,
+  }));
 
   const [fontNotice, setFontNotice] = useState<FontNotice>();
   const [googleFonts, setGoogleFonts] = useState<FontDefinition[]>([]);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState<string>();
+  const [localFonts, setLocalFonts] = useState<LocalFontRecord[]>([]);
+  const [localStore] = useState(() => createLocalFontStore());
   const [provider] = useState(() =>
     createGoogleFontProvider({
       apiKey: import.meta.env.VITE_GOOGLE_FONTS_API_KEY,
@@ -66,11 +80,30 @@ export const useCustomizerParams = (): {
       setGoogleLoading(false);
     }
   };
-  const allFonts = useMemo(() => [...FONT_CATALOG, ...googleFonts], [googleFonts]);
+  const allFonts = useMemo(
+    () => [
+      ...FONT_CATALOG,
+      ...googleFonts,
+      ...localFonts.flatMap((record) => (record.font ? [record.font] : [])),
+    ],
+    [googleFonts, localFonts],
+  );
+
+  useEffect(() => {
+    void localStore.restore().then((restored) => {
+      setLocalFonts((current) => [
+        ...current,
+        ...restored.filter((record) => !current.some((existing) => existing.id === record.id)),
+      ]);
+    });
+  }, [localStore]);
 
   const selectedFont = useMemo(
-    () => allFonts.find((font) => font.id === params.fontId) ?? FONT_CATALOG[0],
-    [allFonts, params.fontId],
+    () =>
+      [...allFonts, ...localFonts.flatMap((record) => (record.font ? [record.font] : []))].find(
+        (font) => font.id === params.fontId,
+      ) ?? FONT_CATALOG[0],
+    [allFonts, localFonts, params.fontId],
   );
 
   const activeTemplate = useMemo(
@@ -160,6 +193,31 @@ export const useCustomizerParams = (): {
     setFontNotice(undefined);
     setParams({ ...DEFAULT_PARAMS });
   };
+  const importLocalFonts = async (files: FileList | File[]): Promise<void> => {
+    const imported = await localStore.importFiles(files);
+    if (imported.length)
+      setLocalFonts((current) => [
+        ...current,
+        ...imported.filter((record) => !current.some((existing) => existing.id === record.id)),
+      ]);
+  };
+  const pickLocalFonts = async (): Promise<void> => {
+    const imported = await localStore.pick();
+    if (imported.length)
+      setLocalFonts((current) => [
+        ...current,
+        ...imported.filter((record) => !current.some((existing) => existing.id === record.id)),
+      ]);
+  };
+  const reconnectLocalFont = async (id: string): Promise<void> => {
+    const record = await localStore.reconnect(id);
+    if (record) setLocalFonts((current) => current.map((item) => (item.id === id ? record : item)));
+  };
+  const removeLocalFont = async (id: string): Promise<void> => {
+    await localStore.remove(id);
+    if (params.fontId === id) setParams((current) => ({ ...current, fontId: FONT_CATALOG[0].id }));
+    setLocalFonts((current) => current.filter((item) => item.id !== id));
+  };
 
   return {
     params,
@@ -168,6 +226,11 @@ export const useCustomizerParams = (): {
     googleLoading,
     googleError,
     loadGoogleFonts,
+    localFonts,
+    importLocalFonts,
+    pickLocalFonts,
+    reconnectLocalFont,
+    removeLocalFont,
     activeTemplate,
     availableStyles,
     usesCyrillic,

@@ -70,14 +70,19 @@ const parseFont = (buffer: ArrayBuffer): opentype.Font => {
 };
 const fontCache = new Map<string, Promise<opentype.Font>>();
 const loadFont = (definition: FontDefinition): Promise<opentype.Font> => {
-  const cacheKey = `${definition.id}\u0000${definition.file}`;
+  const localSignature =
+    definition.source === 'local' ? `\u0000${definition.dataRevision ?? ''}` : '';
+  const cacheKey = `${definition.id}\u0000${definition.file}${localSignature}`;
   const cached = fontCache.get(cacheKey);
   if (cached) return cached;
-  const request = fetch(definition.file)
-    .then((response) => {
-      if (!response.ok) throw new Error(`Could not load the ${definition.name} font.`);
-      return response.arrayBuffer();
-    })
+  const request = (
+    definition.data
+      ? Promise.resolve(definition.data.slice(0))
+      : fetch(definition.file).then((response) => {
+          if (!response.ok) throw new Error(`Could not load the ${definition.name} font.`);
+          return response.arrayBuffer();
+        })
+  )
     .then(parseFont)
     .catch((error) => {
       fontCache.delete(cacheKey);

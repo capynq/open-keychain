@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { DEFAULT_PARAMS, normalizeParams } from '../../domain/keychain';
+import type { KeychainParams } from '../../domain/keychain';
 import { styleName, templateName, type Locale } from '../../infrastructure/i18n';
 import { useCustomizerParams, useGeometryGeneration } from '../../features/customizer';
 import { useExportActions } from '../../features/export';
@@ -8,11 +9,11 @@ import { previewStatus, type SurfacePresetId } from '../../features/preview';
 import { useAnalytics } from '../../infrastructure/telemetry';
 import { useCustomizerGuide } from './useCustomizerGuide';
 
-export const useCustomizerPageState = (locale: Locale) => {
+export const useCustomizerPageState = (locale: Locale, initialParams?: KeychainParams) => {
   const [surfacePreset, setSurfacePreset] = useState<SurfacePresetId>('matte');
   const [exportOpen, setExportOpen] = useState(false);
   const { track } = useAnalytics();
-  const customizer = useCustomizerParams();
+  const customizer = useCustomizerParams(initialParams);
   const geometry = useGeometryGeneration(customizer.params, customizer.selectedFont);
   const hosted = useHostedAccount(customizer.params, (projectParams) => {
     customizer.setParams(normalizeParams({ ...DEFAULT_PARAMS, ...projectParams }));

@@ -1,7 +1,8 @@
 import { Link } from 'react-router';
+import { hostedMode } from '../../features/hosted';
 import type { Locale } from '../../infrastructure/i18n';
 import { t } from '../../infrastructure/i18n';
-import { CREATE_ROUTE } from '../routes';
+import { CREATE_ROUTE, PROFILE_ROUTE } from '../routes';
 import { BrandMark } from './BrandMark';
 import { LanguagePicker } from './LanguagePicker';
 
@@ -21,9 +22,11 @@ export const LandingNavigationHeader = ({
     </nav>
     <div className="topbar-actions landing-topbar-actions">
       <LanguagePicker locale={locale} onLocaleChange={onLocaleChange} />
-      <a href="https://github.com/capynq/open-keychain" className="github-link">
-        GitHub
-      </a>
+      {hostedMode && (
+        <Link className="header-profile-link" to={PROFILE_ROUTE}>
+          {t(locale, 'profile')}
+        </Link>
+      )}
       <Link className="landing-header-cta" to={CREATE_ROUTE}>
         {t(locale, 'landing.startDesigning')}
       </Link>

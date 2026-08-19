@@ -12,6 +12,7 @@ export class GeometryClient {
   private nextRequestId = 1;
   private latestParams: KeychainParams | undefined;
   private latestFontDefinition: FontDefinition | undefined;
+  private readonly registeredLocalFonts = new WeakSet<FontDefinition>();
   private busy = false;
   private resolveGeometry: ((result: GeometryResult) => void) | undefined;
   private rejectGeometry: ((error: Error) => void) | undefined;
@@ -56,7 +57,7 @@ export class GeometryClient {
       params,
       format,
       mode,
-      fontDefinition,
+      fontDefinition: this.fontForWorker(fontDefinition),
     } satisfies WorkerRequest);
     return new Promise((resolve, reject) => {
       this.resolveExport = resolve;
@@ -76,7 +77,7 @@ export class GeometryClient {
       type: 'generate',
       requestId,
       params,
-      fontDefinition,
+      fontDefinition: this.fontForWorker(fontDefinition),
     } satisfies WorkerRequest);
     return new Promise((resolve, reject) => {
       this.resolveGeometry = resolve;
@@ -116,5 +117,19 @@ export class GeometryClient {
     this.resolveExport = undefined;
     this.rejectExport = undefined;
     this.busy = false;
+  }
+
+  private fontForWorker(fontDefinition: FontDefinition | undefined): FontDefinition | undefined {
+    if (
+      !fontDefinition ||
+      fontDefinition.source !== 'local' ||
+      !fontDefinition.data ||
+      !this.registeredLocalFonts.has(fontDefinition)
+    ) {
+      if (fontDefinition?.source === 'local' && fontDefinition.data)
+        this.registeredLocalFonts.add(fontDefinition);
+      return fontDefinition;
+    }
+    return { ...fontDefinition, data: undefined };
   }
 }

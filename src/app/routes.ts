@@ -9,3 +9,5 @@ export const ROUTE_MANIFEST = [
 
 export const LANDING_ROUTE = ROUTE_MANIFEST[0].path;
 export const CREATE_ROUTE = ROUTE_MANIFEST[1].path;
+/** Available only when the hosted account service is enabled. */
+export const PROFILE_ROUTE = '/profile';

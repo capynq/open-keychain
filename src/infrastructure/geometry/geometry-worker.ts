@@ -8,9 +8,18 @@ import {
   type WorkerResponse,
 } from '../../domain/keychain/model/types';
 let wasmPromise: ReturnType<typeof createWasm> | undefined;
+const localFonts = new Map<string, Parameters<typeof buildKeychain>[3]>();
 const getWasm = () => {
   wasmPromise ??= createWasm();
   return wasmPromise;
+};
+const fontForBuild = (definition: Parameters<typeof buildKeychain>[3]) => {
+  if (definition?.source !== 'local') return definition;
+  if (definition.data) {
+    localFonts.set(definition.id, definition);
+    return definition;
+  }
+  return localFonts.get(definition.id) ?? definition;
 };
 void getWasm();
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
@@ -22,7 +31,12 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     }
     const wasm = await getWasm();
     if (request.type === 'generate') {
-      const { result } = await buildKeychain(wasm, request.params, false, request.fontDefinition);
+      const { result } = await buildKeychain(
+        wasm,
+        request.params,
+        false,
+        fontForBuild(request.fontDefinition),
+      );
       const response: WorkerResponse = { type: 'geometry', requestId: request.requestId, result };
       self.postMessage(response, {
         transfer: [
@@ -37,7 +51,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         wasm,
         request.params,
         true,
-        request.fontDefinition,
+        fontForBuild(request.fontDefinition),
       );
       if (!exportMesh || !result.printable) {
         const message =
