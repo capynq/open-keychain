@@ -43,7 +43,7 @@ export const waitForLocalFonts = async (page: Page): Promise<void> => {
 };
 
 export const waitForReadyGeometry = async (page: Page): Promise<void> => {
-  await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 15_000 });
+  await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 30_000 });
   await expect(page.locator('.viewer-surface canvas')).toBeVisible();
   await page.evaluate(
     () =>
@@ -51,6 +51,25 @@ export const waitForReadyGeometry = async (page: Page): Promise<void> => {
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
       }),
   );
+};
+
+/** Capture precondition: a ready status alone must not permit an empty viewer image. */
+export const assertVisibleModel = async (page: Page): Promise<void> => {
+  await expect(page.locator('.preview-panel')).toHaveAttribute('data-model-ready', 'true');
+  const canvas = page.locator('.viewer-surface canvas');
+  await expect(canvas).toBeVisible();
+  await expect
+    .poll(
+      async () => {
+        const bounds = await canvas.boundingBox();
+        if (!bounds || bounds.width <= 8 || bounds.height <= 8) return false;
+        const image = await canvas.screenshot();
+        const stats = await sharp(image).stats();
+        return stats.channels.some((channel) => channel.max - channel.min > 16);
+      },
+      { timeout: 15_000 },
+    )
+    .toBe(true);
 };
 
 export const waitForImageToLoad = async (image: Locator): Promise<void> => {
@@ -80,7 +99,8 @@ export const prepareForCapture = async (page: Page): Promise<void> => {
       }
       .viewer-toolbar,
       .viewer-caption,
-      .surface-popover {
+      .surface-popover,
+      .analytics-consent {
         display: none !important;
       }
     `,

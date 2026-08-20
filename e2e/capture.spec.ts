@@ -3,6 +3,7 @@ import { mkdir } from 'node:fs/promises';
 import sharp from 'sharp';
 import {
   assertPngCapture,
+  assertVisibleModel,
   prepareForCapture,
   waitForReadyGeometry,
   watchBrowserErrors,
@@ -21,6 +22,7 @@ test('captures the reviewed customizer showcase', async ({ page }, testInfo) => 
   await page.goto('/create');
   await waitForReadyGeometry(page);
   await prepareForCapture(page);
+  await assertVisibleModel(page);
   const screenshot = await page.screenshot({ path: target, animations: 'disabled' });
   await assertPngCapture(
     screenshot,
@@ -128,6 +130,7 @@ for (const template of templatePreviews) {
     if (templateWasSelected) await waitForReadyGeometry(page);
     else await waitForRegeneration(page, previousGeneration);
     await prepareForCapture(page);
+    await assertVisibleModel(page);
     const viewerCapture = await page.locator('.viewer-wrap').screenshot({ animations: 'disabled' });
     const screenshot = await sharp(viewerCapture)
       .resize({ width: 640, height: 360, fit: 'cover', position: 'centre' })
@@ -172,6 +175,7 @@ for (const style of stylePreviews) {
     if (styleWasSelected) await waitForReadyGeometry(page);
     else await waitForRegeneration(page, previousStyleGeneration);
     await prepareForCapture(page);
+    await assertVisibleModel(page);
     const viewerCapture = await page.locator('.viewer-wrap').screenshot({ animations: 'disabled' });
     const screenshot = await sharp(viewerCapture)
       .resize({ width: 640, height: 360, fit: 'cover', position: 'centre' })

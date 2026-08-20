@@ -152,6 +152,31 @@ const PreviewSummary = ({
           {modelInfo.font}
         </span>
       </div>
+      {result?.printProfile && (
+        <details className="print-confidence">
+          <summary>
+            <span>{t(locale, 'printConfidence')}</span>
+            <strong>
+              {result.printable ? t(locale, 'printProfileReady') : t(locale, 'printProfileCheck')}
+            </strong>
+          </summary>
+          <div className="print-confidence-body">
+            <span>{t(locale, 'printProfile')}</span>
+            <span>{result.printProfile.id}</span>
+            <span>
+              {result.printProfile.nozzleDiameterMm.toFixed(1)} mm ·{' '}
+              {result.printProfile.supports
+                ? t(locale, 'supportsRequired')
+                : t(locale, 'noSupports')}{' '}
+              ·{' '}
+              {result.printProfile.recommendedOrientation === 'flat'
+                ? t(locale, 'flatOrientation')
+                : t(locale, 'customOrientation')}
+            </span>
+            <p>{t(locale, 'printProfileNotice')}</p>
+          </div>
+        </details>
+      )}
       {status.feedback && (
         <p
           className="summary-feedback"
@@ -194,6 +219,9 @@ export const PreviewPanel = ({
     data-guide-target="preview"
     aria-busy={geometry.busy}
     data-generation-id={geometry.result?.generationId ?? ''}
+    data-model-ready={
+      geometry.result && geometry.result.baseMesh.positions.length > 0 ? 'true' : 'false'
+    }
   >
     <div className="preview-heading">
       <h2 className="eyebrow">{t(locale, 'livePreview')}</h2>

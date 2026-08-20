@@ -30,6 +30,7 @@
     "test:watch": "vitest",
     "bench:geometry": "node --import tsx scripts/bench-geometry.ts",
     "bench:matrix": "node --import tsx scripts/bench-matrix-parent.ts",
+    "test:geometry:matrix": "node --import tsx scripts/bench-matrix-parent.ts",
     "validation:fixtures": "node --import tsx scripts/generate-validation-fixtures.ts",
     "validate:self-hosted": "node --import tsx scripts/validate-static-deployment.ts && pnpm test:e2e:deployed",
     "package:self-hosted-evidence": "node --import tsx scripts/package-self-hosted-evidence.ts",

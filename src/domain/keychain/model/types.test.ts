@@ -7,6 +7,9 @@ import {
 } from './parameters';
 import {
   DEFAULT_PARAMS,
+  DEFAULT_GEOMETRY_CONSTRAINTS,
+  DEFAULT_PRINT_PROFILE,
+  geometryConstraintsFor,
   keyringMetrics,
   normalizeParams,
   ringWallMm,
@@ -14,6 +17,18 @@ import {
   type KeychainParams,
 } from './types';
 describe('keychain parameters', () => {
+  it('defines a stable print profile and derives effective geometry constraints', () => {
+    expect(DEFAULT_PRINT_PROFILE.technology).toBe('fdm');
+    expect(DEFAULT_PRINT_PROFILE.constraints).toEqual(DEFAULT_GEOMETRY_CONSTRAINTS);
+    expect(
+      geometryConstraintsFor({
+        templateId: 'articulated-name',
+        minimumWallMm: 1.6,
+        jointClearanceMm: 0.35,
+        mechanicalGapMm: 0.8,
+      }),
+    ).toEqual({ minimumWallMm: 1.6, minimumClearanceMm: 0.8, maximumWidthMm: 120 });
+  });
   it('normalizes text and clamps consumer controls', () => {
     const result = normalizeParams({
       ...DEFAULT_PARAMS,

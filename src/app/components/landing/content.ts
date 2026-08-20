@@ -13,6 +13,9 @@ export type TemplateShowcase = {
   altKey: string;
 };
 
+export const templateCreatePath = (locale: string, templateId: TemplateId): string =>
+  `/create?template=${encodeURIComponent(templateId)}&lang=${encodeURIComponent(locale)}`;
+
 export const TEMPLATE_SHOWCASE: readonly TemplateShowcase[] = [
   {
     id: 'name-keychain',

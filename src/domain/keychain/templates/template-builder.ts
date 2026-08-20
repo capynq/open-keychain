@@ -1,5 +1,11 @@
 import type { StyleId, TemplateId } from '../model/types';
 import {
+  DEFAULT_GEOMETRY_CONSTRAINTS,
+  DEFAULT_PRINT_PROFILE,
+  type GeometryConstraints,
+  type PrintProfile,
+} from '../model/types';
+import {
   buildStyle,
   capsule,
   ringAssembly,
@@ -65,6 +71,8 @@ export type ArticulatedBuild = {
     motionAllowance: number;
     countersPreserved: boolean;
   };
+  constraints?: GeometryConstraints;
+  printProfile?: PrintProfile;
 };
 export type TemplateBuild = StyleBuild | ArticulatedBuild;
 export const TEMPLATE_CATALOG: readonly TemplateDefinition[] = [
@@ -361,6 +369,7 @@ const articulatedStyle = (wasm: GeometryWasm, input: StyleInput): ArticulatedBui
   const socketZ = Math.max(bottomClearance, (baseThickness - socketDepth) / 2);
   const axialWall = Math.min(socketZ, baseThickness - socketDepth - socketZ);
   const connectorZ = socketZ + clearance;
+  const letterSpacing = Math.max(0, (input.letterSpacing ?? 0) * MANIFOLD_SCALE);
   const glyphBounds = glyphs.reduce(
     (bounds, glyph) => ({
       min: Math.min(bounds.min, glyph.bounds.minY * MANIFOLD_SCALE),
@@ -416,10 +425,10 @@ const articulatedStyle = (wasm: GeometryWasm, input: StyleInput): ArticulatedBui
   let nextLeft = 0;
   const offsets = prototypes.map((prototype) => {
     const offset = nextLeft - prototype.structuralBounds.min[0];
-    nextLeft = offset + prototype.structuralBounds.max[0] + mechanicalGap;
+    nextLeft = offset + prototype.structuralBounds.max[0] + mechanicalGap + letterSpacing;
     return offset;
   });
-  const centerOffset = -nextLeft / 2 + mechanicalGap / 2;
+  const centerOffset = -nextLeft / 2 + (mechanicalGap + letterSpacing) / 2;
   const parts: ArticulatedPart[] = [];
   for (let index = 0; index < prototypes.length; index += 1) {
     const prototype = prototypes[index];
@@ -692,10 +701,19 @@ export const buildTemplate = (
   styleId: StyleId,
   input: StyleInput,
 ): TemplateBuild => {
-  if (templateId === 'articulated-name') return articulatedStyle(wasm, input);
-  if (templateId === 'nameplate') return nameplateStyle(wasm, input);
-  if (templateId === 'plant-label') return plantLabelStyle(wasm, input, styleId);
-  return buildStyle(wasm, styleId, input);
+  const build =
+    templateId === 'articulated-name'
+      ? articulatedStyle(wasm, input)
+      : templateId === 'nameplate'
+        ? nameplateStyle(wasm, input)
+        : templateId === 'plant-label'
+          ? plantLabelStyle(wasm, input, styleId)
+          : buildStyle(wasm, styleId, input);
+  return {
+    ...build,
+    constraints: input.constraints ?? DEFAULT_GEOMETRY_CONSTRAINTS,
+    printProfile: input.printProfile ?? DEFAULT_PRINT_PROFILE,
+  };
 };
 export const isArticulatedBuild = (build: TemplateBuild): build is ArticulatedBuild => {
   return 'kind' in build && build.kind === 'articulated';

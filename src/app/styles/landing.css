@@ -372,6 +372,32 @@
   line-height: 1.5;
 }
 
+.landing-template-card-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 8px 0;
+  color: #9b4f3c;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.landing-template-card-action span {
+  transition: transform 0.16s ease;
+}
+
+.landing-template-card-action:hover span,
+.landing-template-card-action:focus-visible span {
+  transform: translateX(3px);
+}
+
+.landing-template-card-action:focus-visible {
+  outline: 2px solid #ef815e;
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
 .landing-products {
   padding-bottom: 12px;
 }

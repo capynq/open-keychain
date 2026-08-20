@@ -68,3 +68,5 @@ export const templateName = (locale: Locale, templateId: string, fallback: strin
   const translate: TFunction = i18n.getFixedT(locale, 'templates');
   return translate(templateId, { defaultValue: fallback });
 };
+export const templateDescription = (locale: Locale, templateId: string, fallback: string): string =>
+  t(locale, `templateDescriptions.${templateId}`) || fallback;

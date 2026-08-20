@@ -23,6 +23,15 @@ export type GlyphOutline = {
   width: number;
   height: number;
   advance: number;
+  /** Conversion from the font's 100-unit path space into final millimetres. */
+  scale: number;
+};
+export type TextLayout = {
+  outline: TextOutline;
+  glyphs: GlyphOutline[];
+  advances: number[];
+  kerning: number[];
+  bounds: TextOutline['bounds'];
 };
 const MAX_CURVE_DEPTH = 12;
 const distanceToLine = (point: Point, start: Point, end: Point): number => {
@@ -196,6 +205,7 @@ export const flattenTextGlyphs = (
       width: maxX - minX,
       height: maxY - minY,
       advance: (glyphs[index].advanceWidth / font.unitsPerEm) * 100 * scale,
+      scale,
     };
   });
 };
@@ -297,6 +307,47 @@ export const flattenText = (
     width: maxX - minX,
     height: maxY - minY,
   };
+};
+/** Shared metrics boundary for standard and articulated builders. */
+export const layoutText = (
+  font: opentype.Font,
+  text: string,
+  targetHeightMm: number,
+  letterSpacingMm = 0,
+  includeGlyphs = false,
+): TextLayout => {
+  const characters = [...text];
+  const glyphs = includeGlyphs ? flattenTextGlyphs(font, text, targetHeightMm) : [];
+  const outline = flattenText(font, text, targetHeightMm, letterSpacingMm);
+  const kerning: number[] = [];
+  const advances: number[] = [];
+  const metricPaths: opentype.Path[] = [];
+  let metricCursor = 0;
+  let metricPrevious: opentype.Glyph | undefined;
+  for (const character of characters) {
+    const glyph = font.charToGlyph(character);
+    const metricKerning = metricPrevious ? font.getKerningValue(metricPrevious, glyph) : 0;
+    metricPaths.push(glyph.getPath(metricCursor, 0, 100));
+    metricCursor += ((glyph.advanceWidth + metricKerning) / font.unitsPerEm) * 100;
+    metricPrevious = glyph;
+  }
+  const metricPoints = commandPoints(metricPaths);
+  const metricHeight = metricPoints.length
+    ? Math.max(...metricPoints.map((point) => point[1])) -
+      Math.min(...metricPoints.map((point) => point[1]))
+    : 100;
+  const outlineScale = targetHeightMm / Math.max(metricHeight, 1);
+  let previous: opentype.Glyph | undefined;
+  for (const character of characters) {
+    const glyph = font.charToGlyph(character);
+    const value = previous
+      ? (font.getKerningValue(previous, glyph) / font.unitsPerEm) * 100 * outlineScale
+      : 0;
+    kerning.push(value);
+    advances.push((glyph.advanceWidth / font.unitsPerEm) * 100 * outlineScale);
+    previous = glyph;
+  }
+  return { outline, glyphs, advances, kerning, bounds: outline.bounds };
 };
 export const hasRequiredGlyphs = (font: opentype.Font, text: string): string | undefined => {
   for (const character of text) {

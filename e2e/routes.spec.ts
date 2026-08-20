@@ -39,6 +39,29 @@ test('takes the primary landing call to action to the customizer', async ({ page
   assertNoBrowserErrors();
 });
 
+test('exposes a working customizer entry point for every landing template card', async ({
+  page,
+}) => {
+  const assertNoBrowserErrors = watchBrowserErrors(page);
+  await page.goto('/');
+  const expected = ['name-keychain', 'articulated-name', 'nameplate', 'plant-label'];
+  const links = page.locator('.landing-template-card-action');
+  await expect(links).toHaveCount(expected.length);
+  for (const [index, templateId] of expected.entries()) {
+    await expect(links.nth(index)).toHaveAttribute(
+      'href',
+      `/create?template=${templateId}&lang=en`,
+    );
+  }
+  await links.nth(2).click();
+  await expect(page).toHaveURL(/\/create\?template=nameplate&lang=en$/);
+  await expect(page.locator('.template-grid button[aria-pressed="true"]')).toHaveAttribute(
+    'data-testid',
+    'template-card-nameplate',
+  );
+  assertNoBrowserErrors();
+});
+
 test('keeps source navigation in footers, not headers', async ({ page }) => {
   await page.goto('/');
   await expect(

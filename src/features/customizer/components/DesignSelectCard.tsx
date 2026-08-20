@@ -49,7 +49,10 @@ export const DesignSelectCard = ({
     >
       <img src={previewSrc} alt="" aria-hidden="true" />
       <span className="design-select-card-overlay" aria-hidden="true" />
-      <strong>{title}</strong>
+      <span className="design-select-card-copy">
+        <strong>{title}</strong>
+        {description && <span className="design-select-card-description">{description}</span>}
+      </span>
       {description && (
         <span id={descriptionId} className="sr-only">
           {description}

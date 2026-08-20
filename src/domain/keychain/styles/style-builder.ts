@@ -1,4 +1,4 @@
-import type { StyleId, TemplateId } from '../model/types';
+import type { GeometryConstraints, PrintProfile, StyleId, TemplateId } from '../model/types';
 import type { GlyphOutline } from '../text/outline';
 import type { CrossSection, GeometryWasm } from '../../../infrastructure/geometry/manifold-types';
 export type Vec2 = [number, number];
@@ -32,6 +32,8 @@ export type StyleInput = {
   bottomClearance?: number;
   /** Millimetres of 2D dilation applied to articulated glyphs before extrusion. */
   articulatedOutlineExpansionMm?: number;
+  constraints?: GeometryConstraints;
+  printProfile?: PrintProfile;
 };
 export type StyleBuild = {
   backing: CrossSection;
@@ -42,6 +44,8 @@ export type StyleBuild = {
   }>;
   /** Optional template-specific cap depth in millimetres. */
   reliefDepthMm?: number;
+  constraints?: GeometryConstraints;
+  printProfile?: PrintProfile;
 };
 export const roundedRect = (
   wasm: GeometryWasm,

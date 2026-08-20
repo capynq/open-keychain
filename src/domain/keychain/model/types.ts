@@ -51,6 +51,57 @@ export type ValidationIssue = {
   code: string;
   message: string;
 };
+/** Manufacturing limits carried alongside generated geometry. All values are millimetres. */
+export type GeometryConstraints = {
+  minimumWallMm: number;
+  minimumClearanceMm: number;
+  maximumWidthMm: number;
+};
+/** The assumptions under which geometry validation and printability are evaluated. */
+export type PrintProfile = {
+  id: string;
+  technology: 'fdm';
+  nozzleDiameterMm: number;
+  layerHeightMm: number;
+  supports: boolean;
+  recommendedOrientation: 'flat' | 'custom';
+  maxUnsupportedOverhangDeg: number;
+  constraints: GeometryConstraints;
+};
+export const DEFAULT_GEOMETRY_CONSTRAINTS: GeometryConstraints = {
+  minimumWallMm: 1.2,
+  minimumClearanceMm: 0.2,
+  maximumWidthMm: 120,
+};
+export const DEFAULT_PRINT_PROFILE: PrintProfile = {
+  id: 'fdm-standard-0.4',
+  technology: 'fdm',
+  nozzleDiameterMm: 0.4,
+  layerHeightMm: 0.2,
+  supports: false,
+  recommendedOrientation: 'flat',
+  maxUnsupportedOverhangDeg: 45,
+  constraints: DEFAULT_GEOMETRY_CONSTRAINTS,
+};
+export const geometryConstraintsFor = (
+  params: Pick<
+    KeychainParams,
+    'templateId' | 'minimumWallMm' | 'jointClearanceMm' | 'mechanicalGapMm'
+  >,
+): GeometryConstraints => ({
+  minimumWallMm: params.minimumWallMm,
+  minimumClearanceMm: Math.max(
+    DEFAULT_GEOMETRY_CONSTRAINTS.minimumClearanceMm,
+    ...(params.templateId === 'articulated-name'
+      ? [params.jointClearanceMm, params.mechanicalGapMm]
+      : []),
+  ),
+  maximumWidthMm: DEFAULT_GEOMETRY_CONSTRAINTS.maximumWidthMm,
+});
+export const printProfileFor = (constraints: GeometryConstraints): PrintProfile => ({
+  ...DEFAULT_PRINT_PROFILE,
+  constraints,
+});
 export type PrintAppearance = {
   base: {
     name: string;
@@ -77,6 +128,9 @@ export type GeometryResult = {
   issues: ValidationIssue[];
   printable: boolean;
   appearance: PrintAppearance;
+  /** Effective limits used by this generation. Optional for backwards-compatible consumers. */
+  constraints?: GeometryConstraints;
+  printProfile?: PrintProfile;
   baseShading?: 'creased' | 'flat';
   solidCount?: number;
 };

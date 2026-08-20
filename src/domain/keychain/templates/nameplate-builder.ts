@@ -8,6 +8,8 @@ import {
 } from '../../../infrastructure/geometry/manifold-utils';
 import {
   DEFAULT_PRINT_APPEARANCE,
+  geometryConstraintsFor,
+  printProfileFor,
   type GeometryResult,
   type KeychainParams,
   type MeshBuffer,
@@ -194,6 +196,8 @@ export const buildNameplate = (
     issues,
     printable,
     appearance: DEFAULT_PRINT_APPEARANCE,
+    constraints: geometryConstraintsFor(params),
+    printProfile: printProfileFor(geometryConstraintsFor(params)),
     solidCount: 1,
   };
   deleteGeometry([

@@ -10,6 +10,7 @@ import type { KeychainParams } from '../../../domain/keychain';
 import {
   styleDescription,
   styleName,
+  templateDescription,
   templateName,
   t,
   type Locale,
@@ -370,7 +371,7 @@ export const ControlsPanel = ({
             <DesignSelectCard
               key={template.id}
               title={templateName(locale, template.id, template.name)}
-              description={template.description}
+              description={templateDescription(locale, template.id, template.description)}
               previewSrc={TEMPLATE_PREVIEW_ASSETS[template.id]}
               selected={params.templateId === template.id}
               guideTarget={params.templateId === template.id ? 'shape-control' : undefined}

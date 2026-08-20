@@ -163,6 +163,18 @@ for (const item of cases) {
   );
   const codes = issueCodes(result);
   for (const code of codes) summary.warnings[code] = (summary.warnings[code] ?? 0) + 1;
+  const profileReason =
+    !result.constraints || !result.printProfile
+      ? 'missing-print-profile'
+      : result.printProfile.constraints.minimumWallMm !== result.constraints.minimumWallMm ||
+          result.printProfile.constraints.minimumClearanceMm !==
+            result.constraints.minimumClearanceMm ||
+          result.printProfile.constraints.maximumWidthMm !== result.constraints.maximumWidthMm
+        ? 'print-profile-mismatch'
+        : !Number.isFinite(result.constraints.minimumWallMm) ||
+            result.constraints.minimumWallMm <= 0
+          ? 'invalid-print-constraints'
+          : undefined;
   const widthAllowed = codes.includes('text-over-width');
   const expectedInvalid =
     (codes.length === 1 && codes[0] === 'text-too-wide') ||
@@ -170,6 +182,11 @@ for (const item of cases) {
       item.text.className === 'short' &&
       codes.length === 1 &&
       codes[0] === 'articulated-shell-count');
+  const exportReason = exportMesh
+    ? (validateStl(exportMesh) ??
+      validateThreeMf(result.baseMesh, result.reliefMesh, exportMesh, result, 'separate-colors') ??
+      validateThreeMf(result.baseMesh, result.reliefMesh, exportMesh, result, 'merged'))
+    : 'missing-export-mesh';
   const reason = !result.printable
     ? expectedInvalid
       ? undefined
@@ -183,15 +200,7 @@ for (const item of cases) {
             !exportMesh ||
             !finiteMesh(exportMesh)
           ? 'invalid-mesh'
-          : (validateStl(exportMesh) ??
-            validateThreeMf(
-              result.baseMesh,
-              result.reliefMesh,
-              exportMesh,
-              result,
-              'separate-colors',
-            ) ??
-            validateThreeMf(result.baseMesh, result.reliefMesh, exportMesh, result, 'merged'));
+          : (profileReason ?? exportReason);
   if (reason) {
     summary.failed += 1;
     templateSummary.failed += 1;

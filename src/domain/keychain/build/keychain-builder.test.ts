@@ -947,6 +947,25 @@ describe('finished keychain geometry', () => {
     expect(result.appearance.relief.color).toBe('#D94A52');
     expect(result.appearance.base.color).toBe('#E7E2DA');
   }, 30000);
+  it('ignores retained letter spacing for articulated names', async () => {
+    const base = {
+      ...DEFAULT_PARAMS,
+      templateId: 'articulated-name' as const,
+      fontId: 'rubik',
+      text: 'ALEX',
+      letterSpacingMm: 0,
+    };
+    const zeroSpacing = await buildKeychain(wasm, base);
+    const retainedSpacing = await buildKeychain(wasm, { ...base, letterSpacingMm: 8 });
+    expect(zeroSpacing.result.printable, JSON.stringify(zeroSpacing.result.issues)).toBe(true);
+    expect(retainedSpacing.result.printable, JSON.stringify(retainedSpacing.result.issues)).toBe(
+      true,
+    );
+    expect(retainedSpacing.result.dimensions.widthMm).toBeCloseTo(
+      zeroSpacing.result.dimensions.widthMm,
+      6,
+    );
+  }, 30000);
   it('rejects unsupported thin articulated fonts at the builder boundary', async () => {
     const { result } = await buildKeychain(wasm, {
       ...DEFAULT_PARAMS,

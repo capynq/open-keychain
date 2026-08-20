@@ -6,12 +6,7 @@ import {
   fontSupportsArticulatedName,
   type FontDefinition,
 } from '../fonts/catalog';
-import {
-  flattenText,
-  flattenTextGlyphs,
-  hasRequiredGlyphs,
-  type GlyphOutline,
-} from '../text/outline';
+import { flattenText, hasRequiredGlyphs, layoutText, type GlyphOutline } from '../text/outline';
 import {
   buildTemplate,
   isArticulatedBuild,
@@ -21,9 +16,13 @@ import {
 } from '../templates/template-builder';
 import {
   ARTICULATED_PRINT_APPEARANCE,
+  DEFAULT_GEOMETRY_CONSTRAINTS,
   DEFAULT_PRINT_APPEARANCE,
+  DEFAULT_PRINT_PROFILE,
   keyringMetrics,
   normalizeParams,
+  geometryConstraintsFor,
+  printProfileFor,
   type GeometryResult,
   type KeychainParams,
   type MeshBuffer,
@@ -213,6 +212,8 @@ const finalizeArticulated = (
     issues,
     printable: valid && finiteBounds(bounds) && validateMesh(baseMesh) && validateMesh(reliefMesh),
     appearance: ARTICULATED_PRINT_APPEARANCE,
+    constraints: geometryConstraintsFor(params),
+    printProfile: printProfileFor(geometryConstraintsFor(params)),
     solidCount: build.parts.length * 2 - 1,
   };
   releaseArticulatedBuild(build);
@@ -266,13 +267,20 @@ export const buildKeychain = async (
       'missing-glyph',
       `The ${definition.name} font does not contain “${missing}”.`,
     );
-  const outline = flattenText(font, params.text, params.textHeightMm, params.letterSpacingMm);
+  const textLayout =
+    params.templateId === 'articulated-name'
+      ? layoutText(font, params.text, params.textHeightMm, 0, true)
+      : {
+          outline: flattenText(font, params.text, params.textHeightMm, params.letterSpacingMm),
+          glyphs: [],
+          advances: [],
+          kerning: [],
+        };
+  const outline = textLayout.outline;
   if (!outline.polygons.length || outline.width <= 0 || outline.height <= 0)
     return invalidResult(issues, 'empty-outline', 'This name does not produce a usable outline.');
   const articulatedGlyphs =
-    params.templateId === 'articulated-name'
-      ? flattenTextGlyphs(font, params.text, params.textHeightMm)
-      : undefined;
+    params.templateId === 'articulated-name' ? textLayout.glyphs : undefined;
   if (
     params.templateId === 'articulated-name' &&
     !articulatedGlyphs?.some((glyph) => glyph.polygons.length)
@@ -304,7 +312,7 @@ export const buildKeychain = async (
       padding: params.paddingMm * MANIFOLD_SCALE,
       textInset:
         params.templateId === 'articulated-name' ? undefined : params.edgeInsetMm * MANIFOLD_SCALE,
-      letterSpacing: params.letterSpacingMm,
+      letterSpacing: params.templateId === 'articulated-name' ? 0 : params.letterSpacingMm,
       holeDiameter: params.holeDiameterMm * MANIFOLD_SCALE,
       keyringWall: keyring.wallMm * MANIFOLD_SCALE,
       templateId: params.templateId,
@@ -323,6 +331,8 @@ export const buildKeychain = async (
       minimumWall: params.minimumWallMm,
       bottomClearance: params.bottomClearanceMm,
       articulatedOutlineExpansionMm,
+      constraints: geometryConstraintsFor(params),
+      printProfile: printProfileFor(geometryConstraintsFor(params)),
     });
     if (isArticulatedBuild(style))
       return { kind: 'articulated', scale, rawText: text, build: style, widthMm: style.widthMm };
@@ -494,6 +504,8 @@ export const buildKeychain = async (
     issues,
     printable,
     appearance: DEFAULT_PRINT_APPEARANCE,
+    constraints: geometryConstraintsFor(params),
+    printProfile: printProfileFor(geometryConstraintsFor(params)),
     baseShading: params.templateId === 'plant-label' ? 'flat' : 'creased',
     solidCount: 1,
   };
@@ -524,6 +536,8 @@ const invalidResult = (
       issues,
       printable: false,
       appearance: DEFAULT_PRINT_APPEARANCE,
+      constraints: DEFAULT_GEOMETRY_CONSTRAINTS,
+      printProfile: DEFAULT_PRINT_PROFILE,
       solidCount: 0,
     },
   };

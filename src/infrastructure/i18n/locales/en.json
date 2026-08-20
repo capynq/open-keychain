@@ -138,6 +138,15 @@
   "modelTemplate": "Template",
   "modelStyle": "Style",
   "modelFont": "Font",
+  "printConfidence": "Print confidence",
+  "printProfileReady": "Geometry ready",
+  "printProfileCheck": "Check profile",
+  "printProfile": "Baseline",
+  "noSupports": "no supports",
+  "supportsRequired": "supports may be required",
+  "flatOrientation": "flat orientation",
+  "customOrientation": "custom orientation",
+  "printProfileNotice": "Baseline assumptions only; verify the export in your slicer.",
   "matte": "Matte",
   "graph": "Graph",
   "dark": "Dark",
@@ -216,6 +225,7 @@
     "heroTitle": "Turn a name into something you can print.",
     "heroBody": "Make a personalized product in minutes, export STL or 3MF, and take the file straight to your slicer.",
     "startDesigning": "Start designing",
+    "chooseTemplate": "Choose this template",
     "viewSource": "View source",
     "workflowLabel": "The design workflow",
     "previewLabel": "Open Keychain customizer preview",
@@ -294,6 +304,12 @@
     "betaTitle": "A generated file is not a physical-print guarantee.",
     "betaBody": "Check every export in your slicer and test it on your own printer. Printer, material and settings can all change the result.",
     "footerLicense": "MIT licensed · open source"
+  },
+  "templateDescriptions": {
+    "name-keychain": "A backing contour that follows the name.",
+    "articulated-name": "Linked letters with captive print-in-place joints.",
+    "nameplate": "A rounded sign with a tilted, embedded inscription.",
+    "plant-label": "A printable label board with an integrated stake."
   },
   "seo": {
     "brand": "Open Keychain 3D",

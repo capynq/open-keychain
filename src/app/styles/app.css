@@ -713,7 +713,7 @@ p {
 .design-select-card {
   position: relative;
   flex: 0 0 148px;
-  aspect-ratio: 1.18 / 1;
+  aspect-ratio: 1.08 / 1;
   min-width: 140px;
   overflow: hidden;
   scroll-snap-align: start;
@@ -748,16 +748,32 @@ p {
 }
 
 .design-select-card strong {
-  position: absolute;
-  z-index: 2;
-  right: 10px;
-  bottom: 9px;
-  left: 10px;
+  display: block;
   overflow: hidden;
   font-size: 11px;
   line-height: 1.15;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.design-select-card-copy {
+  position: absolute;
+  z-index: 2;
+  right: 10px;
+  bottom: 9px;
+  left: 10px;
+  display: grid;
+  gap: 3px;
+}
+
+.design-select-card-description {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #f8f5efcc;
+  font-size: 9px;
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .design-select-card:hover {
@@ -788,6 +804,78 @@ p {
 .design-select-card:focus-visible {
   outline: 2px solid #ef815e;
   outline-offset: 3px;
+}
+
+.print-confidence {
+  margin-top: 12px;
+  border-top: 1px solid #e2ddd4;
+  color: #6c727e;
+  font-size: 11px;
+}
+
+.print-confidence summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 10px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.print-confidence summary::-webkit-details-marker {
+  display: none;
+}
+
+.print-confidence summary::before {
+  content: '＋';
+  color: #9b4f3c;
+  font-weight: 700;
+}
+
+.print-confidence[open] summary::before {
+  content: '－';
+}
+
+.print-confidence summary strong {
+  margin-left: auto;
+  color: #9b4f3c;
+  font-size: 10px;
+}
+
+.print-confidence-body {
+  display: grid;
+  gap: 5px;
+  padding: 8px 0 2px 18px;
+}
+
+.print-confidence-body span:last-of-type {
+  color: #323b4d;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+}
+
+.print-confidence-body p {
+  margin: 2px 0 0;
+  color: #8f6254;
+}
+
+.design-card-rail-shell::before {
+  position: absolute;
+  right: 8px;
+  bottom: -1px;
+  z-index: 2;
+  color: #8f6254;
+  content: '→';
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease;
+}
+
+.design-card-rail-shell[data-scroll-state='top']::before,
+.design-card-rail-shell[data-scroll-state='middle']::before {
+  opacity: 1;
 }
 
 .choice-card,
@@ -2202,6 +2290,10 @@ input[type='range'] {
     gap: 8px;
     overflow: visible;
     padding: 5px;
+  }
+
+  .design-card-rail-shell::before {
+    display: none;
   }
 
   .design-select-card {
