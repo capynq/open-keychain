@@ -4,11 +4,22 @@ The public SEO pages are generated during `pnpm build` from the typed catalog in
 [`src/infrastructure/seo/catalog.ts`](../src/infrastructure/seo/catalog.ts). The build emits localized HTML pages,
 route-aware app shells, a sitemap, and a real 404 page into `dist/`.
 
+The catalog is the source of truth for the sitemap: every entry has a canonical path, locale, and page-specific
+`lastModified` date. `scripts/validate-seo-build.ts` checks that the sitemap has exactly one URL per catalog entry,
+that URL order and `lastmod` values match, and that all dates use the XML sitemap `YYYY-MM-DD` format.
+
 ## Published indexable URLs
 
-- English: `/` and `/templates/<template>/`
-- Russian: `/ru/` and `/ru/templates/<template>/`
-- Ukrainian: `/uk/` and `/uk/templates/<template>/`
+The release contains exactly 33 indexable URLs: three localized home pages, three template hubs, twelve template
+pages, three guide hubs, and twelve guide pages.
+
+- English: `/`, `/templates/`, `/templates/<template>/`, `/guides/`, and `/guides/<guide>/`
+- Russian: `/ru/`, `/ru/templates/`, `/ru/templates/<template>/`, `/ru/guides/`, and `/ru/guides/<guide>/`
+- Ukrainian: `/uk/`, `/uk/templates/`, `/uk/templates/<template>/`, `/uk/guides/`, and `/uk/guides/<guide>/`
+
+The initial guide slugs are `stl-vs-3mf`, `how-to-print-a-name-keychain`, `articulated-vs-standard-keychain`, and
+`printable-plant-label-guide`. The four template slugs are `name-keychain`, `articulated-name`, `nameplate`, and
+`plant-label`.
 
 The interactive `/create` and `/profile` shells are intentionally `noindex,follow`. They remain linked from the
 indexable pages and are the product experience rather than search landing pages.
@@ -19,9 +30,11 @@ After deploying a build:
 
 1. Keep the existing `open-keychain.com` Google Search Console property verified.
 2. Submit `https://open-keychain.com/sitemap.xml` again after URL or content changes.
-3. Inspect the home page, each language home page, and each English template page.
+3. Inspect the three home pages, both hubs, and the highest-value English guides (`stl-vs-3mf` and
+   `how-to-print-a-name-keychain`).
 4. Use the rendered-page inspection to confirm that the heading, links, preview image, canonical, and JSON-LD are visible.
-5. Review indexing, impressions, queries, click-through rate, and average position over a 28-day window.
+5. Request indexing for the new hubs and guides, then review indexing, impressions, queries, click-through rate,
+   canonical selection, and hreflang reports over a 28-day window.
 
 Sitemap submission is a discovery hint, not a guarantee of indexing or ranking. Search performance also depends on useful
 content, demand, links from relevant sites, and competition.
@@ -36,5 +49,7 @@ Initial search intent is deliberately narrow and descriptive:
 - 3D printable nameplate
 - printable plant label
 
-The localized pages use stable URLs and reciprocal `hreflang` links. Add genuinely useful examples, print settings, and
+The localized pages use stable URLs and reciprocal `hreflang` links. Their JSON-LD is emitted as a linked `@graph`:
+the organization, localized website, web application, and breadcrumb list use stable `@id` references so crawlers can
+associate each landing page with the product and its parent site. Add genuinely useful examples, print settings, and
 maker guides only when they answer a real search question; avoid doorway pages and repeated keyword variations.

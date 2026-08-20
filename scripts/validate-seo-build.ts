@@ -17,17 +17,60 @@ const read = (relativePath: string): string => {
   return fs.readFileSync(filePath, 'utf8');
 };
 
+type JsonLdNode = {
+  '@type'?: string | string[];
+  itemListElement?: Array<{ position?: number; item?: string }>;
+};
+
+const readJsonLdGraph = (html: string, route: string): JsonLdNode[] => {
+  const scripts = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+  if (scripts.length !== 1) fail(`${route} must contain exactly one JSON-LD script`);
+  const script = scripts[0];
+  if (!script) fail(`${route} must contain JSON-LD content`);
+  let parsed: { '@graph'?: JsonLdNode[] } | undefined;
+  try {
+    parsed = JSON.parse(script[1]) as { '@graph'?: JsonLdNode[] };
+  } catch {
+    fail(`${route} JSON-LD is not valid JSON`);
+  }
+  const graph = parsed?.['@graph'];
+  if (!Array.isArray(graph)) fail(`${route} JSON-LD has no graph`);
+  return graph as JsonLdNode[];
+};
+
 const main = (): void => {
   if (!fs.existsSync(DIST_DIR)) fail('missing dist directory');
 
   const sitemap = read('sitemap.xml');
   const sitemapUrls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
+  const sitemapLastModified = [...sitemap.matchAll(/<lastmod>([^<]+)<\/lastmod>/g)].map(
+    (match) => match[1],
+  );
+  const sitemapImages = [...sitemap.matchAll(/<image:loc>([^<]+)<\/image:loc>/g)].map(
+    (match) => match[1],
+  );
   const expectedUrls = SEO_PAGE_MANIFEST.map((entry) => `${SITE_URL}${entry.path}`);
   if (
     sitemapUrls.length !== expectedUrls.length ||
     expectedUrls.some((url) => !sitemapUrls.includes(url))
   ) {
     fail('sitemap does not exactly match the SEO route manifest');
+  }
+  if (new Set(sitemapUrls).size !== sitemapUrls.length) fail('sitemap contains duplicate URLs');
+  const expectedLastModified = SEO_PAGE_MANIFEST.map((entry) => entry.lastModified);
+  if (
+    sitemapLastModified.length !== expectedLastModified.length ||
+    expectedLastModified.some((date, index) => sitemapLastModified[index] !== date) ||
+    sitemapLastModified.some((date) => !/^\d{4}-\d{2}-\d{2}$/.test(date))
+  ) {
+    fail('sitemap lastmod values do not match the page manifest');
+  }
+  if (sitemapImages.length !== SEO_PAGE_MANIFEST.length)
+    fail('sitemap image locations do not match the page manifest');
+  for (const imageUrl of sitemapImages) {
+    if (!imageUrl.startsWith(`${SITE_URL}/`)) fail(`invalid sitemap image URL: ${imageUrl}`);
+    const imagePath = path.join(DIST_DIR, imageUrl.slice(`${SITE_URL}/`.length));
+    if (!fs.existsSync(imagePath)) fail(`missing sitemap image asset: ${imageUrl}`);
   }
 
   for (const entry of SEO_PAGE_MANIFEST) {
@@ -43,6 +86,53 @@ const main = (): void => {
       fail(`${entry.path} is not indexable`);
     for (const locale of ['en', 'ru', 'uk', 'x-default']) {
       if (!html.includes(`hreflang="${locale}"`)) fail(`${entry.path} misses ${locale} alternate`);
+    }
+    const graph = readJsonLdGraph(html, entry.path);
+    const types = graph.flatMap((node) =>
+      Array.isArray(node['@type']) ? node['@type'] : node['@type'] ? [node['@type']] : [],
+    );
+    const requiredTypes =
+      entry.kind === 'guide'
+        ? ['Organization', 'WebSite', 'WebPage', 'WebApplication', 'Article', 'BreadcrumbList']
+        : entry.kind === 'home' || entry.kind === 'template'
+          ? ['Organization', 'WebSite', 'WebApplication', 'WebPage', 'BreadcrumbList']
+          : ['Organization', 'WebSite', 'WebPage', 'BreadcrumbList'];
+    for (const type of requiredTypes) {
+      if (!types.includes(type)) fail(`${entry.path} has no ${type} structured data`);
+    }
+    if (entry.kind !== 'guide' && types.includes('Article'))
+      fail(`${entry.path} unexpectedly has Article structured data`);
+    const breadcrumb = graph.find((node) => node['@type'] === 'BreadcrumbList');
+    if (!breadcrumb || !Array.isArray(breadcrumb.itemListElement))
+      fail(`${entry.path} has no valid BreadcrumbList`);
+    const breadcrumbItems = breadcrumb?.itemListElement ?? [];
+    const expectedBreadcrumb =
+      entry.kind === 'home'
+        ? [entry.path]
+        : entry.kind === 'templates'
+          ? [`${entry.locale === 'en' ? '' : `/${entry.locale}`}/`, `${entry.path}`]
+          : entry.kind === 'guides'
+            ? [`${entry.locale === 'en' ? '' : `/${entry.locale}`}/`, `${entry.path}`]
+            : entry.kind === 'template'
+              ? [
+                  `${entry.locale === 'en' ? '' : `/${entry.locale}`}/`,
+                  `${entry.locale === 'en' ? '' : `/${entry.locale}`}/templates/`,
+                  entry.path,
+                ]
+              : [
+                  `${entry.locale === 'en' ? '' : `/${entry.locale}`}/`,
+                  `${entry.locale === 'en' ? '' : `/${entry.locale}`}/guides/`,
+                  entry.path,
+                ];
+    if (
+      breadcrumbItems.length !== expectedBreadcrumb.length ||
+      expectedBreadcrumb.some(
+        (breadcrumbPath, index) =>
+          breadcrumbItems[index]?.position !== index + 1 ||
+          breadcrumbItems[index]?.item !== `${SITE_URL}${breadcrumbPath}`,
+      )
+    ) {
+      fail(`${entry.path} BreadcrumbList has the wrong URL/order`);
     }
   }
 

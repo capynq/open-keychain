@@ -7,28 +7,51 @@ export type SeoTemplateDefinition = {
   id: TemplateId;
   key: 'nameKeychain' | 'articulatedName' | 'nameplate' | 'plantLabel';
   previewSrc: string;
+  /** Date the template landing page content was last materially changed. */
+  lastModified: string;
 };
+
+export type SeoGuideDefinition = {
+  slug: string;
+  key: 'stlVs3mf' | 'nameKeychainPrinting' | 'articulatedPrinting' | 'plantLabelPrinting';
+  lastModified: string;
+};
+
+export const SEO_GUIDE_CATALOG: readonly SeoGuideDefinition[] = [
+  { slug: 'stl-vs-3mf', key: 'stlVs3mf', lastModified: '2026-08-20' },
+  { slug: 'how-to-print-a-name-keychain', key: 'nameKeychainPrinting', lastModified: '2026-08-20' },
+  {
+    slug: 'articulated-vs-standard-keychain',
+    key: 'articulatedPrinting',
+    lastModified: '2026-08-20',
+  },
+  { slug: 'printable-plant-label-guide', key: 'plantLabelPrinting', lastModified: '2026-08-20' },
+];
 
 export const SEO_TEMPLATE_CATALOG: readonly SeoTemplateDefinition[] = [
   {
     id: 'name-keychain',
     key: 'nameKeychain',
     previewSrc: '/showcase/templates/name-keychain.png',
+    lastModified: '2026-08-19',
   },
   {
     id: 'articulated-name',
     key: 'articulatedName',
     previewSrc: '/showcase/templates/articulated-name.png',
+    lastModified: '2026-08-19',
   },
   {
     id: 'nameplate',
     key: 'nameplate',
     previewSrc: '/showcase/templates/nameplate.png',
+    lastModified: '2026-08-19',
   },
   {
     id: 'plant-label',
     key: 'plantLabel',
     previewSrc: '/showcase/templates/plant-label.png',
+    lastModified: '2026-08-19',
   },
 ];
 
@@ -39,17 +62,46 @@ export const seoHomePath = (locale: SeoLocale): string => `${seoLocalePrefix(loc
 export const seoTemplatePath = (locale: SeoLocale, template: SeoTemplateDefinition): string =>
   `${seoLocalePrefix(locale)}/templates/${template.id}/`;
 
+export const seoTemplatesPath = (locale: SeoLocale): string =>
+  `${seoLocalePrefix(locale)}/templates/`;
+
+export const seoGuidesPath = (locale: SeoLocale): string => `${seoLocalePrefix(locale)}/guides/`;
+
+export const seoGuidePath = (locale: SeoLocale, guide: SeoGuideDefinition): string =>
+  `${seoGuidesPath(locale)}${guide.slug}/`;
+
 export const SEO_PAGE_MANIFEST = SEO_LOCALES.flatMap((locale) => [
   {
     kind: 'home' as const,
     locale,
     path: seoHomePath(locale),
+    lastModified: '2026-08-19',
   },
   ...SEO_TEMPLATE_CATALOG.map((template) => ({
     kind: 'template' as const,
     locale,
     path: seoTemplatePath(locale, template),
     templateId: template.id,
+    lastModified: template.lastModified,
+  })),
+  {
+    kind: 'templates' as const,
+    locale,
+    path: seoTemplatesPath(locale),
+    lastModified: '2026-08-20',
+  },
+  {
+    kind: 'guides' as const,
+    locale,
+    path: seoGuidesPath(locale),
+    lastModified: '2026-08-20',
+  },
+  ...SEO_GUIDE_CATALOG.map((guide) => ({
+    kind: 'guide' as const,
+    locale,
+    path: seoGuidePath(locale, guide),
+    guideSlug: guide.slug,
+    lastModified: guide.lastModified,
   })),
 ]);
 

@@ -10,11 +10,19 @@ import {
   SEO_TEMPLATE_CATALOG,
   seoHomePath,
   seoTemplatePath,
+  seoTemplatesPath,
+  seoGuidesPath,
+  seoGuidePath,
+  SEO_GUIDE_CATALOG,
   type SeoLocale,
   type SeoTemplateDefinition,
 } from '../src/infrastructure/seo/catalog';
+import { SEO_GUIDE_COPY, SEO_HUB_COPY } from '../src/infrastructure/seo/guides';
+import type { SeoGuideCopy } from '../src/infrastructure/seo/guides';
 
 const SITE_URL = 'https://open-keychain.com';
+const POSTHOG_KEY = process.env.VITE_POSTHOG_KEY ?? '';
+const POSTHOG_HOST = process.env.VITE_POSTHOG_HOST ?? 'https://eu.i.posthog.com';
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DIST_DIR = path.resolve(ROOT_DIR, '../dist');
 const LOCALE_DOCUMENTS = { en, ru, uk } as const;
@@ -55,9 +63,22 @@ type SeoCopy = {
     privacy: string;
     readMore: string;
   };
+  templatesHub: { title: string; description: string; heading: string; intro: string };
+  guidesHub: { title: string; description: string; heading: string; intro: string };
+  guides: Record<string, SeoGuideCopy>;
 };
 
-const documents = LOCALE_DOCUMENTS as Record<SeoLocale, { seo: SeoCopy }>;
+const documents = LOCALE_DOCUMENTS as unknown as Record<SeoLocale, { seo: SeoCopy }>;
+for (const locale of SEO_LOCALES) {
+  documents[locale].seo.templatesHub = {
+    title: `${documents[locale].seo.navigation.templates} - ${documents[locale].seo.brand}`,
+    description: documents[locale].seo.home.templatesBody,
+    heading: documents[locale].seo.home.templatesHeading,
+    intro: documents[locale].seo.home.templatesBody,
+  };
+  documents[locale].seo.guidesHub = SEO_HUB_COPY[locale];
+  documents[locale].seo.guides = SEO_GUIDE_COPY[locale];
+}
 
 const escapeHtml = (value: string): string =>
   value
@@ -74,12 +95,41 @@ const ROOT_PLACEHOLDER = '<div id="root"><!-- seo-fallback --></div>';
 
 const absoluteUrl = (urlPath: string): string => `${SITE_URL}${urlPath}`;
 
-const alternateLinks = (kind: 'home' | 'template', template?: SeoTemplateDefinition): string => {
+type SeoKind = 'home' | 'templates' | 'template' | 'guides' | 'guide';
+const alternateLinks = (
+  kind: SeoKind,
+  template?: SeoTemplateDefinition,
+  guideSlug?: string,
+): string => {
   const links = SEO_LOCALES.map((locale) => {
-    const urlPath = kind === 'home' ? seoHomePath(locale) : seoTemplatePath(locale, template!);
+    const urlPath =
+      kind === 'home'
+        ? seoHomePath(locale)
+        : kind === 'templates'
+          ? seoTemplatesPath(locale)
+          : kind === 'guides'
+            ? seoGuidesPath(locale)
+            : kind === 'template'
+              ? seoTemplatePath(locale, template!)
+              : seoGuidePath(
+                  locale,
+                  SEO_GUIDE_CATALOG.find((g) => g.slug === guideSlug)!,
+                );
     return `<link rel="alternate" hreflang="${locale}" href="${absoluteUrl(urlPath)}" />`;
   });
-  const fallbackPath = kind === 'home' ? seoHomePath('en') : seoTemplatePath('en', template!);
+  const fallbackPath =
+    kind === 'home'
+      ? seoHomePath('en')
+      : kind === 'templates'
+        ? seoTemplatesPath('en')
+        : kind === 'guides'
+          ? seoGuidesPath('en')
+          : kind === 'template'
+            ? seoTemplatePath('en', template!)
+            : seoGuidePath(
+                'en',
+                SEO_GUIDE_CATALOG.find((g) => g.slug === guideSlug)!,
+              );
   links.push(`<link rel="alternate" hreflang="x-default" href="${absoluteUrl(fallbackPath)}" />`);
   return links.join('\n    ');
 };
@@ -91,13 +141,26 @@ const imageAlt = (locale: SeoLocale, template: SeoTemplateDefinition): string =>
 
 const languageLinks = (
   locale: SeoLocale,
-  kind: 'home' | 'template',
+  kind: SeoKind,
   template?: SeoTemplateDefinition,
+  guideSlug?: string,
 ) =>
   SEO_LOCALES.map((nextLocale) => {
+    const nativeLabel = { en: 'English', ru: 'Русский', uk: 'Українська' }[nextLocale];
     const urlPath =
-      kind === 'home' ? seoHomePath(nextLocale) : seoTemplatePath(nextLocale, template!);
-    return `<a href="${urlPath}"${nextLocale === locale ? ' aria-current="page"' : ''}>${nextLocale.toUpperCase()}</a>`;
+      kind === 'home'
+        ? seoHomePath(nextLocale)
+        : kind === 'templates'
+          ? seoTemplatesPath(nextLocale)
+          : kind === 'guides'
+            ? seoGuidesPath(nextLocale)
+            : kind === 'template'
+              ? seoTemplatePath(nextLocale, template!)
+              : seoGuidePath(
+                  nextLocale,
+                  SEO_GUIDE_CATALOG.find((g) => g.slug === guideSlug)!,
+                );
+    return `<a href="${urlPath}" data-analytics-event="seo_language_changed" data-analytics-cta="${nextLocale}"${nextLocale === locale ? ' aria-current="page"' : ''}>${nativeLabel}</a>`;
   }).join(' · ');
 
 const templateLinks = (locale: SeoLocale, current?: SeoTemplateDefinition): string =>
@@ -105,65 +168,170 @@ const templateLinks = (locale: SeoLocale, current?: SeoTemplateDefinition): stri
     const copy = documents[locale].seo.templates[template.key];
     const pathName = seoTemplatePath(locale, template);
     const currentAttribute = current?.id === template.id ? ' aria-current="page"' : '';
-    return `<li><a href="${pathName}"${currentAttribute}>${escapeHtml(copy.heading)}</a></li>`;
+    return `<li><a href="${pathName}" data-analytics-event="seo_cta_clicked" data-analytics-cta="${template.id}"${currentAttribute}>${escapeHtml(copy.heading)}</a></li>`;
   }).join('\n');
 
-const jsonLdForHome = (locale: SeoLocale, title: string, description: string) => ({
-  '@context': 'https://schema.org',
-  '@type': ['WebApplication', 'WebSite'],
-  name: documents[locale].seo.brand,
-  url: absoluteUrl(seoHomePath(locale)),
-  description,
-  applicationCategory: 'DesignApplication',
-  operatingSystem: 'Web',
-  isAccessibleForFree: true,
-  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-  publisher: {
-    '@type': 'Organization',
-    name: documents[locale].seo.brand,
-    url: SITE_URL,
-  },
-  inLanguage: locale,
-  headline: title,
-});
+const guideTemplateId = (guideKey: string): SeoTemplateDefinition['id'] =>
+  guideKey === 'articulatedPrinting'
+    ? 'articulated-name'
+    : guideKey === 'plantLabelPrinting'
+      ? 'plant-label'
+      : 'name-keychain';
+
+const guideFaq = (locale: SeoLocale, guideCopy: SeoGuideCopy): readonly Faq[] =>
+  guideCopy.faq ?? [
+    {
+      question:
+        locale === 'ru'
+          ? 'Что проверить перед печатью?'
+          : locale === 'uk'
+            ? 'Що перевірити перед друком?'
+            : 'What should you check before printing?',
+      answer: guideCopy.sections[0]?.body ?? guideCopy.intro,
+    },
+  ];
+
+const guideLinks = (locale: SeoLocale, template: SeoTemplateDefinition): string =>
+  SEO_GUIDE_CATALOG.filter((guide) => guideTemplateId(guide.key) === template.id)
+    .map(
+      (guide) =>
+        `<li><a href="${seoGuidePath(locale, guide)}">${escapeHtml(documents[locale].seo.guides[guide.key].heading)}</a></li>`,
+    )
+    .join('\n');
+
+const jsonLdForHome = (locale: SeoLocale, title: string, description: string) => {
+  const pageUrl = absoluteUrl(seoHomePath(locale));
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': `${SITE_URL}/#organization`,
+        name: documents[locale].seo.brand,
+        url: SITE_URL,
+        sameAs: ['https://github.com/capynq/open-keychain'],
+      },
+      {
+        '@type': 'WebSite',
+        '@id': `${pageUrl}#website`,
+        name: documents[locale].seo.brand,
+        url: pageUrl,
+        inLanguage: locale,
+        publisher: { '@id': `${SITE_URL}/#organization` },
+      },
+      {
+        '@type': 'WebPage',
+        '@id': `${pageUrl}#webpage`,
+        url: pageUrl,
+        name: title,
+        description,
+        inLanguage: locale,
+        isPartOf: { '@id': `${pageUrl}#website` },
+      },
+      {
+        '@type': 'WebApplication',
+        '@id': `${pageUrl}#application`,
+        name: documents[locale].seo.brand,
+        url: pageUrl,
+        description,
+        applicationCategory: 'DesignApplication',
+        operatingSystem: 'Web',
+        isAccessibleForFree: true,
+        offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+        publisher: { '@id': `${SITE_URL}/#organization` },
+        isPartOf: { '@id': `${pageUrl}#website` },
+        inLanguage: locale,
+        headline: title,
+      },
+      {
+        '@type': 'BreadcrumbList',
+        '@id': `${pageUrl}#breadcrumb`,
+        itemListElement: [
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: documents[locale].seo.navigation.home,
+            item: pageUrl,
+          },
+        ],
+      },
+    ],
+  };
+};
 
 const jsonLdForTemplate = (
   locale: SeoLocale,
   template: SeoTemplateDefinition,
   title: string,
   description: string,
-) => ({
-  '@context': 'https://schema.org',
-  '@type': 'WebApplication',
-  name: documents[locale].seo.brand,
-  url: absoluteUrl(seoTemplatePath(locale, template)),
-  description,
-  applicationCategory: 'DesignApplication',
-  operatingSystem: 'Web',
-  isAccessibleForFree: true,
-  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-  inLanguage: locale,
-  headline: title,
-  image: absoluteUrl(template.previewSrc),
-  breadcrumb: {
-    '@type': 'BreadcrumbList',
-    itemListElement: [
+) => {
+  const pageUrl = absoluteUrl(seoTemplatePath(locale, template));
+  const homeUrl = absoluteUrl(seoHomePath(locale));
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
       {
-        '@type': 'ListItem',
-        position: 1,
-        name: documents[locale].seo.navigation.home,
-        item: absoluteUrl(seoHomePath(locale)),
+        '@type': 'Organization',
+        '@id': `${SITE_URL}/#organization`,
+        name: documents[locale].seo.brand,
+        url: SITE_URL,
+        sameAs: ['https://github.com/capynq/open-keychain'],
       },
       {
-        '@type': 'ListItem',
-        position: 2,
-        name: documents[locale].seo.navigation.templates,
-        item: absoluteUrl(seoHomePath(locale)),
+        '@type': 'WebSite',
+        '@id': `${homeUrl}#website`,
+        name: documents[locale].seo.brand,
+        url: homeUrl,
+        inLanguage: locale,
+        publisher: { '@id': `${SITE_URL}/#organization` },
       },
-      { '@type': 'ListItem', position: 3, name: title },
+      {
+        '@type': 'WebPage',
+        '@id': `${pageUrl}#webpage`,
+        url: pageUrl,
+        name: title,
+        description,
+        inLanguage: locale,
+        isPartOf: { '@id': `${homeUrl}#website` },
+      },
+      {
+        '@type': 'WebApplication',
+        '@id': `${pageUrl}#application`,
+        name: documents[locale].seo.brand,
+        url: pageUrl,
+        description,
+        applicationCategory: 'DesignApplication',
+        operatingSystem: 'Web',
+        isAccessibleForFree: true,
+        offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+        inLanguage: locale,
+        headline: title,
+        image: absoluteUrl(template.previewSrc),
+        publisher: { '@id': `${SITE_URL}/#organization` },
+        isPartOf: { '@id': `${homeUrl}#website` },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        '@id': `${pageUrl}#breadcrumb`,
+        itemListElement: [
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: documents[locale].seo.navigation.home,
+            item: homeUrl,
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: documents[locale].seo.navigation.templates,
+            item: absoluteUrl(seoTemplatesPath(locale)),
+          },
+          { '@type': 'ListItem', position: 3, name: title, item: pageUrl },
+        ],
+      },
     ],
-  },
-});
+  };
+};
 
 const renderFaq = (faq: readonly Faq[]): string =>
   faq
@@ -173,20 +341,104 @@ const renderFaq = (faq: readonly Faq[]): string =>
     )
     .join('\n');
 
+const jsonLdForArticle = (
+  locale: SeoLocale,
+  title: string,
+  description: string,
+  pageUrl: string,
+  lastModified: string,
+) => ({
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': `${SITE_URL}/#organization`,
+      name: documents[locale].seo.brand,
+      url: SITE_URL,
+      sameAs: ['https://github.com/capynq/open-keychain'],
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${absoluteUrl(seoHomePath(locale))}#website`,
+      name: documents[locale].seo.brand,
+      url: absoluteUrl(seoHomePath(locale)),
+      inLanguage: locale,
+      publisher: { '@id': `${SITE_URL}/#organization` },
+    },
+    {
+      '@type': 'WebPage',
+      '@id': `${pageUrl}#webpage`,
+      url: pageUrl,
+      name: title,
+      description,
+      inLanguage: locale,
+      isPartOf: { '@id': `${absoluteUrl(seoHomePath(locale))}#website` },
+    },
+    {
+      '@type': 'Article',
+      '@id': `${pageUrl}#article`,
+      headline: title,
+      name: title,
+      url: pageUrl,
+      description,
+      inLanguage: locale,
+      author: { '@id': `${SITE_URL}/#organization` },
+      publisher: { '@id': `${SITE_URL}/#organization` },
+      isPartOf: { '@id': `${absoluteUrl(seoHomePath(locale))}#website` },
+      dateModified: lastModified,
+    },
+    {
+      '@type': 'WebApplication',
+      '@id': `${pageUrl}#application`,
+      name: documents[locale].seo.brand,
+      url: pageUrl,
+      description,
+      applicationCategory: 'DesignApplication',
+      operatingSystem: 'Web',
+      isAccessibleForFree: true,
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      publisher: { '@id': `${SITE_URL}/#organization` },
+      isPartOf: { '@id': `${absoluteUrl(seoHomePath(locale))}#website` },
+      inLanguage: locale,
+    },
+    {
+      '@type': 'BreadcrumbList',
+      '@id': `${pageUrl}#breadcrumb`,
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: documents[locale].seo.navigation.home,
+          item: absoluteUrl(seoHomePath(locale)),
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: documents[locale].seo.guidesHub.heading,
+          item: absoluteUrl(seoGuidesPath(locale)),
+        },
+        { '@type': 'ListItem', position: 3, name: title, item: pageUrl },
+      ],
+    },
+  ],
+});
+
 const renderHeader = (
   locale: SeoLocale,
-  kind: 'home' | 'template',
+  kind: SeoKind,
   template?: SeoTemplateDefinition,
+  guideSlug?: string,
 ): string => {
   const copy = documents[locale].seo;
   return `<header class="seo-header">
     <a class="seo-brand" href="${seoHomePath(locale)}">${escapeHtml(copy.navigation.home)}</a>
     <nav aria-label="${escapeHtml(copy.navigation.templates)}">
-      <a href="${seoHomePath(locale)}#templates">${escapeHtml(copy.navigation.templates)}</a>
+      <a href="${seoTemplatesPath(locale)}">${escapeHtml(copy.navigation.templates)}</a>
+      <a href="${seoGuidesPath(locale)}">${escapeHtml(copy.guidesHub.heading)}</a>
       <a href="${seoHomePath(locale)}#how-it-works">${escapeHtml(copy.navigation.howItWorks)}</a>
       <a href="https://github.com/capynq/open-keychain">${escapeHtml(copy.navigation.github)}</a>
     </nav>
-    <div class="seo-language" aria-label="${escapeHtml(copy.languageLabel)}">${languageLinks(locale, kind, template)}</div>
+    <div class="seo-language" aria-label="${escapeHtml(copy.languageLabel)}">${languageLinks(locale, kind, template, guideSlug)}</div>
   </header>`;
 };
 
@@ -207,7 +459,7 @@ const renderHomeMarkup = (locale: SeoLocale): string => {
       <img src="${template.previewSrc}" alt="${escapeHtml(imageAlt(locale, template))}" width="640" height="360" loading="lazy" />
       <h3>${escapeHtml(templateCopy.heading)}</h3>
       <p>${escapeHtml(templateCopy.intro)}</p>
-      <a class="seo-text-link" href="${seoTemplatePath(locale, template)}">${escapeHtml(copy.navigation.readMore)} →</a>
+      <a class="seo-text-link" data-analytics-event="seo_cta_clicked" data-analytics-cta="${template.id}" href="${seoTemplatePath(locale, template)}">${escapeHtml(copy.navigation.readMore)} →</a>
     </article>`;
   }).join('\n');
   return `<main class="seo-main seo-home">
@@ -216,7 +468,7 @@ const renderHomeMarkup = (locale: SeoLocale): string => {
         <p class="seo-eyebrow">${escapeHtml(copy.brand)}</p>
         <h1 id="seo-home-heading">${escapeHtml(copy.home.heading)}</h1>
         <p class="seo-lede">${escapeHtml(copy.home.intro)}</p>
-        <a class="seo-cta" href="/create?lang=${locale}">${escapeHtml(copy.home.cta)} <span aria-hidden="true">→</span></a>
+        <a class="seo-cta" data-analytics-event="seo_cta_clicked" href="/create?lang=${locale}">${escapeHtml(copy.home.cta)} <span aria-hidden="true">→</span></a>
       </div>
       <img class="seo-hero-image" src="/showcase/create-desktop.png" alt="${escapeHtml(copy.home.heading)}" width="1440" height="900" fetchpriority="high" />
     </section>
@@ -248,13 +500,13 @@ const renderTemplateMarkup = (locale: SeoLocale, template: SeoTemplateDefinition
     .map((benefit) => `<li>${escapeHtml(benefit)}</li>`)
     .join('');
   return `<main class="seo-main seo-template-page">
-    <nav class="seo-breadcrumbs" aria-label="Breadcrumb"><a href="${seoHomePath(locale)}">${escapeHtml(copy.navigation.home)}</a><span aria-hidden="true">/</span><span>${escapeHtml(copy.navigation.templates)}</span><span aria-hidden="true">/</span><span aria-current="page">${escapeHtml(templateCopy.heading)}</span></nav>
+    <nav class="seo-breadcrumbs" aria-label="Breadcrumb"><a href="${seoHomePath(locale)}">${escapeHtml(copy.navigation.home)}</a><span aria-hidden="true">/</span><a href="${seoTemplatesPath(locale)}">${escapeHtml(copy.navigation.templates)}</a><span aria-hidden="true">/</span><span aria-current="page">${escapeHtml(templateCopy.heading)}</span></nav>
     <section class="seo-template-hero" aria-labelledby="seo-template-heading">
       <div>
         <p class="seo-eyebrow">${escapeHtml(copy.navigation.templates)}</p>
         <h1 id="seo-template-heading">${escapeHtml(templateCopy.heading)}</h1>
         <p class="seo-lede">${escapeHtml(templateCopy.intro)}</p>
-        <a class="seo-cta" href="/create?template=${encodeURIComponent(template.id)}&amp;lang=${locale}">${escapeHtml(copy.home.cta)} <span aria-hidden="true">→</span></a>
+        <a class="seo-cta" data-analytics-event="seo_cta_clicked" href="/create?template=${encodeURIComponent(template.id)}&amp;lang=${locale}">${escapeHtml(copy.home.cta)} <span aria-hidden="true">→</span></a>
       </div>
       <img class="seo-hero-image" src="${template.previewSrc}" alt="${escapeHtml(imageAlt(locale, template))}" width="640" height="360" fetchpriority="high" />
     </section>
@@ -270,25 +522,167 @@ const renderTemplateMarkup = (locale: SeoLocale, template: SeoTemplateDefinition
       <h2 id="seo-related-heading">${escapeHtml(copy.navigation.templates)}</h2>
       <ul>${templateLinks(locale, template)}</ul>
     </section>
+    <section class="seo-section seo-related" aria-labelledby="seo-guides-heading">
+      <h2 id="seo-guides-heading">${escapeHtml(copy.guidesHub.heading)}</h2>
+      <ul>${guideLinks(locale, template)}</ul>
+    </section>
   </main>`;
+};
+
+const renderHubMarkup = (locale: SeoLocale, kind: 'templates' | 'guides'): string => {
+  const copy = documents[locale].seo;
+  const hub = kind === 'templates' ? copy.templatesHub : copy.guidesHub;
+  const cards =
+    kind === 'templates'
+      ? SEO_TEMPLATE_CATALOG.map(
+          (template) =>
+            `<li><a href="${seoTemplatePath(locale, template)}" data-analytics-event="seo_cta_clicked" data-analytics-cta="${template.id}">${escapeHtml(copy.templates[template.key].heading)}</a><p>${escapeHtml(copy.templates[template.key].intro)}</p></li>`,
+        ).join('\n')
+      : SEO_GUIDE_CATALOG.map(
+          (guide) =>
+            `<li><a href="${seoGuidePath(locale, guide)}" data-analytics-event="seo_cta_clicked" data-analytics-cta="${guide.slug}">${escapeHtml(copy.guides[guide.key].heading)}</a><p>${escapeHtml(copy.guides[guide.key].intro)}</p></li>`,
+        ).join('\n');
+  return `<main class="seo-main seo-hub"><nav class="seo-breadcrumbs"><a href="${seoHomePath(locale)}">${escapeHtml(copy.navigation.home)}</a><span aria-hidden="true">/</span><span aria-current="page">${escapeHtml(hub.heading)}</span></nav><section class="seo-section"><p class="seo-eyebrow">${escapeHtml(kind === 'templates' ? copy.navigation.templates : copy.guidesHub.heading)}</p><h1>${escapeHtml(hub.heading)}</h1><p class="seo-lede">${escapeHtml(hub.intro)}</p><ul class="seo-hub-list">${cards}</ul><a class="seo-cta" data-analytics-event="seo_cta_clicked" data-analytics-cta="create" href="/create?lang=${locale}">${escapeHtml(copy.home.cta)} <span aria-hidden="true">→</span></a></section></main>`;
+};
+
+const renderGuideMarkup = (locale: SeoLocale, guideSlug: string): string => {
+  const copy = documents[locale].seo;
+  const guide = SEO_GUIDE_CATALOG.find((item) => item.slug === guideSlug)!;
+  const guideCopy = copy.guides[guide.key];
+  const updatedLabel = locale === 'ru' ? 'Обновлено' : locale === 'uk' ? 'Оновлено' : 'Updated';
+  const relatedTemplate = SEO_TEMPLATE_CATALOG.find(
+    (template) => template.id === guideTemplateId(guide.key),
+  )!;
+  return `<main class="seo-main seo-guide"><nav class="seo-breadcrumbs"><a href="${seoHomePath(locale)}">${escapeHtml(copy.navigation.home)}</a><span aria-hidden="true">/</span><a href="${seoGuidesPath(locale)}">${escapeHtml(copy.guidesHub.heading)}</a><span aria-hidden="true">/</span><span aria-current="page">${escapeHtml(guideCopy.heading)}</span></nav><article class="seo-section"><p class="seo-eyebrow">${escapeHtml(copy.guidesHub.heading)}</p><h1>${escapeHtml(guideCopy.heading)}</h1><p class="seo-lede">${escapeHtml(guideCopy.intro)}</p><p class="seo-byline">${escapeHtml(copy.brand)} · <time datetime="${guide.lastModified}">${escapeHtml(updatedLabel)} ${guide.lastModified}</time></p><img class="seo-guide-image" src="${relatedTemplate.previewSrc}" alt="${escapeHtml(imageAlt(locale, relatedTemplate))}" width="640" height="360" loading="lazy" />${guideCopy.sections.map((section) => `<section><h2>${escapeHtml(section.heading)}</h2><p>${escapeHtml(section.body)}</p></section>`).join('')}<section class="seo-section"><h2>${escapeHtml(copy.home.faqHeading)}</h2><div class="seo-faq">${renderFaq(guideFaq(locale, guideCopy))}</div></section><p><a class="seo-text-link" data-analytics-event="seo_cta_clicked" data-analytics-cta="${relatedTemplate.id}" href="${seoTemplatePath(locale, relatedTemplate)}">${escapeHtml(copy.templates[relatedTemplate.key].heading)} →</a></p><a class="seo-cta" data-analytics-event="seo_cta_clicked" data-analytics-cta="create" href="/create?template=${encodeURIComponent(relatedTemplate.id)}&amp;lang=${locale}">${escapeHtml(copy.home.cta)} <span aria-hidden="true">→</span></a></article></main>`;
 };
 
 const renderPage = (
   locale: SeoLocale,
-  kind: 'home' | 'template',
+  kind: SeoKind,
   template?: SeoTemplateDefinition,
+  guideSlug?: string,
+  lastModified = '2026-08-20',
 ): string => {
   const copy = documents[locale].seo;
   const isHome = kind === 'home';
-  const pagePath = isHome ? seoHomePath(locale) : seoTemplatePath(locale, template!);
-  const title = isHome ? copy.home.title : copy.templates[template!.key].title;
-  const description = isHome ? copy.home.description : copy.templates[template!.key].description;
+  const pagePath =
+    kind === 'home'
+      ? seoHomePath(locale)
+      : kind === 'templates'
+        ? seoTemplatesPath(locale)
+        : kind === 'guides'
+          ? seoGuidesPath(locale)
+          : kind === 'template'
+            ? seoTemplatePath(locale, template!)
+            : seoGuidePath(
+                locale,
+                SEO_GUIDE_CATALOG.find((g) => g.slug === guideSlug)!,
+              );
+
+  const jsonLdForHub = (
+    locale: SeoLocale,
+    kind: 'templates' | 'guides',
+    title: string,
+    description: string,
+  ) => {
+    const pageUrl = absoluteUrl(
+      kind === 'templates' ? seoTemplatesPath(locale) : seoGuidesPath(locale),
+    );
+    const homeUrl = absoluteUrl(seoHomePath(locale));
+    const hubName =
+      kind === 'templates'
+        ? documents[locale].seo.navigation.templates
+        : documents[locale].seo.guidesHub.heading;
+    return {
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'Organization',
+          '@id': `${SITE_URL}/#organization`,
+          name: documents[locale].seo.brand,
+          url: SITE_URL,
+          sameAs: ['https://github.com/capynq/open-keychain'],
+        },
+        {
+          '@type': 'WebSite',
+          '@id': `${homeUrl}#website`,
+          name: documents[locale].seo.brand,
+          url: homeUrl,
+          inLanguage: locale,
+          publisher: { '@id': `${SITE_URL}/#organization` },
+        },
+        {
+          '@type': 'WebPage',
+          '@id': `${pageUrl}#webpage`,
+          url: pageUrl,
+          name: title,
+          description,
+          inLanguage: locale,
+          isPartOf: { '@id': `${homeUrl}#website` },
+        },
+        {
+          '@type': 'BreadcrumbList',
+          '@id': `${pageUrl}#breadcrumb`,
+          itemListElement: [
+            {
+              '@type': 'ListItem',
+              position: 1,
+              name: documents[locale].seo.navigation.home,
+              item: homeUrl,
+            },
+            { '@type': 'ListItem', position: 2, name: hubName, item: pageUrl },
+          ],
+        },
+      ],
+    };
+  };
+  const guideCopy = guideSlug
+    ? copy.guides[SEO_GUIDE_CATALOG.find((g) => g.slug === guideSlug)!.key]
+    : undefined;
+  const title = isHome
+    ? copy.home.title
+    : kind === 'templates'
+      ? copy.templatesHub.title
+      : kind === 'guides'
+        ? copy.guidesHub.title
+        : kind === 'template'
+          ? copy.templates[template!.key].title
+          : guideCopy!.title;
+  const description = isHome
+    ? copy.home.description
+    : kind === 'templates'
+      ? copy.templatesHub.description
+      : kind === 'guides'
+        ? copy.guidesHub.description
+        : kind === 'template'
+          ? copy.templates[template!.key].description
+          : guideCopy!.description;
   const jsonLd = isHome
     ? jsonLdForHome(locale, title, description)
-    : jsonLdForTemplate(locale, template!, title, description);
-  const image = isHome ? '/brand/open-keychain-og.png' : template!.previewSrc;
+    : kind === 'template'
+      ? jsonLdForTemplate(locale, template!, title, description)
+      : kind === 'templates' || kind === 'guides'
+        ? jsonLdForHub(locale, kind, title, description)
+        : jsonLdForArticle(locale, title, description, absoluteUrl(pagePath), lastModified);
+  const image = isHome
+    ? '/brand/open-keychain-og.png'
+    : kind === 'template'
+      ? template!.previewSrc
+      : kind === 'guide'
+        ? SEO_TEMPLATE_CATALOG.find(
+            (candidate) =>
+              candidate.id ===
+              guideTemplateId(SEO_GUIDE_CATALOG.find((g) => g.slug === guideSlug)!.key),
+          )!.previewSrc
+        : '/brand/open-keychain-og.png';
   const imageDimensions = isHome ? { width: 1200, height: 630 } : { width: 640, height: 360 };
-  const markup = isHome ? renderHomeMarkup(locale) : renderTemplateMarkup(locale, template!);
+  const markup = isHome
+    ? renderHomeMarkup(locale)
+    : kind === 'template'
+      ? renderTemplateMarkup(locale, template!)
+      : kind === 'guide'
+        ? renderGuideMarkup(locale, guideSlug!)
+        : renderHubMarkup(locale, kind);
   return `<!doctype html>
 <html lang="${locale}">
   <head>
@@ -298,7 +692,7 @@ const renderPage = (
     <meta name="description" content="${escapeHtml(description)}" />
     <meta name="robots" content="index,follow" />
     <link rel="canonical" href="${absoluteUrl(pagePath)}" />
-    ${alternateLinks(kind, template)}
+    ${alternateLinks(kind, template, guideSlug)}
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="${escapeHtml(copy.brand)}" />
     <meta property="og:url" content="${absoluteUrl(pagePath)}" />
@@ -313,11 +707,12 @@ const renderPage = (
     <meta name="twitter:image" content="${absoluteUrl(image)}" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/seo.css" />
+    <script src="/seo-analytics.js" defer data-key="${escapeHtml(POSTHOG_KEY)}" data-host="${escapeHtml(POSTHOG_HOST)}" data-page-type="${kind}" data-page-id="${escapeHtml(guideSlug ?? template?.id ?? (kind === 'home' ? 'home' : kind))}"></script>
     <title>${escapeHtml(title)}</title>
     <script type="application/ld+json">${escapeJson(jsonLd)}</script>
   </head>
   <body>
-    ${renderHeader(locale, kind, template)}
+    ${renderHeader(locale, kind, template, guideSlug)}
     ${markup}
     ${renderFooter(locale)}
   </body>
@@ -401,6 +796,19 @@ const main = (): void => {
   if (!rootIndex.includes('hreflang="x-default"')) {
     rootIndex = rootIndex.replace('</head>', `    ${alternateLinks('home')}\n  </head>`);
   }
+  const rootAnalytics = `<script src="/seo-analytics.js" defer data-key="${escapeHtml(POSTHOG_KEY)}" data-host="${escapeHtml(POSTHOG_HOST)}" data-page-type="home" data-page-id="home" data-spa="true"></script>`;
+  if (!rootIndex.includes('src="/seo-analytics.js"')) {
+    rootIndex = rootIndex.replace('</head>', `    ${rootAnalytics}\n  </head>`);
+  }
+  const rootJsonLd = `<script type="application/ld+json">${escapeJson(jsonLdForHome('en', documents.en.seo.home.title, documents.en.seo.home.description))}</script>`;
+  if (/<script type="application\/ld\+json">[\s\S]*?<\/script>/.test(rootIndex)) {
+    rootIndex = rootIndex.replace(
+      /<script type="application\/ld\+json">[\s\S]*?<\/script>/,
+      rootJsonLd,
+    );
+  } else {
+    rootIndex = rootIndex.replace('</head>', `    ${rootJsonLd}\n  </head>`);
+  }
   fs.writeFileSync(path.join(DIST_DIR, 'index.html'), rootIndex);
 
   for (const entry of SEO_PAGE_MANIFEST) {
@@ -411,7 +819,13 @@ const main = (): void => {
         : undefined;
     if (entry.kind === 'template' && !template)
       throw new Error(`Unknown SEO template: ${entry.templateId}`);
-    const html = renderPage(entry.locale, entry.kind, template);
+    const html = renderPage(
+      entry.locale,
+      entry.kind,
+      template,
+      entry.kind === 'guide' ? entry.guideSlug : undefined,
+      entry.lastModified,
+    );
     writeFile(path.join(DIST_DIR, entry.path, 'index.html'), html);
   }
 
@@ -431,12 +845,26 @@ const main = (): void => {
   writeFile(path.join(DIST_DIR, 'profile.html'), profileShell);
 
   const sitemapEntries = SEO_PAGE_MANIFEST.map((entry) => {
-    const updatedAt = '2026-08-19';
-    return `  <url>\n    <loc>${absoluteUrl(entry.path)}</loc>\n    <lastmod>${updatedAt}</lastmod>\n  </url>`;
+    const template =
+      entry.kind === 'template'
+        ? SEO_TEMPLATE_CATALOG.find((candidate) => candidate.id === entry.templateId)
+        : undefined;
+    const guide =
+      entry.kind === 'guide'
+        ? SEO_GUIDE_CATALOG.find((candidate) => candidate.slug === entry.guideSlug)
+        : undefined;
+    const image =
+      template?.previewSrc ??
+      (guide
+        ? SEO_TEMPLATE_CATALOG.find((candidate) => candidate.id === guideTemplateId(guide.key))
+            ?.previewSrc
+        : '/brand/open-keychain-og.png') ??
+      '/brand/open-keychain-og.png';
+    return `  <url>\n    <loc>${absoluteUrl(entry.path)}</loc>\n    <lastmod>${entry.lastModified}</lastmod>\n    <image:image>\n      <image:loc>${absoluteUrl(image)}</image:loc>\n    </image:image>\n  </url>`;
   }).join('\n');
   writeFile(
     path.join(DIST_DIR, 'sitemap.xml'),
-    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemapEntries}\n</urlset>\n`,
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n${sitemapEntries}\n</urlset>\n`,
   );
   writeFile(
     path.join(DIST_DIR, '404.html'),

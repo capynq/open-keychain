@@ -29,6 +29,22 @@ test('renders a localized template page without the application bundle', async (
   );
 });
 
+test('keeps static-page analytics consent-gated and coarse', async ({ page }) => {
+  const analyticsRequests: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().includes('/capture/')) analyticsRequests.push(request.url());
+  });
+  await page.goto('/templates/name-keychain/');
+  await expect(page.locator('[data-analytics-consent]')).toBeVisible();
+  expect(analyticsRequests).toEqual([]);
+  await page.getByRole('button', { name: 'Allow analytics' }).click();
+  await expect(page.locator('[data-analytics-consent]')).toBeHidden();
+  expect(analyticsRequests).toEqual([]);
+  const analyticsScript = page.locator('script[src="/seo-analytics.js"]');
+  await expect(analyticsScript).toHaveAttribute('data-page-type', 'template');
+  await expect(analyticsScript).toHaveAttribute('data-page-id', 'name-keychain');
+});
+
 test('keeps interactive app shells out of the index', async ({ page }) => {
   for (const route of ['/create', '/profile']) {
     const response = await page.request.get(route);

@@ -22,6 +22,26 @@ body {
   background: #f6f4ef;
 }
 
+[data-analytics-consent] {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 5;
+  max-width: 22rem;
+  padding: 1rem;
+  border: 1px solid #d9d2c5;
+  border-radius: 0.75rem;
+  background: #fffdf8;
+  box-shadow: 0 0.5rem 2rem rgb(32 36 51 / 18%);
+}
+
+[data-analytics-consent] p {
+  margin: 0 0 0.75rem;
+}
+[data-analytics-consent] button {
+  margin-right: 0.5rem;
+}
+
 a {
   color: #b84f36;
 }
@@ -129,6 +149,20 @@ h3 {
   box-shadow:
     18px 20px 0 #c9d1cd,
     28px 32px 45px #2d35421c;
+}
+
+.seo-guide-image {
+  display: block;
+  width: min(100%, 40rem);
+  height: auto;
+  margin: 1.5rem 0 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 1rem 2.5rem rgb(32 36 51 / 12%);
+}
+
+.seo-byline {
+  color: #625d54;
+  font-size: 0.9rem;
 }
 .seo-cta {
   display: inline-flex;

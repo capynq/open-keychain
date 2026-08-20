@@ -1,8 +1,10 @@
 # Open Keychain
 
+[![CI](https://github.com/capynq/open-keychain/actions/workflows/ci.yml/badge.svg)](https://github.com/capynq/open-keychain/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE) [![Live site](https://img.shields.io/badge/live-open--keychain.com-ef6c45)](https://open-keychain.com/)
+
 Open Keychain is an open-source, local-first tool for designing personalized 3D-printable keychains and labels. Enter a name, choose a template, preview the model, then export STL or 3MF for your own slicer and printer.
 
-Try the live [Open Keychain 3D printable keychain maker](https://open-keychain.com/) or browse the [name keychain template](https://open-keychain.com/templates/name-keychain/).
+Try the live [Open Keychain 3D printable keychain maker](https://open-keychain.com/), browse the [template hub](https://open-keychain.com/templates/), or read the [3D printing guides](https://open-keychain.com/guides/).
 
 > Beta note: generated files still need checking in your slicer and testing on your printer. Filament, machine calibration, orientation, and slicer settings affect the physical result.
 
@@ -11,6 +13,13 @@ Try the live [Open Keychain 3D printable keychain maker](https://open-keychain.c
 <p align="center">
   <img src="public/showcase/create-mobile.png" alt="Open Keychain customizer on mobile" width="260" />
 </p>
+
+## Highlights
+
+- Generate name keychains, articulated names, nameplates, and plant labels from one short text input.
+- Preview validated geometry in the browser and export STL or 3MF for your slicer.
+- Use the [name keychain](https://open-keychain.com/templates/name-keychain/), [articulated name](https://open-keychain.com/templates/articulated-name/), [nameplate](https://open-keychain.com/templates/nameplate/), or [plant label](https://open-keychain.com/templates/plant-label/) templates.
+- Keep names, local fonts, geometry generation, and exported files on-device in the default local-first workflow.
 
 ## Use it locally
 
@@ -51,6 +60,11 @@ pnpm build
 
 Serve `dist/` from any static host. Configure an SPA fallback to `index.html` for `/` and `/create`, and allow normal static access to `/manifold.wasm`, `/fonts/`, `/showcase/`, and hashed `/assets/` files. [`nginx.conf`](nginx.conf) is a working reference.
 
+The generated SEO pages are self-contained HTML and include a small, consent-gated analytics
+bundle. It sends only page type, page ID, locale, and CTA metadata after a visitor opts in;
+names, query strings, and exported files are never included. Set `VITE_POSTHOG_KEY` (and
+optionally `VITE_POSTHOG_HOST`) at build time to enable it. See [`docs/analytics.md`](docs/analytics.md).
+
 For the optional hosted profile, use [`docs/hosting-readiness.md`](docs/hosting-readiness.md) for domain, HTTPS, secrets, backup, and private-pilot gates. Billing is not enabled.
 
 ## What you can make
@@ -64,7 +78,7 @@ The customizer exports printable STL and 3MF files. Review the downloaded model 
 
 ## Privacy and future hosting
 
-The default local and self-hosted workflows keep generation and export on the device running the browser. This repository contains no active payment flow, price list, or hosted workspace offering. A future hosted workspace is only a concept for saved projects, seller presets, and repeat-order/batch tools.
+The default local and self-hosted workflows keep generation and export on the device running the browser. The optional SEO analytics is consent-gated and sends only coarse page metadata; it never sends names, search strings, generated geometry, or exported files. This repository contains no active payment flow, price list, or hosted workspace offering. A future hosted workspace is only a concept for saved projects, seller presets, and repeat-order/batch tools.
 
 ## Development
 

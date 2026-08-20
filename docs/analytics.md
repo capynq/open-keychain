@@ -14,6 +14,10 @@ Never commit any of these values to the repository. After changing them, trigger
 
 The app sends only coarse, anonymous product events after consent: page/landing views, language changes, template selection, generation success/failure, export start/completion/failure, surface preset changes, and the primary call-to-action. Event properties contain stable IDs, locale, export format/mode, and status categories. Names, query strings, generated geometry, and exported files are not sent.
 
+Server-rendered SEO pages use a separate lightweight bundle. It remains inert when `VITE_POSTHOG_KEY` is absent and
+emits only `seo_page_view`, `seo_cta_clicked`, and `seo_language_changed` after consent. Its complete property
+allowlist is `page_type`, `page_id`, `locale`, and `cta`; it does not load the application bundle or use autocapture.
+
 PostHog autocapture, page capture, page-leave capture, cookies, and session replay are disabled.
 
 Visitors can decline analytics and can review the policy at `/privacy.html`.
