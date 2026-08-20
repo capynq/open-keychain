@@ -2,7 +2,8 @@ name: CI
 
 on:
   push:
-  pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -29,44 +30,35 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
-      - run: pnpm bench:matrix
       - name: Build application for validation
         run: pnpm build
         env:
           VITE_GOOGLE_FONTS_API_KEY: playwright-google-fonts-key
-      - name: Validate local Compose configuration
-        run: docker compose -f docker-compose.yml config
-      - name: Validate hosted Compose configuration
-        run: docker compose --env-file .env.hosted.example -f docker-compose.hosted.yml config
-      - name: Validate pull request commit messages
-        if: github.event_name == 'pull_request'
-        run: pnpm exec commitlint --from "${{ github.event.pull_request.base.sha }}" --to "${{ github.sha }}"
-      - name: Install Playwright Chromium
-        run: pnpm exec playwright install chromium
-      - name: Run browser tests against the existing build
-        run: pnpm test:e2e --workers=1
-        env:
-          PLAYWRIGHT_USE_EXISTING_BUILD: 'true'
-      - name: Build and start the self-hosted image
-        run: docker compose up -d --build --wait --wait-timeout 120
-      - name: Validate the deployed self-hosted image
-        run: pnpm validate:self-hosted
-        env:
-          PLAYWRIGHT_BASE_URL: http://127.0.0.1:8080
-          SELF_HOSTED_BASE_URL: http://127.0.0.1:8080
-      - name: Show self-hosted logs on failure
-        if: failure()
-        run: docker compose logs --no-color
-      - name: Stop the self-hosted image
-        if: always()
-        run: docker compose down --volumes --remove-orphans
-      - name: Upload browser artifacts on failure
-        if: failure()
+      - name: Upload production build
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
         with:
-          name: playwright-artifacts
-          path: |
-            playwright-report/
-            test-results/
-          if-no-files-found: ignore
-          retention-days: 7
+          name: dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 1
+
+  deploy:
+    needs: quality
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+      - name: Download production build
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dist
+          path: dist
+      - name: Deploy production build
+        run: pnpm --package=netlify-cli dlx netlify deploy --prod --dir=dist --site="$NETLIFY_SITE_ID" --auth="$NETLIFY_AUTH_TOKEN"
+        env:
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}

@@ -10,7 +10,17 @@ pnpm bench:matrix
 pnpm test:e2e --workers=1
 ```
 
-The pre-push hook runs `pnpm validate` automatically. The geometry matrix and browser suite remain CI checks because they are slower and may require additional local tooling.
+The pre-push hook repairs formatting and lint issues in changed files, then selects the local gates from the files in the push:
+
+- Every code push runs typecheck, unit tests, and a production build with the deterministic Playwright Google-font key.
+- UI, route, export, public-asset, and E2E changes also run the full Playwright suite against that existing build.
+- Geometry and font changes also run `pnpm bench:matrix`.
+- Docker, nginx, or hosting changes also validate both Compose profiles and build/test the self-hosted image.
+- Documentation-only pushes run only the changed-file formatter/linter checks.
+
+Install Chromium once with `pnpm exec playwright install chromium`. Docker is needed only for hosting-related changes.
+
+The hook can be bypassed with `HUSKY=0 git push`, but that skips all of these local safety gates and leaves GitHub's main-branch quality workflow as the remaining check.
 
 For a focused local run:
 
