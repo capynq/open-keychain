@@ -208,6 +208,8 @@ test('keeps localized control names and touch targets usable', async ({ page }) 
 test('keeps the preview first at tablet width without horizontal overflow', async ({ page }) => {
   await page.setViewportSize({ width: 900, height: 720 });
   await page.goto('/create');
+  await expect(page.locator('.preview-panel')).toBeVisible();
+  await expect(page.locator('.controls-panel')).toBeVisible();
 
   const layout = await page.evaluate(() => {
     const preview = document.querySelector('.preview-panel')!.getBoundingClientRect();

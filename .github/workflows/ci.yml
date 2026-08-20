@@ -30,7 +30,10 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm bench:matrix
-      - run: pnpm build
+      - name: Build application for validation
+        run: pnpm build
+        env:
+          VITE_GOOGLE_FONTS_API_KEY: playwright-google-fonts-key
       - name: Validate local Compose configuration
         run: docker compose -f docker-compose.yml config
       - name: Validate hosted Compose configuration
