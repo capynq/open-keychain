@@ -62,7 +62,7 @@ expectCache(font, /(?:max-age=0|must-revalidate)/i, '/fonts/nunito.ttf');
 if ((await font.arrayBuffer()).byteLength < 10_000)
   throw new Error('/fonts/nunito.ttf is too small');
 
-for (const route of ['/create', '/self-hosted-validation/deep-link']) {
+for (const route of ['/create', '/create/deep-link']) {
   const fallback = await fetchChecked(route);
 
   expectContentType(fallback, 'text/html', route);

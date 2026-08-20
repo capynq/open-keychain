@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import type pg from 'pg';
 import { createAuth, sessionForRequest } from './auth';
@@ -13,6 +14,8 @@ type ProjectBody = {
 const MAX_PROJECT_BODY_BYTES = 256 * 1024;
 const MAX_PROJECT_NAME_LENGTH = 120;
 const MAX_PROJECT_THUMBNAIL_LENGTH = 192 * 1024;
+const API_RATE_LIMIT_MAX = 120;
+const API_RATE_LIMIT_WINDOW = '1 minute';
 
 const isJsonObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -87,6 +90,11 @@ const userPlan = async (pool: pg.Pool, userId: string): Promise<PlanId> => {
 };
 export const createApp = (pool: pg.Pool, config: ServerConfig): FastifyInstance => {
   const app = Fastify({ logger: true, bodyLimit: MAX_PROJECT_BODY_BYTES });
+  app.register(rateLimit, {
+    global: true,
+    max: API_RATE_LIMIT_MAX,
+    timeWindow: API_RATE_LIMIT_WINDOW,
+  });
   const auth = createAuth(pool, config);
   app.get('/api/health', async () => ({ status: 'ok' }));
   app.route({

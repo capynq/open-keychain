@@ -5,16 +5,17 @@ on:
     tags:
       - 'v*-beta.*'
 
-permissions:
-  contents: write
-  packages: write
-  attestations: write
-  id-token: write
+permissions: {}
 
 jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      contents: write
+      packages: write
+      attestations: write
+      id-token: write
     env:
       IMAGE_NAME: ghcr.io/capynq/open-keychain
     steps:

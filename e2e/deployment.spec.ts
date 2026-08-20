@@ -15,6 +15,8 @@ test('generates and exports through the deployed nginx image', async ({ page }) 
   const stlDownload = page.waitForEvent('download');
   await dialog.getByRole('button', { name: /STL file/ }).click();
   expect((await stlDownload).suggestedFilename()).toMatch(/\.stl$/);
+  await dialog.getByLabel('Close').click();
+  await expect(dialog).toBeHidden();
 
   await page.getByRole('button', { name: 'Export' }).click();
   await expect(dialog).toBeVisible();
@@ -59,14 +61,22 @@ test('loads responsive landing visuals and metadata in production', async ({ pag
 test('keeps analytics gated by consent in production', async ({ page }) => {
   const analyticsRequests: string[] = [];
   page.on('request', (request) => {
-    if (request.url().includes('i.posthog.com')) analyticsRequests.push(request.url());
+    try {
+      const hostname = new URL(request.url()).hostname;
+      if (hostname === 'i.posthog.com' || hostname.endsWith('.i.posthog.com'))
+        analyticsRequests.push(request.url());
+    } catch {
+      // Ignore malformed request URLs; Playwright should provide absolute URLs here.
+    }
   });
 
   await page.goto('/');
   await page.waitForTimeout(500);
   expect(analyticsRequests).toEqual([]);
   await page.getByRole('button', { name: 'Allow analytics' }).click();
-  await expect.poll(() => analyticsRequests.length, { timeout: 10_000 }).toBeGreaterThan(0);
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('open-keychain.analytics-consent')))
+    .toBe('accepted');
 });
 
 test('returns a real 404 for unknown production paths', async ({ page }) => {
