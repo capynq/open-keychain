@@ -19,6 +19,10 @@ import {
   type KeychainParams,
 } from './types';
 describe('keychain parameters', () => {
+  it('uses a printable default font weight', () => {
+    expect(DEFAULT_PARAMS.fontWeightMm).toBe(0.6);
+  });
+
   it('applies only strict six-digit session color overrides', () => {
     expect(() =>
       applyPrintAppearanceOverrides(DEFAULT_PRINT_APPEARANCE, {

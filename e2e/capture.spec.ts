@@ -27,11 +27,9 @@ test('captures the reviewed customizer showcase', async ({ page }, testInfo) => 
   const screenshot = await page.screenshot({ path: target, animations: 'disabled' });
   await assertPngCapture(
     screenshot,
-    testInfo.project.name === 'capture-mobile-2x'
-      ? { width: 780, height: 1688 }
-      : testInfo.project.name === 'capture-mobile'
-        ? { width: 390, height: 844 }
-        : { width: 1440, height: 900 },
+    testInfo.project.name === 'capture-desktop'
+      ? { width: 2880, height: 1800 }
+      : { width: 780, height: 1688 },
   );
   assertNoBrowserErrors();
 });
@@ -138,14 +136,27 @@ for (const template of templatePreviews) {
     else await waitForRegeneration(page, previousGeneration);
     await prepareForCapture(page);
     await assertVisibleModel(page);
-    const viewerCapture = await page.locator('.viewer-wrap').screenshot({ animations: 'disabled' });
-    const screenshot = await sharp(viewerCapture)
-      .resize({ width: 640, height: 360, fit: 'cover', position: 'centre' })
-      .png()
-      .toBuffer();
+    const viewer = page.locator('.viewer-wrap');
+    const viewerBounds = await viewer.boundingBox();
+    expect(viewerBounds).not.toBeNull();
+    const screenshot =
+      testInfo.project.name === 'capture-desktop'
+        ? await page.screenshot({
+            clip: {
+              x: viewerBounds!.x + Math.max(0, (viewerBounds!.width - 640) / 2),
+              y: viewerBounds!.y + Math.max(0, (viewerBounds!.height - 360) / 2),
+              width: 640,
+              height: 360,
+            },
+            animations: 'disabled',
+          })
+        : await sharp(await viewer.screenshot({ animations: 'disabled' }))
+            .resize({ width: 1280, height: 720, fit: 'cover', position: 'centre' })
+            .png()
+            .toBuffer();
     const assetTarget = `public/showcase/templates/${template.file}${suffix === 'mobile' ? '-mobile' : ''}.png`;
     await sharp(screenshot).toFile(assetTarget);
-    await assertPngCapture(screenshot, { width: 640, height: 360 });
+    await assertPngCapture(screenshot, { width: 1280, height: 720 });
     assertNoBrowserErrors();
   });
 }
@@ -183,14 +194,21 @@ for (const style of stylePreviews) {
     else await waitForRegeneration(page, previousStyleGeneration);
     await prepareForCapture(page);
     await assertVisibleModel(page);
-    const viewerCapture = await page.locator('.viewer-wrap').screenshot({ animations: 'disabled' });
-    const screenshot = await sharp(viewerCapture)
-      .resize({ width: 640, height: 360, fit: 'cover', position: 'centre' })
-      .png()
-      .toBuffer();
+    const viewer = page.locator('.viewer-wrap');
+    const viewerBounds = await viewer.boundingBox();
+    expect(viewerBounds).not.toBeNull();
+    const screenshot = await page.screenshot({
+      clip: {
+        x: viewerBounds!.x + Math.max(0, (viewerBounds!.width - 640) / 2),
+        y: viewerBounds!.y + Math.max(0, (viewerBounds!.height - 360) / 2),
+        width: 640,
+        height: 360,
+      },
+      animations: 'disabled',
+    });
     const assetTarget = `public/showcase/styles/${style.file}.png`;
     await sharp(screenshot).toFile(assetTarget);
-    await assertPngCapture(screenshot, { width: 640, height: 360 });
+    await assertPngCapture(screenshot, { width: 1280, height: 720 });
     assertNoBrowserErrors();
   });
 }
