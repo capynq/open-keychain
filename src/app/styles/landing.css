@@ -1,8 +1,17 @@
+:root {
+  --landing-ink: #1f2430;
+  --landing-muted: #626875;
+  --landing-accent: #b94d34;
+  --landing-accent-hover: #a33e33;
+  --landing-surface: #f7f3ec;
+  --landing-dark: #202735;
+}
+
 .landing-shell {
   min-height: 100vh;
   overflow-x: clip;
   background: #f6f4ef;
-  color: #202433;
+  color: var(--landing-ink);
 }
 
 .landing-topbar {
@@ -34,7 +43,7 @@
 }
 
 .landing-nav a {
-  color: #555b68;
+  color: var(--landing-muted);
   font-size: 12px;
   font-weight: 800;
   text-decoration: none;
@@ -44,7 +53,7 @@
 .landing-nav a:focus-visible,
 .github-link:hover,
 .github-link:focus-visible {
-  color: #bf563f;
+  color: #a84e3b;
 }
 
 .landing-topbar-actions {
@@ -66,16 +75,16 @@
 
 .landing-header-cta {
   padding: 8px 14px;
-  background: #ef815e;
+  background: var(--landing-accent);
   color: #fff;
-  box-shadow: 0 5px 12px #ef815e38;
+  box-shadow: 0 5px 12px #b94d3438;
 }
 
 .landing-header-cta:hover,
 .landing-header-cta:focus-visible,
 .landing-button-primary:hover,
 .landing-button-primary:focus-visible {
-  background: #d96547;
+  background: var(--landing-accent-hover);
 }
 
 .landing-header-cta:focus-visible,
@@ -83,7 +92,7 @@
 .landing-nav a:focus-visible,
 .landing-card-link:focus-visible,
 .landing-footer a:focus-visible {
-  outline: 2px solid #ef815e;
+  outline: 2px solid #b94d34;
   outline-offset: 3px;
 }
 
@@ -105,7 +114,7 @@
 
 .landing-kicker {
   margin: 0 0 10px;
-  color: #bf563f;
+  color: #a84e3b;
   font-size: 10px;
   font-weight: 900;
   letter-spacing: 0.16em;
@@ -149,9 +158,9 @@
 }
 
 .landing-button-primary {
-  background: #ef815e;
+  background: var(--landing-accent);
   color: #fff;
-  box-shadow: 0 8px 18px #ef815e38;
+  box-shadow: 0 8px 18px #b94d3438;
 }
 
 .landing-button-secondary {
@@ -162,8 +171,8 @@
 
 .landing-button-secondary:hover,
 .landing-button-secondary:focus-visible {
-  border-color: #ef815e;
-  color: #bf563f;
+  border-color: #b94d34;
+  color: #a33e33;
 }
 
 .landing-process {
@@ -192,13 +201,13 @@
   height: 8px;
   border: 2px solid #f6f4ef;
   border-radius: 99px;
-  background: #ef815e;
+  background: var(--landing-accent);
   content: '';
 }
 
 .landing-process span,
 .landing-step-card > span {
-  color: #bf563f;
+  color: #a84e3b;
   font-size: 24px;
   font-weight: 900;
   letter-spacing: 0.14em;
@@ -213,7 +222,7 @@
 }
 
 .landing-process small {
-  color: #777d89;
+  color: #626875;
   font-size: 10px;
   line-height: 1.35;
 }
@@ -262,7 +271,7 @@
 }
 
 .configurator-window-dots i:first-child {
-  background: #ef815e;
+  background: #b94d34;
 }
 
 .configurator-window-label {
@@ -271,7 +280,7 @@
 }
 
 .configurator-window-status {
-  color: #a84e3b;
+  color: #8f4a37;
   font-size: 9px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -331,7 +340,7 @@
 .landing-trust p:last-child {
   max-width: 520px;
   margin: 0;
-  color: #6b717d;
+  color: #626875;
   font-size: 14px;
   line-height: 1.55;
 }
@@ -367,7 +376,7 @@
 .landing-step-card p,
 .landing-template-card p {
   margin: 0;
-  color: #6c727e;
+  color: #606775;
   font-size: 12px;
   line-height: 1.5;
 }
@@ -393,7 +402,7 @@
 }
 
 .landing-template-card-action:focus-visible {
-  outline: 2px solid #ef815e;
+  outline: 2px solid #b94d34;
   outline-offset: 3px;
   border-radius: 3px;
 }
@@ -446,7 +455,7 @@
 
 .landing-template-card p {
   margin: 0 8px;
-  color: #6c727e;
+  color: #606775;
   font-size: 12px;
   line-height: 1.5;
 }
@@ -473,7 +482,7 @@
 
 .landing-run-card > p {
   margin: 0;
-  color: #777d89;
+  color: #626875;
   font-size: 9px;
   font-weight: 900;
   letter-spacing: 0.12em;
@@ -485,7 +494,7 @@
 }
 
 .landing-run-card > span {
-  color: #a84e3b;
+  color: #8f4a37;
   font-size: 11px;
   font-weight: 900;
 }
@@ -513,13 +522,13 @@
   width: 6px;
   height: 6px;
   border-radius: 99px;
-  background: #ef815e;
+  background: #b94d34;
   content: '';
 }
 
 .landing-card-link {
   margin-top: auto;
-  color: #a84e3b;
+  color: #8f4a37;
   font-size: 12px;
   font-weight: 900;
   text-decoration: none;
@@ -566,7 +575,7 @@
   gap: 12px 24px;
   justify-content: space-between;
   padding: 27px 0 34px;
-  color: #777d89;
+  color: #626875;
   font-size: 11px;
   font-weight: 700;
 }

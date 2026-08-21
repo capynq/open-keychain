@@ -17,6 +17,7 @@ import {
 import { t, type Locale } from '../../infrastructure/i18n';
 import { AppHeader } from '../components/AppHeader';
 import { CREATE_ROUTE } from '../routes';
+import '../styles/profile.css';
 
 type ProfileLocationState = { currentParams?: KeychainParams } | null;
 

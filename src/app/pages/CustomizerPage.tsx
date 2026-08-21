@@ -13,6 +13,9 @@ import { CustomizerOnboarding } from '../components/CustomizerOnboarding';
 import { CustomizerWorkspace } from '../components/CustomizerWorkspace';
 import { CustomizerFooter } from '../components/CustomizerFooter';
 import { useCustomizerPageState } from '../hooks/useCustomizerPageState';
+import '../styles/customizer.css';
+import '../styles/preview.css';
+import '../styles/export.css';
 
 export const CustomizerPage = ({
   locale,

@@ -19,12 +19,20 @@ export const ConfiguratorShowcase = ({ locale }: { locale: Locale }) => (
         <span className="configurator-window-status">{t(locale, 'landing.localBadge')}</span>
       </div>
       <picture>
-        <source media="(max-width: 760px)" srcSet="/showcase/create-mobile.png" />
+        <source
+          media="(max-width: 760px)"
+          srcSet="/showcase/create-mobile.png 1x, /showcase/create-mobile@2x.png 2x"
+          sizes="100vw"
+        />
         <img
           src="/showcase/create-desktop.png"
+          srcSet="/showcase/create-desktop.png 1x"
+          sizes="(max-width: 760px) 100vw, 50vw"
           alt={t(locale, 'landing.previewAlt')}
           width="1440"
           height="900"
+          fetchPriority="high"
+          loading="eager"
         />
       </picture>
     </div>

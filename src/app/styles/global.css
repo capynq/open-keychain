@@ -2,109 +2,132 @@
   font-family: OpenNunito;
   src: url('/fonts/nunito.ttf') format('truetype');
   font-weight: 100 900;
+  font-display: swap;
 }
 @font-face {
   font-family: OpenQuicksand;
   src: url('/fonts/quicksand.ttf') format('truetype');
   font-weight: 100 900;
+  font-display: swap;
 }
 @font-face {
   font-family: OpenFredoka;
   src: url('/fonts/fredoka.ttf') format('truetype');
   font-weight: 100 900;
+  font-display: swap;
 }
 @font-face {
   font-family: OpenOswald;
   src: url('/fonts/oswald.ttf') format('truetype');
   font-weight: 100 900;
+  font-display: swap;
 }
 @font-face {
   font-family: OpenBree;
   src: url('/fonts/bree-serif.ttf') format('truetype');
+  font-display: swap;
 }
 @font-face {
   font-family: OpenBaloo;
   src: url('/fonts/baloo2.ttf') format('truetype');
   font-weight: 100 900;
+  font-display: swap;
 }
 @font-face {
   font-family: OpenKalam;
   src: url('/fonts/kalam.ttf') format('truetype');
   font-weight: 100 900;
+  font-display: swap;
 }
 @font-face {
   font-family: OpenBungee;
   src: url('/fonts/bungee.ttf') format('truetype');
+  font-display: swap;
 }
 @font-face {
   font-family: OpenRubik;
   src: url('/fonts/rubik.ttf') format('truetype');
   font-weight: 100 900;
+  font-display: swap;
 }
 @font-face {
   font-family: OpenMontserrat;
   src: url('/fonts/montserrat.ttf') format('truetype');
   font-weight: 100 900;
+  font-display: swap;
 }
 @font-face {
   font-family: OpenCaveat;
   src: url('/fonts/caveat.ttf') format('truetype');
   font-weight: 100 900;
+  font-display: swap;
 }
 @font-face {
   font-family: OpenMarck;
   src: url('/fonts/marck-script.ttf') format('truetype');
+  font-display: swap;
 }
 @font-face {
   font-family: OpenBadScript;
   src: url('/fonts/bad-script.ttf') format('truetype');
+  font-display: swap;
 }
 @font-face {
   font-family: OpenNeucha;
   src: url('/fonts/neucha.ttf') format('truetype');
+  font-display: swap;
 }
 @font-face {
   font-family: OpenAmatic;
   src: url('/fonts/amatic-sc.ttf') format('truetype');
   font-weight: 400 700;
+  font-display: swap;
 }
 @font-face {
   font-family: OpenLobster;
   src: url('/fonts/lobster.ttf') format('truetype');
+  font-display: swap;
 }
 @font-face {
   font-family: OpenPangolin;
   src: url('/fonts/pangolin.ttf') format('truetype');
+  font-display: swap;
 }
 @font-face {
   font-family: OpenPlaypen;
   src: url('/fonts/playpen-sans.ttf') format('truetype');
   font-weight: 100 800;
+  font-display: swap;
 }
 @font-face {
   font-family: OpenShantell;
   src: url('/fonts/shantell-sans.ttf') format('truetype');
   font-weight: 300 800;
+  font-display: swap;
 }
 @font-face {
   font-family: OpenBalsamiq;
   src: url('/fonts/balsamiq-sans.ttf') format('truetype');
   font-weight: 400;
+  font-display: swap;
 }
 @font-face {
   font-family: OpenComforter;
   src: url('/fonts/comforter.ttf') format('truetype');
   font-weight: 400;
+  font-display: swap;
 }
 @font-face {
   font-family: OpenComforterBrush;
   src: url('/fonts/comforter-brush.ttf') format('truetype');
   font-weight: 400;
+  font-display: swap;
 }
 @font-face {
   font-family: OpenUnderdog;
   src: url('/fonts/underdog.ttf') format('truetype');
   font-weight: 400;
+  font-display: swap;
 }
 
 :root {

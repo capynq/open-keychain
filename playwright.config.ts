@@ -31,5 +31,14 @@ export default defineConfig({
       name: 'mobile',
       use: { hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } },
     },
+    {
+      name: 'mobile-2x',
+      use: {
+        hasTouch: true,
+        isMobile: true,
+        deviceScaleFactor: 2,
+        viewport: { width: 390, height: 844 },
+      },
+    },
   ],
 });

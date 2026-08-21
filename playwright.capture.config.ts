@@ -36,5 +36,14 @@ export default defineConfig({
       name: 'capture-mobile',
       use: { hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } },
     },
+    {
+      name: 'capture-mobile-2x',
+      use: {
+        hasTouch: true,
+        isMobile: true,
+        deviceScaleFactor: 2,
+        viewport: { width: 390, height: 844 },
+      },
+    },
   ],
 });

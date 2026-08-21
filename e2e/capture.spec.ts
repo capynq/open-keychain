@@ -12,6 +12,7 @@ import {
 const screenshotByProject = {
   'capture-desktop': 'public/showcase/create-desktop.png',
   'capture-mobile': 'public/showcase/create-mobile.png',
+  'capture-mobile-2x': 'public/showcase/create-mobile@2x.png',
 } as const;
 
 test('captures the reviewed customizer showcase', async ({ page }, testInfo) => {
@@ -26,9 +27,11 @@ test('captures the reviewed customizer showcase', async ({ page }, testInfo) => 
   const screenshot = await page.screenshot({ path: target, animations: 'disabled' });
   await assertPngCapture(
     screenshot,
-    testInfo.project.name === 'capture-mobile'
-      ? { width: 390, height: 844 }
-      : { width: 1440, height: 900 },
+    testInfo.project.name === 'capture-mobile-2x'
+      ? { width: 780, height: 1688 }
+      : testInfo.project.name === 'capture-mobile'
+        ? { width: 390, height: 844 }
+        : { width: 1440, height: 900 },
   );
   assertNoBrowserErrors();
 });
@@ -113,6 +116,10 @@ for (const template of templatePreviews) {
   test(`captures the ${template.label.toLowerCase()} template preview`, async ({
     page,
   }, testInfo) => {
+    test.skip(
+      testInfo.project.name === 'capture-mobile-2x',
+      'The 2x project captures only the hero.',
+    );
     const suffix = testInfo.project.name === 'capture-mobile' ? 'mobile' : 'desktop';
     const assertNoBrowserErrors = watchBrowserErrors(page);
 
@@ -148,7 +155,7 @@ for (const style of stylePreviews) {
     page,
   }, testInfo) => {
     test.skip(
-      testInfo.project.name === 'capture-mobile',
+      testInfo.project.name === 'capture-mobile' || testInfo.project.name === 'capture-mobile-2x',
       'Style cards use the desktop capture recipe.',
     );
     const assertNoBrowserErrors = watchBrowserErrors(page);

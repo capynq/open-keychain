@@ -103,7 +103,21 @@ test('loads all reviewed landing visuals at the active responsive breakpoint', a
   expect(images.every((image) => image.src.includes('/showcase/templates/'))).toBe(true);
   expect(images.every((image) => image.width > 0 && image.height > 0)).toBe(true);
   const expectedHeroAsset =
-    testInfo.project.name === 'mobile' ? 'create-mobile.png' : 'create-desktop.png';
+    testInfo.project.name === 'mobile-2x'
+      ? 'create-mobile@2x.png'
+      : testInfo.project.name === 'mobile'
+        ? 'create-mobile.png'
+        : 'create-desktop.png';
+  await expect
+    .poll(
+      () =>
+        page
+          .locator('.configurator-window img')
+          .evaluate((element) => (element as HTMLImageElement).currentSrc),
+      { timeout: 5_000 },
+    )
+    .toContain(expectedHeroAsset);
+  await waitForImageToLoad(page.locator('.configurator-window img'));
   expect(
     await page
       .locator('.configurator-window img')
@@ -111,15 +125,41 @@ test('loads all reviewed landing visuals at the active responsive breakpoint', a
   ).toContain(expectedHeroAsset);
   const heroImageState = await page.locator('.configurator-window img').evaluate((element) => {
     const image = element as HTMLImageElement;
-    return { width: image.naturalWidth, height: image.naturalHeight, complete: image.complete };
+    return {
+      width: image.naturalWidth,
+      height: image.naturalHeight,
+      renderedWidth: image.clientWidth,
+      renderedHeight: image.clientHeight,
+      complete: image.complete,
+    };
   });
   expect(heroImageState.complete).toBe(true);
-  expect(heroImageState.width).toBeGreaterThan(0);
-  expect(heroImageState.height).toBeGreaterThan(0);
+  const expectedHeroDimensions =
+    testInfo.project.name === 'mobile-2x'
+      ? { width: 390, height: 844 }
+      : testInfo.project.name === 'mobile'
+        ? { width: 390, height: 844 }
+        : { width: 1440, height: 900 };
+  expect(heroImageState.width).toBe(expectedHeroDimensions.width);
+  expect(heroImageState.height).toBe(expectedHeroDimensions.height);
+  expect(heroImageState.width).toBeGreaterThan(heroImageState.renderedWidth);
+  expect(heroImageState.height).toBeGreaterThan(heroImageState.renderedHeight);
+  await expect(page.locator('.configurator-window img')).toHaveAttribute('fetchpriority', 'high');
+  await expect(page.locator('.configurator-window img')).toHaveAttribute('loading', 'eager');
+  await expect(page.locator('.configurator-window img')).toHaveAttribute(
+    'sizes',
+    '(max-width: 760px) 100vw, 50vw',
+  );
+  await expect(page.locator('.configurator-window source')).toHaveAttribute(
+    'srcset',
+    /create-mobile\.png 1x, \/showcase\/create-mobile@2x\.png 2x/,
+  );
   assertNoBrowserErrors();
 });
 
-test('uses the mobile customizer capture on a mobile landing viewport', async ({ page }) => {
+test('uses the density-appropriate mobile customizer capture on a mobile landing viewport', async ({
+  page,
+}, testInfo) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -131,17 +171,43 @@ test('uses the mobile customizer capture on a mobile landing viewport', async ({
     ),
     waitForImageToLoad(page.locator('.configurator-window img')),
   ]);
+  const expectedHeroAsset =
+    testInfo.project.name === 'mobile-2x' ? 'create-mobile@2x.png' : 'create-mobile.png';
+  await expect
+    .poll(
+      () =>
+        page
+          .locator('.configurator-window img')
+          .evaluate((element) => (element as HTMLImageElement).currentSrc),
+      { timeout: 5_000 },
+    )
+    .toContain(expectedHeroAsset);
+  await waitForImageToLoad(page.locator('.configurator-window img'));
   expect(
     await page
       .locator('.configurator-window img')
       .evaluate((element) => (element as HTMLImageElement).currentSrc),
-  ).toContain('create-mobile.png');
+  ).toContain(expectedHeroAsset);
   const imageState = await page.locator('.configurator-window img').evaluate((element) => {
     const image = element as HTMLImageElement;
-    return { width: image.naturalWidth, height: image.naturalHeight };
+    return {
+      width: image.naturalWidth,
+      height: image.naturalHeight,
+      renderedWidth: image.clientWidth,
+      renderedHeight: image.clientHeight,
+    };
   });
-  expect(imageState.width).toBeGreaterThan(0);
-  expect(imageState.height).toBeGreaterThan(0);
+  // Browsers expose density-corrected intrinsic dimensions for a 2x srcset candidate.
+  expect(imageState.width).toBe(390);
+  expect(imageState.height).toBe(844);
+  expect(imageState.width).toBeGreaterThan(imageState.renderedWidth);
+  expect(imageState.height).toBeGreaterThan(imageState.renderedHeight);
+  expect(
+    await page.locator('.configurator-window img').evaluate((element) => {
+      const image = element as HTMLImageElement;
+      return image.currentSrc.endsWith('/showcase/create-mobile.png');
+    }),
+  ).toBe(testInfo.project.name !== 'mobile-2x');
   assertNoBrowserErrors();
 });
 

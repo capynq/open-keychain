@@ -1,0 +1,154 @@
+.modal-backdrop {
+  position: fixed;
+  z-index: 30;
+  inset: 0 auto auto 0;
+  width: 100svw;
+  height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: #20243399;
+}
+
+.export-modal {
+  width: min(100%, 520px, calc(100svw - 40px));
+  max-height: calc(100svh - 40px);
+  overflow-y: auto;
+  border: 1px solid #d5d0c7;
+  border-radius: 16px;
+  padding: 20px;
+  background: #fffdf8;
+  color: #303545;
+  box-shadow: 0 24px 70px #20243355;
+}
+
+.export-modal-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.export-modal-heading > div {
+  min-width: 0;
+}
+
+.export-modal-heading h2 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -0.03em;
+}
+
+.modal-close {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d5d0c7;
+  border-radius: 8px;
+  background: #fff;
+  color: #303545;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.modal-close:hover,
+.modal-close:focus-visible {
+  border-color: #ef815e;
+}
+
+.export-modal-copy {
+  margin: 12px 0 16px;
+  color: #777b87;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.export-inline-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 12px;
+  padding: 9px 10px;
+  border: 1px solid #e5e1d9;
+  border-radius: 9px;
+  color: #6d7280;
+  background: #f7f5f0;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.export-inline-state p {
+  margin: 0;
+}
+
+.export-inline-state.exporting {
+  color: #7d6423;
+  background: #fff8e8;
+}
+
+.export-inline-state.success {
+  color: #357248;
+  background: #edf7ee;
+}
+
+.export-inline-state.error {
+  color: #9a4d30;
+  background: #fff0e8;
+}
+
+.export-inline-state button {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 5px 9px;
+  border: 1px solid currentColor;
+  border-radius: 7px;
+  color: inherit;
+  background: transparent;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.export-choice-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.export-choice-grid button {
+  display: grid;
+  gap: 3px;
+  min-height: 58px;
+  padding: 10px 12px;
+  border: 1px solid #dfddd6;
+  border-radius: 10px;
+  background: #fbfaf6;
+  color: #303545;
+  text-align: left;
+}
+
+.export-choice-grid button:hover:not(:disabled),
+.export-choice-grid button:focus-visible {
+  border-color: #ef815e;
+  background: #fff9f2;
+}
+
+.export-choice-grid button:focus-visible {
+  outline: 2px solid #ef815e;
+  outline-offset: 1px;
+}
+
+.export-choice-grid button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.export-choice-grid strong {
+  font-size: 12px;
+}
+
+.export-choice-grid small {
+  color: #777b87;
+  font-size: 10px;
+}
