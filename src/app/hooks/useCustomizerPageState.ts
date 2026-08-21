@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
-import { DEFAULT_PARAMS, normalizeParams } from '../../domain/keychain';
+import { useEffect, useReducer, useRef, useState, type SetStateAction } from 'react';
+import { DEFAULT_PARAMS, encodeDesignDocument, normalizeParams } from '../../domain/keychain';
 import type { KeychainParams, PrintAppearanceOverrides } from '../../domain/keychain';
-import { styleName, templateName, type Locale } from '../../infrastructure/i18n';
+import { styleName, t, templateName, type Locale } from '../../infrastructure/i18n';
 import { useCustomizerParams, useGeometryGeneration } from '../../features/customizer';
 import { useExportActions } from '../../features/export';
 import { useHostedAccount } from '../../features/hosted';
@@ -9,12 +9,20 @@ import { previewStatus, type SurfacePresetId } from '../../features/preview';
 import { useAnalytics } from '../../infrastructure/telemetry';
 import { useCustomizerGuide } from './useCustomizerGuide';
 
-export const useCustomizerPageState = (locale: Locale, initialParams?: KeychainParams) => {
+export const useCustomizerPageState = (
+  locale: Locale,
+  initialParams?: KeychainParams,
+  initialAppearanceOverrides?: PrintAppearanceOverrides,
+  routeInputKey?: string,
+) => {
   const [surfacePreset, setSurfacePreset] = useState<SurfacePresetId>('matte');
   const [exportOpen, setExportOpen] = useState(false);
-  const [appearanceOverrides, setAppearanceOverrides] = useState<PrintAppearanceOverrides>({
-    version: 1,
-  });
+  const [appearanceOverrides, setAppearanceOverrides] = useReducer(
+    (current: PrintAppearanceOverrides, next: SetStateAction<PrintAppearanceOverrides>) =>
+      typeof next === 'function' ? next(current) : next,
+    initialAppearanceOverrides ?? { version: 1 },
+  );
+  const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'manual' | 'failed'>('idle');
   const { track } = useAnalytics();
   const customizer = useCustomizerParams(initialParams);
   const geometry = useGeometryGeneration(customizer.params, customizer.selectedFont);
@@ -28,6 +36,60 @@ export const useCustomizerPageState = (locale: Locale, initialParams?: KeychainP
     appearanceOverrides,
   });
   const guide = useCustomizerGuide();
+  const lastRouteInputKey = useRef(routeInputKey);
+
+  useEffect(() => {
+    if (routeInputKey === lastRouteInputKey.current) return;
+    lastRouteInputKey.current = routeInputKey;
+
+    customizer.setParams(normalizeParams({ ...DEFAULT_PARAMS, ...initialParams }));
+    setAppearanceOverrides(initialAppearanceOverrides ?? { version: 1 });
+  }, [customizer, initialAppearanceOverrides, initialParams, routeInputKey]);
+
+  useEffect(() => {
+    if (shareStatus === 'idle') return undefined;
+    const timeout = window.setTimeout(() => setShareStatus('idle'), 4_000);
+
+    return () => window.clearTimeout(timeout);
+  }, [shareStatus]);
+
+  const shareDesign = async (): Promise<void> => {
+    try {
+      const url = new URL(window.location.href);
+
+      url.searchParams.set(
+        'design',
+        encodeDesignDocument({ version: 1, params: customizer.params, appearanceOverrides }),
+      );
+      const value = url.toString();
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(value);
+          setShareStatus('copied');
+          return;
+        } catch {
+          // Continue with the legacy clipboard and manual-copy fallbacks.
+        }
+      }
+      const textarea = document.createElement('textarea');
+
+      textarea.value = value;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      const copied = document.execCommand('copy');
+
+      textarea.remove();
+      if (copied) setShareStatus('copied');
+      else if (window.prompt(t(locale, 'shareManualPrompt'), value) !== null)
+        setShareStatus('manual');
+      else setShareStatus('failed');
+    } catch {
+      setShareStatus('failed');
+    }
+  };
   const activeStyle = customizer.availableStyles.find(
     (style) => style.id === customizer.params.styleId,
   );
@@ -76,6 +138,8 @@ export const useCustomizerPageState = (locale: Locale, initialParams?: KeychainP
     setExportOpen,
     appearanceOverrides,
     setAppearanceOverrides,
+    shareDesign,
+    shareStatus,
     status: previewStatus(geometry, locale),
     modelInfo: {
       template: templateName(locale, customizer.activeTemplate.id, customizer.activeTemplate.name),

@@ -1,18 +1,33 @@
 import { useEffect, useRef } from 'react';
 import { t, type Locale } from '../../../infrastructure/i18n';
 import type { ExportActionsState } from '../model/use-export-actions';
+import type { PreflightReport } from '../model/preflight';
+import type { PrintAppearance } from '../../../domain/keychain';
+import { issueMessage } from '../../../infrastructure/i18n';
 
 export const ExportDialog = ({
   locale,
   open,
   exportState,
+  preflight,
+  effectiveAppearance,
   onClose,
 }: {
   locale: Locale;
   open: boolean;
   exportState: ExportActionsState;
+  preflight: PreflightReport;
+  effectiveAppearance?: PrintAppearance;
   onClose: () => void;
 }) => {
+  const statusLabelKey =
+    preflight.status === 'generating'
+      ? 'printCheckPending'
+      : preflight.status === 'ready-with-warnings'
+        ? 'printCheckWarnings'
+        : preflight.status === 'blocked'
+          ? 'printCheckBlocked'
+          : 'printCheckReady';
   const wasOpen = useRef(false);
   useEffect(() => {
     if (open && !wasOpen.current) exportState.clearStatus();
@@ -56,7 +71,62 @@ export const ExportDialog = ({
           </button>
         </div>
         <p className="export-modal-copy">{t(locale, 'exportDescription')}</p>
-        {!exportState.printable && (
+        <details className="export-preflight" open={preflight.status === 'blocked'}>
+          <summary>
+            <span>{t(locale, 'exportChecks')}</span>
+            <strong>{t(locale, statusLabelKey)}</strong>
+          </summary>
+          <div className="export-preflight-body">
+            {preflight.dimensions && (
+              <p>
+                <strong>{t(locale, 'dimensions')}:</strong>{' '}
+                {preflight.dimensions.widthMm.toFixed(1)} ×{' '}
+                {preflight.dimensions.heightMm.toFixed(1)} ×{' '}
+                {preflight.dimensions.thicknessMm.toFixed(1)} mm
+              </p>
+            )}
+            {preflight.profile && (
+              <p>
+                <strong>{t(locale, 'printProfile')}:</strong> {preflight.profile.id} ·{' '}
+                {preflight.profile.nozzleDiameterMm.toFixed(1)} {t(locale, 'nozzle')} ·{' '}
+                {preflight.profile.layerHeightMm.toFixed(1)} {t(locale, 'layerHeight')}
+              </p>
+            )}
+            {preflight.constraints && (
+              <p>
+                <strong>{t(locale, 'printLimits')}:</strong> {t(locale, 'minimumWall')}{' '}
+                {preflight.constraints.minimumWallMm.toFixed(1)} mm ·{' '}
+                {t(locale, 'minimumClearance')}{' '}
+                {preflight.constraints.minimumClearanceMm.toFixed(1)} mm ·{' '}
+                {t(locale, 'maximumWidth')} {preflight.constraints.maximumWidthMm.toFixed(0)} mm
+              </p>
+            )}
+            {effectiveAppearance && (
+              <p>
+                <strong>{t(locale, 'printColors')}:</strong>{' '}
+                <span
+                  className="export-color-chip"
+                  style={{ backgroundColor: effectiveAppearance.base.color }}
+                />{' '}
+                {t(locale, 'baseRole')} ·{' '}
+                <span
+                  className="export-color-chip"
+                  style={{ backgroundColor: effectiveAppearance.relief.color }}
+                />{' '}
+                {t(locale, 'reliefRole')}
+              </p>
+            )}
+            {preflight.issues.length > 0 && (
+              <ul>
+                {preflight.issues.map((issue) => (
+                  <li key={`${issue.code}-${issue.message}`}>{issueMessage(locale, issue)}</li>
+                ))}
+              </ul>
+            )}
+            <p>{t(locale, 'slicerGuidance')}</p>
+          </div>
+        </details>
+        {!preflight.printable && (
           <p className="export-inline-state" role="status">
             {t(locale, 'exportUnavailable')}
           </p>
@@ -85,7 +155,7 @@ export const ExportDialog = ({
         <div className="export-choice-grid">
           <button
             type="button"
-            disabled={!exportState.printable || exportState.downloading}
+            disabled={!preflight.printable || exportState.downloading}
             onClick={() => handleDownload('stl')}
           >
             <strong>{t(locale, 'exportStl')}</strong>
@@ -93,7 +163,7 @@ export const ExportDialog = ({
           </button>
           <button
             type="button"
-            disabled={!exportState.printable || exportState.downloading}
+            disabled={!preflight.printable || exportState.downloading}
             onClick={() => handleDownload('3mf', 'separate-colors')}
           >
             <strong>{t(locale, 'export3mfSeparate')}</strong>
@@ -101,7 +171,7 @@ export const ExportDialog = ({
           </button>
           <button
             type="button"
-            disabled={!exportState.printable || exportState.downloading}
+            disabled={!preflight.printable || exportState.downloading}
             onClick={() => handleDownload('3mf', 'merged')}
           >
             <strong>{t(locale, 'export3mfMerged')}</strong>

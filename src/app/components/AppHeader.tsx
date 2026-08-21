@@ -16,6 +16,7 @@ export const AppHeader = ({
   onLocaleChange,
   exportOpen = false,
   onExportOpen,
+  onShare,
   hosted,
   currentParams,
 }: {
@@ -24,6 +25,7 @@ export const AppHeader = ({
   onLocaleChange: (locale: Locale) => void;
   exportOpen?: boolean;
   onExportOpen?: () => void;
+  onShare?: () => void;
   hosted?: HostedAccountState;
   currentParams?: KeychainParams;
 }) =>
@@ -36,6 +38,7 @@ export const AppHeader = ({
         onLocaleChange={onLocaleChange}
         exportOpen={exportOpen}
         onExportOpen={onExportOpen}
+        onShare={onShare}
         hosted={hosted}
         currentParams={currentParams}
       />

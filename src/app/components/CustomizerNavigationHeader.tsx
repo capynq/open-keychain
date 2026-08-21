@@ -13,6 +13,7 @@ export const CustomizerNavigationHeader = ({
   onLocaleChange,
   exportOpen,
   onExportOpen,
+  onShare,
   hosted,
   currentParams,
 }: {
@@ -20,20 +21,26 @@ export const CustomizerNavigationHeader = ({
   onLocaleChange: (locale: Locale) => void;
   exportOpen: boolean;
   onExportOpen?: () => void;
+  onShare?: () => void;
   hosted?: HostedAccountState;
   currentParams?: KeychainParams;
 }) => (
   <header className="topbar">
     <BrandMark />
-    <button
-      type="button"
-      className="export-header-button"
-      onClick={onExportOpen}
-      aria-haspopup="dialog"
-      aria-expanded={exportOpen}
-    >
-      {t(locale, 'export')}
-    </button>
+    <div className="topbar-export-actions">
+      <button
+        type="button"
+        className="export-header-button"
+        onClick={onExportOpen}
+        aria-haspopup="dialog"
+        aria-expanded={exportOpen}
+      >
+        {t(locale, 'export')}
+      </button>
+      <button type="button" className="share-header-button" onClick={onShare}>
+        {t(locale, 'share')}
+      </button>
+    </div>
     <div className="topbar-actions">
       <LanguagePicker locale={locale} onLocaleChange={onLocaleChange} />
       {hostedMode && hosted && (

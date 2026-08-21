@@ -19,6 +19,7 @@
 }
 
 .topbar {
+  position: relative;
   flex: 0 0 auto;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -97,6 +98,37 @@
   box-shadow: 0 5px 12px #ef815e38;
   font-size: 13px;
   font-weight: 900;
+}
+
+.topbar-export-actions {
+  position: absolute;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Anchor the export control itself to the viewport midpoint while allowing
+   the adjacent Share control to extend to its right. */
+.topbar-export-actions .export-header-button {
+  transform: translateX(-50%);
+}
+
+.share-header-button {
+  min-height: 40px;
+  border: 1px solid #cecbc2;
+  border-radius: 10px;
+  padding: 9px 18px;
+  background: #fffdf8;
+  color: #303545;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.share-header-button:hover,
+.share-header-button:focus-visible {
+  border-color: #ef815e;
+  color: #bf563f;
 }
 
 .export-header-button:hover {

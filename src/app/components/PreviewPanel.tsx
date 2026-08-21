@@ -4,6 +4,8 @@ import type { GeometryResult, PrintAppearanceOverrides } from '../../domain/keyc
 import { applyPrintAppearanceOverrides } from '../../domain/keychain';
 import { t, type Locale } from '../../infrastructure/i18n';
 import { ResetIconButton } from '../../components/ResetIconButton';
+import { buildPreflightReport } from '../../features/export';
+import { issueMessage } from '../../infrastructure/i18n';
 
 const SURFACE_PRESETS: SurfacePresetId[] = ['matte', 'graph', 'dark', 'wood', 'metal'];
 
@@ -98,13 +100,17 @@ const PreviewSummary = ({
   locale,
   geometry,
   status,
+  exportOpen,
   modelInfo,
 }: {
   locale: Locale;
   geometry: {
     result: GeometryResult | undefined;
+    busy: boolean;
+    error?: string;
   };
   status: PreviewStatus;
+  exportOpen: boolean;
   modelInfo: {
     template: string;
     style: string | undefined;
@@ -113,6 +119,7 @@ const PreviewSummary = ({
 }) => {
   const result = geometry.result;
   const dimensions = result?.dimensions;
+  const report = buildPreflightReport(result, undefined, geometry.busy, geometry.error);
 
   return (
     <section className="preview-summary" aria-label={t(locale, 'modelSummary')}>
@@ -153,32 +160,49 @@ const PreviewSummary = ({
           {modelInfo.font}
         </span>
       </div>
-      {result?.printProfile && (
-        <details className="print-confidence">
-          <summary>
-            <span>{t(locale, 'printConfidence')}</span>
-            <strong>
-              {result.printable ? t(locale, 'printProfileReady') : t(locale, 'printProfileCheck')}
-            </strong>
-          </summary>
-          <div className="print-confidence-body">
-            <span>{t(locale, 'printProfile')}</span>
-            <span>{result.printProfile.id}</span>
-            <span>
-              {result.printProfile.nozzleDiameterMm.toFixed(1)} mm ·{' '}
-              {result.printProfile.supports
-                ? t(locale, 'supportsRequired')
-                : t(locale, 'noSupports')}{' '}
-              ·{' '}
-              {result.printProfile.recommendedOrientation === 'flat'
-                ? t(locale, 'flatOrientation')
-                : t(locale, 'customOrientation')}
-            </span>
-            <p>{t(locale, 'printProfileNotice')}</p>
-          </div>
-        </details>
-      )}
-      {status.feedback && (
+      <details className="print-confidence">
+        <summary>
+          <span>{t(locale, 'printConfidence')}</span>
+          <strong>
+            {report.status === 'generating'
+              ? t(locale, 'printCheckPending')
+              : report.status === 'blocked'
+                ? t(locale, 'printCheckBlocked')
+                : report.status === 'ready-with-warnings'
+                  ? t(locale, 'printCheckWarnings')
+                  : t(locale, 'printProfileReady')}
+          </strong>
+        </summary>
+        <div className="print-confidence-body">
+          {report.profile && (
+            <>
+              <span>{t(locale, 'printProfile')}</span>
+              <span>{report.profile.id}</span>
+              <span>
+                {report.profile.nozzleDiameterMm.toFixed(1)} mm ·{' '}
+                {report.profile.supports ? t(locale, 'supportsRequired') : t(locale, 'noSupports')}{' '}
+                ·{' '}
+                {report.profile.recommendedOrientation === 'flat'
+                  ? t(locale, 'flatOrientation')
+                  : t(locale, 'customOrientation')}
+              </span>
+            </>
+          )}
+          {report.issues.length > 0 && (
+            <ul className="print-check-issues">
+              {report.issues
+                .filter((issue) => issueMessage(locale, issue) !== status.feedback)
+                .map((issue) => (
+                  <li key={`${issue.code}-${issue.message}`} className={issue.severity}>
+                    {issueMessage(locale, issue)}
+                  </li>
+                ))}
+            </ul>
+          )}
+          <p>{t(locale, 'printProfileNotice')}</p>
+        </div>
+      </details>
+      {status.feedback && !exportOpen && (
         <p
           className="summary-feedback"
           role={status.className === 'attention' ? 'alert' : 'status'}
@@ -196,6 +220,7 @@ export const PreviewPanel = ({
   geometry,
   surfacePreset,
   status,
+  exportOpen,
   modelInfo,
   onSurfaceChange,
   onSurfaceReset,
@@ -209,6 +234,7 @@ export const PreviewPanel = ({
   };
   surfacePreset: SurfacePresetId;
   status: PreviewStatus;
+  exportOpen: boolean;
   modelInfo: {
     template: string;
     style: string | undefined;
@@ -258,7 +284,13 @@ export const PreviewPanel = ({
         </div>
       )}
     </div>
-    <PreviewSummary locale={locale} geometry={geometry} status={status} modelInfo={modelInfo} />
+    <PreviewSummary
+      locale={locale}
+      geometry={geometry}
+      status={status}
+      modelInfo={modelInfo}
+      exportOpen={exportOpen}
+    />
     <div className="appearance-controls" aria-label={t(locale, 'printColors')}>
       <div className="appearance-control">
         <span>{t(locale, 'baseColor')}</span>
@@ -277,10 +309,10 @@ export const PreviewPanel = ({
         </button>
       </div>
       <div className="appearance-control">
-        <span>{t(locale, 'reliefColor')}</span>
+        <span>{t(locale, 'secondaryColor')}</span>
         <input
           type="color"
-          aria-label={t(locale, 'reliefColor')}
+          aria-label={t(locale, 'secondaryColor')}
           value={
             appearanceOverrides.relief ?? geometry.result?.appearance.relief.color ?? '#FAF4E9'
           }
@@ -288,10 +320,10 @@ export const PreviewPanel = ({
         />
         <button
           type="button"
-          aria-label={t(locale, 'resetReliefColor')}
+          aria-label={t(locale, 'resetSecondaryColor')}
           onClick={() => onAppearanceChange({ ...appearanceOverrides, relief: undefined })}
         >
-          {t(locale, 'resetReliefColor')}
+          {t(locale, 'resetSecondaryColor')}
         </button>
       </div>
       <button type="button" onClick={() => onAppearanceChange({ version: 1 })}>
