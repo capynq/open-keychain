@@ -3,6 +3,7 @@ import { serializeBinaryStl } from '../export/stl-serializer';
 import { serializeThreeMf } from '../export/three-mf-serializer';
 import {
   sanitizeFilename,
+  applyPrintAppearanceOverrides,
   type ExportFormat,
   type WorkerRequest,
   type WorkerResponse,
@@ -61,6 +62,10 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         self.postMessage(response);
         return;
       }
+      const appearance = applyPrintAppearanceOverrides(
+        result.appearance,
+        request.appearanceOverrides,
+      );
       const format: ExportFormat = request.format ?? 'stl';
       const data =
         format === '3mf'
@@ -69,7 +74,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
               result.reliefMesh,
               exportMesh,
               request.mode ?? 'separate-colors',
-              result.appearance,
+              appearance,
             )
           : serializeBinaryStl(exportMesh);
       const filename = sanitizeFilename(request.params.text, request.params.styleId, format);

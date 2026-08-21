@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Viewer, type PreviewStatus, type SurfacePresetId } from '../../features/preview';
-import type { GeometryResult } from '../../domain/keychain';
+import type { GeometryResult, PrintAppearanceOverrides } from '../../domain/keychain';
+import { applyPrintAppearanceOverrides } from '../../domain/keychain';
 import { t, type Locale } from '../../infrastructure/i18n';
 import { ResetIconButton } from '../../components/ResetIconButton';
 
@@ -198,6 +199,8 @@ export const PreviewPanel = ({
   modelInfo,
   onSurfaceChange,
   onSurfaceReset,
+  appearanceOverrides,
+  onAppearanceChange,
 }: {
   locale: Locale;
   geometry: {
@@ -213,6 +216,8 @@ export const PreviewPanel = ({
   };
   onSurfaceChange: (preset: SurfacePresetId) => void;
   onSurfaceReset: () => void;
+  appearanceOverrides: PrintAppearanceOverrides;
+  onAppearanceChange: (overrides: PrintAppearanceOverrides) => void;
 }) => (
   <section
     className="preview-panel"
@@ -230,7 +235,16 @@ export const PreviewPanel = ({
       </span>
     </div>
     <div className="viewer-wrap">
-      <Viewer result={geometry.result} surfacePreset={surfacePreset} locale={locale} />
+      <Viewer
+        result={geometry.result}
+        appearance={
+          geometry.result
+            ? applyPrintAppearanceOverrides(geometry.result.appearance, appearanceOverrides)
+            : undefined
+        }
+        surfacePreset={surfacePreset}
+        locale={locale}
+      />
       <SurfacePopover
         locale={locale}
         surfacePreset={surfacePreset}
@@ -245,5 +259,44 @@ export const PreviewPanel = ({
       )}
     </div>
     <PreviewSummary locale={locale} geometry={geometry} status={status} modelInfo={modelInfo} />
+    <div className="appearance-controls" aria-label={t(locale, 'printColors')}>
+      <div className="appearance-control">
+        <span>{t(locale, 'baseColor')}</span>
+        <input
+          type="color"
+          aria-label={t(locale, 'baseColor')}
+          value={appearanceOverrides.base ?? geometry.result?.appearance.base.color ?? '#B84838'}
+          onChange={(e) => onAppearanceChange({ ...appearanceOverrides, base: e.target.value })}
+        />
+        <button
+          type="button"
+          aria-label={t(locale, 'resetBaseColor')}
+          onClick={() => onAppearanceChange({ ...appearanceOverrides, base: undefined })}
+        >
+          {t(locale, 'resetBaseColor')}
+        </button>
+      </div>
+      <div className="appearance-control">
+        <span>{t(locale, 'reliefColor')}</span>
+        <input
+          type="color"
+          aria-label={t(locale, 'reliefColor')}
+          value={
+            appearanceOverrides.relief ?? geometry.result?.appearance.relief.color ?? '#FAF4E9'
+          }
+          onChange={(e) => onAppearanceChange({ ...appearanceOverrides, relief: e.target.value })}
+        />
+        <button
+          type="button"
+          aria-label={t(locale, 'resetReliefColor')}
+          onClick={() => onAppearanceChange({ ...appearanceOverrides, relief: undefined })}
+        >
+          {t(locale, 'resetReliefColor')}
+        </button>
+      </div>
+      <button type="button" onClick={() => onAppearanceChange({ version: 1 })}>
+        {t(locale, 'resetColors')}
+      </button>
+    </div>
   </section>
 );

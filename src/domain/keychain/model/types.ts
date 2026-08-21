@@ -112,6 +112,32 @@ export type PrintAppearance = {
     color: string;
   };
 };
+/** Session-only color choices. Geometry and hosted project data remain unchanged. */
+export type PrintAppearanceOverrides = {
+  version: 1;
+  base?: string;
+  relief?: string;
+};
+export const normalizeAppearanceColor = (color: string | undefined, fallback: string): string => {
+  if (color === undefined) return fallback;
+  const value = color?.trim().toUpperCase() ?? '';
+  if (!/^#[0-9A-F]{6}$/.test(value)) throw new Error(`Invalid appearance color: ${color}`);
+  return value;
+};
+export const applyPrintAppearanceOverrides = (
+  appearance: PrintAppearance,
+  overrides?: PrintAppearanceOverrides,
+): PrintAppearance => ({
+  ...appearance,
+  base: {
+    ...appearance.base,
+    color: normalizeAppearanceColor(overrides?.base, appearance.base.color),
+  },
+  relief: {
+    ...appearance.relief,
+    color: normalizeAppearanceColor(overrides?.relief, appearance.relief.color),
+  },
+});
 export const DEFAULT_PRINT_APPEARANCE: PrintAppearance = {
   base: { name: 'Backing', color: '#B84838' },
   relief: { name: 'Raised text', color: '#FAF4E9' },
@@ -150,6 +176,7 @@ export type WorkerRequest =
       params: KeychainParams;
       format?: ExportFormat;
       mode?: ThreeMfMode;
+      appearanceOverrides?: PrintAppearanceOverrides;
       fontDefinition?: FontDefinition;
     };
 export type WorkerResponse =

@@ -4,6 +4,7 @@ import {
   fontSupportsArticulatedName,
   fontSupportsText,
   TEMPLATE_CATALOG,
+  DESIGN_RECIPE_CATALOG,
   type FontCategory,
 } from '../../../domain/keychain';
 import type { KeychainParams } from '../../../domain/keychain';
@@ -42,12 +43,14 @@ export const ControlsPanel = ({
   onReset,
   onNameEdited,
   onTemplateSelected,
+  onRecipeSelected,
 }: {
   locale: Locale;
   customizer: ReturnType<typeof useCustomizerParams>;
   onReset: () => void;
   onNameEdited: () => void;
   onTemplateSelected: () => void;
+  onRecipeSelected: (recipe: (typeof DESIGN_RECIPE_CATALOG)[number]) => void;
 }) => {
   const {
     params,
@@ -339,6 +342,29 @@ export const ControlsPanel = ({
               ? t(locale, 'controlsScrollTop')
               : ''}
       </span>
+      <section className="control-section">
+        <div className="section-heading">
+          <h2>{t(locale, 'recipesTitle')}</h2>
+        </div>
+        <DesignCardRail label={t(locale, 'recipesTitle')}>
+          {DESIGN_RECIPE_CATALOG.map((recipe, index) => (
+            <DesignSelectCard
+              key={recipe.id}
+              title={t(locale, `recipes.${recipe.id}.name`)}
+              accessibleLabel={t(locale, 'recipeAccessibleLabel', { number: index + 1 })}
+              description={t(locale, `recipes.${recipe.id}.description`)}
+              previewSrc={stylePreviewAsset(recipe.templateId, recipe.styleId)}
+              selected={
+                params.templateId === recipe.templateId &&
+                params.styleId === recipe.styleId &&
+                params.fontId === recipe.fontId
+              }
+              testId={`recipe-card-${recipe.id}`}
+              onSelect={() => onRecipeSelected(recipe)}
+            />
+          ))}
+        </DesignCardRail>
+      </section>
       <section className="control-section">
         <div className="section-heading">
           <h2>{t(locale, 'name')}</h2>

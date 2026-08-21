@@ -1,5 +1,6 @@
 export * from './model/types';
 export * from './model/parameters';
+export * from './recipes';
 export * from './text/outline';
 export * from './fonts/catalog';
 export * from './fonts/google-provider';

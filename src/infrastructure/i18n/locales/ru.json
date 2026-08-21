@@ -1,4 +1,20 @@
 {
+  "recipesTitle": "Готовые варианты",
+  "recipeAccessibleLabel": "Готовый вариант {number}",
+  "baseColor": "Цвет основы",
+  "reliefColor": "Цвет рельефа",
+  "resetColors": "Сбросить цвета",
+  "resetColor": "Сбросить",
+  "resetBaseColor": "Сбросить цвет основы",
+  "resetReliefColor": "Сбросить цвет рельефа",
+  "printColors": "Цвета печати",
+  "recipes": {
+    "clean-contour": { "name": "Чистый контур", "description": "Аккуратный контур для повседневных имён." },
+    "bold-capsule": { "name": "Жирная капсула", "description": "Прочная форма с выразительными буквами." },
+    "playful-bubble": { "name": "Игривый пузырь", "description": "Весёлая форма для коротких имён." },
+    "articulated-motion": { "name": "Подвижные буквы", "description": "Гибкие соединённые буквы с шарнирами." },
+    "garden-marker": { "name": "Садовый маркер", "description": "Практичная табличка с заострённым колышком." }
+  },
   "openSource": "Открытый код ↗",
   "profile": "Профиль",
   "profileTitle": "Ваше пространство мастера",

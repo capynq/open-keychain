@@ -14,9 +14,31 @@ import {
   normalizeParams,
   ringWallMm,
   sanitizeFilename,
+  applyPrintAppearanceOverrides,
+  DEFAULT_PRINT_APPEARANCE,
   type KeychainParams,
 } from './types';
 describe('keychain parameters', () => {
+  it('applies only strict six-digit session color overrides', () => {
+    expect(() =>
+      applyPrintAppearanceOverrides(DEFAULT_PRINT_APPEARANCE, {
+        version: 1,
+        base: '#12abEF',
+        relief: '#bad',
+      }),
+    ).toThrow('Invalid appearance color');
+  });
+  it('normalizes valid session colors', () => {
+    expect(
+      applyPrintAppearanceOverrides(DEFAULT_PRINT_APPEARANCE, {
+        version: 1,
+        base: '#12abEF',
+      }),
+    ).toEqual({
+      ...DEFAULT_PRINT_APPEARANCE,
+      base: { ...DEFAULT_PRINT_APPEARANCE.base, color: '#12ABEF' },
+    });
+  });
   it('defines a stable print profile and derives effective geometry constraints', () => {
     expect(DEFAULT_PRINT_PROFILE.technology).toBe('fdm');
     expect(DEFAULT_PRINT_PROFILE.constraints).toEqual(DEFAULT_GEOMETRY_CONSTRAINTS);

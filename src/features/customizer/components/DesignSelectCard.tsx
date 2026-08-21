@@ -2,6 +2,7 @@ import { useId, useRef, type ReactNode } from 'react';
 
 export type DesignSelectCardProps = {
   title: string;
+  accessibleLabel?: string;
   description?: string;
   previewSrc: string;
   selected: boolean;
@@ -13,6 +14,7 @@ export type DesignSelectCardProps = {
 /** A compact, image-led choice that works for both templates and styles. */
 export const DesignSelectCard = ({
   title,
+  accessibleLabel,
   description,
   previewSrc,
   selected,
@@ -40,7 +42,7 @@ export const DesignSelectCard = ({
       type="button"
       className={`design-select-card${selected ? ' selected' : ''}`}
       aria-pressed={selected}
-      aria-label={title}
+      aria-label={accessibleLabel ?? title}
       aria-describedby={description ? descriptionId : undefined}
       data-guide-target={guideTarget}
       data-testid={testId}
@@ -53,9 +55,9 @@ export const DesignSelectCard = ({
         <strong>{title}</strong>
         {description && <span className="design-select-card-description">{description}</span>}
       </span>
-      {description && (
+      {(accessibleLabel || description) && (
         <span id={descriptionId} className="sr-only">
-          {description}
+          {accessibleLabel ? `${title}${description ? `. ${description}` : ''}` : description}
         </span>
       )}
     </button>

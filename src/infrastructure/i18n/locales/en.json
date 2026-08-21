@@ -1,4 +1,23 @@
 {
+  "recipesTitle": "Starting points",
+  "recipeAccessibleLabel": "Starting point {number}",
+  "baseColor": "Base color",
+  "reliefColor": "Raised color",
+  "resetColors": "Reset colors",
+  "resetColor": "Reset",
+  "resetBaseColor": "Reset base color",
+  "resetReliefColor": "Reset raised color",
+  "printColors": "Print colors",
+  "recipes": {
+    "clean-contour": { "name": "Clean contour", "description": "A clean contour for everyday names." },
+    "bold-capsule": { "name": "Bold capsule", "description": "A sturdy capsule with confident lettering." },
+    "playful-bubble": { "name": "Playful bubble", "description": "A cheerful bubble shape for short names." },
+    "articulated-motion": {
+      "name": "Articulated motion",
+      "description": "Flexible linked letters with captive joints."
+    },
+    "garden-marker": { "name": "Garden marker", "description": "A practical plant label with a pointed stake." }
+  },
   "openSource": "Open source ↗",
   "profile": "Profile",
   "profileTitle": "Your maker space",

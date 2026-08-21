@@ -3,6 +3,7 @@ import type { Locale } from '../../infrastructure/i18n';
 import { useAnalytics } from '../../infrastructure/telemetry';
 import { PreviewPanel } from './PreviewPanel';
 import type { CustomizerPageState } from '../hooks/useCustomizerPageState';
+import { DEFAULT_PARAMS, normalizeParams, type DesignRecipe } from '../../domain/keychain';
 
 export const CustomizerWorkspace = ({
   locale,
@@ -26,8 +27,20 @@ const WorkspaceContent = ({ locale, state }: { locale: Locale; state: Customizer
         customizer={state.customizer}
         onNameEdited={state.guide.markNameEdited}
         onTemplateSelected={state.guide.markTemplateEdited}
+        onRecipeSelected={(recipe: DesignRecipe) => {
+          state.customizer.setParams((current) =>
+            normalizeParams({
+              ...DEFAULT_PARAMS,
+              text: current.text,
+              ...recipe.params,
+              fontId: recipe.fontId,
+            }),
+          );
+          state.guide.markTemplateEdited();
+        }}
         onReset={() => {
           state.customizer.reset();
+          state.setAppearanceOverrides({ version: 1 });
           setSurface('matte');
         }}
       />
@@ -39,6 +52,8 @@ const WorkspaceContent = ({ locale, state }: { locale: Locale; state: Customizer
         modelInfo={state.modelInfo}
         onSurfaceChange={setSurface}
         onSurfaceReset={() => setSurface('matte')}
+        appearanceOverrides={state.appearanceOverrides}
+        onAppearanceChange={state.setAppearanceOverrides}
       />
     </div>
   );

@@ -7,6 +7,7 @@ import type {
   GeometryResult,
   KeychainParams,
   ThreeMfMode,
+  PrintAppearanceOverrides,
 } from '../../../domain/keychain';
 import type { FontDefinition } from '../../../domain/keychain/fonts/catalog';
 import { useAnalytics } from '../../../infrastructure/telemetry';
@@ -31,23 +32,30 @@ export const useExportActions = ({
   geometry,
   params,
   fontDefinition,
+  appearanceOverrides,
 }: {
   geometry: ExportSource;
   params: KeychainParams;
   fontDefinition?: FontDefinition;
+  appearanceOverrides?: PrintAppearanceOverrides;
 }): ExportActionsState => {
   const [downloading, setDownloading] = useState(false);
   const [status, setStatus] = useState<ExportActionsState['status']>('idle');
   const [error, setError] = useState<string>();
-  const lastRequest = useRef<{ format: ExportFormat; mode: ThreeMfMode } | undefined>(undefined);
+  const lastRequest = useRef<{
+    format: ExportFormat;
+    mode: ThreeMfMode;
+    appearanceOverrides?: PrintAppearanceOverrides;
+  }>(undefined);
   const { track } = useAnalytics();
 
   const download = async (
     format: ExportFormat,
     mode: ThreeMfMode = 'separate-colors',
+    requestedAppearanceOverrides: PrintAppearanceOverrides | undefined = appearanceOverrides,
   ): Promise<void> => {
     if (!geometry.result?.printable || downloading) return;
-    lastRequest.current = { format, mode };
+    lastRequest.current = { format, mode, appearanceOverrides: requestedAppearanceOverrides };
     setDownloading(true);
     setStatus('exporting');
     setError(undefined);
@@ -55,7 +63,13 @@ export const useExportActions = ({
     let exportToken: string | undefined;
     try {
       if (hostedMode) exportToken = (await requestExportIntent()).token;
-      const file = await geometry.clientRef.current?.export(params, format, mode, fontDefinition);
+      const file = await geometry.clientRef.current?.export(
+        params,
+        format,
+        mode,
+        fontDefinition,
+        requestedAppearanceOverrides,
+      );
       if (!file) throw new Error('The file could not be created.');
       const url = URL.createObjectURL(new Blob([file.data], { type: file.mimeType }));
       const anchor = document.createElement('a');
@@ -80,7 +94,12 @@ export const useExportActions = ({
   };
 
   const retry = async (): Promise<void> => {
-    if (lastRequest.current) await download(lastRequest.current.format, lastRequest.current.mode);
+    if (lastRequest.current)
+      await download(
+        lastRequest.current.format,
+        lastRequest.current.mode,
+        lastRequest.current.appearanceOverrides,
+      );
   };
 
   return {

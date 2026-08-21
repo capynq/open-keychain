@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { DEFAULT_PARAMS, normalizeParams } from '../../domain/keychain';
-import type { KeychainParams } from '../../domain/keychain';
+import type { KeychainParams, PrintAppearanceOverrides } from '../../domain/keychain';
 import { styleName, templateName, type Locale } from '../../infrastructure/i18n';
 import { useCustomizerParams, useGeometryGeneration } from '../../features/customizer';
 import { useExportActions } from '../../features/export';
@@ -12,6 +12,9 @@ import { useCustomizerGuide } from './useCustomizerGuide';
 export const useCustomizerPageState = (locale: Locale, initialParams?: KeychainParams) => {
   const [surfacePreset, setSurfacePreset] = useState<SurfacePresetId>('matte');
   const [exportOpen, setExportOpen] = useState(false);
+  const [appearanceOverrides, setAppearanceOverrides] = useState<PrintAppearanceOverrides>({
+    version: 1,
+  });
   const { track } = useAnalytics();
   const customizer = useCustomizerParams(initialParams);
   const geometry = useGeometryGeneration(customizer.params, customizer.selectedFont);
@@ -22,6 +25,7 @@ export const useCustomizerPageState = (locale: Locale, initialParams?: KeychainP
     geometry,
     params: customizer.params,
     fontDefinition: customizer.selectedFont,
+    appearanceOverrides,
   });
   const guide = useCustomizerGuide();
   const activeStyle = customizer.availableStyles.find(
@@ -70,6 +74,8 @@ export const useCustomizerPageState = (locale: Locale, initialParams?: KeychainP
     setSurfacePreset,
     exportOpen,
     setExportOpen,
+    appearanceOverrides,
+    setAppearanceOverrides,
     status: previewStatus(geometry, locale),
     modelInfo: {
       template: templateName(locale, customizer.activeTemplate.id, customizer.activeTemplate.name),

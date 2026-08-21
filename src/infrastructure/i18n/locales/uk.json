@@ -1,4 +1,20 @@
 {
+  "recipesTitle": "Готові варіанти",
+  "recipeAccessibleLabel": "Готовий варіант {number}",
+  "baseColor": "Колір основи",
+  "reliefColor": "Колір рельєфу",
+  "resetColors": "Скинути кольори",
+  "resetColor": "Скинути",
+  "resetBaseColor": "Скинути колір основи",
+  "resetReliefColor": "Скинути колір рельєфу",
+  "printColors": "Кольори друку",
+  "recipes": {
+    "clean-contour": { "name": "Чистий контур", "description": "Акуратний контур для щоденних імен." },
+    "bold-capsule": { "name": "Жирна капсула", "description": "Міцна форма з виразними літерами." },
+    "playful-bubble": { "name": "Грайлива бульбашка", "description": "Весела форма для коротких імен." },
+    "articulated-motion": { "name": "Рухомі літери", "description": "Гнучкі з’єднані літери з шарнірами." },
+    "garden-marker": { "name": "Садовий маркер", "description": "Практична табличка із загостреним кілочком." }
+  },
   "openSource": "Відкритий код ↗",
   "profile": "Профіль",
   "profileTitle": "Ваш простір майстра",

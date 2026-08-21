@@ -5,6 +5,7 @@ import type {
   ThreeMfMode,
   WorkerRequest,
   WorkerResponse,
+  PrintAppearanceOverrides,
 } from '../../domain/keychain/model/types';
 import type { FontDefinition } from '../../domain/keychain/fonts/catalog';
 export class GeometryClient {
@@ -43,6 +44,7 @@ export class GeometryClient {
     format: ExportFormat = 'stl',
     mode: ThreeMfMode = 'separate-colors',
     fontDefinition?: FontDefinition,
+    appearanceOverrides?: PrintAppearanceOverrides,
   ): Promise<{
     filename: string;
     mimeType: string;
@@ -57,6 +59,7 @@ export class GeometryClient {
       params,
       format,
       mode,
+      appearanceOverrides,
       fontDefinition: this.fontForWorker(fontDefinition),
     } satisfies WorkerRequest);
     return new Promise((resolve, reject) => {

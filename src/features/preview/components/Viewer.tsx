@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
-import type { GeometryResult } from '../../../domain/keychain';
+import type { GeometryResult, PrintAppearance } from '../../../domain/keychain';
 import { t, type Locale } from '../../../infrastructure/i18n';
 import {
   applyCameraPose,
@@ -18,6 +18,7 @@ import '../styles/preview.css';
 export type SurfacePresetId = 'matte' | 'graph' | 'dark' | 'wood' | 'metal';
 type ViewerProps = {
   result: GeometryResult | undefined;
+  appearance?: PrintAppearance;
   surfacePreset?: SurfacePresetId;
   locale?: Locale;
 };
@@ -152,7 +153,12 @@ const syncPlatform = (state: ViewerState, result: GeometryResult | undefined): v
   );
   state.platform.receiveShadow = true;
 };
-export const Viewer = ({ result, surfacePreset = 'matte', locale = 'en' }: ViewerProps) => {
+export const Viewer = ({
+  result,
+  appearance = result?.appearance,
+  surfacePreset = 'matte',
+  locale = 'en',
+}: ViewerProps) => {
   const hostRef = useRef<HTMLDivElement>(null);
 
   const stateRef = useRef<ViewerState | undefined>(undefined);
@@ -368,6 +374,19 @@ export const Viewer = ({ result, surfacePreset = 'matte', locale = 'en' }: Viewe
     state.key.shadow.camera.updateProjectionMatrix();
     fitViewer(state, result, selected);
   }, [result]);
+
+  useEffect(() => {
+    const state = stateRef.current;
+    if (!state || !appearance) return;
+    const base = state.group.children[0];
+    const relief = state.group.children[1];
+    if (base instanceof THREE.Mesh) {
+      (base.material as THREE.MeshStandardMaterial).color.set(appearance.base.color);
+    }
+    if (relief instanceof THREE.Mesh) {
+      (relief.material as THREE.MeshStandardMaterial).color.set(appearance.relief.color);
+    }
+  }, [appearance]);
 
   useEffect(() => {
     const state = stateRef.current;
