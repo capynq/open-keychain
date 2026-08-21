@@ -62,7 +62,7 @@ jobs:
           name: dist
           path: dist
       - name: Deploy production build
-        run: pnpm --package=netlify-cli dlx netlify deploy --prod --dir=dist --site="$NETLIFY_SITE_ID" --auth="$NETLIFY_AUTH_TOKEN"
+        run: pnpm --package=netlify-cli dlx netlify deploy --prod --no-build --dir=dist --site="$NETLIFY_SITE_ID" --auth="$NETLIFY_AUTH_TOKEN"
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
