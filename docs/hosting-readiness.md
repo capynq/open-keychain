@@ -7,9 +7,9 @@ Open Keychain has two deployment profiles:
 - `docker-compose.hosted.yml` adds the optional Fastify API, PostgreSQL, sessions, export
   quotas, and saved project parameters behind the hosted nginx proxy.
 
-## Staging deployment
+## Self-hosted production deployment
 
-1. Purchase or select a domain and point its DNS record at the staging host.
+1. Purchase or select a domain and point its DNS record at the production host.
 2. Install Docker and an HTTPS reverse proxy or certificate manager on the host.
 3. Copy `.env.hosted.example` to a host-only `.env` and replace every placeholder:
    `APP_URL`, `POSTGRES_PASSWORD`, and `BETTER_AUTH_SECRET` (at least 32 random characters).
@@ -26,7 +26,7 @@ The hosted frontend proxies `/api/` to the API service. Keep PostgreSQL private 
 Compose network and terminate HTTPS before the web container. `APP_URL` must match the
 public HTTPS origin so secure session cookies are enabled.
 
-## Netlify continuous deployment
+## Netlify production deployment
 
 The static production site can deploy without the Netlify GitHub App through
 `.github/workflows/netlify.yml`. Add these repository secrets in GitHub:

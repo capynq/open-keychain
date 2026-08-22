@@ -24,21 +24,6 @@ The initial guide slugs are `stl-vs-3mf`, `how-to-print-a-name-keychain`, `artic
 The interactive `/create` and `/profile` shells are intentionally `noindex,follow`. They remain linked from the
 indexable pages and are the product experience rather than search landing pages.
 
-## Search Console rollout
-
-After deploying a build:
-
-1. Keep the existing `open-keychain.com` Google Search Console property verified.
-2. Submit `https://open-keychain.com/sitemap.xml` again after URL or content changes.
-3. Inspect the three home pages, both hubs, and the highest-value English guides (`stl-vs-3mf` and
-   `how-to-print-a-name-keychain`).
-4. Use the rendered-page inspection to confirm that the heading, links, preview image, canonical, and JSON-LD are visible.
-5. Request indexing for the new hubs and guides, then review indexing, impressions, queries, click-through rate,
-   canonical selection, and hreflang reports over a 28-day window.
-
-Sitemap submission is a discovery hint, not a guarantee of indexing or ranking. Search performance also depends on useful
-content, demand, links from relevant sites, and competition.
-
 ## Content and authority
 
 Initial search intent is deliberately narrow and descriptive:
