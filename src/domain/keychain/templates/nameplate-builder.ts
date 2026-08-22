@@ -103,7 +103,9 @@ export const buildNameplate = (
     deleteGeometry(candidateParts);
     const candidateHasVisibleCap = candidateBounds.max[2] > baseThickness + 300;
     const candidateCarrierEmbedded = carrierBounds.max[2] <= baseThickness - 100;
-    const candidateModel = wasm.Manifold.union([plate, carrier, candidateText]).simplify(20);
+    const candidateUnion = wasm.Manifold.union([plate, carrier, candidateText]);
+    const candidateModel = candidateUnion.simplify(15);
+    candidateUnion.delete();
     const candidateComponents = candidateModel.decompose();
     const candidateConnected = candidateComponents.length === 1;
     deleteGeometry(candidateComponents);
@@ -166,7 +168,9 @@ export const buildNameplate = (
       code: 'dense-mesh',
       message: 'This curved model exceeds 12,000 triangles and may take longer to slice.',
     });
-  const visibleText = tiltedText.trimByPlane([0, 0, 1], baseThickness - 100).simplify(20);
+  const trimmedVisibleText = tiltedText.trimByPlane([0, 0, 1], baseThickness - 100);
+  const visibleText = trimmedVisibleText.simplify(20);
+  trimmedVisibleText.delete();
   const baseMesh = asMesh(plate);
   const reliefMesh = asMesh(visibleText);
   const exportMesh = includeExport ? asMesh(model) : undefined;
