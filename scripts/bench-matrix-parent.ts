@@ -18,8 +18,8 @@ type MatrixSummary = {
 };
 const summaries: MatrixSummary[] = [];
 
-for (const templateId of templateIds) {
-  const summary = await new Promise<MatrixSummary | undefined>((resolve) => {
+const runTemplate = (templateId: (typeof templateIds)[number]) =>
+  new Promise<MatrixSummary | undefined>((resolve) => {
     const child = spawn(process.execPath, ['--import', 'tsx', worker], {
       cwd: process.cwd(),
       env: { ...process.env, MATRIX_TEMPLATE: templateId },
@@ -28,10 +28,10 @@ for (const templateId of templateIds) {
     let output = '';
     child.stdout.on('data', (chunk: Buffer) => {
       output += chunk.toString();
-      process.stdout.write(chunk);
     });
     child.on('error', () => resolve(undefined));
     child.on('close', () => {
+      process.stdout.write(output);
       const lastLine = output.trim().split('\n').at(-1);
       if (!lastLine) {
         resolve(undefined);
@@ -44,6 +44,9 @@ for (const templateId of templateIds) {
       }
     });
   });
+
+const results = await Promise.all(templateIds.map(runTemplate));
+for (const summary of results) {
   if (summary) summaries.push(summary);
   else process.exitCode = 1;
 }
