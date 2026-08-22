@@ -41,7 +41,7 @@ test('loads responsive landing visuals and metadata in production', async ({ pag
     .evaluateAll((elements) => elements.map((element) => (element as HTMLImageElement).currentSrc));
   expect(templateSources.every((source) => source.includes('/showcase/templates/'))).toBe(true);
   const expectedHero =
-    testInfo.project.name === 'deployed-mobile' ? 'create-mobile.png' : 'create-desktop.png';
+    testInfo.project.name === 'deployed-mobile' ? 'create-mobile@2x.png' : 'create-desktop.png';
   const heroSource = await page
     .locator('.configurator-window img')
     .evaluate((element) => (element as HTMLImageElement).currentSrc);
