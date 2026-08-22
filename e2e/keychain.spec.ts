@@ -150,7 +150,7 @@ test('treats adjusted NIKITA Bubble geometry as ready and a width failure as an 
   await page.getByRole('button', { name: 'Export' }).click();
   await expect(page.getByRole('dialog', { name: 'Choose an export' })).toBeVisible();
   await expect(page.getByRole('dialog').getByRole('button', { name: /STL file/ })).toBeEnabled();
-  await page.getByLabel('Name height').fill('12');
+  await page.getByLabel('Text size').fill('12');
   await page.getByLabel('Name or text').fill('WWWWWWWWWWWWWWWWWWWWWWWW');
   await expect(page.locator('.status-pill')).toHaveText('Needs attention', { timeout: 10000 });
   await expect(page.getByText(/cannot fit within 120 mm/)).toBeVisible();
@@ -303,10 +303,10 @@ test('resets each model section without changing unrelated choices', async ({ pa
   await page.getByRole('button', { name: /Caveat/ }).click();
   await page.getByRole('button', { name: 'Plant label' }).click();
   await page.getByRole('button', { name: 'Bubble' }).click();
-  await page.getByLabel('Name height').fill('30');
+  await page.getByLabel('Text size').fill('30');
 
   await page.getByRole('button', { name: 'Reset shape' }).click();
-  await expect(page.getByLabel('Name height')).toHaveValue('20');
+  await expect(page.getByLabel('Text size')).toHaveValue('20');
   await expect(page.getByRole('button', { name: 'Plant label' })).toHaveClass(/selected/);
   await expect(page.getByRole('button', { name: 'Bubble' })).toHaveClass(/selected/);
 
