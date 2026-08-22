@@ -20,7 +20,7 @@ test('serves every SEO page as crawlable localized HTML', async ({ page }) => {
 
 test('renders a localized template page without the application bundle', async ({ page }) => {
   await page.goto('/uk/templates/name-keychain/');
-  await expect(page).toHaveTitle(/іменних брелоків/);
+  await expect(page).toHaveTitle('Open Keychain 3D | Іменний брелок для 3D-друку');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('іменний брелок');
   await expect(page.locator('script[type="module"]')).toHaveCount(0);
   await expect(page.getByRole('link', { name: /Створити брелок/ })).toHaveAttribute(

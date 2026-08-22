@@ -69,9 +69,12 @@ type SeoCopy = {
 };
 
 const documents = LOCALE_DOCUMENTS as unknown as Record<SeoLocale, { seo: SeoCopy }>;
+const brandFirstTitle = (brand: string, purpose: string): string =>
+  purpose.startsWith(`${brand} | `) ? purpose : `${brand} | ${purpose}`;
+
 for (const locale of SEO_LOCALES) {
   documents[locale].seo.templatesHub = {
-    title: `${documents[locale].seo.navigation.templates} - ${documents[locale].seo.brand}`,
+    title: brandFirstTitle(documents[locale].seo.brand, documents[locale].seo.navigation.templates),
     description: documents[locale].seo.home.templatesBody,
     heading: documents[locale].seo.home.templatesHeading,
     intro: documents[locale].seo.home.templatesBody,
@@ -447,7 +450,6 @@ const renderFooter = (locale: SeoLocale): string => {
   return `<footer class="seo-footer">
     <span>${escapeHtml(copy.brand)} · MIT licensed</span>
     <a href="/privacy.html">${escapeHtml(copy.navigation.privacy)}</a>
-    <a href="https://github.com/capynq/open-keychain">${escapeHtml(copy.navigation.github)}</a>
   </footer>`;
 };
 
@@ -639,15 +641,18 @@ const renderPage = (
   const guideCopy = guideSlug
     ? copy.guides[SEO_GUIDE_CATALOG.find((g) => g.slug === guideSlug)!.key]
     : undefined;
-  const title = isHome
-    ? copy.home.title
-    : kind === 'templates'
-      ? copy.templatesHub.title
-      : kind === 'guides'
-        ? copy.guidesHub.title
-        : kind === 'template'
-          ? copy.templates[template!.key].title
-          : guideCopy!.title;
+  const title = brandFirstTitle(
+    copy.brand,
+    isHome
+      ? copy.home.title
+      : kind === 'templates'
+        ? copy.templatesHub.title
+        : kind === 'guides'
+          ? copy.guidesHub.title
+          : kind === 'template'
+            ? copy.templates[template!.key].title
+            : guideCopy!.title,
+  );
   const description = isHome
     ? copy.home.description
     : kind === 'templates'
@@ -706,6 +711,7 @@ const renderPage = (
     <meta name="twitter:description" content="${escapeHtml(description)}" />
     <meta name="twitter:image" content="${absoluteUrl(image)}" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/brand/favicon-96.png" sizes="96x96" type="image/png" />
     <link rel="stylesheet" href="/seo.css" />
     <script src="/seo-analytics.js" defer data-key="${escapeHtml(POSTHOG_KEY)}" data-host="${escapeHtml(POSTHOG_HOST)}" data-page-type="${kind}" data-page-id="${escapeHtml(guideSlug ?? template?.id ?? (kind === 'home' ? 'home' : kind))}"></script>
     <title>${escapeHtml(title)}</title>
@@ -829,13 +835,13 @@ const main = (): void => {
     writeFile(path.join(DIST_DIR, entry.path, 'index.html'), html);
   }
 
-  const createTitle = 'Create a printable keychain - Open Keychain 3D';
+  const createTitle = 'Open Keychain 3D | Create a printable keychain';
   const createDescription =
     'Design a personalized printable keychain or label, preview the geometry, and export STL or 3MF locally.';
   const createShell = createAppShell(sourceIndex, createTitle, createDescription, '/create');
   const profileShell = createAppShell(
     sourceIndex,
-    'Your projects - Open Keychain 3D',
+    'Open Keychain 3D | Your projects',
     'Manage saved printable keychain projects.',
     '/profile',
   );
@@ -875,7 +881,7 @@ const main = (): void => {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex,follow" />
     <link rel="stylesheet" href="/seo.css" />
-    <title>Page not found - Open Keychain 3D</title>
+    <title>Open Keychain 3D | Page not found</title>
   </head>
   <body>
     ${renderHeader('en', 'home')}

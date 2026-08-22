@@ -13,5 +13,8 @@
 /showcase/*
   Cache-Control: public, max-age=86400
 
+/privacy.html
+  X-Robots-Tag: noindex, follow
+
 /manifold.wasm
   Cache-Control: public, max-age=0, must-revalidate

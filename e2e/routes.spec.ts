@@ -16,11 +16,11 @@ test('renders every declared route without browser errors', async ({ page }) => 
     await expect(page.getByRole('main')).toBeVisible();
 
     if (route.id === 'landing') {
-      await expect(page).toHaveTitle('Open Keychain 3D - free printable name keychain maker');
+      await expect(page).toHaveTitle('Open Keychain 3D | Name keychain maker');
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await expect(page.locator('.landing-button-primary')).toBeVisible();
     } else {
-      await expect(page).toHaveTitle('Create a printable keychain - Open Keychain 3D');
+      await expect(page).toHaveTitle('Open Keychain 3D | Create a keychain');
       await expect(page.getByRole('main', { name: 'Customizer' })).toBeVisible();
       await waitForReadyGeometry(page);
     }
@@ -228,7 +228,7 @@ test('keeps the customizer title when its path has a trailing slash', async ({ p
   const assertNoBrowserErrors = watchBrowserErrors(page);
 
   await page.goto('/create/');
-  await expect(page).toHaveTitle('Create a printable keychain - Open Keychain 3D');
+  await expect(page).toHaveTitle('Open Keychain 3D | Create a keychain');
   assertNoBrowserErrors();
 });
 
@@ -237,9 +237,7 @@ test('updates the localized landing title', async ({ page }) => {
 
   await page.goto('/');
   await page.getByRole('combobox', { name: 'Language' }).selectOption('ru');
-  await expect(page).toHaveTitle(
-    'Open Keychain 3D - бесплатный генератор именных брелоков для 3D-печати',
-  );
+  await expect(page).toHaveTitle('Open Keychain 3D | Генератор именных брелоков');
   await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
   assertNoBrowserErrors();
 });

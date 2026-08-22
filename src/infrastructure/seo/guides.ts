@@ -18,7 +18,7 @@ export const SEO_HUB_COPY: Localized<{
   intro: string;
 }> = {
   en: {
-    title: '3D printing guides for custom names - Open Keychain 3D',
+    title: 'Open Keychain 3D | 3D printing guides',
     description:
       'Practical guides for designing and 3D printing name keychains, articulated names, nameplates, and plant labels.',
     heading: 'Practical guides for printable names',
@@ -26,7 +26,7 @@ export const SEO_HUB_COPY: Localized<{
       'Learn how to choose a template, prepare text, and get a reliable first print from Open Keychain 3D.',
   },
   ru: {
-    title: 'Руководства по 3D-печати имён - Open Keychain 3D',
+    title: 'Open Keychain 3D | Руководства по 3D-печати',
     description:
       'Практические руководства по созданию и 3D-печати именных брелоков, шарнирных имён, табличек и бирок.',
     heading: 'Практические руководства по печатным именам',
@@ -34,7 +34,7 @@ export const SEO_HUB_COPY: Localized<{
       'Узнайте, как выбрать шаблон, подготовить текст и получить удачную первую печать в Open Keychain 3D.',
   },
   uk: {
-    title: 'Посібники з 3D-друку імен - Open Keychain 3D',
+    title: 'Open Keychain 3D | Посібники з 3D-друку',
     description:
       'Практичні посібники зі створення та 3D-друку іменних брелоків, рухомих імен, табличок і етикеток.',
     heading: 'Практичні посібники для друкованих імен',
@@ -46,7 +46,7 @@ export const SEO_HUB_COPY: Localized<{
 export const SEO_GUIDE_COPY: Record<SeoLocale, Record<string, SeoGuideCopy>> = {
   en: {
     stlVs3mf: {
-      title: 'STL vs 3MF for 3D printing - Open Keychain 3D',
+      title: 'Open Keychain 3D | STL vs 3MF',
       description: 'Understand when to use STL or 3MF for a personalized printable model.',
       heading: 'STL vs 3MF: which export should you use?',
       intro:
@@ -67,7 +67,7 @@ export const SEO_GUIDE_COPY: Record<SeoLocale, Record<string, SeoGuideCopy>> = {
       ],
     },
     nameKeychainPrinting: {
-      title: 'How to 3D print a name keychain - Open Keychain 3D',
+      title: 'Open Keychain 3D | Print a name keychain',
       description:
         'Learn how to design and 3D print a personalized name keychain with a sturdy backing and keyring hole.',
       heading: 'How to 3D print a name keychain',
@@ -88,7 +88,7 @@ export const SEO_GUIDE_COPY: Record<SeoLocale, Record<string, SeoGuideCopy>> = {
       ],
     },
     articulatedPrinting: {
-      title: 'How to 3D print an articulated name - Open Keychain 3D',
+      title: 'Open Keychain 3D | Print an articulated name',
       description:
         'Prepare and print a flexible articulated name keychain with validated captive joints.',
       heading: 'How to 3D print an articulated name',
@@ -109,7 +109,7 @@ export const SEO_GUIDE_COPY: Record<SeoLocale, Record<string, SeoGuideCopy>> = {
       ],
     },
     plantLabelPrinting: {
-      title: 'How to 3D print a plant label - Open Keychain 3D',
+      title: 'Open Keychain 3D | Print a plant label',
       description:
         'Create a durable 3D printable plant label with a pointed stake for pots and garden beds.',
       heading: 'How to 3D print a plant label',
@@ -132,7 +132,7 @@ export const SEO_GUIDE_COPY: Record<SeoLocale, Record<string, SeoGuideCopy>> = {
   },
   ru: {
     stlVs3mf: {
-      title: 'STL или 3MF для 3D-печати - Open Keychain 3D',
+      title: 'Open Keychain 3D | STL или 3MF',
       description: 'Разберитесь, когда использовать STL или 3MF для персонализированной модели.',
       heading: 'STL или 3MF: какой экспорт выбрать?',
       intro:
@@ -153,7 +153,7 @@ export const SEO_GUIDE_COPY: Record<SeoLocale, Record<string, SeoGuideCopy>> = {
       ],
     },
     nameKeychainPrinting: {
-      title: 'Как напечатать именной брелок на 3D-принтере - Open Keychain 3D',
+      title: 'Open Keychain 3D | Печать именного брелока',
       description:
         'Практическое руководство по созданию и 3D-печати именного брелока с прочной основой и отверстием.',
       heading: 'Как напечатать именной брелок',
@@ -174,7 +174,7 @@ export const SEO_GUIDE_COPY: Record<SeoLocale, Record<string, SeoGuideCopy>> = {
       ],
     },
     articulatedPrinting: {
-      title: 'Как напечатать шарнирное имя - Open Keychain 3D',
+      title: 'Open Keychain 3D | Печать шарнирного имени',
       description:
         'Подготовьте и напечатайте гибкий шарнирный именной брелок с проверенными соединениями.',
       heading: 'Как напечатать шарнирное имя',
@@ -195,7 +195,7 @@ export const SEO_GUIDE_COPY: Record<SeoLocale, Record<string, SeoGuideCopy>> = {
       ],
     },
     plantLabelPrinting: {
-      title: 'Как напечатать бирку для растения - Open Keychain 3D',
+      title: 'Open Keychain 3D | Печать бирки для растения',
       description:
         'Создайте прочную бирку для растений с заострённым держателем для горшков и грядок.',
       heading: 'Как напечатать бирку для растения',
@@ -218,7 +218,7 @@ export const SEO_GUIDE_COPY: Record<SeoLocale, Record<string, SeoGuideCopy>> = {
   },
   uk: {
     stlVs3mf: {
-      title: 'STL чи 3MF для 3D-друку - Open Keychain 3D',
+      title: 'Open Keychain 3D | STL чи 3MF',
       description: 'Дізнайтеся, коли використовувати STL або 3MF для персоналізованої моделі.',
       heading: 'STL чи 3MF: який експорт обрати?',
       intro:
@@ -239,7 +239,7 @@ export const SEO_GUIDE_COPY: Record<SeoLocale, Record<string, SeoGuideCopy>> = {
       ],
     },
     nameKeychainPrinting: {
-      title: 'Як надрукувати іменний брелок - Open Keychain 3D',
+      title: 'Open Keychain 3D | Друк іменного брелока',
       description:
         'Дізнайтеся, як створити та надрукувати іменний брелок із міцною основою й отвором.',
       heading: 'Як надрукувати іменний брелок',
@@ -260,7 +260,7 @@ export const SEO_GUIDE_COPY: Record<SeoLocale, Record<string, SeoGuideCopy>> = {
       ],
     },
     articulatedPrinting: {
-      title: 'Як надрукувати рухоме ім’я - Open Keychain 3D',
+      title: 'Open Keychain 3D | Друк рухомого імені',
       description:
         'Підготуйте та надрукуйте гнучкий іменний брелок із перевіреними рухомими з’єднаннями.',
       heading: 'Як надрукувати рухоме ім’я',
@@ -281,7 +281,7 @@ export const SEO_GUIDE_COPY: Record<SeoLocale, Record<string, SeoGuideCopy>> = {
       ],
     },
     plantLabelPrinting: {
-      title: 'Як надрукувати етикетку для рослини - Open Keychain 3D',
+      title: 'Open Keychain 3D | Друк етикетки для рослини',
       description:
         'Створіть міцну етикетку для рослин із загостреним держаком для горщиків і грядок.',
       heading: 'Як надрукувати етикетку для рослини',

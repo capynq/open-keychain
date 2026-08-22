@@ -18,14 +18,14 @@ export type SeoGuideDefinition = {
 };
 
 export const SEO_GUIDE_CATALOG: readonly SeoGuideDefinition[] = [
-  { slug: 'stl-vs-3mf', key: 'stlVs3mf', lastModified: '2026-08-20' },
-  { slug: 'how-to-print-a-name-keychain', key: 'nameKeychainPrinting', lastModified: '2026-08-20' },
+  { slug: 'stl-vs-3mf', key: 'stlVs3mf', lastModified: '2026-08-22' },
+  { slug: 'how-to-print-a-name-keychain', key: 'nameKeychainPrinting', lastModified: '2026-08-22' },
   {
     slug: 'articulated-vs-standard-keychain',
     key: 'articulatedPrinting',
-    lastModified: '2026-08-20',
+    lastModified: '2026-08-22',
   },
-  { slug: 'printable-plant-label-guide', key: 'plantLabelPrinting', lastModified: '2026-08-20' },
+  { slug: 'printable-plant-label-guide', key: 'plantLabelPrinting', lastModified: '2026-08-22' },
 ];
 
 export const SEO_TEMPLATE_CATALOG: readonly SeoTemplateDefinition[] = [
@@ -33,25 +33,25 @@ export const SEO_TEMPLATE_CATALOG: readonly SeoTemplateDefinition[] = [
     id: 'name-keychain',
     key: 'nameKeychain',
     previewSrc: '/showcase/templates/name-keychain.png',
-    lastModified: '2026-08-19',
+    lastModified: '2026-08-22',
   },
   {
     id: 'articulated-name',
     key: 'articulatedName',
     previewSrc: '/showcase/templates/articulated-name.png',
-    lastModified: '2026-08-19',
+    lastModified: '2026-08-22',
   },
   {
     id: 'nameplate',
     key: 'nameplate',
     previewSrc: '/showcase/templates/nameplate.png',
-    lastModified: '2026-08-19',
+    lastModified: '2026-08-22',
   },
   {
     id: 'plant-label',
     key: 'plantLabel',
     previewSrc: '/showcase/templates/plant-label.png',
-    lastModified: '2026-08-19',
+    lastModified: '2026-08-22',
   },
 ];
 
@@ -75,7 +75,7 @@ export const SEO_PAGE_MANIFEST = SEO_LOCALES.flatMap((locale) => [
     kind: 'home' as const,
     locale,
     path: seoHomePath(locale),
-    lastModified: '2026-08-19',
+    lastModified: '2026-08-22',
   },
   ...SEO_TEMPLATE_CATALOG.map((template) => ({
     kind: 'template' as const,
@@ -88,13 +88,13 @@ export const SEO_PAGE_MANIFEST = SEO_LOCALES.flatMap((locale) => [
     kind: 'templates' as const,
     locale,
     path: seoTemplatesPath(locale),
-    lastModified: '2026-08-20',
+    lastModified: '2026-08-22',
   },
   {
     kind: 'guides' as const,
     locale,
     path: seoGuidesPath(locale),
-    lastModified: '2026-08-20',
+    lastModified: '2026-08-22',
   },
   ...SEO_GUIDE_CATALOG.map((guide) => ({
     kind: 'guide' as const,

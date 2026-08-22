@@ -41,6 +41,12 @@ const readJsonLdGraph = (html: string, route: string): JsonLdNode[] => {
 const main = (): void => {
   if (!fs.existsSync(DIST_DIR)) fail('missing dist directory');
 
+  const favicon = path.join(DIST_DIR, 'brand/favicon-96.png');
+  if (!fs.existsSync(favicon)) fail('missing 96px raster favicon');
+  const privacy = read('privacy.html');
+  if (!privacy.includes('meta name="robots" content="noindex,follow"'))
+    fail('privacy page is indexable');
+
   const sitemap = read('sitemap.xml');
   const sitemapUrls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
   const sitemapLastModified = [...sitemap.matchAll(/<lastmod>([^<]+)<\/lastmod>/g)].map(
@@ -84,6 +90,21 @@ const main = (): void => {
     if (!/<h1[^>]*>[^<]+<\/h1>/.test(html)) fail(`${entry.path} has no visible H1`);
     if (!html.includes('meta name="robots" content="index,follow"'))
       fail(`${entry.path} is not indexable`);
+    if (!html.includes('href="/brand/favicon-96.png"'))
+      fail(`${entry.path} has no square raster favicon`);
+    const title = html.match(/<title>([^<]+)<\/title>/)?.[1] ?? '';
+    if (title.length > 60) fail(`${entry.path} title is not concise (${title.length})`);
+    if (!title.startsWith('Open Keychain 3D | ')) fail(`${entry.path} title is not brand-first`);
+    if (entry.kind === 'guide') {
+      const creatorLinks = html.match(/href="\/create\?/g) ?? [];
+      if (creatorLinks.length !== 1)
+        fail(`${entry.path} must have exactly one creator CTA (found ${creatorLinks.length})`);
+      const sourceLinks = html.match(/href="https:\/\/github\.com\/capynq\/open-keychain"/g) ?? [];
+      if (sourceLinks.length !== 1)
+        fail(
+          `${entry.path} must have exactly one GitHub source link (found ${sourceLinks.length})`,
+        );
+    }
     for (const locale of ['en', 'ru', 'uk', 'x-default']) {
       if (!html.includes(`hreflang="${locale}"`)) fail(`${entry.path} misses ${locale} alternate`);
     }
@@ -142,8 +163,8 @@ const main = (): void => {
   }
 
   for (const [route, expectedTitle, canonicalPath] of [
-    ['create/index.html', 'Create a printable keychain', '/create'],
-    ['profile/index.html', 'Your projects', '/profile'],
+    ['create/index.html', 'Open Keychain 3D | Create a printable keychain', '/create'],
+    ['profile/index.html', 'Open Keychain 3D | Your projects', '/profile'],
   ] as const) {
     const html = read(route);
     if (!html.includes('meta name="robots" content="noindex,follow"'))
