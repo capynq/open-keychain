@@ -138,8 +138,8 @@ test('loads all reviewed landing visuals at the active responsive breakpoint', a
     testInfo.project.name === 'mobile-2x'
       ? { width: 390, height: 844 }
       : testInfo.project.name === 'mobile'
-        ? { width: 390, height: 844 }
-        : { width: 1440, height: 900 };
+        ? { width: 780, height: 1688 }
+        : { width: 2880, height: 1800 };
   expect(heroImageState.width).toBe(expectedHeroDimensions.width);
   expect(heroImageState.height).toBe(expectedHeroDimensions.height);
   expect(heroImageState.width).toBeGreaterThan(heroImageState.renderedWidth);
@@ -198,8 +198,12 @@ test('uses the density-appropriate mobile customizer capture on a mobile landing
     };
   });
   // Browsers expose density-corrected intrinsic dimensions for a 2x srcset candidate.
-  expect(imageState.width).toBe(390);
-  expect(imageState.height).toBe(844);
+  const expectedMobileIntrinsicDimensions =
+    testInfo.project.name === 'mobile-2x'
+      ? { width: 390, height: 844 }
+      : { width: 780, height: 1688 };
+  expect(imageState.width).toBe(expectedMobileIntrinsicDimensions.width);
+  expect(imageState.height).toBe(expectedMobileIntrinsicDimensions.height);
   expect(imageState.width).toBeGreaterThan(imageState.renderedWidth);
   expect(imageState.height).toBeGreaterThan(imageState.renderedHeight);
   expect(

@@ -203,7 +203,7 @@ export const DEFAULT_PARAMS: KeychainParams = {
   templateId: 'name-keychain',
   styleId: 'contour',
   textHeightMm: 20,
-  fontWeightMm: 0,
+  fontWeightMm: 0.6,
   baseThicknessMm: 2.4,
   reliefDepthMm: 1,
   paddingMm: 2.4,
