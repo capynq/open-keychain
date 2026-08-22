@@ -342,6 +342,10 @@ for (const viewport of [
       const controls = document.querySelector('.controls-panel')!.getBoundingClientRect();
       const header = document.querySelector('.topbar')!.getBoundingClientRect();
       const exportButton = document.querySelector('.export-header-button')!.getBoundingClientRect();
+      const shareButton = document.querySelector('.share-header-button')!.getBoundingClientRect();
+      const languagePicker = document
+        .querySelector('.language-picker select')!
+        .getBoundingClientRect();
       const viewer = document.querySelector('.viewer')!.getBoundingClientRect();
       return {
         headerTop: header.top,
@@ -352,6 +356,10 @@ for (const viewport of [
         exportBottom: exportButton.bottom,
         exportCenter: (exportButton.left + exportButton.right) / 2,
         viewportCenter: window.innerWidth / 2,
+        shareRight: shareButton.right,
+        languageLeft: languagePicker.left,
+        languageTop: languagePicker.top,
+        languageBottom: languagePicker.bottom,
         viewerWidth: viewer.width,
         viewerHeight: viewer.height,
       };
@@ -363,6 +371,9 @@ for (const viewport of [
     expect(layout.exportBottom).toBeLessThanOrEqual(layout.headerBottom);
     expect(Math.abs(layout.exportCenter - layout.viewportCenter)).toBeLessThanOrEqual(1);
     expect(layout.exportBottom - layout.exportTop).toBeGreaterThanOrEqual(36);
+    expect(layout.languageLeft).toBeGreaterThanOrEqual(layout.shareRight);
+    expect(layout.languageTop).toBeGreaterThanOrEqual(layout.headerTop);
+    expect(layout.languageBottom).toBeLessThanOrEqual(layout.headerBottom);
     expect(layout.viewerWidth).toBeGreaterThan(360);
     expect(layout.viewerHeight).toBeGreaterThan(260);
     await expect(page.getByRole('button', { name: 'Export' })).toBeVisible();
