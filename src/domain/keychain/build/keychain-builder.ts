@@ -269,9 +269,9 @@ export const buildKeychain = async (
     );
   const textLayout =
     params.templateId === 'articulated-name'
-      ? layoutText(font, params.text, params.textHeightMm, 0, true)
+      ? layoutText(font, params.text, params.textSizeMm, 0, true)
       : {
-          outline: flattenText(font, params.text, params.textHeightMm, params.letterSpacingMm),
+          outline: flattenText(font, params.text, params.textSizeMm, params.letterSpacingMm),
           glyphs: [],
           advances: [],
           kerning: [],
@@ -331,6 +331,13 @@ export const buildKeychain = async (
       minimumWall: params.minimumWallMm,
       bottomClearance: params.bottomClearanceMm,
       articulatedOutlineExpansionMm,
+      reliefHaloMm: params.reliefHaloMm,
+      ringOffsetMm: params.ringOffsetMm,
+      bubbleLobeMm: params.bubbleLobeMm,
+      tagTailMm: params.tagTailMm,
+      archCurveMm: params.archCurveMm,
+      stakeShoulderMm: params.stakeShoulderMm,
+      jointBossMm: params.jointBossMm,
       constraints: geometryConstraintsFor(params),
       printProfile: printProfileFor(geometryConstraintsFor(params)),
     });
@@ -353,11 +360,11 @@ export const buildKeychain = async (
     issues.push({
       severity: 'warning',
       code: 'text-over-width',
-      message: `The name remains ${params.textHeightMm.toFixed(1)} mm high and is ${styled.widthMm.toFixed(1)} mm wide; the 120 mm recommended width was not enforced for this font.`,
+      message: `The name remains ${params.textSizeMm.toFixed(1)} mm high and is ${styled.widthMm.toFixed(1)} mm wide; the 120 mm recommended width was not enforced for this font.`,
     });
   } else if (styled.widthMm > MAX_WIDTH_MM) {
     let highWidth = styled.widthMm;
-    const minimumScale = MIN_TEXT_HEIGHT_MM / params.textHeightMm;
+    const minimumScale = MIN_TEXT_HEIGHT_MM / params.textSizeMm;
     if (minimumScale >= 1) {
       releaseStyledGeometry(styled);
       return invalidResult(
@@ -404,7 +411,7 @@ export const buildKeychain = async (
     issues.push({
       severity: 'warning',
       code: 'scaled-to-fit',
-      message: `The name was adjusted to ${(params.textHeightMm * styled.scale).toFixed(1)} mm high to keep the finished keychain within 120 mm.`,
+      message: `The name was adjusted to ${(params.textSizeMm * styled.scale).toFixed(1)} mm high to keep the finished keychain within 120 mm.`,
     });
   }
   if (styled.kind === 'articulated')

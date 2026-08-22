@@ -16,6 +16,7 @@ export type HostedProject = {
   created_at: string;
   updated_at: string;
 };
+export const HOSTED_PROJECT_SCHEMA_VERSION = 2;
 export { hostedMode } from '../config';
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 export class HostedApiError extends Error {
@@ -118,7 +119,7 @@ export const saveProject = (
     project: HostedProject;
   }>('/api/projects', {
     method: 'POST',
-    body: JSON.stringify({ name, params }),
+    body: JSON.stringify({ name, params, schema_version: HOSTED_PROJECT_SCHEMA_VERSION }),
   });
 };
 

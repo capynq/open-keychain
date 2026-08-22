@@ -215,6 +215,32 @@
   gap: 12px;
 }
 
+.randomize-header-button,
+.undo-header-button {
+  min-height: 32px;
+  border: 1px solid #cecbc2;
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: #fffdf8;
+  color: #303545;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.randomize-header-button:hover,
+.undo-header-button:hover,
+.randomize-header-button:focus-visible,
+.undo-header-button:focus-visible {
+  border-color: #ef815e;
+  color: #bf563f;
+}
+
+.randomize-header-button:disabled,
+.undo-header-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
 .language-picker select {
   height: 28px;
   border: 1px solid #cecbc2;

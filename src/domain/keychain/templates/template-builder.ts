@@ -359,7 +359,8 @@ const articulatedStyle = (wasm: GeometryWasm, input: StyleInput): ArticulatedBui
   const maxAngle = Math.min(50, Math.max(15, input.maxJointAngleDeg ?? 35));
   const motionAllowance = Math.sin((maxAngle * Math.PI) / 180) * neckWidth * 0.25;
   const chamberRadius = headRadius + clearance + motionAllowance;
-  const bossRadius = chamberRadius + minimumWall;
+  const bossRadius =
+    chamberRadius + minimumWall + Math.max(0, input.jointBossMm ?? 0) * MANIFOLD_SCALE;
   const minimumAxialWall = Math.max(650, bottomClearance * 2);
   const connectorThickness = Math.max(
     900,
@@ -404,7 +405,14 @@ const articulatedStyle = (wasm: GeometryWasm, input: StyleInput): ArticulatedBui
       structural = addJointBoss(wasm, structural, right.anchor, right.root, bossRadius);
     }
     if (index === 0) {
-      const next = ringAssembly(wasm, structural, input.holeDiameter, input.keyringWall, 'left');
+      const next = ringAssembly(
+        wasm,
+        structural,
+        input.holeDiameter,
+        input.keyringWall,
+        'left',
+        input.ringOffsetMm ?? 0,
+      );
       structural.delete();
       structural = next;
     }
@@ -560,6 +568,9 @@ const plantFoundation = (
   height: number,
   radius: number,
   accentEnabled: boolean,
+  bubbleLobeMm = 0,
+  tagTailMm = 0,
+  archCurveMm = 0,
 ): CrossSection => {
   const base = roundedRect(wasm, width, height, radius);
   if (!accentEnabled) return base;
@@ -594,7 +605,7 @@ const plantFoundation = (
     return result;
   }
   if (styleId === 'soft-tag') {
-    const accent = wasm.CrossSection.circle(accentRadius(0.48), 64).translate([
+    const accent = wasm.CrossSection.circle(accentRadius(0.48) + tagTailMm * 1000, 64).translate([
       bounds.max[0] - height * 0.28,
       bounds.max[1] - height * 0.28,
     ]);
@@ -605,11 +616,11 @@ const plantFoundation = (
   }
   if (styleId === 'bubble') {
     const bubbles = [
-      wasm.CrossSection.circle(accentRadius(0.44), 64).translate([
+      wasm.CrossSection.circle(accentRadius(0.44) + bubbleLobeMm * 1000, 64).translate([
         bounds.min[0] + height * 0.34,
         bounds.max[1] - height * 0.3,
       ]),
-      wasm.CrossSection.circle(Math.max(2200, height * 0.34), 64).translate([
+      wasm.CrossSection.circle(Math.max(2200, height * 0.34) + bubbleLobeMm * 1000, 64).translate([
         bounds.max[0] - height * 0.22,
         bounds.min[1] + height * 0.25,
       ]),
@@ -620,10 +631,10 @@ const plantFoundation = (
     return result;
   }
   if (styleId === 'arch') {
-    const arch = wasm.CrossSection.circle(Math.max(height, width * 0.22), 64).translate([
-      (bounds.min[0] + bounds.max[0]) / 2,
-      bounds.max[1] - height * 0.12,
-    ]);
+    const arch = wasm.CrossSection.circle(
+      Math.max(height, width * 0.22) + archCurveMm * 1000,
+      64,
+    ).translate([(bounds.min[0] + bounds.max[0]) / 2, bounds.max[1] - height * 0.12]);
     const result = union(wasm, [base, arch]);
     base.delete();
     arch.delete();
@@ -657,10 +668,16 @@ const plantLabelStyle = (wasm: GeometryWasm, input: StyleInput, styleId: StyleId
     foundationHeight,
     styleId === 'capsule' ? foundationHeight / 2 : radius,
     input.plantAccentEnabled ?? true,
+    input.bubbleLobeMm ?? 0,
+    input.tagTailMm ?? 0,
+    input.archCurveMm ?? 0,
   );
   const stakeTotal = Math.max(24000, (input.stakeLength ?? 48) * 1000);
   const tipHeight = Math.max(8000, Math.min(12000, stakeTotal * 0.16));
-  const stakeWidth = Math.max(6000, Math.min(8500, foundationWidth * 0.18));
+  const stakeWidth = Math.max(
+    6000,
+    Math.min(8500, foundationWidth * 0.18 + Math.max(0, input.stakeShoulderMm ?? 0) * 1000),
+  );
   const foundationBottom = -foundationHeight / 2;
   const foundationTop = foundationHeight / 2;
   const shaftTop = foundationTop + 1000;

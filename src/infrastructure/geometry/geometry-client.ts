@@ -11,15 +11,22 @@ import type { FontDefinition } from '../../domain/keychain/fonts/catalog';
 export class GeometryClient {
   private readonly worker: Worker;
   private nextRequestId = 1;
-  private latestParams: KeychainParams | undefined;
-  private latestFontDefinition: FontDefinition | undefined;
   private readonly registeredLocalFonts = new WeakSet<FontDefinition>();
-  private busy = false;
-  private resolveGeometry: ((result: GeometryResult) => void) | undefined;
-  private rejectGeometry: ((error: Error) => void) | undefined;
-  private resolveExport:
-    ((file: { filename: string; mimeType: string; data: ArrayBuffer }) => void) | undefined;
-  private rejectExport: ((error: Error) => void) | undefined;
+  private activePreviewRequestId: number | undefined;
+  private queuedPreview:
+    { params: KeychainParams; fontDefinition?: FontDefinition; requestId: number } | undefined;
+  private readonly pendingGeometry = new Map<
+    number,
+    { resolve: (result: GeometryResult) => void; reject: (error: Error) => void }
+  >();
+  private readonly pendingExports = new Map<
+    number,
+    {
+      resolve: (file: { filename: string; mimeType: string; data: ArrayBuffer }) => void;
+      reject: (error: Error) => void;
+    }
+  >();
+  private disposed = false;
   constructor() {
     this.worker = new Worker(new URL('./geometry-worker.ts', import.meta.url), { type: 'module' });
     this.worker.onmessage = (event: MessageEvent<WorkerResponse>) =>
@@ -27,17 +34,24 @@ export class GeometryClient {
     this.worker.postMessage({ type: 'warmup' } satisfies WorkerRequest);
   }
   request(params: KeychainParams, fontDefinition?: FontDefinition): Promise<GeometryResult> {
-    if (this.busy && this.resolveGeometry) {
-      this.latestParams = params;
-      this.latestFontDefinition = fontDefinition;
-      return new Promise((resolve, reject) => {
-        this.resolveGeometry = resolve;
-        this.rejectGeometry = reject;
-      });
+    const requestId = this.nextRequestId++;
+    const promise = new Promise<GeometryResult>((resolve, reject) => {
+      this.pendingGeometry.set(requestId, { resolve, reject });
+    });
+    if (this.activePreviewRequestId !== undefined) {
+      const stale = this.pendingGeometry.get(this.activePreviewRequestId);
+      stale?.reject(new Error('Preview generation superseded.'));
+      this.pendingGeometry.delete(this.activePreviewRequestId);
+      if (this.queuedPreview) {
+        const superseded = this.pendingGeometry.get(this.queuedPreview.requestId);
+        superseded?.reject(new Error('Preview generation superseded.'));
+        this.pendingGeometry.delete(this.queuedPreview.requestId);
+      }
+      this.queuedPreview = { params, fontDefinition, requestId };
+      return promise;
     }
-    this.latestParams = undefined;
-    this.latestFontDefinition = undefined;
-    return this.sendGenerate(params, fontDefinition);
+    this.sendGenerate(params, fontDefinition, requestId);
+    return promise;
   }
   export(
     params: KeychainParams,
@@ -51,8 +65,13 @@ export class GeometryClient {
     data: ArrayBuffer;
   }> {
     const requestId = this.nextRequestId++;
-    this.resolveExport = undefined;
-    this.rejectExport = undefined;
+    const promise = new Promise<{
+      filename: string;
+      mimeType: string;
+      data: ArrayBuffer;
+    }>((resolve, reject) => {
+      this.pendingExports.set(requestId, { resolve, reject });
+    });
     this.worker.postMessage({
       type: 'export',
       requestId,
@@ -62,64 +81,71 @@ export class GeometryClient {
       appearanceOverrides,
       fontDefinition: this.fontForWorker(fontDefinition),
     } satisfies WorkerRequest);
-    return new Promise((resolve, reject) => {
-      this.resolveExport = resolve;
-      this.rejectExport = reject;
-    });
+    return promise;
   }
   dispose(): void {
+    this.disposed = true;
+    const error = new Error('Geometry client disposed.');
+    for (const pending of this.pendingGeometry.values()) pending.reject(error);
+    for (const pending of this.pendingExports.values()) pending.reject(error);
+    this.pendingGeometry.clear();
+    this.pendingExports.clear();
     this.worker.terminate();
   }
   private sendGenerate(
     params: KeychainParams,
     fontDefinition?: FontDefinition,
-  ): Promise<GeometryResult> {
-    const requestId = this.nextRequestId++;
-    this.busy = true;
+    requestId = this.nextRequestId++,
+  ): void {
+    this.activePreviewRequestId = requestId;
     this.worker.postMessage({
       type: 'generate',
       requestId,
       params,
       fontDefinition: this.fontForWorker(fontDefinition),
     } satisfies WorkerRequest);
-    return new Promise((resolve, reject) => {
-      this.resolveGeometry = resolve;
-      this.rejectGeometry = reject;
-    });
   }
   private handleResponse(response: WorkerResponse): void {
+    if (this.disposed) return;
     if (response.type === 'geometry') {
-      this.busy = false;
-      this.resolveGeometry?.({ ...response.result, generationId: response.requestId });
-      this.resolveGeometry = undefined;
-      this.rejectGeometry = undefined;
-      const latest = this.latestParams;
+      const pending = this.pendingGeometry.get(response.requestId);
+      if (pending) {
+        pending.resolve({ ...response.result, generationId: response.requestId });
+        this.pendingGeometry.delete(response.requestId);
+      }
+      if (this.activePreviewRequestId === response.requestId) {
+        this.activePreviewRequestId = undefined;
+      }
+      const latest = this.queuedPreview;
       if (latest) {
-        const latestFontDefinition = this.latestFontDefinition;
-        this.latestParams = undefined;
-        this.latestFontDefinition = undefined;
-        this.sendGenerate(latest, latestFontDefinition);
+        this.queuedPreview = undefined;
+        this.sendGenerate(latest.params, latest.fontDefinition, latest.requestId);
       }
       return;
     }
     if (response.type === 'export') {
-      this.resolveExport?.({
+      const pending = this.pendingExports.get(response.requestId);
+      pending?.resolve({
         filename: response.filename,
         mimeType: response.mimeType,
         data: response.data,
       });
-      this.resolveExport = undefined;
-      this.rejectExport = undefined;
+      this.pendingExports.delete(response.requestId);
       return;
     }
     const error = new Error(response.message);
-    this.rejectGeometry?.(error);
-    this.rejectExport?.(error);
-    this.resolveGeometry = undefined;
-    this.rejectGeometry = undefined;
-    this.resolveExport = undefined;
-    this.rejectExport = undefined;
-    this.busy = false;
+    const geometry = this.pendingGeometry.get(response.requestId);
+    geometry?.reject(error);
+    this.pendingGeometry.delete(response.requestId);
+    const exportRequest = this.pendingExports.get(response.requestId);
+    exportRequest?.reject(error);
+    this.pendingExports.delete(response.requestId);
+    if (this.activePreviewRequestId === response.requestId) {
+      this.activePreviewRequestId = undefined;
+      const latest = this.queuedPreview;
+      this.queuedPreview = undefined;
+      if (latest) this.sendGenerate(latest.params, latest.fontDefinition, latest.requestId);
+    }
   }
 
   private fontForWorker(fontDefinition: FontDefinition | undefined): FontDefinition | undefined {

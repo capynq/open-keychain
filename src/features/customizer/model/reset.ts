@@ -3,7 +3,7 @@ import { DEFAULT_PARAMS, normalizeParams, type KeychainParams } from '../../../d
 export type CustomizerResetSection = 'name' | 'template' | 'style' | 'font' | 'shape';
 
 const SHAPE_DEFAULTS = {
-  textHeightMm: DEFAULT_PARAMS.textHeightMm,
+  textSizeMm: DEFAULT_PARAMS.textSizeMm,
   fontWeightMm: DEFAULT_PARAMS.fontWeightMm,
   baseThicknessMm: DEFAULT_PARAMS.baseThicknessMm,
   reliefDepthMm: DEFAULT_PARAMS.reliefDepthMm,
@@ -22,6 +22,13 @@ const SHAPE_DEFAULTS = {
   maxJointAngleDeg: DEFAULT_PARAMS.maxJointAngleDeg,
   minimumWallMm: DEFAULT_PARAMS.minimumWallMm,
   bottomClearanceMm: DEFAULT_PARAMS.bottomClearanceMm,
+  reliefHaloMm: DEFAULT_PARAMS.reliefHaloMm,
+  ringOffsetMm: DEFAULT_PARAMS.ringOffsetMm,
+  bubbleLobeMm: DEFAULT_PARAMS.bubbleLobeMm,
+  tagTailMm: DEFAULT_PARAMS.tagTailMm,
+  archCurveMm: DEFAULT_PARAMS.archCurveMm,
+  stakeShoulderMm: DEFAULT_PARAMS.stakeShoulderMm,
+  jointBossMm: DEFAULT_PARAMS.jointBossMm,
 } satisfies Partial<KeychainParams>;
 
 export const resetParamsForSection = (

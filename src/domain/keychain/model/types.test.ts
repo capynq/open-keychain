@@ -59,11 +59,11 @@ describe('keychain parameters', () => {
     const result = normalizeParams({
       ...DEFAULT_PARAMS,
       text: '  José   ',
-      textHeightMm: 100,
+      textSizeMm: 100,
       holeDiameterMm: 0,
     });
     expect(result.text).toBe('José');
-    expect(result.textHeightMm).toBe(30);
+    expect(result.textSizeMm).toBe(30);
     expect(result.holeDiameterMm).toBe(3);
     expect(result.letterSpacingMm).toBe(1);
     expect(result.plantAccentEnabled).toBe(true);
@@ -114,7 +114,7 @@ describe('keychain parameters', () => {
   });
   it('keeps the visible parameter matrix aligned with template and style capabilities', () => {
     const parameters: readonly CustomizerParameter[] = [
-      'textHeightMm',
+      'textSizeMm',
       'fontWeightMm',
       'baseThicknessMm',
       'reliefDepthMm',
@@ -146,7 +146,7 @@ describe('keychain parameters', () => {
     };
 
     expectActive('name-keychain', 'contour', [
-      'textHeightMm',
+      'textSizeMm',
       'fontWeightMm',
       'baseThicknessMm',
       'reliefDepthMm',
@@ -155,7 +155,7 @@ describe('keychain parameters', () => {
       'holeDiameterMm',
     ]);
     expectActive('articulated-name', 'contour', [
-      'textHeightMm',
+      'textSizeMm',
       'baseThicknessMm',
       'reliefDepthMm',
       'holeDiameterMm',
@@ -165,7 +165,7 @@ describe('keychain parameters', () => {
       'maxJointAngleDeg',
     ]);
     expectActive('nameplate', 'contour', [
-      'textHeightMm',
+      'textSizeMm',
       'fontWeightMm',
       'baseThicknessMm',
       'reliefDepthMm',
@@ -176,7 +176,7 @@ describe('keychain parameters', () => {
     ]);
 
     const plantParameters = [
-      'textHeightMm',
+      'textSizeMm',
       'fontWeightMm',
       'baseThicknessMm',
       'reliefDepthMm',

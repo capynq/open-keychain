@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS projects (
   name TEXT NOT NULL,
   params JSONB NOT NULL,
   thumbnail TEXT,
-  schema_version INTEGER NOT NULL DEFAULT 1,
+  schema_version INTEGER NOT NULL DEFAULT 2,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

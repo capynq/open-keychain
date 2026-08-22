@@ -10,19 +10,20 @@ import {
 } from './model/types';
 
 export type DesignDocument = {
-  version: 1;
+  /** Version 2 uses the textSizeMm parameter name. */
+  version: 2;
   params: KeychainParams;
   appearanceOverrides?: PrintAppearanceOverrides;
   fontFallback?: boolean;
 };
 
-const V2_PREFIX = 'v2.';
+const V3_PREFIX = 'v3.';
 const COMPACT_PARAM_KEYS: Record<keyof KeychainParams, string> = {
   text: 't',
   fontId: 'f',
   templateId: 'm',
   styleId: 's',
-  textHeightMm: 'h',
+  textSizeMm: 'h',
   fontWeightMm: 'w',
   baseThicknessMm: 'b',
   reliefDepthMm: 'r',
@@ -41,6 +42,13 @@ const COMPACT_PARAM_KEYS: Record<keyof KeychainParams, string> = {
   maxJointAngleDeg: 'x',
   minimumWallMm: 'u',
   bottomClearanceMm: 'o',
+  reliefHaloMm: 'y',
+  ringOffsetMm: 'z',
+  bubbleLobeMm: 'aa',
+  tagTailMm: 'ab',
+  archCurveMm: 'ac',
+  stakeShoulderMm: 'ad',
+  jointBossMm: 'ae',
 };
 const COMPACT_TO_PARAM = Object.fromEntries(
   Object.entries(COMPACT_PARAM_KEYS).map(([key, compact]) => [compact, key]),
@@ -104,7 +112,7 @@ const base64UrlToBytes = (encoded: string): Uint8Array => {
 
 export const encodeDesignDocument = (document: DesignDocument): string => {
   if (
-    document.version !== 1 ||
+    document.version !== 2 ||
     !isValidParams(document.params) ||
     (document.appearanceOverrides !== undefined && !isValidAppearance(document.appearanceOverrides))
   )
@@ -133,40 +141,17 @@ export const encodeDesignDocument = (document: DesignDocument): string => {
     };
   }
   if (safeDocument.fontFallback) compact.ff = true;
-  return `${V2_PREFIX}${bytesToBase64Url(new TextEncoder().encode(JSON.stringify(compact)))}`;
+  return `${V3_PREFIX}${bytesToBase64Url(new TextEncoder().encode(JSON.stringify(compact)))}`;
 };
 
 export const decodeDesignDocument = (encoded: string): DesignDocument | undefined => {
   try {
     if (encoded.length > 24_000) return undefined;
-    const isV2 = encoded.startsWith(V2_PREFIX);
-    const payload = isV2
-      ? encoded.slice(V2_PREFIX.length)
-      : encoded.startsWith('v1.')
-        ? encoded.slice(3)
-        : encoded;
+    const isV3 = encoded.startsWith(V3_PREFIX);
+    if (!isV3) return undefined;
+    const payload = encoded.slice(V3_PREFIX.length);
     const parsed: unknown = JSON.parse(new TextDecoder().decode(base64UrlToBytes(payload)));
-    if (isV2) return decodeV2Document(parsed);
-    if (
-      !isRecord(parsed) ||
-      parsed.version !== 1 ||
-      Object.keys(parsed).some(
-        (key) => !['version', 'params', 'appearanceOverrides', 'fontFallback'].includes(key),
-      ) ||
-      !isValidParams(parsed.params) ||
-      (parsed.appearanceOverrides !== undefined && !isValidAppearance(parsed.appearanceOverrides))
-    )
-      return undefined;
-    if (parsed.fontFallback !== undefined && typeof parsed.fontFallback !== 'boolean')
-      return undefined;
-    const params = parsed.params as KeychainParams;
-    if (!FONT_CATALOG.some((font) => font.id === params.fontId)) return undefined;
-    return {
-      version: 1,
-      params: normalizeParams(params),
-      ...(parsed.appearanceOverrides ? { appearanceOverrides: parsed.appearanceOverrides } : {}),
-      ...(parsed.fontFallback ? { fontFallback: true } : {}),
-    };
+    return decodeV2Document(parsed);
   } catch {
     return undefined;
   }
@@ -202,7 +187,7 @@ const decodeV2Document = (parsed: unknown): DesignDocument | undefined => {
   if (parsed.ff !== undefined && typeof parsed.ff !== 'boolean') return undefined;
   if (!FONT_CATALOG.some((font) => font.id === params.fontId)) return undefined;
   return {
-    version: 1,
+    version: 2,
     params: normalizeParams(params),
     ...(appearanceOverrides ? { appearanceOverrides } : {}),
     ...(parsed.ff ? { fontFallback: true } : {}),

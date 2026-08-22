@@ -7,7 +7,7 @@ export type KeychainParams = {
   fontId: string;
   templateId: TemplateId;
   styleId: StyleId;
-  textHeightMm: number;
+  textSizeMm: number;
   fontWeightMm: number;
   baseThicknessMm: number;
   reliefDepthMm: number;
@@ -26,6 +26,13 @@ export type KeychainParams = {
   maxJointAngleDeg: number;
   minimumWallMm: number;
   bottomClearanceMm: number;
+  reliefHaloMm: number;
+  ringOffsetMm: number;
+  bubbleLobeMm: number;
+  tagTailMm: number;
+  archCurveMm: number;
+  stakeShoulderMm: number;
+  jointBossMm: number;
 };
 export type NormalizedParams = KeychainParams;
 export type KeyringMetrics = {
@@ -202,7 +209,7 @@ export const DEFAULT_PARAMS: KeychainParams = {
   fontId: 'nunito',
   templateId: 'name-keychain',
   styleId: 'contour',
-  textHeightMm: 20,
+  textSizeMm: 20,
   fontWeightMm: 0.6,
   baseThicknessMm: 2.4,
   reliefDepthMm: 1,
@@ -221,6 +228,13 @@ export const DEFAULT_PARAMS: KeychainParams = {
   maxJointAngleDeg: 35,
   minimumWallMm: 1.2,
   bottomClearanceMm: 0.25,
+  reliefHaloMm: 0,
+  ringOffsetMm: 0,
+  bubbleLobeMm: 0,
+  tagTailMm: 0,
+  archCurveMm: 0,
+  stakeShoulderMm: 0,
+  jointBossMm: 0,
 };
 export const normalizeParams = (params: KeychainParams): NormalizedParams => {
   const text = params.text.normalize('NFC').trim().replace(/\s+/g, ' ');
@@ -233,7 +247,7 @@ export const normalizeParams = (params: KeychainParams): NormalizedParams => {
     ...params,
     text,
     templateId: params.templateId ?? 'name-keychain',
-    textHeightMm: clamp(params.textHeightMm, 12, 30),
+    textSizeMm: clamp(params.textSizeMm, 12, 30),
     fontWeightMm: clamp(params.fontWeightMm ?? 0, 0, 1.5),
     baseThicknessMm,
     reliefDepthMm: clamp(params.reliefDepthMm, 0.6, 2),
@@ -256,6 +270,33 @@ export const normalizeParams = (params: KeychainParams): NormalizedParams => {
     maxJointAngleDeg: clamp(params.maxJointAngleDeg ?? 35, 15, 50),
     minimumWallMm: clamp(params.minimumWallMm ?? 1.2, 0.8, 3),
     bottomClearanceMm: clamp(params.bottomClearanceMm ?? 0.25, 0.15, 0.6),
+    reliefHaloMm:
+      params.templateId === 'name-keychain' || params.templateId === 'nameplate'
+        ? clamp(params.reliefHaloMm ?? 0, 0, 2)
+        : 0,
+    ringOffsetMm:
+      params.templateId === 'name-keychain' || params.templateId === 'articulated-name'
+        ? clamp(params.ringOffsetMm ?? 0, -3, 3)
+        : 0,
+    bubbleLobeMm:
+      params.styleId === 'bubble' &&
+      (params.templateId === 'name-keychain' || params.templateId === 'plant-label')
+        ? clamp(params.bubbleLobeMm ?? 0, 0, 4)
+        : 0,
+    tagTailMm:
+      params.styleId === 'soft-tag' &&
+      (params.templateId === 'name-keychain' || params.templateId === 'plant-label')
+        ? clamp(params.tagTailMm ?? 0, 0, 4)
+        : 0,
+    archCurveMm:
+      params.styleId === 'arch' &&
+      (params.templateId === 'name-keychain' || params.templateId === 'plant-label')
+        ? clamp(params.archCurveMm ?? 0, 0, 6)
+        : 0,
+    stakeShoulderMm:
+      params.templateId === 'plant-label' ? clamp(params.stakeShoulderMm ?? 0, 0, 8) : 0,
+    jointBossMm:
+      params.templateId === 'articulated-name' ? clamp(params.jointBossMm ?? 0, 0, 3) : 0,
   };
 };
 export const clamp = (value: number, min: number, max: number): number => {

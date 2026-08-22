@@ -23,12 +23,18 @@ export const useCustomizerPageState = (
     initialAppearanceOverrides ?? { version: 1 },
   );
   const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'manual' | 'failed'>('idle');
+  const [randomizing, setRandomizing] = useState(false);
+  const [randomizeFailure, setRandomizeFailure] = useState(false);
   const { track } = useAnalytics();
   const customizer = useCustomizerParams(initialParams);
   const geometry = useGeometryGeneration(customizer.params, customizer.selectedFont);
-  const hosted = useHostedAccount(customizer.params, (projectParams) => {
-    customizer.setParams(normalizeParams({ ...DEFAULT_PARAMS, ...projectParams }));
-  });
+  const hosted = useHostedAccount(
+    customizer.params,
+    (projectParams) => {
+      customizer.setParams(normalizeParams({ ...DEFAULT_PARAMS, ...projectParams }));
+    },
+    locale,
+  );
   const exportState = useExportActions({
     geometry,
     params: customizer.params,
@@ -37,6 +43,39 @@ export const useCustomizerPageState = (
   });
   const guide = useCustomizerGuide();
   const lastRouteInputKey = useRef(routeInputKey);
+  const randomizeGeneration = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (!randomizing || geometry.busy) return;
+    const generationSettled =
+      geometry.error !== undefined || geometry.result?.generationId !== randomizeGeneration.current;
+    if (!generationSettled) return;
+
+    if ((geometry.error || geometry.result?.printable === false) && customizer.canUndo) {
+      window.setTimeout(() => {
+        customizer.undo();
+        setRandomizeFailure(true);
+      }, 0);
+    }
+
+    const timer = window.setTimeout(() => setRandomizing(false), 0);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    customizer,
+    geometry.busy,
+    geometry.error,
+    geometry.result?.generationId,
+    geometry.result?.printable,
+    randomizing,
+  ]);
+
+  useEffect(() => {
+    if (!randomizeFailure) return undefined;
+    const timer = window.setTimeout(() => setRandomizeFailure(false), 4_000);
+
+    return () => window.clearTimeout(timer);
+  }, [randomizeFailure]);
 
   useEffect(() => {
     if (routeInputKey === lastRouteInputKey.current) return;
@@ -59,7 +98,7 @@ export const useCustomizerPageState = (
 
       url.searchParams.set(
         'design',
-        encodeDesignDocument({ version: 1, params: customizer.params, appearanceOverrides }),
+        encodeDesignDocument({ version: 2, params: customizer.params, appearanceOverrides }),
       );
       const value = url.toString();
       if (navigator.clipboard?.writeText) {
@@ -117,6 +156,19 @@ export const useCustomizerPageState = (
     }
   }, [customizer.params.templateId, geometry.error, geometry.result?.printable, locale, track]);
 
+  const randomize = (): void => {
+    if (randomizing) return;
+    randomizeGeneration.current = geometry.result?.generationId;
+    setRandomizing(true);
+    setRandomizeFailure(false);
+    customizer.randomize();
+  };
+
+  const undo = (): void => {
+    if (randomizing) return;
+    customizer.undo();
+  };
+
   useEffect(() => {
     if (!exportOpen) return undefined;
     const closeOnEscape = (event: KeyboardEvent): void => {
@@ -140,6 +192,10 @@ export const useCustomizerPageState = (
     setAppearanceOverrides,
     shareDesign,
     shareStatus,
+    randomizing,
+    randomizeFailure,
+    randomize,
+    undo,
     status: previewStatus(geometry, locale),
     modelInfo: {
       template: templateName(locale, customizer.activeTemplate.id, customizer.activeTemplate.name),

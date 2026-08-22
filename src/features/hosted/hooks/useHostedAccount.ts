@@ -11,6 +11,8 @@ import {
 } from '../api/hosted-api';
 import { hostedMode } from '../config';
 import { FONT_CATALOG, isLocalFontId, type KeychainParams } from '../../../domain/keychain';
+import { HOSTED_PROJECT_SCHEMA_VERSION } from '../api/hosted-api';
+import { t, type Locale } from '../../../infrastructure/i18n';
 
 export type HostedAccountState = {
   account: HostedUser | undefined;
@@ -36,6 +38,7 @@ export type HostedAccountState = {
 export const useHostedAccount = (
   params: KeychainParams,
   onLoadProject: (params: KeychainParams) => void,
+  locale: Locale = 'en',
 ): HostedAccountState => {
   const [account, setAccount] = useState<HostedUser>();
   const [projects, setProjects] = useState<HostedProject[]>([]);
@@ -101,6 +104,11 @@ export const useHostedAccount = (
   };
 
   const loadProject = (project: HostedProject): void => {
+    if (project.schema_version !== HOSTED_PROJECT_SCHEMA_VERSION) {
+      setAuthError(t(locale, 'projectOutdated'));
+      setAccountOpen(true);
+      return;
+    }
     onLoadProject(project.params as KeychainParams);
     setAccountOpen(false);
   };

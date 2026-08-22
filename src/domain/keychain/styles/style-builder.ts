@@ -34,6 +34,13 @@ export type StyleInput = {
   articulatedOutlineExpansionMm?: number;
   constraints?: GeometryConstraints;
   printProfile?: PrintProfile;
+  reliefHaloMm?: number;
+  ringOffsetMm?: number;
+  bubbleLobeMm?: number;
+  tagTailMm?: number;
+  archCurveMm?: number;
+  stakeShoulderMm?: number;
+  jointBossMm?: number;
 };
 export type StyleBuild = {
   backing: CrossSection;
@@ -145,6 +152,7 @@ export const ringAssembly = (
   holeDiameter: number,
   wall: number,
   side: 'left' | 'right' = 'left',
+  offsetMm = 0,
 ): CrossSection => {
   const bounds = sectionBounds(base);
   const outerRadius = holeDiameter / 2 + wall;
@@ -155,7 +163,7 @@ export const ringAssembly = (
     side === 'left'
       ? anchor[0] - outerRadius + Math.min(1600, outerRadius * 0.34)
       : anchor[0] + outerRadius - Math.min(1600, outerRadius * 0.34);
-  const center: Vec2 = [x, anchor[1]];
+  const center: Vec2 = [x, anchor[1] + offsetMm * 1000];
   const outer = wasm.CrossSection.circle(outerRadius, 96).translate(center);
   const rootHeight = Math.min(
     bounds.max[1] - bounds.min[1],
@@ -197,14 +205,32 @@ export const finishStyle = (
   attachKeyring = true,
 ): StyleBuild => {
   const textInset = Math.max(600, input.textInset ?? input.padding);
-  const support = relief.offset(Math.max(600, Math.min(textInset, 1200)), 'Round', 2, 64);
+  const support = relief.offset(
+    Math.max(
+      600,
+      Math.min(
+        textInset + Math.max(0, input.reliefHaloMm ?? 0) * 1000,
+        1200 + Math.max(0, input.reliefHaloMm ?? 0) * 1000,
+      ),
+    ),
+    'Round',
+    2,
+    64,
+  );
   const joined = union(wasm, [backing, support]);
   const combined = joined.simplify(20);
   backing.delete();
   support.delete();
   joined.delete();
   const result = attachKeyring
-    ? ringAssembly(wasm, combined, input.holeDiameter, input.keyringWall, side)
+    ? ringAssembly(
+        wasm,
+        combined,
+        input.holeDiameter,
+        input.keyringWall,
+        side,
+        input.ringOffsetMm ?? 0,
+      )
     : combined;
   if (result !== combined) combined.delete();
   return { backing: result, relief, recesses };
@@ -224,10 +250,10 @@ export const buildStyle = (wasm: GeometryWasm, styleId: StyleId, input: StyleInp
   if (styleId === 'soft-tag') {
     const plate = plateStyle(wasm, input, 3500);
     const bounds = sectionBounds(plate);
-    const accent = wasm.CrossSection.circle(3400, 64).translate([
-      bounds.max[0] - 3000,
-      bounds.max[1] - 3000,
-    ]);
+    const accent = wasm.CrossSection.circle(
+      3400 + Math.max(0, input.tagTailMm ?? 0) * 1000,
+      64,
+    ).translate([bounds.max[0] - 3000, bounds.max[1] - 3000]);
     const result = union(wasm, [plate, accent]);
     plate.delete();
     accent.delete();
@@ -237,14 +263,14 @@ export const buildStyle = (wasm: GeometryWasm, styleId: StyleId, input: StyleInp
     const backing = input.text.offset(textInset, 'Round', 2, 64);
     const bounds = sectionBounds(backing);
     const bubbles = [
-      wasm.CrossSection.circle(Math.max(3000, input.padding + 500), 64).translate([
-        bounds.min[0] + 1000,
-        bounds.min[1] + 1000,
-      ]),
-      wasm.CrossSection.circle(Math.max(3000, input.padding + 500), 64).translate([
-        bounds.max[0] - 1000,
-        bounds.max[1] - 1000,
-      ]),
+      wasm.CrossSection.circle(
+        Math.max(3000, input.padding + 500 + Math.max(0, input.bubbleLobeMm ?? 0) * 1000),
+        64,
+      ).translate([bounds.min[0] + 1000, bounds.min[1] + 1000]),
+      wasm.CrossSection.circle(
+        Math.max(3000, input.padding + 500 + Math.max(0, input.bubbleLobeMm ?? 0) * 1000),
+        64,
+      ).translate([bounds.max[0] - 1000, bounds.max[1] - 1000]),
     ];
     const joined = union(wasm, [backing, ...bubbles]);
     const decorated = joined.simplify(20);
@@ -258,7 +284,10 @@ export const buildStyle = (wasm: GeometryWasm, styleId: StyleId, input: StyleInp
     const width = Math.max(textWidth, 1);
     const warp = (point: Vec2) => {
       const normalized = (point[0] - centerX) / (width / 2);
-      point[1] += Math.max(1500, Math.min(5000, textHeight * 0.18)) * (1 - normalized * normalized);
+      point[1] +=
+        (Math.max(1500, Math.min(5000, textHeight * 0.18)) +
+          Math.max(0, input.archCurveMm ?? 0) * 1000) *
+        (1 - normalized * normalized);
     };
     const relief = input.text.warp(warp);
     const backing = relief.offset(textInset, 'Round', 2, 64);

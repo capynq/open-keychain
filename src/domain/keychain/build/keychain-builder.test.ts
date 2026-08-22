@@ -214,7 +214,7 @@ describe('finished keychain geometry', () => {
     ];
     const variants = [
       {
-        textHeightMm: 12,
+        textSizeMm: 12,
         fontWeightMm: 0,
         baseThicknessMm: 1.6,
         reliefDepthMm: 0.6,
@@ -223,7 +223,7 @@ describe('finished keychain geometry', () => {
         letterSpacingMm: 0,
       },
       {
-        textHeightMm: 30,
+        textSizeMm: 30,
         fontWeightMm: 1.5,
         baseThicknessMm: 4,
         reliefDepthMm: 2,
@@ -292,8 +292,8 @@ describe('finished keychain geometry', () => {
       {
         label: 'name height',
         base: standard,
-        low: { textHeightMm: 12 },
-        high: { textHeightMm: 30 },
+        low: { textSizeMm: 12 },
+        high: { textSizeMm: 30 },
       },
       {
         label: 'font weight',
@@ -334,8 +334,8 @@ describe('finished keychain geometry', () => {
       {
         label: 'articulated name height',
         base: articulated,
-        low: { textHeightMm: 12 },
-        high: { textHeightMm: 30 },
+        low: { textSizeMm: 12 },
+        high: { textSizeMm: 30 },
       },
       {
         label: 'articulated base',
@@ -382,8 +382,8 @@ describe('finished keychain geometry', () => {
       {
         label: 'nameplate height',
         base: nameplate,
-        low: { textHeightMm: 12 },
-        high: { textHeightMm: 30 },
+        low: { textSizeMm: 12 },
+        high: { textSizeMm: 30 },
       },
       {
         label: 'nameplate weight',
@@ -427,7 +427,7 @@ describe('finished keychain geometry', () => {
         low: { nameplateEmbedMm: 0.2 },
         high: { nameplateEmbedMm: 1.8 },
       },
-      { label: 'plant height', base: plant, low: { textHeightMm: 12 }, high: { textHeightMm: 30 } },
+      { label: 'plant height', base: plant, low: { textSizeMm: 12 }, high: { textSizeMm: 30 } },
       { label: 'plant weight', base: plant, low: { fontWeightMm: 0 }, high: { fontWeightMm: 1.5 } },
       {
         label: 'plant base',
@@ -568,7 +568,7 @@ describe('finished keychain geometry', () => {
       ...DEFAULT_PARAMS,
       fontId: 'comforter-brush',
       text: 'ВЛАДИСЛАВА',
-      textHeightMm: 20,
+      textSizeMm: 20,
       fontWeightMm: 0,
     });
     expect(result.printable, JSON.stringify(result.issues)).toBe(true);
@@ -684,7 +684,7 @@ describe('finished keychain geometry', () => {
       fontId: 'bungee',
       styleId: 'bubble',
       text: 'NIKITA',
-      textHeightMm: 30,
+      textSizeMm: 30,
     });
     expect(result.printable, JSON.stringify(result.issues)).toBe(true);
     expect(result.dimensions.widthMm).toBeLessThanOrEqual(120.1);
@@ -699,7 +699,7 @@ describe('finished keychain geometry', () => {
       fontId: 'bungee',
       styleId: 'bubble',
       text: 'WWWWWWWWWWWWWWWWWWWWWWWW',
-      textHeightMm: 12,
+      textSizeMm: 12,
     });
     expect(result.printable).toBe(false);
     expect(result.issues).toContainEqual(

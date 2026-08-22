@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import {
   FONT_CATALOG,
   articulatedFallbackFont,
@@ -23,6 +23,7 @@ import { DEFAULT_PARAMS, type KeychainParams, type TemplateId } from '../../../d
 import { STYLE_CATALOG, TEMPLATE_CATALOG } from '../../../domain/keychain';
 import type { FontNotice } from '../model/customizer-types';
 import { resetParamsForSection, type CustomizerResetSection } from '../model/reset';
+import { randomizeParams, type RandomSource } from '../model/randomizer';
 
 export const useCustomizerParams = (
   initialParams?: KeychainParams,
@@ -51,11 +52,21 @@ export const useCustomizerParams = (
   showsParameter: (parameter: CustomizerParameter) => boolean;
   rangeFor: (parameter: ShapeParameter) => ParameterRange;
   setParams: Dispatch<SetStateAction<KeychainParams>>;
+  randomize: (random?: RandomSource) => void;
+  undo: () => void;
+  canUndo: boolean;
 } => {
   const [params, setParams] = useState<KeychainParams>(() => ({
     ...DEFAULT_PARAMS,
     ...initialParams,
   }));
+  const previousParams = useRef<KeychainParams | undefined>(undefined);
+  const [canUndo, setCanUndo] = useState(false);
+  const setParamsDirect: Dispatch<SetStateAction<KeychainParams>> = (next) => {
+    previousParams.current = undefined;
+    setCanUndo(false);
+    setParams(next);
+  };
 
   const [fontNotice, setFontNotice] = useState<FontNotice>();
   const [googleFonts, setGoogleFonts] = useState<FontDefinition[]>([]);
@@ -121,7 +132,7 @@ export const useCustomizerParams = (
 
   const update = <K extends keyof KeychainParams>(key: K, value: KeychainParams[K]): void => {
     setFontNotice(undefined);
-    setParams((current) => ({ ...current, [key]: value }));
+    setParamsDirect((current) => ({ ...current, [key]: value }));
   };
 
   const updateText = (text: string): void => {
@@ -138,12 +149,16 @@ export const useCustomizerParams = (
         : allFonts.find((font) => fontSupportsText(font, text));
     if (replacement)
       setFontNotice({ font: currentFont.name, replacement: replacement.name, articulated });
-    setParams((current) => ({ ...current, text, fontId: replacement?.id ?? current.fontId }));
+    setParamsDirect((current) => ({
+      ...current,
+      text,
+      fontId: replacement?.id ?? current.fontId,
+    }));
   };
 
   const updateBackingSize = (value: number): void => {
     setFontNotice(undefined);
-    setParams((current) => ({
+    setParamsDirect((current) => ({
       ...current,
       paddingMm: value,
       edgeInsetMm: value,
@@ -164,7 +179,7 @@ export const useCustomizerParams = (
         replacement: previewReplacement.name,
         articulated: true,
       });
-    setParams((current) => {
+    setParamsDirect((current) => {
       const currentFont =
         allFonts.find((font) => font.id === current.fontId) ?? fontDefinition(current.fontId);
       const replacement =
@@ -186,12 +201,12 @@ export const useCustomizerParams = (
 
   const resetSection = (section: CustomizerResetSection): void => {
     setFontNotice(undefined);
-    setParams((current) => resetParamsForSection(current, section));
+    setParamsDirect((current) => resetParamsForSection(current, section));
   };
 
   const reset = (): void => {
     setFontNotice(undefined);
-    setParams({ ...DEFAULT_PARAMS });
+    setParamsDirect({ ...DEFAULT_PARAMS });
   };
   const importLocalFonts = async (files: FileList | File[]): Promise<void> => {
     const imported = await localStore.importFiles(files);
@@ -215,7 +230,8 @@ export const useCustomizerParams = (
   };
   const removeLocalFont = async (id: string): Promise<void> => {
     await localStore.remove(id);
-    if (params.fontId === id) setParams((current) => ({ ...current, fontId: FONT_CATALOG[0].id }));
+    if (params.fontId === id)
+      setParamsDirect((current) => ({ ...current, fontId: FONT_CATALOG[0].id }));
     setLocalFonts((current) => current.filter((item) => item.id !== id));
   };
 
@@ -243,7 +259,23 @@ export const useCustomizerParams = (
     reset,
     showsParameter: (parameter) => hasActiveParameter(params, parameter),
     rangeFor: (parameter) => parameterRange(params, parameter),
-    setParams,
+    setParams: setParamsDirect,
+    randomize: (random) =>
+      setParams((current) => {
+        const next = randomizeParams(current, { random, fonts: allFonts });
+
+        previousParams.current = current;
+        setCanUndo(true);
+        return next;
+      }),
+    undo: () => {
+      const previous = previousParams.current;
+      if (!previous) return;
+      previousParams.current = undefined;
+      setCanUndo(false);
+      setParams(previous);
+    },
+    canUndo,
   };
 };
 

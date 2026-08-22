@@ -61,25 +61,33 @@ export const CustomizerPage = ({
         exportOpen={state.exportOpen}
         onExportOpen={() => state.setExportOpen(true)}
         onShare={() => void state.shareDesign()}
+        onRandomize={state.randomize}
+        onUndo={state.undo}
+        canUndo={state.customizer.canUndo}
+        randomizing={state.randomizing}
         hosted={state.hosted}
         currentParams={state.customizer.params}
       />
-      {(hasInvalidDesign || state.shareStatus !== 'idle') &&
+      {(hasInvalidDesign || state.shareStatus !== 'idle' || state.randomizeFailure) &&
         (() => {
           const variant: ToastVariant = hasInvalidDesign
             ? 'error'
-            : state.shareStatus === 'failed'
+            : state.randomizeFailure
               ? 'error'
-              : state.shareStatus === 'manual'
-                ? 'manual'
-                : 'success';
+              : state.shareStatus === 'failed'
+                ? 'error'
+                : state.shareStatus === 'manual'
+                  ? 'manual'
+                  : 'success';
           const message = hasInvalidDesign
             ? t(locale, 'shareInvalid')
-            : state.shareStatus === 'failed'
-              ? t(locale, 'shareFailed')
-              : state.shareStatus === 'manual'
-                ? t(locale, 'shareManual')
-                : t(locale, 'shareCopied');
+            : state.randomizeFailure
+              ? t(locale, 'randomizeFailed')
+              : state.shareStatus === 'failed'
+                ? t(locale, 'shareFailed')
+                : state.shareStatus === 'manual'
+                  ? t(locale, 'shareManual')
+                  : t(locale, 'shareCopied');
 
           return <Toast variant={variant}>{message}</Toast>;
         })()}

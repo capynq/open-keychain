@@ -206,8 +206,8 @@ export const createApp = (pool: pg.Pool, config: ServerConfig): FastifyInstance 
     const validationError = projectBodyError(body);
     if (validationError) return reply.status(400).send({ error: validationError });
     const result = await pool.query(
-      `INSERT INTO projects(id, user_id, name, params, thumbnail)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO projects(id, user_id, name, params, thumbnail, schema_version)
+       VALUES ($1, $2, $3, $4, $5, 2)
        RETURNING id, name, params, thumbnail, schema_version, created_at, updated_at`,
       [
         randomUUID(),

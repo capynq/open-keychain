@@ -17,6 +17,10 @@ export const AppHeader = ({
   exportOpen = false,
   onExportOpen,
   onShare,
+  onRandomize,
+  onUndo,
+  canUndo,
+  randomizing,
   hosted,
   currentParams,
 }: {
@@ -26,6 +30,10 @@ export const AppHeader = ({
   exportOpen?: boolean;
   onExportOpen?: () => void;
   onShare?: () => void;
+  onRandomize?: () => void;
+  onUndo?: () => void;
+  canUndo?: boolean;
+  randomizing?: boolean;
   hosted?: HostedAccountState;
   currentParams?: KeychainParams;
 }) =>
@@ -39,6 +47,10 @@ export const AppHeader = ({
         exportOpen={exportOpen}
         onExportOpen={onExportOpen}
         onShare={onShare}
+        onRandomize={onRandomize}
+        onUndo={onUndo}
+        canUndo={canUndo}
+        randomizing={randomizing}
         hosted={hosted}
         currentParams={currentParams}
       />

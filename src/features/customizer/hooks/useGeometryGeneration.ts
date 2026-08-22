@@ -49,6 +49,7 @@ export const useGeometryGeneration = (
             setBusy(false);
           })
           .catch((cause: Error) => {
+            if (cause.message === 'Preview generation superseded.') return;
             setBusy(false);
             setError(cause.message);
           });

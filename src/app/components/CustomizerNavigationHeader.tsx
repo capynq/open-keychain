@@ -14,6 +14,10 @@ export const CustomizerNavigationHeader = ({
   exportOpen,
   onExportOpen,
   onShare,
+  onRandomize,
+  onUndo,
+  canUndo,
+  randomizing = false,
   hosted,
   currentParams,
 }: {
@@ -22,6 +26,10 @@ export const CustomizerNavigationHeader = ({
   exportOpen: boolean;
   onExportOpen?: () => void;
   onShare?: () => void;
+  onRandomize?: () => void;
+  onUndo?: () => void;
+  canUndo?: boolean;
+  randomizing?: boolean;
   hosted?: HostedAccountState;
   currentParams?: KeychainParams;
 }) => (
@@ -42,6 +50,24 @@ export const CustomizerNavigationHeader = ({
       </button>
     </div>
     <div className="topbar-actions">
+      <button
+        type="button"
+        className="randomize-header-button"
+        onClick={onRandomize}
+        disabled={randomizing}
+      >
+        {t(locale, randomizing ? 'randomizing' : 'randomize')}
+      </button>
+      {canUndo && (
+        <button
+          type="button"
+          className="undo-header-button"
+          onClick={onUndo}
+          disabled={randomizing}
+        >
+          {t(locale, 'undo')}
+        </button>
+      )}
       <LanguagePicker locale={locale} onLocaleChange={onLocaleChange} />
       {hostedMode && hosted && (
         <Link className="header-profile-link" to={PROFILE_ROUTE} state={{ currentParams }}>

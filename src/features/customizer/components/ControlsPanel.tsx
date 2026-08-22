@@ -650,12 +650,12 @@ export const ControlsPanel = ({
           <ResetIconButton label={t(locale, 'resetShape')} onClick={() => resetSection('shape')} />
         </div>
         <div className="range-grid">
-          {showsParameter('textHeightMm') && (
+          {showsParameter('textSizeMm') && (
             <RangeControl
-              label={t(locale, 'nameHeight')}
-              value={params.textHeightMm}
-              {...rangeFor('textHeightMm')}
-              onChange={(value) => update('textHeightMm', value)}
+              label={t(locale, 'textSize')}
+              value={params.textSizeMm}
+              {...rangeFor('textSizeMm')}
+              onChange={(value) => update('textSizeMm', value)}
             />
           )}
           {showsParameter('fontWeightMm') && (
@@ -778,6 +778,62 @@ export const ControlsPanel = ({
               />
               <span>{t(locale, 'plantAccents')}</span>
             </label>
+          )}
+          {showsParameter('reliefHaloMm') && (
+            <RangeControl
+              label={t(locale, 'reliefHalo')}
+              value={params.reliefHaloMm}
+              {...rangeFor('reliefHaloMm')}
+              onChange={(value) => update('reliefHaloMm', value)}
+            />
+          )}
+          {showsParameter('ringOffsetMm') && (
+            <RangeControl
+              label={t(locale, 'ringOffset')}
+              value={params.ringOffsetMm}
+              {...rangeFor('ringOffsetMm')}
+              onChange={(value) => update('ringOffsetMm', value)}
+            />
+          )}
+          {showsParameter('bubbleLobeMm') && (
+            <RangeControl
+              label={t(locale, 'bubbleLobe')}
+              value={params.bubbleLobeMm}
+              {...rangeFor('bubbleLobeMm')}
+              onChange={(value) => update('bubbleLobeMm', value)}
+            />
+          )}
+          {showsParameter('tagTailMm') && (
+            <RangeControl
+              label={t(locale, 'tagTail')}
+              value={params.tagTailMm}
+              {...rangeFor('tagTailMm')}
+              onChange={(value) => update('tagTailMm', value)}
+            />
+          )}
+          {showsParameter('archCurveMm') && (
+            <RangeControl
+              label={t(locale, 'archCurve')}
+              value={params.archCurveMm}
+              {...rangeFor('archCurveMm')}
+              onChange={(value) => update('archCurveMm', value)}
+            />
+          )}
+          {showsParameter('stakeShoulderMm') && (
+            <RangeControl
+              label={t(locale, 'stakeShoulder')}
+              value={params.stakeShoulderMm}
+              {...rangeFor('stakeShoulderMm')}
+              onChange={(value) => update('stakeShoulderMm', value)}
+            />
+          )}
+          {showsParameter('jointBossMm') && (
+            <RangeControl
+              label={t(locale, 'jointBoss')}
+              value={params.jointBossMm}
+              {...rangeFor('jointBossMm')}
+              onChange={(value) => update('jointBossMm', value)}
+            />
           )}
         </div>
       </section>

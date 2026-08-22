@@ -8,7 +8,7 @@ const changedParams = (): KeychainParams => ({
   fontId: 'caveat',
   templateId: 'plant-label',
   styleId: 'bubble',
-  textHeightMm: 30,
+  textSizeMm: 30,
   fontWeightMm: 1.5,
   baseThicknessMm: 1.6,
   stakeLengthMm: 100,
@@ -50,7 +50,7 @@ describe('customizer section resets', () => {
       'shape',
     );
 
-    expect(result.textHeightMm).toBe(DEFAULT_PARAMS.textHeightMm);
+    expect(result.textSizeMm).toBe(DEFAULT_PARAMS.textSizeMm);
     expect(result.stakeLengthMm).toBe(DEFAULT_PARAMS.stakeLengthMm);
     expect(result.plantAccentEnabled).toBe(DEFAULT_PARAMS.plantAccentEnabled);
     expect(result.baseThicknessMm).toBe(3.4);

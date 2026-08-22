@@ -1,0 +1,42 @@
+import { describe, expect, it } from 'vitest';
+import { DEFAULT_PARAMS } from '../../../domain/keychain';
+import { randomizeParams } from './randomizer';
+
+describe('randomizeParams', () => {
+  it('uses an injectable bounded source and keeps the design valid', () => {
+    const values = [0, 0.999999, 0.25, 0.75];
+    let index = 0;
+    const result = randomizeParams(
+      { ...DEFAULT_PARAMS, text: 'Mila' },
+      { random: () => values[index++ % values.length] },
+    );
+
+    expect(result.text).toBe('Mila');
+    expect(result.templateId).toBe('articulated-name');
+    expect(result.textSizeMm).toBeGreaterThanOrEqual(12);
+    expect(result.textSizeMm).toBeLessThanOrEqual(30);
+    expect(result.baseThicknessMm).toBeGreaterThanOrEqual(3.4);
+  });
+
+  it('does not randomize shape controls when requested', () => {
+    const result = randomizeParams(DEFAULT_PARAMS, {
+      random: () => 0,
+      templates: ['plant-label'],
+      randomizeShape: false,
+    });
+
+    expect(result.templateId).toBe('plant-label');
+    expect(result.textSizeMm).toBe(DEFAULT_PARAMS.textSizeMm);
+    expect(result.paddingMm).toBe(DEFAULT_PARAMS.paddingMm);
+  });
+
+  it('clamps out-of-range random values rather than producing invalid indices', () => {
+    const result = randomizeParams(DEFAULT_PARAMS, {
+      random: () => 42,
+      randomizeShape: false,
+    });
+
+    expect(result.templateId).toBe('plant-label');
+    expect(result.fontId).toBeTruthy();
+  });
+});
