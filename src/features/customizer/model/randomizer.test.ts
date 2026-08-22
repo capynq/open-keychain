@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_PARAMS } from '../../../domain/keychain';
-import { randomizeParams } from './randomizer';
+import { randomizeParams, randomizeWithValidation } from './randomizer';
 
 describe('randomizeParams', () => {
   it('uses an injectable bounded source and keeps the design valid', () => {
@@ -38,5 +38,25 @@ describe('randomizeParams', () => {
 
     expect(result.templateId).toBe('plant-label');
     expect(result.fontId).toBeTruthy();
+  });
+
+  it('returns an atomic accepted transaction with bounded attempts', async () => {
+    const result = await randomizeWithValidation(
+      DEFAULT_PARAMS,
+      async () => ({ printable: true }),
+      { random: () => 0, attempts: 3 },
+    );
+
+    expect(result.status).toBe('accepted');
+    expect(result.attempts).toBe(1);
+    expect(result.params.text).toBe(DEFAULT_PARAMS.text);
+  });
+
+  it('returns the original design after validation exhaustion', async () => {
+    const result = await randomizeWithValidation(DEFAULT_PARAMS, async () => false, {
+      attempts: 2,
+    });
+
+    expect(result).toMatchObject({ status: 'exhausted', params: DEFAULT_PARAMS, attempts: 2 });
   });
 });

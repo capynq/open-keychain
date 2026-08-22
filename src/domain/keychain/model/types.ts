@@ -167,12 +167,51 @@ export type GeometryResult = {
   baseShading?: 'creased' | 'flat';
   solidCount?: number;
 };
+/** A complete candidate result, kept separate from the preview queue. */
+export type GeometryValidation = Omit<GeometryResult, 'generationId'>;
+
+/** Reject malformed worker payloads before they can reach rendering or export. */
+export const validateGeometryResult = (result: GeometryResult): boolean => {
+  const meshValid = (mesh: MeshBuffer): boolean =>
+    mesh.positions instanceof Float32Array &&
+    mesh.indices instanceof Uint32Array &&
+    mesh.positions.length % 3 === 0 &&
+    [...mesh.positions].every(Number.isFinite) &&
+    [...mesh.indices].every(Number.isFinite) &&
+    [...mesh.indices].every((index) => index < mesh.positions.length / 3);
+  const dimensionsValid = Object.values(result.dimensions).every((value) =>
+    Array.isArray(value)
+      ? value.length === 3 && value.every(Number.isFinite)
+      : Number.isFinite(value),
+  );
+  return (
+    Number.isInteger(result.generationId) &&
+    meshValid(result.baseMesh) &&
+    meshValid(result.reliefMesh) &&
+    dimensionsValid &&
+    Array.isArray(result.issues) &&
+    result.issues.every(
+      (issue) =>
+        (issue.severity === 'warning' || issue.severity === 'error') &&
+        typeof issue.code === 'string' &&
+        typeof issue.message === 'string',
+    ) &&
+    typeof result.printable === 'boolean' &&
+    !!result.appearance
+  );
+};
 export type WorkerRequest =
   | {
       type: 'warmup';
     }
   | {
       type: 'generate';
+      requestId: number;
+      params: KeychainParams;
+      fontDefinition?: FontDefinition;
+    }
+  | {
+      type: 'validate';
       requestId: number;
       params: KeychainParams;
       fontDefinition?: FontDefinition;
@@ -191,6 +230,11 @@ export type WorkerResponse =
       type: 'geometry';
       requestId: number;
       result: Omit<GeometryResult, 'generationId'>;
+    }
+  | {
+      type: 'validation';
+      requestId: number;
+      result: GeometryValidation;
     }
   | {
       type: 'export';
@@ -243,7 +287,7 @@ export const normalizeParams = (params: KeychainParams): NormalizedParams => {
     params.templateId === 'articulated-name' ? 3.4 : 1.6,
     4,
   );
-  return {
+  const normalized: NormalizedParams = {
     ...params,
     text,
     templateId: params.templateId ?? 'name-keychain',
@@ -298,6 +342,36 @@ export const normalizeParams = (params: KeychainParams): NormalizedParams => {
     jointBossMm:
       params.templateId === 'articulated-name' ? clamp(params.jointBossMm ?? 0, 0, 3) : 0,
   };
+  // Keep stale controls from a previous template/style from affecting later
+  // builds. The registry is intentionally represented here explicitly so old
+  // persisted payloads are normalized deterministically as well.
+  if (normalized.templateId !== 'name-keychain' && normalized.templateId !== 'nameplate')
+    normalized.reliefHaloMm = 0;
+  if (normalized.templateId !== 'name-keychain' && normalized.templateId !== 'articulated-name')
+    normalized.ringOffsetMm = 0;
+  if (
+    !(normalized.templateId === 'name-keychain' || normalized.templateId === 'plant-label') ||
+    normalized.styleId !== 'bubble'
+  )
+    normalized.bubbleLobeMm = 0;
+  if (
+    !(normalized.templateId === 'name-keychain' || normalized.templateId === 'plant-label') ||
+    normalized.styleId !== 'soft-tag'
+  )
+    normalized.tagTailMm = 0;
+  if (
+    !(normalized.templateId === 'name-keychain' || normalized.templateId === 'plant-label') ||
+    normalized.styleId !== 'arch'
+  )
+    normalized.archCurveMm = 0;
+  if (normalized.templateId !== 'plant-label') normalized.stakeShoulderMm = 0;
+  if (normalized.templateId !== 'articulated-name') normalized.jointBossMm = 0;
+  if (normalized.templateId === 'articulated-name') {
+    normalized.fontWeightMm = 0;
+    normalized.edgeInsetMm = normalized.paddingMm;
+    normalized.letterSpacingMm = 0;
+  }
+  return normalized;
 };
 export const clamp = (value: number, min: number, max: number): number => {
   return Math.min(max, Math.max(min, value));

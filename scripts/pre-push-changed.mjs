@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import process from 'node:process';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL, URL } from 'node:url';
+import { runValidationGates } from './run-validation-gates.mjs';
 
 const runResult = (command, args, options = {}) =>
   spawnSync(command, args, { stdio: 'inherit', ...options });
@@ -164,7 +165,7 @@ const runDockerValidation = () => {
   if (validationStatus !== 0) process.exit(validationStatus);
 };
 
-export const runPrePush = () => {
+export const runPrePush = async () => {
   if (hasChanges(['diff', '--quiet']) || hasChanges(['diff', '--cached', '--quiet'])) {
     process.stderr.write('pre-push: commit or stash tracked changes before automatic repair.\n');
     process.exit(1);
@@ -194,21 +195,41 @@ export const runPrePush = () => {
 
   const classification = classifyChangedFiles(files);
   if (classification.needsCoreValidation) {
-    run('pnpm', ['typecheck']);
-    run('pnpm', ['test']);
-    run('pnpm', ['build'], {
-      env: { ...process.env, VITE_GOOGLE_FONTS_API_KEY: 'playwright-google-fonts-key' },
+    const buildResults = await runValidationGates(
+      [
+        {
+          name: 'build',
+          command: 'pnpm',
+          args: ['build'],
+          env: { VITE_GOOGLE_FONTS_API_KEY: 'playwright-google-fonts-key' },
+        },
+      ],
+      { concurrency: 1 },
+    );
+    if (buildResults.some((result) => !result.ok)) process.exit(1);
+
+    const gates = [
+      { name: 'typecheck', command: 'pnpm', args: ['typecheck'] },
+      { name: 'unit', command: 'pnpm', args: ['test'] },
+    ];
+    if (classification.needsBrowserValidation) {
+      gates.push({
+        name: 'browser',
+        command: 'pnpm',
+        args: ['test:e2e', '--workers=1'],
+        env: { PLAYWRIGHT_USE_EXISTING_BUILD: 'true' },
+      });
+    }
+    if (classification.needsGeometryBenchmark)
+      gates.push({ name: 'geometry', command: 'pnpm', args: ['bench:matrix'] });
+    const results = await runValidationGates(gates, {
+      concurrency: Number.parseInt(process.env.VALIDATION_CONCURRENCY ?? '2', 10),
     });
+    if (results.some((result) => !result.ok)) process.exit(1);
   }
-  if (classification.needsBrowserValidation) {
-    run('pnpm', ['test:e2e', '--workers=1'], {
-      env: { ...process.env, PLAYWRIGHT_USE_EXISTING_BUILD: 'true' },
-    });
-  }
-  if (classification.needsGeometryBenchmark) run('pnpm', ['bench:matrix']);
   if (classification.needsDockerValidation) runDockerValidation();
 };
 
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
-  runPrePush();
+  await runPrePush();
 }

@@ -4,6 +4,8 @@ import {
   fontSupportsArticulatedName,
   fontSupportsText,
   TEMPLATE_CATALOG,
+  PARAMETER_REGISTRY,
+  type ShapeParameter,
   type FontCategory,
 } from '../../../domain/keychain';
 import type { KeychainParams } from '../../../domain/keychain';
@@ -322,6 +324,74 @@ export const ControlsPanel = ({
       </div>
     </details>
   );
+
+  const parameterGroups: readonly { key: string; parameters: readonly ShapeParameter[] }[] = [
+    {
+      key: 'core',
+      parameters: [
+        'textSizeMm',
+        'fontWeightMm',
+        'baseThicknessMm',
+        'reliefDepthMm',
+        'edgeInsetMm',
+        'letterSpacingMm',
+        'holeDiameterMm',
+      ],
+    },
+    {
+      key: 'style',
+      parameters: [
+        'cornerRadiusMm',
+        'nameplateTiltDeg',
+        'nameplateEmbedMm',
+        'stakeLengthMm',
+        'reliefHaloMm',
+        'ringOffsetMm',
+        'bubbleLobeMm',
+        'tagTailMm',
+        'archCurveMm',
+        'stakeShoulderMm',
+      ],
+    },
+    {
+      key: 'mechanical',
+      parameters: [
+        'connectorWidthMm',
+        'jointClearanceMm',
+        'mechanicalGapMm',
+        'maxJointAngleDeg',
+        'jointBossMm',
+      ],
+    },
+  ];
+
+  const parameterLabel = (parameter: ShapeParameter): string => {
+    if (parameter === 'baseThicknessMm')
+      return t(locale, params.templateId === 'nameplate' ? 'plateThickness' : 'baseThickness');
+    if (parameter === 'reliefDepthMm')
+      return t(locale, params.templateId === 'nameplate' ? 'textLift' : 'raisedText');
+    if (parameter === 'edgeInsetMm') return t(locale, 'backingSize');
+    return t(locale, PARAMETER_REGISTRY[parameter].labelKey);
+  };
+
+  const renderParameter = (parameter: ShapeParameter) => {
+    if (!showsParameter(parameter)) return null;
+    const definition = rangeFor(parameter);
+    const key = parameter as keyof KeychainParams;
+    if (typeof params[key] !== 'number') return null;
+    return (
+      <RangeControl
+        key={parameter}
+        label={parameterLabel(parameter)}
+        value={params[key] as number}
+        {...definition}
+        {...(parameter === 'edgeInsetMm' ? { min: Math.max(1.2, definition.min) } : {})}
+        onChange={(value) =>
+          parameter === 'edgeInsetMm' ? updateBackingSize(value) : update(key, value as never)
+        }
+      />
+    );
+  };
 
   return (
     <aside
@@ -649,193 +719,28 @@ export const ControlsPanel = ({
           <h2>{t(locale, 'shape')}</h2>
           <ResetIconButton label={t(locale, 'resetShape')} onClick={() => resetSection('shape')} />
         </div>
-        <div className="range-grid">
-          {showsParameter('textSizeMm') && (
-            <RangeControl
-              label={t(locale, 'textSize')}
-              value={params.textSizeMm}
-              {...rangeFor('textSizeMm')}
-              onChange={(value) => update('textSizeMm', value)}
+        {parameterGroups.map((group) => {
+          const controls = group.parameters.map(renderParameter).filter(Boolean);
+          if (!controls.length && group.key !== 'core') return null;
+          return (
+            <div className="parameter-group" data-parameter-group={group.key} key={group.key}>
+              <h3>
+                {t(locale, `parameterGroup${group.key[0].toUpperCase()}${group.key.slice(1)}`)}
+              </h3>
+              <div className="range-grid">{controls}</div>
+            </div>
+          );
+        })}
+        {showsParameter('plantAccentEnabled') && (
+          <label className="check-control">
+            <input
+              type="checkbox"
+              checked={params.plantAccentEnabled}
+              onChange={(event) => update('plantAccentEnabled', event.target.checked)}
             />
-          )}
-          {showsParameter('fontWeightMm') && (
-            <RangeControl
-              label={t(locale, 'fontWeight')}
-              value={params.fontWeightMm}
-              {...rangeFor('fontWeightMm')}
-              onChange={(value) => update('fontWeightMm', value)}
-            />
-          )}
-          {showsParameter('baseThicknessMm') && (
-            <RangeControl
-              label={t(
-                locale,
-                params.templateId === 'nameplate' ? 'plateThickness' : 'baseThickness',
-              )}
-              value={params.baseThicknessMm}
-              {...rangeFor('baseThicknessMm')}
-              onChange={(value) => update('baseThicknessMm', value)}
-            />
-          )}
-          {showsParameter('reliefDepthMm') && (
-            <RangeControl
-              label={t(locale, params.templateId === 'nameplate' ? 'textLift' : 'raisedText')}
-              value={params.reliefDepthMm}
-              {...rangeFor('reliefDepthMm')}
-              onChange={(value) => update('reliefDepthMm', value)}
-            />
-          )}
-          {showsParameter('edgeInsetMm') && (
-            <RangeControl
-              label={t(locale, 'backingSize')}
-              value={params.edgeInsetMm}
-              {...{ ...rangeFor('edgeInsetMm'), min: 1.2 }}
-              onChange={updateBackingSize}
-            />
-          )}
-          {showsParameter('letterSpacingMm') && (
-            <RangeControl
-              label={t(locale, 'letterSpacing')}
-              value={params.letterSpacingMm}
-              {...rangeFor('letterSpacingMm')}
-              onChange={(value) => update('letterSpacingMm', value)}
-            />
-          )}
-          {showsParameter('holeDiameterMm') && (
-            <RangeControl
-              label={t(locale, 'keyringHole')}
-              value={params.holeDiameterMm}
-              {...rangeFor('holeDiameterMm')}
-              onChange={(value) => update('holeDiameterMm', value)}
-            />
-          )}
-          {showsParameter('connectorWidthMm') && (
-            <>
-              <RangeControl
-                label={t(locale, 'connectorWidth')}
-                value={params.connectorWidthMm}
-                {...rangeFor('connectorWidthMm')}
-                onChange={(value) => update('connectorWidthMm', value)}
-              />
-              <RangeControl
-                label={t(locale, 'jointClearance')}
-                value={params.jointClearanceMm}
-                {...rangeFor('jointClearanceMm')}
-                onChange={(value) => update('jointClearanceMm', value)}
-              />
-              <RangeControl
-                label={t(locale, 'mechanicalGap')}
-                value={params.mechanicalGapMm}
-                {...rangeFor('mechanicalGapMm')}
-                onChange={(value) => update('mechanicalGapMm', value)}
-              />
-              <RangeControl
-                label={t(locale, 'maxJointAngle')}
-                value={params.maxJointAngleDeg}
-                {...rangeFor('maxJointAngleDeg')}
-                onChange={(value) => update('maxJointAngleDeg', value)}
-              />
-            </>
-          )}
-          {showsParameter('cornerRadiusMm') && (
-            <RangeControl
-              label={t(locale, 'cornerRadius')}
-              value={params.cornerRadiusMm}
-              {...rangeFor('cornerRadiusMm')}
-              onChange={(value) => update('cornerRadiusMm', value)}
-            />
-          )}
-          {showsParameter('nameplateTiltDeg') && (
-            <RangeControl
-              label={t(locale, 'textTilt')}
-              value={params.nameplateTiltDeg}
-              {...rangeFor('nameplateTiltDeg')}
-              onChange={(value) => update('nameplateTiltDeg', value)}
-            />
-          )}
-          {showsParameter('nameplateEmbedMm') && (
-            <RangeControl
-              label={t(locale, 'embedDepth')}
-              value={params.nameplateEmbedMm}
-              {...rangeFor('nameplateEmbedMm')}
-              onChange={(value) => update('nameplateEmbedMm', value)}
-            />
-          )}
-          {showsParameter('stakeLengthMm') && (
-            <RangeControl
-              label={t(locale, 'stakeLength')}
-              value={params.stakeLengthMm}
-              {...rangeFor('stakeLengthMm')}
-              onChange={(value) => update('stakeLengthMm', value)}
-            />
-          )}
-          {showsParameter('plantAccentEnabled') && (
-            <label className="check-control">
-              <input
-                type="checkbox"
-                checked={params.plantAccentEnabled}
-                onChange={(event) => update('plantAccentEnabled', event.target.checked)}
-              />
-              <span>{t(locale, 'plantAccents')}</span>
-            </label>
-          )}
-          {showsParameter('reliefHaloMm') && (
-            <RangeControl
-              label={t(locale, 'reliefHalo')}
-              value={params.reliefHaloMm}
-              {...rangeFor('reliefHaloMm')}
-              onChange={(value) => update('reliefHaloMm', value)}
-            />
-          )}
-          {showsParameter('ringOffsetMm') && (
-            <RangeControl
-              label={t(locale, 'ringOffset')}
-              value={params.ringOffsetMm}
-              {...rangeFor('ringOffsetMm')}
-              onChange={(value) => update('ringOffsetMm', value)}
-            />
-          )}
-          {showsParameter('bubbleLobeMm') && (
-            <RangeControl
-              label={t(locale, 'bubbleLobe')}
-              value={params.bubbleLobeMm}
-              {...rangeFor('bubbleLobeMm')}
-              onChange={(value) => update('bubbleLobeMm', value)}
-            />
-          )}
-          {showsParameter('tagTailMm') && (
-            <RangeControl
-              label={t(locale, 'tagTail')}
-              value={params.tagTailMm}
-              {...rangeFor('tagTailMm')}
-              onChange={(value) => update('tagTailMm', value)}
-            />
-          )}
-          {showsParameter('archCurveMm') && (
-            <RangeControl
-              label={t(locale, 'archCurve')}
-              value={params.archCurveMm}
-              {...rangeFor('archCurveMm')}
-              onChange={(value) => update('archCurveMm', value)}
-            />
-          )}
-          {showsParameter('stakeShoulderMm') && (
-            <RangeControl
-              label={t(locale, 'stakeShoulder')}
-              value={params.stakeShoulderMm}
-              {...rangeFor('stakeShoulderMm')}
-              onChange={(value) => update('stakeShoulderMm', value)}
-            />
-          )}
-          {showsParameter('jointBossMm') && (
-            <RangeControl
-              label={t(locale, 'jointBoss')}
-              value={params.jointBossMm}
-              {...rangeFor('jointBossMm')}
-              onChange={(value) => update('jointBossMm', value)}
-            />
-          )}
-        </div>
+            <span>{t(locale, 'plantAccents')}</span>
+          </label>
+        )}
       </section>
       <button type="button" className="reset-settings" onClick={onReset}>
         {t(locale, 'resetSettings')}

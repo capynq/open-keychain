@@ -231,6 +231,8 @@ export const PreviewPanel = ({
   geometry: {
     result: GeometryResult | undefined;
     busy: boolean;
+    error?: string;
+    current?: boolean;
   };
   surfacePreset: SurfacePresetId;
   status: PreviewStatus;
@@ -249,6 +251,15 @@ export const PreviewPanel = ({
     className="preview-panel"
     data-guide-target="preview"
     aria-busy={geometry.busy}
+    data-preview-state={
+      geometry.error
+        ? 'error'
+        : geometry.current === false
+          ? 'stale'
+          : geometry.busy
+            ? 'updating'
+            : 'current'
+    }
     data-generation-id={geometry.result?.generationId ?? ''}
     data-model-ready={
       geometry.result && geometry.result.baseMesh.positions.length > 0 ? 'true' : 'false'
@@ -260,7 +271,7 @@ export const PreviewPanel = ({
         {status.text}
       </span>
     </div>
-    <div className="viewer-wrap">
+    <div className="viewer-wrap" data-stale={geometry.current === false ? 'true' : 'false'}>
       <Viewer
         result={geometry.result}
         appearance={
@@ -277,10 +288,10 @@ export const PreviewPanel = ({
         onSurfaceChange={onSurfaceChange}
         onReset={onSurfaceReset}
       />
-      {geometry.busy && (
+      {!geometry.error && (geometry.busy || geometry.current === false) && (
         <div className="viewer-loading" role="status" aria-live="polite">
           <span className="viewer-spinner" aria-hidden="true" />
-          <span>{t(locale, 'updating')}</span>
+          <span>{t(locale, geometry.busy ? 'updating' : 'previewStale')}</span>
         </div>
       )}
     </div>

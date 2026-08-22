@@ -39,6 +39,7 @@
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "validate:changed": "node scripts/validate-changed.mjs",
+    "validate:ci": "node scripts/run-validation-gates.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "fix": "pnpm format && pnpm lint:fix",

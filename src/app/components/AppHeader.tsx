@@ -21,6 +21,7 @@ export const AppHeader = ({
   onUndo,
   canUndo,
   randomizing,
+  exportDisabled,
   hosted,
   currentParams,
 }: {
@@ -34,6 +35,7 @@ export const AppHeader = ({
   onUndo?: () => void;
   canUndo?: boolean;
   randomizing?: boolean;
+  exportDisabled?: boolean;
   hosted?: HostedAccountState;
   currentParams?: KeychainParams;
 }) =>
@@ -51,6 +53,7 @@ export const AppHeader = ({
         onUndo={onUndo}
         canUndo={canUndo}
         randomizing={randomizing}
+        exportDisabled={exportDisabled}
         hosted={hosted}
         currentParams={currentParams}
       />

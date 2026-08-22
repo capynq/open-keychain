@@ -18,6 +18,7 @@ export const CustomizerNavigationHeader = ({
   onUndo,
   canUndo,
   randomizing = false,
+  exportDisabled = false,
   hosted,
   currentParams,
 }: {
@@ -30,6 +31,7 @@ export const CustomizerNavigationHeader = ({
   onUndo?: () => void;
   canUndo?: boolean;
   randomizing?: boolean;
+  exportDisabled?: boolean;
   hosted?: HostedAccountState;
   currentParams?: KeychainParams;
 }) => (
@@ -40,12 +42,19 @@ export const CustomizerNavigationHeader = ({
         type="button"
         className="export-header-button"
         onClick={onExportOpen}
+        disabled={randomizing || exportDisabled}
+        aria-busy={randomizing || undefined}
         aria-haspopup="dialog"
         aria-expanded={exportOpen}
       >
         {t(locale, 'export')}
       </button>
-      <button type="button" className="share-header-button" onClick={onShare}>
+      <button
+        type="button"
+        className="share-header-button"
+        onClick={onShare}
+        disabled={randomizing}
+      >
         {t(locale, 'share')}
       </button>
     </div>
@@ -55,6 +64,7 @@ export const CustomizerNavigationHeader = ({
         className="randomize-header-button"
         onClick={onRandomize}
         disabled={randomizing}
+        aria-busy={randomizing}
       >
         {t(locale, randomizing ? 'randomizing' : 'randomize')}
       </button>

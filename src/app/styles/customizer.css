@@ -1150,6 +1150,19 @@ p {
   row-gap: 7px;
 }
 
+.parameter-group + .parameter-group {
+  margin-top: 16px;
+}
+
+.parameter-group h3 {
+  margin: 0 0 6px;
+  color: #696d78;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .range-control {
   display: block;
   min-width: 0;

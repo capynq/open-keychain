@@ -43,32 +43,6 @@ export const useCustomizerPageState = (
   });
   const guide = useCustomizerGuide();
   const lastRouteInputKey = useRef(routeInputKey);
-  const randomizeGeneration = useRef<number | undefined>(undefined);
-
-  useEffect(() => {
-    if (!randomizing || geometry.busy) return;
-    const generationSettled =
-      geometry.error !== undefined || geometry.result?.generationId !== randomizeGeneration.current;
-    if (!generationSettled) return;
-
-    if ((geometry.error || geometry.result?.printable === false) && customizer.canUndo) {
-      window.setTimeout(() => {
-        customizer.undo();
-        setRandomizeFailure(true);
-      }, 0);
-    }
-
-    const timer = window.setTimeout(() => setRandomizing(false), 0);
-
-    return () => window.clearTimeout(timer);
-  }, [
-    customizer,
-    geometry.busy,
-    geometry.error,
-    geometry.result?.generationId,
-    geometry.result?.printable,
-    randomizing,
-  ]);
 
   useEffect(() => {
     if (!randomizeFailure) return undefined;
@@ -158,10 +132,33 @@ export const useCustomizerPageState = (
 
   const randomize = (): void => {
     if (randomizing) return;
-    randomizeGeneration.current = geometry.result?.generationId;
     setRandomizing(true);
     setRandomizeFailure(false);
-    customizer.randomize();
+    void customizer
+      .randomize(undefined, async (candidate) => {
+        const client = geometry.clientRef.current;
+        if (!client) return false;
+        return client.validate(candidate, customizer.fontForId(candidate.fontId));
+      })
+      .then((transaction) => {
+        if (transaction.status === 'cancelled') {
+          setRandomizing(false);
+          return;
+        }
+        if (transaction.status === 'accepted') {
+          const candidateFont = customizer.fontForId(transaction.params.fontId);
+          if (transaction.result)
+            geometry.adoptResult(transaction.result, transaction.params, candidateFont);
+          setRandomizing(false);
+        } else {
+          setRandomizeFailure(true);
+          setRandomizing(false);
+        }
+      })
+      .catch(() => {
+        setRandomizeFailure(true);
+        setRandomizing(false);
+      });
   };
 
   const undo = (): void => {

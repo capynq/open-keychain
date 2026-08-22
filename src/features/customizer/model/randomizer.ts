@@ -6,11 +6,12 @@ import {
   hasActiveParameter,
   normalizeParams,
   parameterRange,
-  templateParameterKeys,
+  orderedTemplateParameterKeys,
   type FontDefinition,
   type KeychainParams,
   type ShapeParameter,
   type TemplateId,
+  type GeometryResult,
 } from '../../../domain/keychain';
 
 /** A source returning a value in [0, 1). Injectable so random designs are testable. */
@@ -73,7 +74,7 @@ export const randomizeParams = (
   let next: KeychainParams = { ...current, templateId, styleId, fontId };
 
   if (options.randomizeShape !== false) {
-    for (const parameter of templateParameterKeys(templateId)) {
+    for (const parameter of orderedTemplateParameterKeys(templateId)) {
       if (hasActiveParameter(next, parameter)) {
         next = { ...next, [parameter]: randomValue(next, parameter, random) };
       }
@@ -83,18 +84,44 @@ export const randomizeParams = (
   return normalizeParams(next);
 };
 
-export type RandomizeValidation = (candidate: KeychainParams) => Promise<boolean>;
+export type RandomizeValidationResult =
+  boolean | { printable: boolean } | Pick<GeometryResult, 'printable' | 'issues'> | GeometryResult;
+export type RandomizeValidation = (candidate: KeychainParams) => Promise<RandomizeValidationResult>;
+
+export type RandomizeTransaction = {
+  status: 'accepted' | 'exhausted' | 'cancelled';
+  params: KeychainParams;
+  result?: GeometryResult;
+  attempts: number;
+};
 
 /** Try bounded candidates and keep the original if every candidate has a geometry error. */
 export const randomizeWithValidation = async (
   current: KeychainParams,
   validate: RandomizeValidation,
   options: RandomizerOptions & { attempts?: number } = {},
-): Promise<KeychainParams> => {
+): Promise<RandomizeTransaction> => {
   const attempts = Math.max(1, Math.min(12, options.attempts ?? 6));
   for (let index = 0; index < attempts; index += 1) {
     const candidate = randomizeParams(current, options);
-    if (await validate(candidate)) return candidate;
+    try {
+      const result = await validate(candidate);
+      const accepted =
+        typeof result === 'boolean'
+          ? result
+          : result.printable &&
+            (!('issues' in result) || !result.issues.some((issue) => issue.severity === 'error'));
+      if (accepted)
+        return {
+          status: 'accepted',
+          params: candidate,
+          result: typeof result === 'boolean' || !('baseMesh' in result) ? undefined : result,
+          attempts: index + 1,
+        };
+    } catch {
+      // A failed worker request is equivalent to a rejected candidate. Keep
+      // trying without ever committing a partially validated design.
+    }
   }
-  return current;
+  return { status: 'exhausted', params: current, attempts };
 };

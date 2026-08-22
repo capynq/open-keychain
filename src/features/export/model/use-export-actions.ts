@@ -25,6 +25,7 @@ export type ExportActionsState = {
 type ExportSource = {
   clientRef: MutableRefObject<GeometryClient | undefined>;
   result: GeometryResult | undefined;
+  current?: boolean;
   setError: Dispatch<SetStateAction<string | undefined>>;
 };
 
@@ -54,7 +55,7 @@ export const useExportActions = ({
     mode: ThreeMfMode = 'separate-colors',
     requestedAppearanceOverrides: PrintAppearanceOverrides | undefined = appearanceOverrides,
   ): Promise<void> => {
-    if (!geometry.result?.printable || downloading) return;
+    if (!geometry.result?.printable || geometry.current === false || downloading) return;
     lastRequest.current = { format, mode, appearanceOverrides: requestedAppearanceOverrides };
     setDownloading(true);
     setStatus('exporting');
@@ -104,7 +105,7 @@ export const useExportActions = ({
 
   return {
     downloading,
-    printable: Boolean(geometry.result?.printable),
+    printable: Boolean(geometry.result?.printable && geometry.current !== false),
     status,
     error,
     download,

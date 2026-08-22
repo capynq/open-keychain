@@ -30,14 +30,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm format:check
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm test
-      - name: Build application for validation
-        run: pnpm build
+      - name: Run bounded validation gates
+        run: pnpm validate:ci
         env:
-          VITE_GOOGLE_FONTS_API_KEY: playwright-google-fonts-key
+          VALIDATION_CONCURRENCY: 2
       - name: Upload production build
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
         with:

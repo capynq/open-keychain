@@ -47,4 +47,14 @@ describe('previewStatus', () => {
     expect(status.text).toContain('attention');
     expect(status.feedback).toBe('Worker failed.');
   });
+
+  it('keeps generation errors visible while stale generation state is present', () => {
+    const status = previewStatus(
+      { result: result(), busy: true, current: false, error: 'Worker failed.' },
+      'en',
+    );
+
+    expect(status.className).toBe('attention');
+    expect(status.text).toContain('attention');
+  });
 });

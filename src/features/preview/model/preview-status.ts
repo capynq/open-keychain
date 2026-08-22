@@ -11,29 +11,32 @@ export type PreviewStatusInput = {
   result: GeometryResult | undefined;
   busy: boolean;
   error: string | undefined;
+  current?: boolean;
 };
 
 export const previewStatus = (
-  { result, busy, error }: PreviewStatusInput,
+  { result, busy, error, current = true }: PreviewStatusInput,
   locale: Locale,
 ): PreviewStatus => {
   const errorIssue = result?.issues.find((item) => item.severity === 'error');
   const warningIssue = result?.issues.find((item) => item.severity === 'warning');
   const needsAttention = Boolean(error || (!busy && result && (!result.printable || errorIssue)));
-  const className = busy
-    ? 'updating'
-    : needsAttention
-      ? 'attention'
+  const className = needsAttention
+    ? 'attention'
+    : busy || !current
+      ? 'updating'
       : warningIssue
         ? 'adjusted'
         : 'ready';
-  const text = busy
-    ? t(locale, 'updating')
-    : needsAttention
-      ? t(locale, 'needsAttention')
-      : warningIssue
-        ? t(locale, 'adjusted')
-        : t(locale, 'ready');
+  const text = needsAttention
+    ? t(locale, 'needsAttention')
+    : busy
+      ? t(locale, 'updating')
+      : !current
+        ? t(locale, 'previewStale')
+        : warningIssue
+          ? t(locale, 'adjusted')
+          : t(locale, 'ready');
   const feedback =
     error ??
     (errorIssue

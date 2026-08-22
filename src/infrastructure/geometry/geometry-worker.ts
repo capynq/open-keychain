@@ -31,13 +31,29 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       return;
     }
     const wasm = await getWasm();
-    if (request.type === 'generate') {
+    if (request.type === 'generate' || request.type === 'validate') {
       const { result } = await buildKeychain(
         wasm,
         request.params,
         false,
         fontForBuild(request.fontDefinition),
       );
+      if (request.type === 'validate') {
+        const response: WorkerResponse = {
+          type: 'validation',
+          requestId: request.requestId,
+          result,
+        };
+        self.postMessage(response, {
+          transfer: [
+            result.baseMesh.positions.buffer,
+            result.baseMesh.indices.buffer,
+            result.reliefMesh.positions.buffer,
+            result.reliefMesh.indices.buffer,
+          ],
+        });
+        return;
+      }
       const response: WorkerResponse = { type: 'geometry', requestId: request.requestId, result };
       self.postMessage(response, {
         transfer: [

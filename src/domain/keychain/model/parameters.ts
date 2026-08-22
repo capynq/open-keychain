@@ -1,4 +1,4 @@
-import type { KeychainParams, StyleId, TemplateId } from './types';
+import { DEFAULT_PARAMS, type KeychainParams, type StyleId, type TemplateId } from './types';
 export type ParameterRange = {
   min: number;
   max: number;
@@ -9,6 +9,10 @@ export type ParameterDefinition = ParameterRange & {
   labelKey: string;
   dependencies: readonly ShapeParameter[];
   randomization: 'uniform' | 'boolean' | 'derived';
+  /** Canonical default used when a control is reset or is not applicable. */
+  defaultValue: number;
+  /** Whether this control contributes to the selected template/style. */
+  applicable: (params: Pick<KeychainParams, 'templateId' | 'styleId'>) => boolean;
 };
 export type ShapeParameter =
   | 'textSizeMm'
@@ -66,24 +70,33 @@ export const PARAMETER_DEFINITIONS: Record<ShapeParameter, ParameterDefinition> 
       parameter,
       {
         ...PARAMETER_RANGES[parameter],
-        labelKey:
-          parameter === 'textSizeMm'
-            ? 'textSize'
-            : parameter === 'reliefHaloMm'
-              ? 'reliefHalo'
-              : parameter === 'ringOffsetMm'
-                ? 'ringOffset'
-                : parameter === 'bubbleLobeMm'
-                  ? 'bubbleLobe'
-                  : parameter === 'tagTailMm'
-                    ? 'tagTail'
-                    : parameter === 'archCurveMm'
-                      ? 'archCurve'
-                      : parameter === 'stakeShoulderMm'
-                        ? 'stakeShoulder'
-                        : parameter === 'jointBossMm'
-                          ? 'jointBoss'
-                          : parameter,
+        labelKey: (
+          {
+            textSizeMm: 'textSize',
+            fontWeightMm: 'fontWeight',
+            baseThicknessMm: 'baseThickness',
+            reliefDepthMm: 'raisedText',
+            paddingMm: 'borderPadding',
+            edgeInsetMm: 'backingSize',
+            letterSpacingMm: 'letterSpacing',
+            holeDiameterMm: 'keyringHole',
+            connectorWidthMm: 'connectorWidth',
+            jointClearanceMm: 'jointClearance',
+            mechanicalGapMm: 'mechanicalGap',
+            maxJointAngleDeg: 'maxJointAngle',
+            cornerRadiusMm: 'cornerRadius',
+            stakeLengthMm: 'stakeLength',
+            nameplateTiltDeg: 'textTilt',
+            nameplateEmbedMm: 'embedDepth',
+            reliefHaloMm: 'reliefHalo',
+            ringOffsetMm: 'ringOffset',
+            bubbleLobeMm: 'bubbleLobe',
+            tagTailMm: 'tagTail',
+            archCurveMm: 'archCurve',
+            stakeShoulderMm: 'stakeShoulder',
+            jointBossMm: 'jointBoss',
+          } satisfies Record<ShapeParameter, string>
+        )[parameter],
         dependencies:
           parameter === 'paddingMm' || parameter === 'reliefHaloMm'
             ? (['textSizeMm'] as const)
@@ -95,6 +108,17 @@ export const PARAMETER_DEFINITIONS: Record<ShapeParameter, ParameterDefinition> 
                   ? (['textSizeMm', 'paddingMm', 'nameplateEmbedMm', 'nameplateTiltDeg'] as const)
                   : ([] as const),
         randomization: 'uniform' as const,
+        defaultValue: DEFAULT_PARAMS[parameter],
+        applicable: (params: Pick<KeychainParams, 'templateId' | 'styleId'>) =>
+          hasTemplateParameter(params.templateId, parameter) &&
+          !(parameter === 'bubbleLobeMm' && params.styleId !== 'bubble') &&
+          !(parameter === 'tagTailMm' && params.styleId !== 'soft-tag') &&
+          !(parameter === 'archCurveMm' && params.styleId !== 'arch') &&
+          !(
+            parameter === 'cornerRadiusMm' &&
+            params.templateId === 'plant-label' &&
+            params.styleId === 'capsule'
+          ),
       },
     ]),
   ) as unknown as Record<ShapeParameter, ParameterDefinition>;
@@ -106,6 +130,8 @@ export const CUSTOMIZER_PARAMETER_DEFINITIONS = {
   },
   ...PARAMETER_DEFINITIONS,
 } as const;
+/** Single registry consumed by controls, randomization, and normalization. */
+export const PARAMETER_REGISTRY = PARAMETER_DEFINITIONS;
 const COMMON_PARAMETERS: readonly ShapeParameter[] = ['textSizeMm', 'baseThicknessMm'];
 const STANDARD_TEXT_PARAMETERS: readonly ShapeParameter[] = ['fontWeightMm', 'edgeInsetMm'];
 const RELIEF_PARAMETERS: readonly ShapeParameter[] = ['reliefDepthMm'];
@@ -160,6 +186,25 @@ export const TEMPLATE_PARAMETER_KEYS: Record<TemplateId, readonly ShapeParameter
 };
 export const templateParameterKeys = (templateId: TemplateId): readonly ShapeParameter[] => {
   return TEMPLATE_PARAMETER_KEYS[templateId];
+};
+
+/** Return active parameters in dependency-first order for deterministic updates. */
+export const orderedTemplateParameterKeys = (templateId: TemplateId): readonly ShapeParameter[] => {
+  const active = new Set(TEMPLATE_PARAMETER_KEYS[templateId]);
+  const ordered: ShapeParameter[] = [];
+  const visiting = new Set<ShapeParameter>();
+  const visited = new Set<ShapeParameter>();
+  const visit = (parameter: ShapeParameter): void => {
+    if (visited.has(parameter) || !active.has(parameter)) return;
+    if (visiting.has(parameter)) return;
+    visiting.add(parameter);
+    for (const dependency of PARAMETER_REGISTRY[parameter].dependencies) visit(dependency);
+    visiting.delete(parameter);
+    visited.add(parameter);
+    ordered.push(parameter);
+  };
+  for (const parameter of TEMPLATE_PARAMETER_KEYS[templateId]) visit(parameter);
+  return ordered;
 };
 export const hasTemplateParameter = (
   templateId: TemplateId,

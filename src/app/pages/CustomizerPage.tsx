@@ -65,6 +65,7 @@ export const CustomizerPage = ({
         onUndo={state.undo}
         canUndo={state.customizer.canUndo}
         randomizing={state.randomizing}
+        exportDisabled={!state.exportState.printable || state.randomizing}
         hosted={state.hosted}
         currentParams={state.customizer.params}
       />
@@ -111,11 +112,14 @@ export const CustomizerPage = ({
                 state.appearanceOverrides,
               )
             : undefined,
-          state.geometry.busy,
+          state.geometry.busy || state.geometry.current === false,
           state.geometry.error,
         )}
         effectiveAppearance={
-          state.geometry.result && !state.geometry.busy && !state.geometry.error
+          state.geometry.result &&
+          !state.geometry.busy &&
+          state.geometry.current !== false &&
+          !state.geometry.error
             ? applyPrintAppearanceOverrides(
                 state.geometry.result.appearance,
                 state.appearanceOverrides,

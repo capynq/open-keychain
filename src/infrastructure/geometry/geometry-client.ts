@@ -7,6 +7,7 @@ import type {
   WorkerResponse,
   PrintAppearanceOverrides,
 } from '../../domain/keychain/model/types';
+import { validateGeometryResult } from '../../domain/keychain/model/types';
 import type { FontDefinition } from '../../domain/keychain/fonts/catalog';
 export class GeometryClient {
   private readonly worker: Worker;
@@ -25,6 +26,10 @@ export class GeometryClient {
       resolve: (file: { filename: string; mimeType: string; data: ArrayBuffer }) => void;
       reject: (error: Error) => void;
     }
+  >();
+  private readonly pendingValidations = new Map<
+    number,
+    { resolve: (result: GeometryResult) => void; reject: (error: Error) => void }
   >();
   private disposed = false;
   constructor() {
@@ -83,13 +88,29 @@ export class GeometryClient {
     } satisfies WorkerRequest);
     return promise;
   }
+  /** Validate a candidate independently of the coalesced preview request. */
+  validate(params: KeychainParams, fontDefinition?: FontDefinition): Promise<GeometryResult> {
+    const requestId = this.nextRequestId++;
+    const promise = new Promise<GeometryResult>((resolve, reject) => {
+      this.pendingValidations.set(requestId, { resolve, reject });
+    });
+    this.worker.postMessage({
+      type: 'validate',
+      requestId,
+      params,
+      fontDefinition: this.fontForWorker(fontDefinition),
+    } satisfies WorkerRequest);
+    return promise;
+  }
   dispose(): void {
     this.disposed = true;
     const error = new Error('Geometry client disposed.');
     for (const pending of this.pendingGeometry.values()) pending.reject(error);
     for (const pending of this.pendingExports.values()) pending.reject(error);
+    for (const pending of this.pendingValidations.values()) pending.reject(error);
     this.pendingGeometry.clear();
     this.pendingExports.clear();
+    this.pendingValidations.clear();
     this.worker.terminate();
   }
   private sendGenerate(
@@ -110,7 +131,12 @@ export class GeometryClient {
     if (response.type === 'geometry') {
       const pending = this.pendingGeometry.get(response.requestId);
       if (pending) {
-        pending.resolve({ ...response.result, generationId: response.requestId });
+        const result = { ...response.result, generationId: response.requestId };
+        if (!validateGeometryResult(result)) {
+          pending.reject(new Error('Geometry worker returned an invalid result.'));
+        } else {
+          pending.resolve(result);
+        }
         this.pendingGeometry.delete(response.requestId);
       }
       if (this.activePreviewRequestId === response.requestId) {
@@ -121,6 +147,17 @@ export class GeometryClient {
         this.queuedPreview = undefined;
         this.sendGenerate(latest.params, latest.fontDefinition, latest.requestId);
       }
+      return;
+    }
+    if (response.type === 'validation') {
+      const pending = this.pendingValidations.get(response.requestId);
+      const result = { ...response.result, generationId: response.requestId };
+      if (pending) {
+        if (!validateGeometryResult(result))
+          pending.reject(new Error('Geometry worker returned an invalid validation result.'));
+        else pending.resolve(result);
+      }
+      this.pendingValidations.delete(response.requestId);
       return;
     }
     if (response.type === 'export') {
@@ -140,6 +177,9 @@ export class GeometryClient {
     const exportRequest = this.pendingExports.get(response.requestId);
     exportRequest?.reject(error);
     this.pendingExports.delete(response.requestId);
+    const validation = this.pendingValidations.get(response.requestId);
+    validation?.reject(error);
+    this.pendingValidations.delete(response.requestId);
     if (this.activePreviewRequestId === response.requestId) {
       this.activePreviewRequestId = undefined;
       const latest = this.queuedPreview;

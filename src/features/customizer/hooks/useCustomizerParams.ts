@@ -23,13 +23,20 @@ import { DEFAULT_PARAMS, type KeychainParams, type TemplateId } from '../../../d
 import { STYLE_CATALOG, TEMPLATE_CATALOG } from '../../../domain/keychain';
 import type { FontNotice } from '../model/customizer-types';
 import { resetParamsForSection, type CustomizerResetSection } from '../model/reset';
-import { randomizeParams, type RandomSource } from '../model/randomizer';
+import {
+  randomizeParams,
+  randomizeWithValidation,
+  type RandomSource,
+  type RandomizeTransaction,
+  type RandomizeValidation,
+} from '../model/randomizer';
 
 export const useCustomizerParams = (
   initialParams?: KeychainParams,
 ): {
   params: KeychainParams;
   selectedFont: FontDefinition;
+  fontForId: (id: string) => FontDefinition;
   googleFonts: FontDefinition[];
   googleLoading: boolean;
   googleError: string | undefined;
@@ -52,7 +59,10 @@ export const useCustomizerParams = (
   showsParameter: (parameter: CustomizerParameter) => boolean;
   rangeFor: (parameter: ShapeParameter) => ParameterRange;
   setParams: Dispatch<SetStateAction<KeychainParams>>;
-  randomize: (random?: RandomSource) => void;
+  randomize: (
+    random?: RandomSource,
+    validate?: RandomizeValidation,
+  ) => Promise<RandomizeTransaction>;
   undo: () => void;
   canUndo: boolean;
 } => {
@@ -60,6 +70,14 @@ export const useCustomizerParams = (
     ...DEFAULT_PARAMS,
     ...initialParams,
   }));
+  // Keep an eagerly updated snapshot so an async randomization cannot commit
+  // over an edit made while its validation request was pending.
+  const paramsRef = useRef(params);
+
+  useEffect(() => {
+    paramsRef.current = params;
+  }, [params]);
+
   const previousParams = useRef<KeychainParams | undefined>(undefined);
   const [canUndo, setCanUndo] = useState(false);
   const setParamsDirect: Dispatch<SetStateAction<KeychainParams>> = (next) => {
@@ -238,6 +256,7 @@ export const useCustomizerParams = (
   return {
     params,
     selectedFont,
+    fontForId: (id) => allFonts.find((font) => font.id === id) ?? fontDefinition(id),
     googleFonts,
     googleLoading,
     googleError,
@@ -260,14 +279,29 @@ export const useCustomizerParams = (
     showsParameter: (parameter) => hasActiveParameter(params, parameter),
     rangeFor: (parameter) => parameterRange(params, parameter),
     setParams: setParamsDirect,
-    randomize: (random) =>
-      setParams((current) => {
-        const next = randomizeParams(current, { random, fonts: allFonts });
-
-        previousParams.current = current;
+    randomize: async (random, validate) => {
+      const original = params;
+      const transaction = validate
+        ? await randomizeWithValidation(original, validate, { random, fonts: allFonts })
+        : {
+            status: 'accepted' as const,
+            params: randomizeParams(original, { random, fonts: allFonts }),
+            attempts: 1,
+          };
+      if (JSON.stringify(paramsRef.current) !== JSON.stringify(original)) {
+        return {
+          status: 'cancelled' as const,
+          params: paramsRef.current,
+          attempts: transaction.attempts,
+        };
+      }
+      if (transaction.status === 'accepted') {
+        previousParams.current = original;
         setCanUndo(true);
-        return next;
-      }),
+        setParams(transaction.params);
+      }
+      return transaction;
+    },
     undo: () => {
       const previous = previousParams.current;
       if (!previous) return;

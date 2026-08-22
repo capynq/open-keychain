@@ -3,6 +3,8 @@ import {
   hasActiveParameter,
   parameterRange,
   templateParameterKeys,
+  orderedTemplateParameterKeys,
+  PARAMETER_DEFINITIONS,
   type CustomizerParameter,
 } from './parameters';
 import {
@@ -111,6 +113,19 @@ describe('keychain parameters', () => {
         'nameplateEmbedMm',
       ).max,
     ).toBeCloseTo(1.3);
+  });
+  it('keeps registry dependencies before dependent randomizable parameters', () => {
+    const ordered = orderedTemplateParameterKeys('nameplate');
+    expect(ordered.indexOf('textSizeMm')).toBeLessThan(ordered.indexOf('paddingMm'));
+    expect(ordered.indexOf('baseThicknessMm')).toBeLessThan(ordered.indexOf('reliefDepthMm'));
+  });
+
+  it('maps every registry control to its localized label key', () => {
+    expect(PARAMETER_DEFINITIONS.fontWeightMm.labelKey).toBe('fontWeight');
+    expect(PARAMETER_DEFINITIONS.connectorWidthMm.labelKey).toBe('connectorWidth');
+    expect(PARAMETER_DEFINITIONS.nameplateTiltDeg.labelKey).toBe('textTilt');
+    expect(PARAMETER_DEFINITIONS.holeDiameterMm.labelKey).toBe('keyringHole');
+    expect(PARAMETER_DEFINITIONS.paddingMm.labelKey).toBe('borderPadding');
   });
   it('keeps the visible parameter matrix aligned with template and style capabilities', () => {
     const parameters: readonly CustomizerParameter[] = [
