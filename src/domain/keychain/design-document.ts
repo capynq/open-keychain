@@ -17,42 +17,6 @@ export type DesignDocument = {
 };
 
 const V5_PREFIX = 'v5.';
-const V3_PREFIX = 'v3.';
-const V3_COMPACT_PARAM_KEYS: Partial<Record<keyof KeychainParams, string>> = {
-  text: 't',
-  fontId: 'f',
-  templateId: 'm',
-  styleId: 's',
-  textSizeMm: 'h',
-  fontWeightMm: 'w',
-  baseThicknessMm: 'b',
-  reliefDepthMm: 'r',
-  paddingMm: 'p',
-  edgeInsetMm: 'e',
-  letterSpacingMm: 'l',
-  holeDiameterMm: 'd',
-  connectorWidthMm: 'c',
-  cornerRadiusMm: 'k',
-  stakeLengthMm: 'q',
-  plantAccentEnabled: 'a',
-  nameplateTiltDeg: 'i',
-  nameplateEmbedMm: 'n',
-  jointClearanceMm: 'j',
-  mechanicalGapMm: 'g',
-  maxJointAngleDeg: 'x',
-  minimumWallMm: 'u',
-  bottomClearanceMm: 'o',
-  reliefHaloMm: 'y',
-  ringOffsetMm: 'z',
-  bubbleLobeMm: 'aa',
-  tagTailMm: 'ab',
-  archCurveMm: 'ac',
-  stakeShoulderMm: 'ad',
-  jointBossMm: 'ae',
-};
-const V3_COMPACT_TO_PARAM = Object.fromEntries(
-  Object.entries(V3_COMPACT_PARAM_KEYS).map(([key, compact]) => [compact, key]),
-) as Record<string, keyof KeychainParams>;
 const COMPACT_PARAM_KEYS: Record<keyof KeychainParams, string> = {
   text: 't',
   subtitle: 'st',
@@ -220,34 +184,23 @@ export const encodeDesignDocument = (document: DesignDocument): string => {
 export const decodeDesignDocument = (encoded: string): DesignDocument | undefined => {
   try {
     if (encoded.length > 24_000) return undefined;
-    const prefix = encoded.startsWith(V5_PREFIX)
-      ? V5_PREFIX
-      : encoded.startsWith(V3_PREFIX)
-        ? V3_PREFIX
-        : undefined;
-    if (!prefix) return undefined;
-    const payload = encoded.slice(prefix.length);
+    if (!encoded.startsWith(V5_PREFIX)) return undefined;
+    const payload = encoded.slice(V5_PREFIX.length);
     const parsed: unknown = JSON.parse(new TextDecoder().decode(base64UrlToBytes(payload)));
-    return decodeCompactDocument(
-      parsed,
-      prefix === V3_PREFIX ? V3_COMPACT_TO_PARAM : COMPACT_TO_PARAM,
-    );
+    return decodeCompactDocument(parsed);
   } catch {
     return undefined;
   }
 };
 
-const decodeCompactDocument = (
-  parsed: unknown,
-  compactToParam: Record<string, keyof KeychainParams>,
-): DesignDocument | undefined => {
+const decodeCompactDocument = (parsed: unknown): DesignDocument | undefined => {
   if (!isRecord(parsed) || !isRecord(parsed.p)) return undefined;
   if (Object.keys(parsed).some((key) => !['p', 'a', 'ff'].includes(key))) return undefined;
   const compactParams = parsed.p;
-  if (Object.keys(compactParams).some((key) => !(key in compactToParam))) return undefined;
+  if (Object.keys(compactParams).some((key) => !(key in COMPACT_TO_PARAM))) return undefined;
   const params = { ...DEFAULT_PARAMS } as KeychainParams;
   for (const [compactKey, value] of Object.entries(compactParams)) {
-    params[compactToParam[compactKey]] = value as never;
+    params[COMPACT_TO_PARAM[compactKey]] = value as never;
   }
   if (!isValidParams(params)) return undefined;
   let appearanceOverrides: PrintAppearanceOverrides | undefined;

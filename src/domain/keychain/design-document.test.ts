@@ -24,19 +24,6 @@ describe('design document codec', () => {
       btoa(JSON.stringify({ version: 2, params: DEFAULT_PARAMS })).length,
     );
   });
-  it('decodes existing v3 links into the current document version', () => {
-    const compact = { p: { t: 'LEGACY', m: 'name-keychain', s: 'contour' } };
-    const payload = btoa(JSON.stringify(compact))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/g, '');
-    expect(decodeDesignDocument(`v3.${payload}`)).toMatchObject({
-      version: 5,
-      params: { text: 'LEGACY', templateId: 'name-keychain', styleId: 'contour' },
-    });
-    expect(decodeDesignDocument(`v4.${payload}`)).toBeUndefined();
-  });
-
   it('round-trips magnet hardware and pocket placement', () => {
     const encoded = encodeDesignDocument({
       version: 5,
@@ -89,7 +76,7 @@ describe('design document codec', () => {
     ).toThrow();
   });
 
-  it('rejects legacy v1 payloads', () => {
+  it('rejects unversioned and unsupported payloads', () => {
     const legacy = btoa(
       JSON.stringify({ version: 1, params: { ...DEFAULT_PARAMS, text: 'Legacy' } }),
     )
