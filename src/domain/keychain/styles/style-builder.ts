@@ -1,7 +1,15 @@
 import type { GeometryConstraints, PrintProfile, StyleId, TemplateId } from '../model/types';
 import type { GlyphOutline } from '../text/outline';
 import type { CrossSection, GeometryWasm } from '../../../infrastructure/geometry/manifold-types';
+import { sectionArea } from '../../../infrastructure/geometry/manifold-utils';
 export type Vec2 = [number, number];
+const MAGNET_DIMENSIONS = {
+  '6x2': [6, 2],
+  '8x2': [8, 2],
+  '10x3': [10, 3],
+  '12x3': [12, 3],
+  '15x3': [15, 3],
+} as const;
 export type Bounds2 = {
   min: Vec2;
   max: Vec2;
@@ -41,18 +49,87 @@ export type StyleInput = {
   archCurveMm?: number;
   stakeShoulderMm?: number;
   jointBossMm?: number;
+  ribbonTailMm?: number;
+  ribbonNotchMm?: number;
+  subtitle?: CrossSection;
+  magnetPocketPreset?: '6x2' | '8x2' | '10x3' | '12x3' | '15x3';
+  magnetPocketPlacement?: 'center' | 'upper' | 'lower' | 'left' | 'right';
 };
 export type StyleBuild = {
   backing: CrossSection;
   relief: CrossSection;
+  subtitle?: CrossSection;
   recesses?: Array<{
     section: CrossSection;
     depthMm: number;
   }>;
+  rearRecesses?: Array<{ section: CrossSection; depthMm: number }>;
+  magnetPocket?: {
+    preset: '6x2' | '8x2' | '10x3' | '12x3' | '15x3';
+    placement: 'center' | 'upper' | 'lower' | 'left' | 'right';
+    diameterMm: number;
+    depthMm: number;
+    centerMm: Vec2;
+    adjusted: boolean;
+    safe: boolean;
+  };
   /** Optional template-specific cap depth in millimetres. */
   reliefDepthMm?: number;
   constraints?: GeometryConstraints;
   printProfile?: PrintProfile;
+};
+
+const magnetPocket = (
+  wasm: GeometryWasm,
+  plate: CrossSection,
+  input: StyleInput,
+): { section: CrossSection; centerMm: Vec2; adjusted: boolean; safe: boolean } => {
+  const preset = input.magnetPocketPreset ?? '10x3';
+  const [diameter] = MAGNET_DIMENSIONS[preset];
+  const radius = (diameter / 2) * 1000;
+  const clearance = 1.2 * 1000;
+  const bounds = sectionBounds(plate);
+  const xLimit = Math.max(0, (bounds.max[0] - bounds.min[0]) / 2 - radius - clearance);
+  const yLimit = Math.max(0, (bounds.max[1] - bounds.min[1]) / 2 - radius - clearance);
+  const placement = input.magnetPocketPlacement ?? 'center';
+  const requestedX =
+    placement === 'left' ? -xLimit * 0.6 : placement === 'right' ? xLimit * 0.6 : 0;
+  const requestedY =
+    placement === 'upper' ? yLimit * 0.6 : placement === 'lower' ? -yLimit * 0.6 : 0;
+  const clampedRequested: Vec2 = [
+    Math.max(-xLimit, Math.min(xLimit, requestedX)),
+    Math.max(-yLimit, Math.min(yLimit, requestedY)),
+  ];
+  const isSafe = (point: Vec2): boolean => {
+    const envelope = wasm.CrossSection.circle(radius + clearance, 64).translate(point);
+    const outside = envelope.subtract(plate);
+    const safe = sectionArea(outside) <= 10_000;
+    envelope.delete();
+    outside.delete();
+    return safe;
+  };
+  const candidates: Vec2[] = [clampedRequested, [0, 0]];
+  for (let row = -2; row <= 2; row += 1)
+    for (let column = -2; column <= 2; column += 1)
+      candidates.push([(column / 2) * xLimit, (row / 2) * yLimit]);
+  const safeCandidates = candidates.filter(isSafe);
+  const point = safeCandidates.sort(
+    (left, right) =>
+      (left[0] - clampedRequested[0]) ** 2 +
+      (left[1] - clampedRequested[1]) ** 2 -
+      ((right[0] - clampedRequested[0]) ** 2 + (right[1] - clampedRequested[1]) ** 2),
+  )[0] ?? [0, 0];
+  const x = point[0];
+  const y = point[1];
+  return {
+    section: wasm.CrossSection.circle(radius, 64).translate([x, y]),
+    centerMm: [x / 1000, y / 1000],
+    adjusted:
+      safeCandidates.length === 0 ||
+      Math.abs(x - requestedX) > 0.01 ||
+      Math.abs(y - requestedY) > 0.01,
+    safe: safeCandidates.length > 0 || (xLimit > 0 && yLimit > 0),
+  };
 };
 export const roundedRect = (
   wasm: GeometryWasm,
@@ -70,6 +147,22 @@ export const union = (wasm: GeometryWasm, sections: CrossSection[]): CrossSectio
 export const sectionBounds = (section: CrossSection): Bounds2 => {
   const bounds = section.bounds();
   return { min: [bounds.min[0], bounds.min[1]], max: [bounds.max[0], bounds.max[1]] };
+};
+/** Apply the Arch style's shared upward curve to a relief section. */
+export const archWarp = (
+  section: CrossSection,
+  textBounds: Bounds2,
+  archCurveMm = 0,
+): CrossSection => {
+  const textWidth = textBounds.max[0] - textBounds.min[0];
+  const textHeight = textBounds.max[1] - textBounds.min[1];
+  const centerX = (textBounds.min[0] + textBounds.max[0]) / 2;
+  const amplitude =
+    Math.max(1500, Math.min(5000, textHeight * 0.18)) + Math.max(0, archCurveMm) * 1000;
+  return section.warp((point: Vec2) => {
+    const normalized = (point[0] - centerX) / (textWidth / 2);
+    point[1] += amplitude * (1 - normalized * normalized);
+  });
 };
 export const capsule = (
   wasm: GeometryWasm,
@@ -205,22 +298,20 @@ export const finishStyle = (
   attachKeyring = true,
 ): StyleBuild => {
   const textInset = Math.max(600, input.textInset ?? input.padding);
-  const support = relief.offset(
-    Math.max(
-      600,
-      Math.min(
-        textInset + Math.max(0, input.reliefHaloMm ?? 0) * 1000,
-        1200 + Math.max(0, input.reliefHaloMm ?? 0) * 1000,
-      ),
-    ),
-    'Round',
-    2,
-    64,
+  const reliefHalo = Math.max(0, input.reliefHaloMm ?? 0) * 1000;
+  const supportOffset = Math.max(600, Math.min(textInset + reliefHalo, 1200 + reliefHalo));
+  const support = relief.offset(supportOffset, 'Round', 2, 64);
+  const subtitleSupport = input.subtitle
+    ? input.subtitle.offset(supportOffset, 'Round', 2, 64)
+    : undefined;
+  const joined = union(
+    wasm,
+    subtitleSupport ? [backing, support, subtitleSupport] : [backing, support],
   );
-  const joined = union(wasm, [backing, support]);
   const combined = joined.simplify(20);
   backing.delete();
   support.delete();
+  subtitleSupport?.delete();
   joined.delete();
   const result = attachKeyring
     ? ringAssembly(
@@ -233,20 +324,127 @@ export const finishStyle = (
       )
     : combined;
   if (result !== combined) combined.delete();
-  return { backing: result, relief, recesses };
+  return { backing: result, relief, subtitle: input.subtitle, recesses };
+};
+const finishMagnetStyle = (
+  wasm: GeometryWasm,
+  backing: CrossSection,
+  relief: CrossSection,
+  input: StyleInput,
+  side: 'left' | 'right',
+  recesses?: Array<{ section: CrossSection; depthMm: number }>,
+): StyleBuild => {
+  let magnetBacking = backing;
+  if (input.subtitle) {
+    const subtitleSupport = input.subtitle.offset(
+      Math.max(600, Math.min(input.textInset ?? input.padding, 1200)),
+      'Round',
+      2,
+      64,
+    );
+    const joined = union(wasm, [magnetBacking, subtitleSupport]).simplify(20);
+    magnetBacking.delete();
+    subtitleSupport.delete();
+    magnetBacking = joined;
+  }
+  const finished = finishStyle(wasm, magnetBacking, relief, input, side, recesses, false);
+  const pocket = magnetPocket(wasm, finished.backing, input);
+  const preset = input.magnetPocketPreset ?? '10x3';
+  const dimensions = MAGNET_DIMENSIONS[preset];
+  return {
+    ...finished,
+    subtitle: input.subtitle,
+    rearRecesses: [{ section: pocket.section, depthMm: dimensions[1] + 0.2 }],
+    magnetPocket: {
+      preset,
+      placement: input.magnetPocketPlacement ?? 'center',
+      diameterMm: dimensions[0] + 0.4,
+      depthMm: dimensions[1] + 0.2,
+      centerMm: pocket.centerMm,
+      adjusted: pocket.adjusted,
+      safe: pocket.safe,
+    },
+  };
 };
 export const buildStyle = (wasm: GeometryWasm, styleId: StyleId, input: StyleInput): StyleBuild => {
   const textInset = Math.max(600, input.textInset ?? input.padding);
   const textWidth = input.textBounds.max[0] - input.textBounds.min[0];
   const textHeight = input.textBounds.max[1] - input.textBounds.min[1];
-  if (styleId === 'capsule')
-    return finishStyle(
+  if (input.templateId === 'magnet' && styleId === 'plain') {
+    const plate = roundedRect(
       wasm,
-      plateStyle(wasm, input, Math.max(5000, textHeight / 2)),
-      input.text,
-      input,
-      'right',
+      Math.max(34000, textWidth + textInset * 2),
+      Math.max(18000, textHeight + textInset * 2),
+      Math.max(1500, Math.min(5000, input.cornerRadius ?? textHeight / 2)),
     );
+    const relief = input.text;
+    const result = finishMagnetStyle(wasm, plate, relief, input, 'left');
+    return { ...result, subtitle: input.subtitle };
+  }
+  if (styleId === 'ribbon') {
+    const tail = Math.max(6, input.ribbonTailMm ?? 12) * 1000;
+    const notch = Math.min(tail * 0.8, Math.max(1, input.ribbonNotchMm ?? 4) * 1000);
+    const plate = roundedRect(
+      wasm,
+      Math.max(34000, textWidth + textInset * 2 + tail * 2),
+      Math.max(18000, textHeight + textInset * 2),
+      Math.max(1500, Math.min(5000, input.cornerRadius ?? textHeight / 2)),
+    );
+    const bounds = sectionBounds(plate);
+    const y = (bounds.min[1] + bounds.max[1]) / 2;
+    const left = wasm.CrossSection.ofPolygons(
+      [
+        [
+          [bounds.min[0], bounds.min[1]],
+          [bounds.min[0] - tail, y - textHeight * 0.28],
+          [bounds.min[0] - tail + notch, y],
+          [bounds.min[0] - tail, y + textHeight * 0.28],
+          [bounds.min[0], bounds.max[1]],
+        ],
+      ],
+      'EvenOdd',
+    );
+    const right = wasm.CrossSection.ofPolygons(
+      [
+        [
+          [bounds.max[0], bounds.min[1]],
+          [bounds.max[0] + tail, y - textHeight * 0.28],
+          [bounds.max[0] + tail - notch, y],
+          [bounds.max[0] + tail, y + textHeight * 0.28],
+          [bounds.max[0], bounds.max[1]],
+        ],
+      ],
+      'EvenOdd',
+    );
+    const backing = union(wasm, [plate, left, right]);
+    plate.delete();
+    left.delete();
+    right.delete();
+    const relief = input.text;
+    if (input.templateId === 'magnet') {
+      // The fixed 4.4 mm Magnet baseline leaves at least 1.2 mm of roof for a 3.2 mm pocket.
+      const result = finishMagnetStyle(wasm, backing, relief, input, 'left');
+      return { ...result, subtitle: input.subtitle };
+    }
+    const finished = finishStyle(wasm, backing, relief, input, 'left');
+    return finished;
+  }
+  if (styleId === 'capsule')
+    return input.templateId === 'magnet'
+      ? finishMagnetStyle(
+          wasm,
+          plateStyle(wasm, input, Math.max(5000, textHeight / 2)),
+          input.text,
+          input,
+          'right',
+        )
+      : finishStyle(
+          wasm,
+          plateStyle(wasm, input, Math.max(5000, textHeight / 2)),
+          input.text,
+          input,
+          'right',
+        );
   if (styleId === 'soft-tag') {
     const plate = plateStyle(wasm, input, 3500);
     const bounds = sectionBounds(plate);
@@ -257,7 +455,9 @@ export const buildStyle = (wasm: GeometryWasm, styleId: StyleId, input: StyleInp
     const result = union(wasm, [plate, accent]);
     plate.delete();
     accent.delete();
-    return finishStyle(wasm, result, input.text, input, 'left');
+    return input.templateId === 'magnet'
+      ? finishMagnetStyle(wasm, result, input.text, input, 'left')
+      : finishStyle(wasm, result, input.text, input, 'left');
   }
   if (styleId === 'bubble') {
     const backing = input.text.offset(textInset, 'Round', 2, 64);
@@ -277,33 +477,32 @@ export const buildStyle = (wasm: GeometryWasm, styleId: StyleId, input: StyleInp
     joined.delete();
     backing.delete();
     bubbles.forEach((bubble: CrossSection) => bubble.delete());
-    return finishStyle(wasm, decorated, input.text, input, 'left');
+    return input.templateId === 'magnet'
+      ? finishMagnetStyle(wasm, decorated, input.text, input, 'left')
+      : finishStyle(wasm, decorated, input.text, input, 'left');
   }
   if (styleId === 'arch') {
-    const centerX = (input.textBounds.min[0] + input.textBounds.max[0]) / 2;
-    const width = Math.max(textWidth, 1);
-    const warp = (point: Vec2) => {
-      const normalized = (point[0] - centerX) / (width / 2);
-      point[1] +=
-        (Math.max(1500, Math.min(5000, textHeight * 0.18)) +
-          Math.max(0, input.archCurveMm ?? 0) * 1000) *
-        (1 - normalized * normalized);
-    };
-    const relief = input.text.warp(warp);
+    const relief = archWarp(input.text, input.textBounds, input.archCurveMm);
     const backing = relief.offset(textInset, 'Round', 2, 64);
-    return finishStyle(wasm, backing, relief, input, 'left');
+    return input.templateId === 'magnet'
+      ? finishMagnetStyle(wasm, backing, relief, input, 'left')
+      : finishStyle(wasm, backing, relief, input, 'left');
   }
   const offset = input.text.offset(textInset, 'Round', 2, 64);
-  return finishStyle(wasm, offset, input.text, input, 'left');
+  return input.templateId === 'magnet'
+    ? finishMagnetStyle(wasm, offset, input.text, input, 'left')
+    : finishStyle(wasm, offset, input.text, input, 'left');
 };
 export const STYLE_CATALOG: Array<{
   id: StyleId;
   name: string;
   description: string;
 }> = [
+  { id: 'plain', name: 'Plain', description: 'A clean plaque without decorative tails.' },
   { id: 'contour', name: 'Contour', description: 'A soft outline that follows the name.' },
   { id: 'capsule', name: 'Capsule', description: 'A clean pill-shaped nameplate.' },
   { id: 'soft-tag', name: 'Soft tag', description: 'A rounded tag with a playful end.' },
   { id: 'bubble', name: 'Bubble', description: 'An organic, connected silhouette.' },
   { id: 'arch', name: 'Arch', description: 'A gently curved nameplate.' },
+  { id: 'ribbon', name: 'Ribbon', description: 'Symmetric tails with restrained folded accents.' },
 ];

@@ -2,7 +2,13 @@ import { spawn } from 'node:child_process';
 import { performance } from 'node:perf_hooks';
 import { fileURLToPath } from 'node:url';
 
-const templateIds = ['name-keychain', 'articulated-name', 'nameplate', 'plant-label'] as const;
+const templateIds = [
+  'name-keychain',
+  'articulated-name',
+  'nameplate',
+  'plant-label',
+  'magnet',
+] as const;
 const concurrency = Math.max(1, Number.parseInt(process.env.MATRIX_CONCURRENCY ?? '2', 10) || 2);
 const worker = fileURLToPath(new URL('./bench-matrix.ts', import.meta.url));
 type MatrixSummary = {

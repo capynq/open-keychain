@@ -12,6 +12,15 @@ describe('i18n utilities', () => {
     ).toContain('Ж');
     expect(issueMessage('ru', { code: 'relief-outside-backing', message: '' })).toContain('основы');
     expect(
+      issueMessage('ru', { code: 'subtitle-font-load', message: 'Could not load subtitle font.' }),
+    ).toContain('шрифт подзаголовка');
+    expect(
+      issueMessage('uk', {
+        code: 'subtitle-missing-glyph',
+        message: 'The subtitle font does not contain “Ж”.',
+      }),
+    ).toContain('шрифті підзаголовка');
+    expect(
       issueMessage('en', {
         code: 'text-over-width',
         message:

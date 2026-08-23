@@ -6,6 +6,7 @@ import { t, type Locale } from '../../infrastructure/i18n';
 import { ResetIconButton } from '../../components/ResetIconButton';
 import { buildPreflightReport } from '../../features/export';
 import { issueMessage } from '../../infrastructure/i18n';
+import { InfoBlock } from '../../features/customizer/components/InfoBlock';
 
 const SURFACE_PRESETS: SurfacePresetId[] = ['matte', 'graph', 'dark', 'wood', 'metal'];
 
@@ -112,6 +113,7 @@ const PreviewSummary = ({
   status: PreviewStatus;
   exportOpen: boolean;
   modelInfo: {
+    templateId: string;
     template: string;
     style: string | undefined;
     font: string;
@@ -174,6 +176,21 @@ const PreviewSummary = ({
           </strong>
         </summary>
         <div className="print-confidence-body">
+          {modelInfo.templateId === 'magnet' && (
+            <InfoBlock tone="hardware" title={t(locale, 'magnetHardwareTitle')}>
+              <>
+                {t(locale, 'magnetHardware')}
+                {result?.magnetPocket && (
+                  <small>
+                    {t(locale, 'magnetPocketDetails', {
+                      diameter: result.magnetPocket.diameterMm.toFixed(1),
+                      depth: result.magnetPocket.depthMm.toFixed(1),
+                    })}
+                  </small>
+                )}
+              </>
+            </InfoBlock>
+          )}
           {report.profile && (
             <>
               <span>{t(locale, 'printProfile')}</span>
@@ -238,6 +255,7 @@ export const PreviewPanel = ({
   status: PreviewStatus;
   exportOpen: boolean;
   modelInfo: {
+    templateId: string;
     template: string;
     style: string | undefined;
     font: string;

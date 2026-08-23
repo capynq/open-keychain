@@ -157,7 +157,11 @@ for (const item of cases) {
       fontId: item.fontId,
       text: item.text.value,
       baseThicknessMm:
-        item.template.id === 'articulated-name' ? 3.4 : DEFAULT_PARAMS.baseThicknessMm,
+        item.template.id === 'articulated-name'
+          ? 3.4
+          : item.template.id === 'magnet'
+            ? 4.4
+            : DEFAULT_PARAMS.baseThicknessMm,
     },
     true,
   );

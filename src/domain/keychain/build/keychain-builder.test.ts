@@ -146,6 +146,207 @@ const geometryFingerprint = (result: Awaited<ReturnType<typeof buildKeychain>>['
   Number(result.dimensions.thicknessMm.toFixed(3)),
 ];
 describe('finished keychain geometry', () => {
+  it('builds every magnet style with a blind rear pocket and no keyring', async () => {
+    for (const styleId of [
+      'plain',
+      'contour',
+      'capsule',
+      'soft-tag',
+      'bubble',
+      'arch',
+      'ribbon',
+    ] as const) {
+      const { result } = await buildKeychain(wasm, {
+        ...DEFAULT_PARAMS,
+        templateId: 'magnet',
+        styleId,
+        baseThicknessMm: 4.4,
+        text: 'MAGNET',
+        subtitle: '2026',
+        magnetPocketPreset: '10x3',
+        magnetPocketPlacement: 'center',
+      });
+      expect(result.printable, `${styleId}: ${JSON.stringify(result.issues)}`).toBe(true);
+      expect(result.magnetPocket?.preset).toBe('10x3');
+      expect(result.magnetPocket?.depthMm).toBe(3.2);
+      expect(result.magnetPocket?.diameterMm).toBe(10.4);
+      expect(result.issues.some((issue) => issue.code === 'relief-outside-backing')).toBe(false);
+    }
+  }, 60000);
+  it('changes pocket placement and dimensions across the fixed hardware presets', async () => {
+    const upper = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      templateId: 'magnet',
+      styleId: 'plain',
+      baseThicknessMm: 4.4,
+      magnetPocketPreset: '6x2',
+      magnetPocketPlacement: 'upper',
+    });
+    const right = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      templateId: 'magnet',
+      styleId: 'plain',
+      baseThicknessMm: 4.4,
+      magnetPocketPreset: '15x3',
+      magnetPocketPlacement: 'right',
+    });
+    expect(upper.result.magnetPocket?.centerMm[1]).toBeGreaterThan(0);
+    expect(right.result.magnetPocket?.centerMm[0]).toBeGreaterThan(0);
+    expect(upper.result.magnetPocket?.diameterMm).toBe(6.4);
+    expect(upper.result.magnetPocket?.depthMm).toBe(2.2);
+    expect(right.result.magnetPocket?.diameterMm).toBe(15.4);
+    expect(right.result.magnetPocket?.depthMm).toBe(3.2);
+  }, 60000);
+  it('supports independent subtitle styling across standard templates', async () => {
+    for (const templateId of ['name-keychain', 'magnet', 'nameplate', 'plant-label'] as const) {
+      const base: KeychainParams = {
+        ...DEFAULT_PARAMS,
+        templateId,
+        styleId: templateId === 'magnet' ? 'plain' : 'contour',
+        baseThicknessMm: templateId === 'magnet' ? 4.4 : DEFAULT_PARAMS.baseThicknessMm,
+        text: 'NAME',
+        subtitle: 'ROLE',
+        subtitleFontId: 'caveat',
+        subtitleTextSizeMm: 6,
+        subtitleReliefDepthMm: 0.6,
+        subtitleOffsetXRatio: 0,
+        subtitleOffsetYRatio: 0,
+      };
+      const first = await buildKeychain(wasm, base);
+      const second = await buildKeychain(wasm, {
+        ...base,
+        subtitleTextSizeMm: 9,
+        subtitleReliefDepthMm: 1.4,
+        subtitleOffsetXRatio: 0.5,
+      });
+      expect(first.result.printable, `${templateId}: ${JSON.stringify(first.result.issues)}`).toBe(
+        true,
+      );
+      expect(
+        second.result.printable,
+        `${templateId}: ${JSON.stringify(second.result.issues)}`,
+      ).toBe(true);
+      expect(geometryFingerprint(second.result)).not.toEqual(geometryFingerprint(first.result));
+    }
+  }, 120000);
+  it('includes subtitles in Nameplate and Plant label relief geometry', async () => {
+    for (const templateId of ['nameplate', 'plant-label'] as const) {
+      const withoutSubtitle = await buildKeychain(wasm, {
+        ...DEFAULT_PARAMS,
+        templateId,
+        styleId: templateId === 'nameplate' ? 'contour' : 'arch',
+        text: 'NAME',
+        subtitle: '',
+      });
+      const withSubtitle = await buildKeychain(wasm, {
+        ...DEFAULT_PARAMS,
+        templateId,
+        styleId: templateId === 'nameplate' ? 'contour' : 'arch',
+        text: 'NAME',
+        subtitle: 'ROLE',
+      });
+      expect(withSubtitle.result.printable, JSON.stringify(withSubtitle.result.issues)).toBe(true);
+      expect(meshFingerprint(withSubtitle.result.reliefMesh)).not.toEqual(
+        meshFingerprint(withoutSubtitle.result.reliefMesh),
+      );
+    }
+  }, 60000);
+  it('keeps an Arch subtitle on the same curve as the primary relief', async () => {
+    const straight = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      styleId: 'arch',
+      text: 'ALEX',
+      subtitle: 'ROLE',
+      archCurveMm: 0,
+    });
+    const curved = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      styleId: 'arch',
+      text: 'ALEX',
+      subtitle: 'ROLE',
+      archCurveMm: 6,
+    });
+    expect(straight.result.printable, JSON.stringify(straight.result.issues)).toBe(true);
+    expect(curved.result.printable, JSON.stringify(curved.result.issues)).toBe(true);
+    expect(meshFingerprint(curved.result.reliefMesh)).not.toEqual(
+      meshFingerprint(straight.result.reliefMesh),
+    );
+  }, 30000);
+
+  it('makes relief halo visible around both Arch text lines', async () => {
+    const withoutHalo = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      styleId: 'arch',
+      text: 'ALEX',
+      subtitle: 'ROLE',
+      reliefHaloMm: 0,
+    });
+    const withHalo = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      styleId: 'arch',
+      text: 'ALEX',
+      subtitle: 'ROLE',
+      reliefHaloMm: 2,
+    });
+    expect(withoutHalo.result.printable, JSON.stringify(withoutHalo.result.issues)).toBe(true);
+    expect(withHalo.result.printable, JSON.stringify(withHalo.result.issues)).toBe(true);
+    expect(meshFingerprint(withHalo.result.baseMesh)).not.toEqual(
+      meshFingerprint(withoutHalo.result.baseMesh),
+    );
+  }, 30000);
+
+  it('brings similarly sized Contour title lines into a natural join', async () => {
+    const joined = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      styleId: 'contour',
+      text: 'ALEX',
+      subtitle: 'qwerty',
+      subtitleTextSizeMm: DEFAULT_PARAMS.textSizeMm,
+      subtitleGapMm: 1.5,
+    });
+    const separated = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      styleId: 'contour',
+      text: 'ALEX',
+      subtitle: 'qwerty',
+      subtitleTextSizeMm: DEFAULT_PARAMS.textSizeMm,
+      subtitleGapMm: 8,
+    });
+    expect(joined.result.printable, JSON.stringify(joined.result.issues)).toBe(true);
+    expect(separated.result.printable, JSON.stringify(separated.result.issues)).toBe(true);
+    expect(joined.result.dimensions.heightMm).toBeLessThan(separated.result.dimensions.heightMm);
+  }, 30000);
+  it('builds a printable magnet with a contained subtitle and ribbon variation', async () => {
+    const compact = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      templateId: 'magnet',
+      styleId: 'ribbon',
+      baseThicknessMm: 4.4,
+      textSizeMm: 12,
+      text: 'EVENT',
+      subtitle: '2026',
+      ribbonTailMm: 6,
+      ribbonNotchMm: 1,
+    });
+    const spacious = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      templateId: 'magnet',
+      styleId: 'ribbon',
+      baseThicknessMm: 5,
+      textSizeMm: 12,
+      text: 'EVENT',
+      subtitle: '2026',
+      ribbonTailMm: 18,
+      ribbonNotchMm: 8,
+    });
+    expect(compact.result.printable).toBe(true);
+    expect(compact.result.issues.some((issue) => issue.code === 'relief-outside-backing')).toBe(
+      false,
+    );
+    expect(spacious.result.printable, JSON.stringify(spacious.result.issues)).toBe(true);
+    expect(geometryFingerprint(spacious.result)).not.toEqual(geometryFingerprint(compact.result));
+    expect(compact.result.dimensions.thicknessMm).toBeGreaterThanOrEqual(4.4);
+  });
   for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'] as const) {
     it(`changes ${styleId} geometry across the full backing-size range`, async () => {
       const compact = await buildKeychain(wasm, {
@@ -693,7 +894,7 @@ describe('finished keychain geometry', () => {
     );
     expect(result.issues.some((issue) => issue.severity === 'error')).toBe(false);
   }, 30000);
-  it('returns an actionable error when 12 mm text still cannot fit', async () => {
+  it('keeps an oversized 12 mm text exportable with a warning', async () => {
     const { result } = await buildKeychain(wasm, {
       ...DEFAULT_PARAMS,
       fontId: 'bungee',
@@ -701,9 +902,9 @@ describe('finished keychain geometry', () => {
       text: 'WWWWWWWWWWWWWWWWWWWWWWWW',
       textSizeMm: 12,
     });
-    expect(result.printable).toBe(false);
+    expect(result.printable).toBe(true);
     expect(result.issues).toContainEqual(
-      expect.objectContaining({ severity: 'error', code: 'text-too-wide' }),
+      expect.objectContaining({ severity: 'warning', code: 'text-over-width' }),
     );
   }, 30000);
   for (const templateId of ['articulated-name', 'nameplate', 'plant-label'] as const) {

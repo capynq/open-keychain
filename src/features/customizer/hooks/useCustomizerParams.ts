@@ -36,6 +36,7 @@ export const useCustomizerParams = (
 ): {
   params: KeychainParams;
   selectedFont: FontDefinition;
+  selectedSubtitleFont: FontDefinition;
   fontForId: (id: string) => FontDefinition;
   googleFonts: FontDefinition[];
   googleLoading: boolean;
@@ -52,6 +53,8 @@ export const useCustomizerParams = (
   fontNotice: FontNotice | undefined;
   update: <K extends keyof KeychainParams>(key: K, value: KeychainParams[K]) => void;
   updateText: (text: string) => void;
+  updateSubtitle: (subtitle: string) => void;
+  updateSubtitleFont: (fontId: string) => void;
   selectTemplate: (templateId: TemplateId) => void;
   updateBackingSize: (value: number) => void;
   resetSection: (section: CustomizerResetSection) => void;
@@ -134,6 +137,13 @@ export const useCustomizerParams = (
       ) ?? FONT_CATALOG[0],
     [allFonts, localFonts, params.fontId],
   );
+  const selectedSubtitleFont = useMemo(
+    () =>
+      [...allFonts, ...localFonts.flatMap((record) => (record.font ? [record.font] : []))].find(
+        (font) => font.id === params.subtitleFontId,
+      ) ?? FONT_CATALOG[0],
+    [allFonts, localFonts, params.subtitleFontId],
+  );
 
   const activeTemplate = useMemo(
     () =>
@@ -154,17 +164,19 @@ export const useCustomizerParams = (
   };
 
   const updateText = (text: string): void => {
+    setFontNotice(undefined);
     const currentFont =
       allFonts.find((font) => font.id === params.fontId) ?? fontDefinition(params.fontId);
     const articulated = params.templateId === 'articulated-name';
+    const textForCompatibility = text;
     const compatible = articulated
       ? fontSupportsArticulatedName(currentFont, text)
-      : fontSupportsText(currentFont, text);
+      : fontSupportsText(currentFont, textForCompatibility);
     const replacement = compatible
       ? undefined
       : articulated
         ? articulatedFallbackFont(text)
-        : allFonts.find((font) => fontSupportsText(font, text));
+        : allFonts.find((font) => fontSupportsText(font, textForCompatibility));
     if (replacement)
       setFontNotice({ font: currentFont.name, replacement: replacement.name, articulated });
     setParamsDirect((current) => ({
@@ -172,6 +184,46 @@ export const useCustomizerParams = (
       text,
       fontId: replacement?.id ?? current.fontId,
     }));
+  };
+  const updateSubtitle = (subtitle: string): void => {
+    setFontNotice(undefined);
+    const currentFont =
+      allFonts.find((font) => font.id === params.subtitleFontId) ??
+      fontDefinition(params.subtitleFontId);
+    const replacement =
+      !subtitle || fontSupportsText(currentFont, subtitle)
+        ? undefined
+        : allFonts.find((font) => fontSupportsText(font, subtitle));
+    if (replacement)
+      setFontNotice({
+        font: currentFont.name,
+        replacement: replacement.name,
+        articulated: false,
+        target: 'subtitle',
+      });
+    setParamsDirect((current) => ({
+      ...current,
+      subtitle,
+      subtitleFontId: replacement?.id ?? current.subtitleFontId,
+    }));
+  };
+  const updateSubtitleFont = (fontId: string): void => {
+    setFontNotice(undefined);
+    const selected = allFonts.find((font) => font.id === fontId) ?? fontDefinition(fontId);
+    if (params.subtitle && !fontSupportsText(selected, params.subtitle)) {
+      const replacement = allFonts.find((font) => fontSupportsText(font, params.subtitle));
+      if (replacement) {
+        setFontNotice({
+          font: selected.name,
+          replacement: replacement.name,
+          articulated: false,
+          target: 'subtitle',
+        });
+        setParamsDirect((current) => ({ ...current, subtitleFontId: replacement.id }));
+        return;
+      }
+    }
+    setParamsDirect((current) => ({ ...current, subtitleFontId: fontId }));
   };
 
   const updateBackingSize = (value: number): void => {
@@ -204,15 +256,47 @@ export const useCustomizerParams = (
         templateId === 'articulated-name' && !fontSupportsArticulatedName(currentFont, current.text)
           ? articulatedFallbackFont(current.text)
           : undefined;
+      const currentSubtitleFont =
+        allFonts.find((font) => font.id === current.subtitleFontId) ??
+        fontDefinition(current.subtitleFontId);
+      const subtitleReplacement =
+        templateId !== 'articulated-name' &&
+        current.subtitle &&
+        !fontSupportsText(currentSubtitleFont, current.subtitle)
+          ? allFonts.find((font) => fontSupportsText(font, current.subtitle))
+          : undefined;
+
+      const template =
+        TEMPLATE_CATALOG.find((item) => item.id === templateId) ?? TEMPLATE_CATALOG[0];
 
       return {
         ...current,
         templateId,
+        styleId:
+          templateId === 'magnet'
+            ? 'plain'
+            : template.styles.includes(current.styleId)
+              ? current.styleId
+              : 'contour',
         fontId: replacement?.id ?? current.fontId,
-        baseThicknessMm:
+        subtitleFontId:
           templateId === 'articulated-name'
-            ? Math.max(3.4, current.baseThicknessMm)
-            : current.baseThicknessMm,
+            ? DEFAULT_PARAMS.subtitleFontId
+            : (subtitleReplacement?.id ?? current.subtitleFontId),
+        ...(templateId === 'articulated-name'
+          ? {
+              subtitle: '',
+              subtitleFontId: DEFAULT_PARAMS.subtitleFontId,
+              subtitleOffsetXRatio: 0,
+              subtitleOffsetYRatio: 0,
+            }
+          : {}),
+        baseThicknessMm:
+          templateId === 'magnet'
+            ? Math.max(4.4, Math.min(5, current.baseThicknessMm))
+            : templateId === 'articulated-name'
+              ? Math.max(3.4, Math.min(4, current.baseThicknessMm))
+              : Math.min(4, current.baseThicknessMm),
       };
     });
   };
@@ -248,14 +332,19 @@ export const useCustomizerParams = (
   };
   const removeLocalFont = async (id: string): Promise<void> => {
     await localStore.remove(id);
-    if (params.fontId === id)
-      setParamsDirect((current) => ({ ...current, fontId: FONT_CATALOG[0].id }));
+    if (params.fontId === id || params.subtitleFontId === id)
+      setParamsDirect((current) => ({
+        ...current,
+        ...(current.fontId === id ? { fontId: FONT_CATALOG[0].id } : {}),
+        ...(current.subtitleFontId === id ? { subtitleFontId: FONT_CATALOG[0].id } : {}),
+      }));
     setLocalFonts((current) => current.filter((item) => item.id !== id));
   };
 
   return {
     params,
     selectedFont,
+    selectedSubtitleFont,
     fontForId: (id) => allFonts.find((font) => font.id === id) ?? fontDefinition(id),
     googleFonts,
     googleLoading,
@@ -272,6 +361,8 @@ export const useCustomizerParams = (
     fontNotice,
     update,
     updateText,
+    updateSubtitle,
+    updateSubtitleFont,
     updateBackingSize,
     selectTemplate,
     resetSection,

@@ -33,11 +33,13 @@ export const useExportActions = ({
   geometry,
   params,
   fontDefinition,
+  subtitleFontDefinition,
   appearanceOverrides,
 }: {
   geometry: ExportSource;
   params: KeychainParams;
   fontDefinition?: FontDefinition;
+  subtitleFontDefinition?: FontDefinition;
   appearanceOverrides?: PrintAppearanceOverrides;
 }): ExportActionsState => {
   const [downloading, setDownloading] = useState(false);
@@ -70,6 +72,7 @@ export const useExportActions = ({
         mode,
         fontDefinition,
         requestedAppearanceOverrides,
+        subtitleFontDefinition,
       );
       if (!file) throw new Error('The file could not be created.');
       const url = URL.createObjectURL(new Blob([file.data], { type: file.mimeType }));

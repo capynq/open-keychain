@@ -31,6 +31,59 @@ test('shows the expanded built-in catalog and optional filters', async ({ page }
   await expect(fontSection.getByText('No compatible fonts found.')).toBeVisible();
 });
 
+test('synchronizes primary and secondary font targets with subtitle compatibility', async ({
+  page,
+}) => {
+  await page.goto('/create');
+  const browser = page.getByTestId('font-browser');
+  const shape = page.getByTestId('shape-settings');
+  const subtitle = page.getByLabel('Subtitle or short message');
+  await expect(browser.getByRole('radio')).toHaveCount(0);
+  await expect(shape.getByRole('radio')).toHaveCount(0);
+  await subtitle.fill('ROLE');
+  await expect(browser.getByRole('radio', { name: 'Primary' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await expect(shape.getByRole('radio', { name: 'Primary' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+
+  await shape.getByRole('radio', { name: 'Secondary' }).click();
+  await expect(browser.getByRole('radio', { name: 'Secondary' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await expect(shape.getByRole('radio', { name: 'Secondary' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await expect(shape.getByLabel('Text size')).toHaveCount(0);
+  await expect(subtitle).toBeVisible();
+
+  await browser.getByRole('button', { name: 'Reset subtitle' }).click();
+  await expect(browser.getByRole('radio')).toHaveCount(0);
+  await subtitle.fill('ROLE');
+  await expect(browser.getByRole('radio', { name: 'Primary' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+
+  await subtitle.fill('');
+  await expect(browser.getByRole('radio')).toHaveCount(0);
+  await expect(shape.getByRole('radio')).toHaveCount(0);
+  await subtitle.fill('ROLE');
+  await shape.getByRole('radio', { name: 'Secondary' }).click();
+  await shape.getByRole('button', { name: 'Reset subtitle' }).click();
+  await expect(browser.getByRole('radio')).toHaveCount(0);
+  await expect(shape.getByRole('radio')).toHaveCount(0);
+  await subtitle.fill('ROLE');
+  await page.getByRole('button', { name: 'Articulated name' }).click();
+  await expect(browser.getByRole('radio', { name: 'Secondary' })).toHaveCount(0);
+  await expect(shape.getByRole('radio', { name: 'Secondary' })).toHaveCount(0);
+});
+
 test('shows the Google Fonts unavailable fallback and keeps built-in fonts available', async ({
   page,
 }) => {

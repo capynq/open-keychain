@@ -35,6 +35,7 @@ test('captures the reviewed customizer showcase', async ({ page }, testInfo) => 
 });
 
 const templatePreviews = [
+  { label: 'Magnet', file: 'magnet' },
   { label: 'Name keychain', file: 'name-keychain' },
   { label: 'Articulated name', file: 'articulated-name' },
   { label: 'Nameplate', file: 'nameplate' },
@@ -42,6 +43,48 @@ const templatePreviews = [
 ] as const;
 
 const stylePreviews = [
+  {
+    template: 'Magnet',
+    templateFile: 'magnet',
+    style: 'Plain',
+    file: 'magnet',
+  },
+  {
+    template: 'Magnet',
+    templateFile: 'magnet',
+    style: 'Contour',
+    file: 'magnet-contour',
+  },
+  {
+    template: 'Magnet',
+    templateFile: 'magnet',
+    style: 'Capsule',
+    file: 'magnet-capsule',
+  },
+  {
+    template: 'Magnet',
+    templateFile: 'magnet',
+    style: 'Soft tag',
+    file: 'magnet-soft-tag',
+  },
+  {
+    template: 'Magnet',
+    templateFile: 'magnet',
+    style: 'Bubble',
+    file: 'magnet-bubble',
+  },
+  {
+    template: 'Magnet',
+    templateFile: 'magnet',
+    style: 'Arch',
+    file: 'magnet-arch',
+  },
+  {
+    template: 'Magnet',
+    templateFile: 'magnet',
+    style: 'Ribbon',
+    file: 'magnet-ribbon',
+  },
   {
     template: 'Name keychain',
     templateFile: 'name-keychain',

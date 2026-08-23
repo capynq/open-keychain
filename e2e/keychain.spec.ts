@@ -138,7 +138,7 @@ test('customizes a name, uses every icon camera preset, and downloads STL', asyn
     .click();
   expect((await download).suggestedFilename()).toMatch(/^keychain-oliver-capsule\.stl$/);
 });
-test('treats adjusted NIKITA Bubble geometry as ready and a width failure as an error', async ({
+test('treats adjusted NIKITA Bubble geometry as ready and keeps width warnings exportable', async ({
   page,
 }) => {
   await page.goto('/create');
@@ -152,9 +152,8 @@ test('treats adjusted NIKITA Bubble geometry as ready and a width failure as an 
   await expect(page.getByRole('dialog').getByRole('button', { name: /STL file/ })).toBeEnabled();
   await page.getByLabel('Text size').fill('12');
   await page.getByLabel('Name or text').fill('WWWWWWWWWWWWWWWWWWWWWWWW');
-  await expect(page.locator('.status-pill')).toHaveText('Needs attention', { timeout: 10000 });
-  await expect(page.getByText(/cannot fit within 120 mm/)).toBeVisible();
-  await expect(page.getByRole('dialog').getByRole('button', { name: /STL file/ })).toBeDisabled();
+  await expect(page.locator('.status-pill')).toHaveText('Ready · adjusted', { timeout: 10000 });
+  await expect(page.getByRole('dialog').getByRole('button', { name: /STL file/ })).toBeEnabled();
   await page.getByRole('button', { name: 'Close' }).click();
 });
 test('switches to a bilingual font when Cyrillic text is entered', async ({ page }) => {
@@ -284,6 +283,78 @@ test('renders the plant label as a pointed T-shaped printable template', async (
   await expect(page.getByRole('dialog', { name: 'Choose an export' })).toBeVisible();
   await expect(page.getByRole('dialog').getByRole('button', { name: /STL file/ })).toBeEnabled();
 });
+test('supports the Magnet ribbon workflow with subtitle hardware guidance', async ({ page }) => {
+  await page.goto('/create');
+  await page.getByRole('button', { name: 'Magnet' }).click();
+  await expect(page.getByRole('button', { name: 'Plain' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByLabel('Ribbon tail length')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Ribbon' }).click();
+  await expect(page.getByLabel('Ribbon tail length')).toBeVisible();
+  const subtitleInput = page.getByLabel('Subtitle or short message');
+  await expect(subtitleInput).toBeVisible();
+  await subtitleInput.fill('2026');
+  await page.getByTestId('shape-settings').getByRole('radio', { name: 'Secondary' }).click();
+  await expect(page.getByLabel('Customizer controls').getByText(/10\.4 mm diameter/)).toBeVisible();
+  await page.getByRole('button', { name: 'Bottom view' }).click();
+  await expect(page.locator('.viewer')).toHaveAttribute('data-view', 'bottom');
+  await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10000 });
+  await page.getByRole('button', { name: 'Export' }).click();
+  await expect(page.getByRole('dialog', { name: 'Choose an export' })).toBeVisible();
+  await expect(page.getByRole('dialog').getByRole('button', { name: /STL file/ })).toBeEnabled();
+});
+test('keeps subtitle fields full-width, spaced, and keyboard-visible', async ({ page }) => {
+  await page.goto('/create');
+  const shape = page.getByTestId('shape-settings');
+  const subtitleInput = page.getByLabel('Subtitle or short message');
+  await subtitleInput.fill('ROLE');
+  await shape.getByRole('radio', { name: 'Secondary' }).click();
+  const subtitle = shape.getByTestId('subtitle-settings');
+  await expect(subtitle).toBeVisible();
+
+  const metrics = await subtitle.evaluate((section) => {
+    const fields = Array.from(
+      section.querySelectorAll<HTMLElement>('.subtitle-input-control, .range-control'),
+    );
+    const sectionRect = section.getBoundingClientRect();
+    const boxes = fields.map((field) => {
+      const rect = field.getBoundingClientRect();
+      const control = field.querySelector<HTMLElement>('input, select');
+      const controlRect = control?.getBoundingClientRect();
+      return {
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        bottom: rect.bottom,
+        width: rect.width,
+        controlWidth: controlRect?.width ?? 0,
+      };
+    });
+    const gaps = boxes.slice(1).map((box, index) => box.top - boxes[index].bottom);
+    return {
+      sectionWidth: sectionRect.width,
+      boxes,
+      gaps,
+      rowGap: Number.parseFloat(getComputedStyle(section).rowGap),
+    };
+  });
+
+  expect(metrics.boxes.length).toBe(7);
+  expect(metrics.boxes.every((box) => box.width > 0 && box.controlWidth > 0)).toBe(true);
+  expect(metrics.boxes.every((box) => box.controlWidth <= box.width + 0.5)).toBe(true);
+  expect(metrics.boxes.every((box) => box.right <= metrics.boxes[0].right + 0.5)).toBe(true);
+  expect(metrics.gaps.every((gap) => Math.abs(gap - metrics.rowGap) < 1.5)).toBe(true);
+  const reset = subtitle.getByRole('button', { name: 'Reset subtitle' });
+  const input = page.getByTestId('subtitle-input').locator('.subtitle-input');
+  const nameBox = await page.getByLabel('Name or text').boundingBox();
+  const subtitleBox = await page.getByTestId('subtitle-input').boundingBox();
+  expect(nameBox).not.toBeNull();
+  expect(subtitleBox).not.toBeNull();
+  expect(subtitleBox?.y ?? 0).toBeGreaterThan(nameBox?.y ?? 0);
+  await reset.focus();
+  await input.focus();
+  await expect(input).toBeFocused();
+  await expect(input).toHaveCSS('outline-style', 'solid');
+});
 test('shows only template-relevant shape controls', async ({ page }) => {
   await page.goto('/create');
   await page.getByRole('button', { name: 'Plant label' }).click();
@@ -306,15 +377,16 @@ test('resets each model section without changing unrelated choices', async ({ pa
   await page.getByLabel('Text size').fill('30');
 
   await page.getByRole('button', { name: 'Reset shape' }).click();
-  await expect(page.getByLabel('Text size')).toHaveValue('20');
+  await expect(page.getByLabel('Text size')).toHaveValue('30');
   await expect(page.getByRole('button', { name: 'Plant label' })).toHaveClass(/selected/);
   await expect(page.getByRole('button', { name: 'Bubble' })).toHaveClass(/selected/);
 
   await page.getByRole('button', { name: 'Reset style' }).click();
   await expect(page.getByRole('button', { name: 'Contour' })).toHaveClass(/selected/);
 
-  await page.getByRole('button', { name: 'Reset font' }).click();
+  await page.getByTestId('font-browser').getByRole('button', { name: 'Reset font' }).click();
   await expect(page.getByRole('button', { name: /Nunito/ })).toHaveClass(/selected/);
+  await expect(page.getByLabel('Text size')).toHaveValue('20');
   await expect(page.getByLabel('Name or text')).toHaveValue('OLIVER');
 
   await page.getByRole('button', { name: 'Reset name' }).click();

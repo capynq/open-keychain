@@ -37,6 +37,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         request.params,
         false,
         fontForBuild(request.fontDefinition),
+        request.subtitleFontDefinition ? fontForBuild(request.subtitleFontDefinition) : undefined,
       );
       if (request.type === 'validate') {
         const response: WorkerResponse = {
@@ -69,6 +70,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         request.params,
         true,
         fontForBuild(request.fontDefinition),
+        request.subtitleFontDefinition ? fontForBuild(request.subtitleFontDefinition) : undefined,
       );
       if (!exportMesh || !result.printable) {
         const message =

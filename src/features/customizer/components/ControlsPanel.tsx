@@ -5,6 +5,7 @@ import {
   fontSupportsText,
   TEMPLATE_CATALOG,
   PARAMETER_REGISTRY,
+  MAGNET_POCKET_PRESETS,
   type ShapeParameter,
   type FontCategory,
 } from '../../../domain/keychain';
@@ -25,6 +26,7 @@ import { DesignCardRail, DesignSelectCard } from './DesignSelectCard';
 import { stylePreviewAsset, TEMPLATE_PREVIEW_ASSETS } from './design-card-assets';
 
 type FontSourceTab = 'bundled' | 'google' | 'local';
+type FontTarget = 'primary' | 'secondary';
 type FontBrowserState = {
   search: string;
   page: number;
@@ -54,11 +56,14 @@ export const ControlsPanel = ({
   const {
     params,
     selectedFont,
+    selectedSubtitleFont,
     availableStyles,
     usesCyrillic,
     fontNotice,
     update,
     updateText,
+    updateSubtitle,
+    updateSubtitleFont,
     updateBackingSize,
     selectTemplate,
     resetSection,
@@ -66,6 +71,9 @@ export const ControlsPanel = ({
     rangeFor,
   } = customizer;
   const [fontSource, setFontSource] = useState<FontSourceTab>('bundled');
+  // This is intentionally session-local: selecting a target changes where the
+  // browser applies a font, but is not part of the design document.
+  const [fontTarget, setFontTarget] = useState<FontTarget>('primary');
   const [fontBrowserState, setFontBrowserState] = useState(INITIAL_FONT_BROWSER_STATE);
   const [fontLoadError, setFontLoadError] = useState(false);
   const [loadingFontId, setLoadingFontId] = useState<string>();
@@ -81,6 +89,15 @@ export const ControlsPanel = ({
     typeof window !== 'undefined' && typeof window.showOpenFilePicker === 'function';
   const fontsPerPage = 12;
   const activeBrowserState = fontBrowserState[fontSource];
+  const hasSubtitle =
+    TEMPLATE_CATALOG.find((template) => template.id === params.templateId)?.supportsSubtitle ===
+    true;
+  const hasSubtitleText = params.subtitle.trim().length > 0;
+  const activeFontTarget: FontTarget = hasSubtitle && hasSubtitleText ? fontTarget : 'primary';
+  const activeTargetText = activeFontTarget === 'secondary' ? params.subtitle : params.text;
+  const activeTargetFontId =
+    activeFontTarget === 'secondary' ? params.subtitleFontId : params.fontId;
+
   const sourceFonts =
     fontSource === 'google'
       ? customizer.googleFonts
@@ -90,11 +107,17 @@ export const ControlsPanel = ({
   const compatibleFonts = useMemo(
     () =>
       sourceFonts.filter((font) =>
-        params.templateId === 'articulated-name'
-          ? fontSupportsArticulatedName(font, params.text)
-          : !activeBrowserState.supportsTextOnly || fontSupportsText(font, params.text),
+        activeFontTarget === 'primary' && params.templateId === 'articulated-name'
+          ? fontSupportsArticulatedName(font, activeTargetText)
+          : !activeBrowserState.supportsTextOnly || fontSupportsText(font, activeTargetText),
       ),
-    [activeBrowserState.supportsTextOnly, params.templateId, params.text, sourceFonts],
+    [
+      activeBrowserState.supportsTextOnly,
+      activeFontTarget,
+      activeTargetText,
+      params.templateId,
+      sourceFonts,
+    ],
   );
   const filteredFonts = useMemo(() => {
     const query = activeBrowserState.search.trim().toLocaleLowerCase();
@@ -120,6 +143,53 @@ export const ControlsPanel = ({
       [fontSource]: { ...current[fontSource], ...changes },
     }));
   };
+  const renderFontTargetSwitch = (idPrefix: string) =>
+    hasSubtitle && hasSubtitleText ? (
+      <div
+        className="font-target-switch"
+        data-testid={`${idPrefix}-switch`}
+        role="radiogroup"
+        aria-orientation="horizontal"
+        aria-label={t(locale, 'fontTarget')}
+      >
+        {(['primary', 'secondary'] as const).map((target, index) => (
+          <button
+            key={target}
+            type="button"
+            role="radio"
+            id={`${idPrefix}-${target}`}
+            data-font-target={target}
+            aria-checked={activeFontTarget === target}
+            tabIndex={activeFontTarget === target ? 0 : -1}
+            className={activeFontTarget === target ? 'active' : ''}
+            onClick={() => setFontTarget(target)}
+            onKeyDown={(event) => {
+              if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+              event.preventDefault();
+              const nextIndex =
+                event.key === 'Home'
+                  ? 0
+                  : event.key === 'End'
+                    ? 1
+                    : (index + (event.key === 'ArrowLeft' ? -1 : 1) + 2) % 2;
+              const nextTarget = (['primary', 'secondary'] as const)[nextIndex];
+              setFontTarget(nextTarget);
+              document.getElementById(`${idPrefix}-${nextTarget}`)?.focus();
+            }}
+          >
+            {t(locale, target === 'primary' ? 'fontPrimary' : 'fontSecondary')}
+          </button>
+        ))}
+      </div>
+    ) : null;
+  const resetActiveFont = (): void => {
+    if (activeFontTarget === 'secondary') {
+      setFontTarget('primary');
+      resetSection('subtitle');
+    } else resetSection('font');
+  };
+  const resetActiveFontLabel =
+    activeFontTarget === 'secondary' ? t(locale, 'resetSubtitle') : t(locale, 'resetFont');
 
   useEffect(() => {
     const controls = controlsRef.current;
@@ -192,7 +262,8 @@ export const ControlsPanel = ({
       setLoadingFontId(undefined);
       return;
     }
-    update('fontId', font.id);
+    if (activeFontTarget === 'secondary') updateSubtitleFont(font.id);
+    else update('fontId', font.id);
     setLoadingFontId(undefined);
   };
   const renderFontGroups = (fonts: typeof FONT_CATALOG) => (
@@ -222,18 +293,18 @@ export const ControlsPanel = ({
                 <div className="font-card-wrap" key={font.id}>
                   <button
                     type="button"
-                    className={`font-card ${params.fontId === font.id ? 'selected' : ''} ${previewFontId === font.id ? 'previewing' : ''}`}
+                    className={`font-card ${activeTargetFontId === font.id ? 'selected' : ''} ${previewFontId === font.id ? 'previewing' : ''}`}
                     data-font-state={
                       loadingFontId === font.id
                         ? 'loading'
-                        : params.fontId === font.id
+                        : activeTargetFontId === font.id
                           ? 'selected'
                           : 'idle'
                     }
                     onClick={() => void selectFont(font)}
                     disabled={loadingFontId !== undefined}
                     aria-busy={loadingFontId === font.id}
-                    aria-pressed={params.fontId === font.id}
+                    aria-pressed={activeTargetFontId === font.id}
                     aria-label={`${t(locale, 'selectFont')}: ${font.name}`}
                     onMouseEnter={() => {
                       setPreviewFontId(font.id);
@@ -248,12 +319,12 @@ export const ControlsPanel = ({
                     title={font.name}
                   >
                     <span style={{ fontFamily: font.previewFamily, fontWeight: font.weight }}>
-                      {params.text || (usesCyrillic ? font.sampleCyrillic : font.sampleLatin)}
+                      {activeTargetText || (usesCyrillic ? font.sampleCyrillic : font.sampleLatin)}
                     </span>
                     <small>
                       {loadingFontId === font.id
                         ? t(locale, 'fontLoading')
-                        : params.fontId === font.id
+                        : activeTargetFontId === font.id
                           ? `${font.name} · ${t(locale, 'fontSelected')}`
                           : font.name}
                     </small>
@@ -328,15 +399,7 @@ export const ControlsPanel = ({
   const parameterGroups: readonly { key: string; parameters: readonly ShapeParameter[] }[] = [
     {
       key: 'core',
-      parameters: [
-        'textSizeMm',
-        'fontWeightMm',
-        'baseThicknessMm',
-        'reliefDepthMm',
-        'edgeInsetMm',
-        'letterSpacingMm',
-        'holeDiameterMm',
-      ],
+      parameters: ['baseThicknessMm', 'edgeInsetMm', 'holeDiameterMm'],
     },
     {
       key: 'style',
@@ -351,6 +414,8 @@ export const ControlsPanel = ({
         'tagTailMm',
         'archCurveMm',
         'stakeShoulderMm',
+        'ribbonTailMm',
+        'ribbonNotchMm',
       ],
     },
     {
@@ -409,7 +474,7 @@ export const ControlsPanel = ({
               ? t(locale, 'controlsScrollTop')
               : ''}
       </span>
-      <section className="control-section">
+      <section className="control-section" data-testid="name-settings">
         <div className="section-heading">
           <h2>{t(locale, 'name')}</h2>
           <ResetIconButton label={t(locale, 'resetName')} onClick={() => resetSection('name')} />
@@ -427,8 +492,29 @@ export const ControlsPanel = ({
             placeholder={t(locale, 'namePlaceholder')}
           />
         </label>
+        {hasSubtitle && (
+          <label className="text-input subtitle-input-control" data-testid="subtitle-input">
+            <span className="sr-only">{t(locale, 'subtitleInput')}</span>
+            <input
+              className="subtitle-input"
+              aria-label={t(locale, 'subtitleInput')}
+              value={params.subtitle}
+              maxLength={24}
+              onChange={(event) => {
+                onNameEdited();
+                if (!event.target.value.trim()) setFontTarget('primary');
+                updateSubtitle(event.target.value);
+              }}
+              placeholder={t(locale, 'subtitlePlaceholder')}
+            />
+          </label>
+        )}
       </section>
-      <section className="control-section" data-guide-target="shape">
+      <section
+        className="control-section"
+        data-guide-target="shape"
+        data-testid="template-settings"
+      >
         <div className="section-heading">
           <h2>{t(locale, 'template')}</h2>
           <ResetIconButton
@@ -448,6 +534,7 @@ export const ControlsPanel = ({
               testId={`template-card-${template.id}`}
               onSelect={() => {
                 onTemplateSelected();
+                if (!template.supportsSubtitle) setFontTarget('primary');
                 selectTemplate(template.id);
               }}
             />
@@ -478,13 +565,73 @@ export const ControlsPanel = ({
           </DesignCardRail>
         </section>
       )}
-      <section className="control-section">
+      {params.templateId === 'magnet' && (
+        <section className="control-section magnet-controls">
+          <div className="section-heading">
+            <h2>{t(locale, 'magnetControls')}</h2>
+          </div>
+          <label className="select-control">
+            <span>{t(locale, 'magnetPocketSize')}</span>
+            <select
+              aria-label={t(locale, 'magnetPocketSize')}
+              value={params.magnetPocketPreset}
+              onChange={(event) =>
+                update(
+                  'magnetPocketPreset',
+                  event.target.value as KeychainParams['magnetPocketPreset'],
+                )
+              }
+            >
+              {MAGNET_POCKET_PRESETS.map((preset) => (
+                <option key={preset.id} value={preset.id}>
+                  {preset.id} mm
+                </option>
+              ))}
+            </select>
+            <small>
+              {(() => {
+                const preset =
+                  MAGNET_POCKET_PRESETS.find((item) => item.id === params.magnetPocketPreset) ??
+                  MAGNET_POCKET_PRESETS[2];
+                return t(locale, 'magnetPocketDetails', {
+                  diameter: (preset.diameterMm + 0.4).toFixed(1),
+                  depth: (preset.thicknessMm + 0.2).toFixed(1),
+                });
+              })()}
+            </small>
+          </label>
+          <label className="select-control">
+            <span>{t(locale, 'magnetPocketPlacement')}</span>
+            <select
+              aria-label={t(locale, 'magnetPocketPlacement')}
+              value={params.magnetPocketPlacement}
+              onChange={(event) =>
+                update(
+                  'magnetPocketPlacement',
+                  event.target.value as KeychainParams['magnetPocketPlacement'],
+                )
+              }
+            >
+              {(['center', 'upper', 'lower', 'left', 'right'] as const).map((placement) => (
+                <option key={placement} value={placement}>
+                  {t(locale, `magnetPlacement${placement[0].toUpperCase()}${placement.slice(1)}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </section>
+      )}
+      <section className="control-section" data-testid="font-browser">
         <div className="section-heading">
           <h2>
-            {t(locale, 'font')} <span className="selected-note">{selectedFont.name}</span>
+            {t(locale, 'font')}{' '}
+            <span className="selected-note">
+              {activeFontTarget === 'secondary' ? selectedSubtitleFont.name : selectedFont.name}
+            </span>
           </h2>
-          <ResetIconButton label={t(locale, 'resetFont')} onClick={() => resetSection('font')} />
+          <ResetIconButton label={resetActiveFontLabel} onClick={resetActiveFont} />
         </div>
+        {renderFontTargetSwitch('font-browser-target')}
         <div className="font-source-tabs" role="tablist" aria-label={t(locale, 'fontSources')}>
           {(['bundled', 'google', 'local'] as const).map((source, index) => (
             <button
@@ -520,6 +667,7 @@ export const ControlsPanel = ({
           ))}
         </div>
         <div
+          className="font-panel"
           id={`font-panel-${fontSource}`}
           role="tabpanel"
           aria-labelledby={`font-tab-${fontSource}`}
@@ -702,10 +850,18 @@ export const ControlsPanel = ({
         </footer>
         {fontNotice && (
           <p className="font-notice" aria-live="polite">
-            {t(locale, fontNotice.articulated ? 'fontArticulatedFallback' : 'fontFallback', {
-              font: fontNotice.font,
-              replacement: fontNotice.replacement,
-            })}
+            {t(
+              locale,
+              fontNotice.articulated
+                ? 'fontArticulatedFallback'
+                : fontNotice.target === 'subtitle'
+                  ? 'fontSubtitleFallback'
+                  : 'fontFallback',
+              {
+                font: fontNotice.font,
+                replacement: fontNotice.replacement,
+              },
+            )}
           </p>
         )}
         {fontLoadError && (
@@ -714,35 +870,143 @@ export const ControlsPanel = ({
           </p>
         )}
       </section>
-      <section className="control-section">
+      <section className="control-section shape-settings" data-testid="shape-settings">
         <div className="section-heading">
           <h2>{t(locale, 'shape')}</h2>
           <ResetIconButton label={t(locale, 'resetShape')} onClick={() => resetSection('shape')} />
         </div>
-        {parameterGroups.map((group) => {
-          const controls = group.parameters.map(renderParameter).filter(Boolean);
-          if (!controls.length && group.key !== 'core') return null;
-          return (
-            <div className="parameter-group" data-parameter-group={group.key} key={group.key}>
-              <h3>
-                {t(locale, `parameterGroup${group.key[0].toUpperCase()}${group.key.slice(1)}`)}
-              </h3>
-              <div className="range-grid">{controls}</div>
+        <div className="control-subsection shape-font-settings" data-testid="font-settings">
+          <div className="section-heading">
+            <h3>{t(locale, 'fontSettings')}</h3>
+            {activeFontTarget === 'primary' && (
+              <ResetIconButton label={resetActiveFontLabel} onClick={resetActiveFont} />
+            )}
+          </div>
+          {renderFontTargetSwitch('shape-font-target')}
+          {activeFontTarget === 'primary' && (
+            <div className="range-grid">
+              {renderParameter('textSizeMm')}
+              {renderParameter('fontWeightMm')}
+              {renderParameter('letterSpacingMm')}
+              {renderParameter('reliefDepthMm')}
             </div>
-          );
-        })}
-        {showsParameter('plantAccentEnabled') && (
-          <label className="check-control">
-            <input
-              type="checkbox"
-              checked={params.plantAccentEnabled}
-              onChange={(event) => update('plantAccentEnabled', event.target.checked)}
-            />
-            <span>{t(locale, 'plantAccents')}</span>
-          </label>
-        )}
+          )}
+          {hasSubtitle && hasSubtitleText && (
+            <div className="subtitle-controls" data-testid="subtitle-settings">
+              <div className="section-heading">
+                <h4>{t(locale, 'subtitle')}</h4>
+                <ResetIconButton
+                  label={t(locale, 'resetSubtitle')}
+                  onClick={() => {
+                    setFontTarget('primary');
+                    resetSection('subtitle');
+                  }}
+                />
+              </div>
+              {activeFontTarget === 'secondary' && hasSubtitleText && (
+                <>
+                  <RangeControl
+                    label={t(locale, 'subtitleSize')}
+                    value={params.subtitleTextSizeMm ?? 6}
+                    min={4}
+                    max={12}
+                    step={0.5}
+                    unit="mm"
+                    onChange={(value) => update('subtitleTextSizeMm', value)}
+                  />
+                  <RangeControl
+                    label={t(locale, 'subtitleWeight')}
+                    value={params.subtitleFontWeightMm ?? 0}
+                    min={0}
+                    max={1.5}
+                    step={0.1}
+                    unit="mm"
+                    onChange={(value) => update('subtitleFontWeightMm', value)}
+                  />
+                  <RangeControl
+                    label={t(locale, 'subtitleSpacing')}
+                    value={params.subtitleLetterSpacingMm ?? 0.5}
+                    min={0}
+                    max={4}
+                    step={0.1}
+                    unit="mm"
+                    onChange={(value) => update('subtitleLetterSpacingMm', value)}
+                  />
+                  <RangeControl
+                    label={t(locale, 'subtitleDepth')}
+                    value={params.subtitleReliefDepthMm ?? 0.8}
+                    min={0.4}
+                    max={1.5}
+                    step={0.1}
+                    unit="mm"
+                    onChange={(value) => update('subtitleReliefDepthMm', value)}
+                  />
+                  <RangeControl
+                    label={t(locale, 'subtitleGap')}
+                    value={params.subtitleGapMm ?? 1.5}
+                    min={1.5}
+                    max={8}
+                    step={0.1}
+                    unit="mm"
+                    onChange={(value) => update('subtitleGapMm', value)}
+                  />
+                  <RangeControl
+                    label={t(locale, 'subtitleOffsetX')}
+                    value={params.subtitleOffsetXRatio * 100}
+                    min={-100}
+                    max={100}
+                    step={5}
+                    unit="%"
+                    onChange={(value) => update('subtitleOffsetXRatio', value / 100)}
+                  />
+                  <RangeControl
+                    label={t(locale, 'subtitleOffsetY')}
+                    value={params.subtitleOffsetYRatio * 100}
+                    min={-100}
+                    max={100}
+                    step={5}
+                    unit="%"
+                    onChange={(value) => update('subtitleOffsetYRatio', value / 100)}
+                  />
+                </>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="control-subsection shape-figure-settings" data-testid="figure-settings">
+          <h3>{t(locale, 'figureSettings')}</h3>
+          {parameterGroups.map((group) => {
+            const controls = group.parameters.map(renderParameter).filter(Boolean);
+            if (!controls.length && group.key !== 'core') return null;
+            return (
+              <div className="parameter-group" data-parameter-group={group.key} key={group.key}>
+                <h4>
+                  {t(locale, `parameterGroup${group.key[0].toUpperCase()}${group.key.slice(1)}`)}
+                </h4>
+                <div className="range-grid">{controls}</div>
+              </div>
+            );
+          })}
+          {showsParameter('plantAccentEnabled') && (
+            <label className="check-control">
+              <input
+                type="checkbox"
+                checked={params.plantAccentEnabled}
+                onChange={(event) => update('plantAccentEnabled', event.target.checked)}
+              />
+              <span>{t(locale, 'plantAccents')}</span>
+            </label>
+          )}
+        </div>
       </section>
-      <button type="button" className="reset-settings" onClick={onReset}>
+      <button
+        type="button"
+        className="reset-settings"
+        onClick={() => {
+          setFontTarget('primary');
+          onReset();
+        }}
+      >
         {t(locale, 'resetSettings')}
       </button>
       <div className="controls-scroll-spacer" aria-hidden="true" />

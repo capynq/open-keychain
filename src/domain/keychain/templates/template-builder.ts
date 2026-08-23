@@ -29,9 +29,12 @@ export type TemplateDefinition = {
   name: string;
   description: string;
   supportsKeyring: boolean;
+  supportsSubtitle: boolean;
   styles: readonly StyleId[];
+  hardware?: string;
 };
 const ALL_STYLE_IDS: readonly StyleId[] = ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'];
+const RIBBON_STYLES: readonly StyleId[] = [...ALL_STYLE_IDS, 'ribbon'];
 export type ArticulatedPart = {
   body: Solid;
   cap: Solid;
@@ -81,20 +84,32 @@ export const TEMPLATE_CATALOG: readonly TemplateDefinition[] = [
     name: 'Name keychain',
     description: 'A backing contour that follows the name.',
     supportsKeyring: true,
-    styles: ALL_STYLE_IDS,
+    supportsSubtitle: true,
+    styles: RIBBON_STYLES,
   },
   {
     id: 'articulated-name',
     name: 'Articulated name',
     description: 'Separate letter-shaped bodies linked by compact captive print-in-place joints.',
     supportsKeyring: true,
+    supportsSubtitle: false,
     styles: [],
+  },
+  {
+    id: 'magnet',
+    name: 'Magnet',
+    description: 'A personalized magnet with a safe blind rear pocket for a disc magnet.',
+    supportsKeyring: false,
+    supportsSubtitle: true,
+    styles: ['plain', 'contour', 'capsule', 'soft-tag', 'bubble', 'arch', 'ribbon'],
+    hardware: 'Glue in the selected disc magnet; the blind rear pocket is not printable hardware.',
   },
   {
     id: 'nameplate',
     name: 'Nameplate',
     description: 'A rounded sign with a tilted, embedded inscription.',
     supportsKeyring: false,
+    supportsSubtitle: true,
     styles: [],
   },
   {
@@ -102,6 +117,7 @@ export const TEMPLATE_CATALOG: readonly TemplateDefinition[] = [
     name: 'Plant label',
     description: 'A printable label board with an integrated stake.',
     supportsKeyring: false,
+    supportsSubtitle: true,
     styles: ALL_STYLE_IDS,
   },
 ];
@@ -559,7 +575,7 @@ const nameplateStyle = (wasm: GeometryWasm, input: StyleInput): StyleBuild => {
     Math.min(input.cornerRadius ?? 4000, Math.min(width, height) / 2 - input.padding - 250),
   );
   const plate = roundedRect(wasm, width, height, radius);
-  return { backing: plate, relief: input.text };
+  return { backing: plate, relief: input.text, subtitle: input.subtitle };
 };
 const plantFoundation = (
   wasm: GeometryWasm,
@@ -701,14 +717,25 @@ const plantLabelStyle = (wasm: GeometryWasm, input: StyleInput, styleId: StyleId
   const textOffsetY = foundationBottom + 1000 - input.textBounds.min[1];
   const labelText = input.text.translate([0, textOffsetY]);
   const labelFootprint = input.text.translate([0, textOffsetY]);
-  const joined = union(wasm, [foundation, shaft, tip, labelFootprint]);
+  const labelSubtitle = input.subtitle?.translate([0, textOffsetY]);
+  const subtitleFootprint = labelSubtitle
+    ? labelSubtitle.offset(Math.max(600, input.textInset ?? input.padding), 'Round', 2, 64)
+    : undefined;
+  const joined = union(
+    wasm,
+    subtitleFootprint
+      ? [foundation, shaft, tip, labelFootprint, subtitleFootprint]
+      : [foundation, shaft, tip, labelFootprint],
+  );
   foundation.delete();
   shaft.delete();
   tip.delete();
   labelFootprint.delete();
+  subtitleFootprint?.delete();
   return {
     backing: joined,
     relief: labelText,
+    subtitle: labelSubtitle,
     reliefDepthMm: Math.min(2, Math.max(0.6, input.reliefDepth ?? 0.7)),
   };
 };

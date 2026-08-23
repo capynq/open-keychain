@@ -15,7 +15,13 @@ export class GeometryClient {
   private readonly registeredLocalFonts = new WeakSet<FontDefinition>();
   private activePreviewRequestId: number | undefined;
   private queuedPreview:
-    { params: KeychainParams; fontDefinition?: FontDefinition; requestId: number } | undefined;
+    | {
+        params: KeychainParams;
+        fontDefinition?: FontDefinition;
+        subtitleFontDefinition?: FontDefinition;
+        requestId: number;
+      }
+    | undefined;
   private readonly pendingGeometry = new Map<
     number,
     { resolve: (result: GeometryResult) => void; reject: (error: Error) => void }
@@ -38,7 +44,11 @@ export class GeometryClient {
       this.handleResponse(event.data);
     this.worker.postMessage({ type: 'warmup' } satisfies WorkerRequest);
   }
-  request(params: KeychainParams, fontDefinition?: FontDefinition): Promise<GeometryResult> {
+  request(
+    params: KeychainParams,
+    fontDefinition?: FontDefinition,
+    subtitleFontDefinition?: FontDefinition,
+  ): Promise<GeometryResult> {
     const requestId = this.nextRequestId++;
     const promise = new Promise<GeometryResult>((resolve, reject) => {
       this.pendingGeometry.set(requestId, { resolve, reject });
@@ -52,10 +62,10 @@ export class GeometryClient {
         superseded?.reject(new Error('Preview generation superseded.'));
         this.pendingGeometry.delete(this.queuedPreview.requestId);
       }
-      this.queuedPreview = { params, fontDefinition, requestId };
+      this.queuedPreview = { params, fontDefinition, requestId, subtitleFontDefinition };
       return promise;
     }
-    this.sendGenerate(params, fontDefinition, requestId);
+    this.sendGenerate(params, fontDefinition, requestId, subtitleFontDefinition);
     return promise;
   }
   export(
@@ -64,6 +74,7 @@ export class GeometryClient {
     mode: ThreeMfMode = 'separate-colors',
     fontDefinition?: FontDefinition,
     appearanceOverrides?: PrintAppearanceOverrides,
+    subtitleFontDefinition?: FontDefinition,
   ): Promise<{
     filename: string;
     mimeType: string;
@@ -85,11 +96,16 @@ export class GeometryClient {
       mode,
       appearanceOverrides,
       fontDefinition: this.fontForWorker(fontDefinition),
+      subtitleFontDefinition: this.fontForWorker(subtitleFontDefinition),
     } satisfies WorkerRequest);
     return promise;
   }
   /** Validate a candidate independently of the coalesced preview request. */
-  validate(params: KeychainParams, fontDefinition?: FontDefinition): Promise<GeometryResult> {
+  validate(
+    params: KeychainParams,
+    fontDefinition?: FontDefinition,
+    subtitleFontDefinition?: FontDefinition,
+  ): Promise<GeometryResult> {
     const requestId = this.nextRequestId++;
     const promise = new Promise<GeometryResult>((resolve, reject) => {
       this.pendingValidations.set(requestId, { resolve, reject });
@@ -99,6 +115,7 @@ export class GeometryClient {
       requestId,
       params,
       fontDefinition: this.fontForWorker(fontDefinition),
+      subtitleFontDefinition: this.fontForWorker(subtitleFontDefinition),
     } satisfies WorkerRequest);
     return promise;
   }
@@ -117,6 +134,7 @@ export class GeometryClient {
     params: KeychainParams,
     fontDefinition?: FontDefinition,
     requestId = this.nextRequestId++,
+    subtitleFontDefinition?: FontDefinition,
   ): void {
     this.activePreviewRequestId = requestId;
     this.worker.postMessage({
@@ -124,6 +142,7 @@ export class GeometryClient {
       requestId,
       params,
       fontDefinition: this.fontForWorker(fontDefinition),
+      subtitleFontDefinition: this.fontForWorker(subtitleFontDefinition),
     } satisfies WorkerRequest);
   }
   private handleResponse(response: WorkerResponse): void {
@@ -145,7 +164,12 @@ export class GeometryClient {
       const latest = this.queuedPreview;
       if (latest) {
         this.queuedPreview = undefined;
-        this.sendGenerate(latest.params, latest.fontDefinition, latest.requestId);
+        this.sendGenerate(
+          latest.params,
+          latest.fontDefinition,
+          latest.requestId,
+          latest.subtitleFontDefinition,
+        );
       }
       return;
     }
@@ -184,7 +208,13 @@ export class GeometryClient {
       this.activePreviewRequestId = undefined;
       const latest = this.queuedPreview;
       this.queuedPreview = undefined;
-      if (latest) this.sendGenerate(latest.params, latest.fontDefinition, latest.requestId);
+      if (latest)
+        this.sendGenerate(
+          latest.params,
+          latest.fontDefinition,
+          latest.requestId,
+          latest.subtitleFontDefinition,
+        );
     }
   }
 

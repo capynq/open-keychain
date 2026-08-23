@@ -27,7 +27,11 @@ export const useCustomizerPageState = (
   const [randomizeFailure, setRandomizeFailure] = useState(false);
   const { track } = useAnalytics();
   const customizer = useCustomizerParams(initialParams);
-  const geometry = useGeometryGeneration(customizer.params, customizer.selectedFont);
+  const geometry = useGeometryGeneration(
+    customizer.params,
+    customizer.selectedFont,
+    customizer.selectedSubtitleFont,
+  );
   const hosted = useHostedAccount(
     customizer.params,
     (projectParams) => {
@@ -39,6 +43,7 @@ export const useCustomizerPageState = (
     geometry,
     params: customizer.params,
     fontDefinition: customizer.selectedFont,
+    subtitleFontDefinition: customizer.selectedSubtitleFont,
     appearanceOverrides,
   });
   const guide = useCustomizerGuide();
@@ -72,7 +77,7 @@ export const useCustomizerPageState = (
 
       url.searchParams.set(
         'design',
-        encodeDesignDocument({ version: 2, params: customizer.params, appearanceOverrides }),
+        encodeDesignDocument({ version: 5, params: customizer.params, appearanceOverrides }),
       );
       const value = url.toString();
       if (navigator.clipboard?.writeText) {
@@ -138,7 +143,11 @@ export const useCustomizerPageState = (
       .randomize(undefined, async (candidate) => {
         const client = geometry.clientRef.current;
         if (!client) return false;
-        return client.validate(candidate, customizer.fontForId(candidate.fontId));
+        return client.validate(
+          candidate,
+          customizer.fontForId(candidate.fontId),
+          customizer.fontForId(candidate.subtitleFontId),
+        );
       })
       .then((transaction) => {
         if (transaction.status === 'cancelled') {
@@ -147,8 +156,14 @@ export const useCustomizerPageState = (
         }
         if (transaction.status === 'accepted') {
           const candidateFont = customizer.fontForId(transaction.params.fontId);
+          const candidateSubtitleFont = customizer.fontForId(transaction.params.subtitleFontId);
           if (transaction.result)
-            geometry.adoptResult(transaction.result, transaction.params, candidateFont);
+            geometry.adoptResult(
+              transaction.result,
+              transaction.params,
+              candidateFont,
+              candidateSubtitleFont,
+            );
           setRandomizing(false);
         } else {
           setRandomizeFailure(true);
@@ -195,6 +210,7 @@ export const useCustomizerPageState = (
     undo,
     status: previewStatus(geometry, locale),
     modelInfo: {
+      templateId: customizer.activeTemplate.id,
       template: templateName(locale, customizer.activeTemplate.id, customizer.activeTemplate.name),
       style: activeStyle ? styleName(locale, activeStyle.id, activeStyle.name) : undefined,
       font: customizer.selectedFont.name,

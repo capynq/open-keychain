@@ -1,9 +1,35 @@
 import type { FontDefinition } from '../fonts/catalog';
 
-export type StyleId = 'contour' | 'capsule' | 'soft-tag' | 'bubble' | 'arch';
-export type TemplateId = 'name-keychain' | 'articulated-name' | 'nameplate' | 'plant-label';
+export type StyleId = 'plain' | 'contour' | 'capsule' | 'soft-tag' | 'bubble' | 'arch' | 'ribbon';
+export type TemplateId =
+  'name-keychain' | 'articulated-name' | 'nameplate' | 'plant-label' | 'magnet';
+export type MagnetPocketPreset = '6x2' | '8x2' | '10x3' | '12x3' | '15x3';
+export type MagnetPocketPlacement = 'center' | 'upper' | 'lower' | 'left' | 'right';
+export type MagnetPocketPresetMetadata = {
+  id: MagnetPocketPreset;
+  diameterMm: number;
+  thicknessMm: number;
+  pocketDiameterMm: number;
+  pocketDepthMm: number;
+};
+export const MAGNET_POCKET_PRESETS: readonly MagnetPocketPresetMetadata[] = [
+  { id: '6x2', diameterMm: 6, thicknessMm: 2, pocketDiameterMm: 6.4, pocketDepthMm: 2.2 },
+  { id: '8x2', diameterMm: 8, thicknessMm: 2, pocketDiameterMm: 8.4, pocketDepthMm: 2.2 },
+  { id: '10x3', diameterMm: 10, thicknessMm: 3, pocketDiameterMm: 10.4, pocketDepthMm: 3.2 },
+  { id: '12x3', diameterMm: 12, thicknessMm: 3, pocketDiameterMm: 12.4, pocketDepthMm: 3.2 },
+  { id: '15x3', diameterMm: 15, thicknessMm: 3, pocketDiameterMm: 15.4, pocketDepthMm: 3.2 },
+];
+export const MAGNET_POCKET_PRESET_MAP = Object.fromEntries(
+  MAGNET_POCKET_PRESETS.map((preset) => [preset.id, preset]),
+) as Record<MagnetPocketPreset, MagnetPocketPresetMetadata>;
 export type KeychainParams = {
   text: string;
+  subtitle: string;
+  subtitleFontId: string;
+  subtitleOffsetXRatio: number;
+  subtitleOffsetYRatio: number;
+  magnetPocketPreset: MagnetPocketPreset;
+  magnetPocketPlacement: MagnetPocketPlacement;
   fontId: string;
   templateId: TemplateId;
   styleId: StyleId;
@@ -33,7 +59,21 @@ export type KeychainParams = {
   archCurveMm: number;
   stakeShoulderMm: number;
   jointBossMm: number;
+  ribbonTailMm: number;
+  ribbonNotchMm: number;
+  subtitleTextSizeMm?: number;
+  subtitleFontWeightMm?: number;
+  subtitleLetterSpacingMm?: number;
+  subtitleReliefDepthMm?: number;
+  subtitleGapMm?: number;
 };
+export const MAGNET_SUBTITLE_MAX_LENGTH = 24;
+export const DEFAULT_MAGNET_POCKET_PRESET: MagnetPocketPreset = '10x3';
+export const DEFAULT_MAGNET_POCKET_PLACEMENT: MagnetPocketPlacement = 'center';
+export const magnetTextContent = (text: string, subtitle: string): string =>
+  subtitle ? `${text} ${subtitle}` : text;
+export const supportsMagnetSubtitle = (text: string, subtitle: string): boolean =>
+  Boolean(text.trim()) && [...subtitle].length <= MAGNET_SUBTITLE_MAX_LENGTH;
 export type NormalizedParams = KeychainParams;
 export type KeyringMetrics = {
   wallMm: number;
@@ -166,6 +206,16 @@ export type GeometryResult = {
   printProfile?: PrintProfile;
   baseShading?: 'creased' | 'flat';
   solidCount?: number;
+  magnetPocket?: MagnetPocketMetadata;
+};
+export type MagnetPocketMetadata = {
+  preset: MagnetPocketPreset;
+  placement: MagnetPocketPlacement;
+  diameterMm: number;
+  depthMm: number;
+  centerMm: [number, number];
+  adjusted: boolean;
+  safe: boolean;
 };
 /** A complete candidate result, kept separate from the preview queue. */
 export type GeometryValidation = Omit<GeometryResult, 'generationId'>;
@@ -197,7 +247,16 @@ export const validateGeometryResult = (result: GeometryResult): boolean => {
         typeof issue.message === 'string',
     ) &&
     typeof result.printable === 'boolean' &&
-    !!result.appearance
+    !!result.appearance &&
+    (!result.magnetPocket ||
+      (['6x2', '8x2', '10x3', '12x3', '15x3'].includes(result.magnetPocket.preset) &&
+        ['center', 'upper', 'lower', 'left', 'right'].includes(result.magnetPocket.placement) &&
+        Number.isFinite(result.magnetPocket.diameterMm) &&
+        Number.isFinite(result.magnetPocket.depthMm) &&
+        result.magnetPocket.centerMm.length === 2 &&
+        result.magnetPocket.centerMm.every(Number.isFinite) &&
+        typeof result.magnetPocket.adjusted === 'boolean' &&
+        typeof result.magnetPocket.safe === 'boolean'))
   );
 };
 export type WorkerRequest =
@@ -209,12 +268,14 @@ export type WorkerRequest =
       requestId: number;
       params: KeychainParams;
       fontDefinition?: FontDefinition;
+      subtitleFontDefinition?: FontDefinition;
     }
   | {
       type: 'validate';
       requestId: number;
       params: KeychainParams;
       fontDefinition?: FontDefinition;
+      subtitleFontDefinition?: FontDefinition;
     }
   | {
       type: 'export';
@@ -224,6 +285,7 @@ export type WorkerRequest =
       mode?: ThreeMfMode;
       appearanceOverrides?: PrintAppearanceOverrides;
       fontDefinition?: FontDefinition;
+      subtitleFontDefinition?: FontDefinition;
     };
 export type WorkerResponse =
   | {
@@ -250,6 +312,12 @@ export type WorkerResponse =
     };
 export const DEFAULT_PARAMS: KeychainParams = {
   text: 'ALEX',
+  subtitle: '',
+  subtitleFontId: 'nunito',
+  subtitleOffsetXRatio: 0,
+  subtitleOffsetYRatio: 0,
+  magnetPocketPreset: DEFAULT_MAGNET_POCKET_PRESET,
+  magnetPocketPlacement: DEFAULT_MAGNET_POCKET_PLACEMENT,
   fontId: 'nunito',
   templateId: 'name-keychain',
   styleId: 'contour',
@@ -279,17 +347,57 @@ export const DEFAULT_PARAMS: KeychainParams = {
   archCurveMm: 0,
   stakeShoulderMm: 0,
   jointBossMm: 0,
+  ribbonTailMm: 12,
+  ribbonNotchMm: 4,
+  subtitleTextSizeMm: 6,
+  subtitleFontWeightMm: 0,
+  subtitleLetterSpacingMm: 0.5,
+  subtitleReliefDepthMm: 0.8,
+  subtitleGapMm: 1.5,
 };
 export const normalizeParams = (params: KeychainParams): NormalizedParams => {
   const text = params.text.normalize('NFC').trim().replace(/\s+/g, ' ');
   const baseThicknessMm = clamp(
     params.baseThicknessMm,
-    params.templateId === 'articulated-name' ? 3.4 : 1.6,
-    4,
+    params.templateId === 'articulated-name' ? 3.4 : params.templateId === 'magnet' ? 4.4 : 1.6,
+    params.templateId === 'magnet' ? 5 : 4,
   );
   const normalized: NormalizedParams = {
     ...params,
     text,
+    styleId:
+      params.templateId === 'magnet' &&
+      !['plain', 'contour', 'capsule', 'soft-tag', 'bubble', 'arch', 'ribbon'].includes(
+        params.styleId,
+      )
+        ? 'plain'
+        : params.styleId === 'ribbon' &&
+            params.templateId !== 'name-keychain' &&
+            params.templateId !== 'magnet'
+          ? 'contour'
+          : params.styleId,
+    subtitle:
+      params.templateId !== 'articulated-name'
+        ? (params.subtitle ?? '').normalize('NFC').trim().replace(/\s+/g, ' ')
+        : '',
+    subtitleFontId:
+      params.templateId !== 'articulated-name' && params.subtitleFontId?.trim()
+        ? params.subtitleFontId.trim()
+        : DEFAULT_PARAMS.subtitleFontId,
+    subtitleOffsetXRatio:
+      params.templateId !== 'articulated-name' ? clamp(params.subtitleOffsetXRatio ?? 0, -1, 1) : 0,
+    subtitleOffsetYRatio:
+      params.templateId !== 'articulated-name' ? clamp(params.subtitleOffsetYRatio ?? 0, -1, 1) : 0,
+    magnetPocketPreset:
+      params.templateId === 'magnet' &&
+      ['6x2', '8x2', '10x3', '12x3', '15x3'].includes(params.magnetPocketPreset)
+        ? params.magnetPocketPreset
+        : DEFAULT_MAGNET_POCKET_PRESET,
+    magnetPocketPlacement:
+      params.templateId === 'magnet' &&
+      ['center', 'upper', 'lower', 'left', 'right'].includes(params.magnetPocketPlacement)
+        ? params.magnetPocketPlacement
+        : DEFAULT_MAGNET_POCKET_PLACEMENT,
     templateId: params.templateId ?? 'name-keychain',
     textSizeMm: clamp(params.textSizeMm, 12, 30),
     fontWeightMm: clamp(params.fontWeightMm ?? 0, 0, 1.5),
@@ -324,24 +432,47 @@ export const normalizeParams = (params: KeychainParams): NormalizedParams => {
         : 0,
     bubbleLobeMm:
       params.styleId === 'bubble' &&
-      (params.templateId === 'name-keychain' || params.templateId === 'plant-label')
+      (params.templateId === 'name-keychain' ||
+        params.templateId === 'plant-label' ||
+        params.templateId === 'magnet')
         ? clamp(params.bubbleLobeMm ?? 0, 0, 4)
         : 0,
     tagTailMm:
       params.styleId === 'soft-tag' &&
-      (params.templateId === 'name-keychain' || params.templateId === 'plant-label')
+      (params.templateId === 'name-keychain' ||
+        params.templateId === 'plant-label' ||
+        params.templateId === 'magnet')
         ? clamp(params.tagTailMm ?? 0, 0, 4)
         : 0,
     archCurveMm:
       params.styleId === 'arch' &&
-      (params.templateId === 'name-keychain' || params.templateId === 'plant-label')
+      (params.templateId === 'name-keychain' ||
+        params.templateId === 'plant-label' ||
+        params.templateId === 'magnet')
         ? clamp(params.archCurveMm ?? 0, 0, 6)
         : 0,
     stakeShoulderMm:
       params.templateId === 'plant-label' ? clamp(params.stakeShoulderMm ?? 0, 0, 8) : 0,
     jointBossMm:
       params.templateId === 'articulated-name' ? clamp(params.jointBossMm ?? 0, 0, 3) : 0,
+    ribbonTailMm:
+      params.styleId === 'ribbon' &&
+      (params.templateId === 'name-keychain' || params.templateId === 'magnet')
+        ? clamp(params.ribbonTailMm ?? 12, 6, 24)
+        : 0,
+    ribbonNotchMm:
+      params.styleId === 'ribbon' &&
+      (params.templateId === 'name-keychain' || params.templateId === 'magnet')
+        ? clamp(params.ribbonNotchMm ?? 4, 1, 10)
+        : 0,
+    subtitleTextSizeMm: clamp(params.subtitleTextSizeMm ?? 6, 4, 12),
+    subtitleFontWeightMm: clamp(params.subtitleFontWeightMm ?? 0, 0, 1.5),
+    subtitleLetterSpacingMm: clamp(params.subtitleLetterSpacingMm ?? 0.5, 0, 4),
+    subtitleReliefDepthMm: clamp(params.subtitleReliefDepthMm ?? 0.8, 0.4, 1.5),
+    subtitleGapMm: clamp(params.subtitleGapMm ?? 1.5, 1.5, 8),
   };
+  if (normalized.templateId === 'magnet')
+    normalized.baseThicknessMm = clamp(params.baseThicknessMm, 4.4, 5);
   // Keep stale controls from a previous template/style from affecting later
   // builds. The registry is intentionally represented here explicitly so old
   // persisted payloads are normalized deterministically as well.
@@ -350,22 +481,45 @@ export const normalizeParams = (params: KeychainParams): NormalizedParams => {
   if (normalized.templateId !== 'name-keychain' && normalized.templateId !== 'articulated-name')
     normalized.ringOffsetMm = 0;
   if (
-    !(normalized.templateId === 'name-keychain' || normalized.templateId === 'plant-label') ||
+    !(
+      normalized.templateId === 'name-keychain' ||
+      normalized.templateId === 'plant-label' ||
+      normalized.templateId === 'magnet'
+    ) ||
     normalized.styleId !== 'bubble'
   )
     normalized.bubbleLobeMm = 0;
   if (
-    !(normalized.templateId === 'name-keychain' || normalized.templateId === 'plant-label') ||
+    !(
+      normalized.templateId === 'name-keychain' ||
+      normalized.templateId === 'plant-label' ||
+      normalized.templateId === 'magnet'
+    ) ||
     normalized.styleId !== 'soft-tag'
   )
     normalized.tagTailMm = 0;
   if (
-    !(normalized.templateId === 'name-keychain' || normalized.templateId === 'plant-label') ||
+    !(
+      normalized.templateId === 'name-keychain' ||
+      normalized.templateId === 'plant-label' ||
+      normalized.templateId === 'magnet'
+    ) ||
     normalized.styleId !== 'arch'
   )
     normalized.archCurveMm = 0;
   if (normalized.templateId !== 'plant-label') normalized.stakeShoulderMm = 0;
   if (normalized.templateId !== 'articulated-name') normalized.jointBossMm = 0;
+  if (normalized.templateId !== 'magnet') {
+    normalized.magnetPocketPreset = DEFAULT_MAGNET_POCKET_PRESET;
+    normalized.magnetPocketPlacement = DEFAULT_MAGNET_POCKET_PLACEMENT;
+  }
+  if (
+    !['name-keychain', 'magnet'].includes(normalized.templateId) ||
+    normalized.styleId !== 'ribbon'
+  ) {
+    normalized.ribbonTailMm = 0;
+    normalized.ribbonNotchMm = 0;
+  }
   if (normalized.templateId === 'articulated-name') {
     normalized.fontWeightMm = 0;
     normalized.edgeInsetMm = normalized.paddingMm;

@@ -42,6 +42,10 @@ const randomValue = (params: KeychainParams, parameter: ShapeParameter, random: 
   const step = Math.floor(boundedUnit(random()) * (steps + 1));
   return Number((range.min + step * range.step).toFixed(3));
 };
+const randomValueFor = (random: RandomSource, min: number, max: number, step: number): number => {
+  const count = Math.max(0, Math.round((max - min) / step));
+  return Number((min + Math.floor(boundedUnit(random()) * (count + 1)) * step).toFixed(3));
+};
 
 /**
  * Creates a valid, bounded variation while retaining the user's text.
@@ -54,7 +58,11 @@ export const randomizeParams = (
   const random = options.random ?? Math.random;
   const templatePool = (
     options.templates ?? TEMPLATE_CATALOG.map((template) => template.id)
-  ).filter((id): id is TemplateId => TEMPLATE_CATALOG.some((template) => template.id === id));
+  ).filter(
+    (id): id is TemplateId =>
+      TEMPLATE_CATALOG.some((template) => template.id === id) &&
+      !(current.subtitle && id === 'articulated-name'),
+  );
   const templateId = pick(templatePool, random, current.templateId) ?? current.templateId;
   const template = TEMPLATE_CATALOG.find((item) => item.id === templateId) ?? TEMPLATE_CATALOG[0];
   const styleId = template.styles.length
@@ -71,7 +79,16 @@ export const randomizeParams = (
       random,
       current.fontId,
     ) ?? current.fontId;
-  let next: KeychainParams = { ...current, templateId, styleId, fontId };
+  const subtitleFonts = (options.fonts ?? FONT_CATALOG).filter(
+    (font) => !current.subtitle || fontSupportsText(font, current.subtitle),
+  );
+  const subtitleFontId =
+    pick(
+      subtitleFonts.map((font) => font.id),
+      random,
+      current.subtitleFontId,
+    ) ?? current.subtitleFontId;
+  let next: KeychainParams = { ...current, templateId, styleId, fontId, subtitleFontId };
 
   if (options.randomizeShape !== false) {
     for (const parameter of orderedTemplateParameterKeys(templateId)) {
@@ -80,6 +97,18 @@ export const randomizeParams = (
       }
     }
     if (templateId === 'plant-label') next = { ...next, plantAccentEnabled: random() >= 0.5 };
+    if (templateId !== 'articulated-name' && current.subtitle) {
+      next = {
+        ...next,
+        subtitleTextSizeMm: randomValueFor(random, 4, 12, 0.5),
+        subtitleFontWeightMm: randomValueFor(random, 0, 1.5, 0.1),
+        subtitleLetterSpacingMm: randomValueFor(random, 0, 4, 0.1),
+        subtitleReliefDepthMm: randomValueFor(random, 0.4, 1.5, 0.1),
+        subtitleGapMm: randomValueFor(random, 1.5, 8, 0.1),
+        subtitleOffsetXRatio: randomValueFor(random, -1, 1, 0.05),
+        subtitleOffsetYRatio: randomValueFor(random, -1, 1, 0.05),
+      };
+    }
   }
   return normalizeParams(next);
 };

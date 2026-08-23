@@ -8,5 +8,7 @@
   "capsule.description": "Simple rounded plate",
   "soft-tag.description": "Plate with a soft tab",
   "bubble.description": "Organic shape with bubbles",
-  "arch.description": "Shape with an arched top"
+  "arch.description": "Shape with an arched top",
+  "ribbon": "Ribbon",
+  "ribbon.description": "Symmetric tails with restrained fold accents"
 }

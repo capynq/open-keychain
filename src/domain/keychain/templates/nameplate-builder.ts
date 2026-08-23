@@ -26,6 +26,7 @@ export const buildNameplate = (
   issues: ValidationIssue[],
   includeExport: boolean,
 ): { result: GeometryResult; exportMesh?: MeshBuffer } => {
+  const reliefSource = styled.subtitle ? styled.relief.add(styled.subtitle) : styled.relief;
   const baseThickness = Math.round(params.baseThicknessMm * MANIFOLD_SCALE);
   const embedDepth = Math.min(
     Math.max(200, Math.round(params.nameplateEmbedMm * MANIFOLD_SCALE)),
@@ -33,7 +34,7 @@ export const buildNameplate = (
   );
   const visibleDepth = Math.round(params.reliefDepthMm * MANIFOLD_SCALE);
   const plate = styled.backing.extrude(baseThickness);
-  const textBounds = styled.relief.bounds();
+  const textBounds = reliefSource.bounds();
   const pivotX = (textBounds.min[0] + textBounds.max[0]) / 2;
   const pivotY = textBounds.min[1];
   const plateBounds = plate.boundingBox();
@@ -41,7 +42,7 @@ export const buildNameplate = (
   const embeddingStep = 250;
   const tolerance = 250;
   const carrierDepth = embedDepth + visibleDepth + embeddingSafety;
-  const carrierRawText = styled.relief.extrude(carrierDepth);
+  const carrierRawText = reliefSource.extrude(carrierDepth);
   const carrierCentered = carrierRawText.translate([-pivotX, -pivotY, 0]);
   const carrierRotated = carrierCentered.rotate([params.nameplateTiltDeg, 0, 0]);
   const carrierRotatedBounds = carrierRotated.boundingBox();
@@ -59,9 +60,13 @@ export const buildNameplate = (
   let hasVisibleCap = false;
   let connected = false;
   let carrierFullyEmbedded = false;
-  const createStretchedRelief = (rootDepth: number): Manifold => {
-    const depth = rootDepth + visibleDepth;
-    const raw = styled.relief.extrude(depth, 12);
+  const createStretchedRelief = (
+    source: typeof reliefSource,
+    rootDepth: number,
+    capDepth: number,
+  ): Manifold => {
+    const depth = rootDepth + capDepth;
+    const raw = source.extrude(depth, 12);
     const centered = raw.translate([-pivotX, -pivotY, 0]);
     const angle = (params.nameplateTiltDeg * Math.PI) / 180;
     const cosine = Math.cos(angle);
@@ -84,7 +89,18 @@ export const buildNameplate = (
   };
   for (let attempt = 0; attempt < 13; attempt += 1) {
     const rootDepth = embedDepth + embeddingSafety + attempt * embeddingStep;
-    const candidateText = createStretchedRelief(rootDepth);
+    const candidateMain = createStretchedRelief(styled.relief, rootDepth, visibleDepth);
+    const candidateSubtitle = styled.subtitle
+      ? createStretchedRelief(
+          styled.subtitle,
+          rootDepth,
+          Math.round((params.subtitleReliefDepthMm ?? params.reliefDepthMm) * MANIFOLD_SCALE),
+        )
+      : undefined;
+    const candidateText = candidateSubtitle
+      ? wasm.Manifold.union([candidateMain, candidateSubtitle])
+      : candidateMain;
+    if (candidateSubtitle) candidateSubtitle.delete();
     const candidateBounds = candidateText.boundingBox();
     const candidateInsidePlateFootprint = [carrierBounds, candidateBounds].every(
       (bounds) =>
@@ -123,6 +139,7 @@ export const buildNameplate = (
       hasVisibleCap = candidateHasVisibleCap;
       connected = candidateConnected;
       carrierFullyEmbedded = candidateCarrierEmbedded;
+      if (candidateMain !== candidateText) candidateMain.delete();
       break;
     }
     if (attempt === 12) {
@@ -133,8 +150,10 @@ export const buildNameplate = (
       hasVisibleCap = candidateHasVisibleCap;
       connected = candidateConnected;
       carrierFullyEmbedded = candidateCarrierEmbedded;
+      if (candidateMain !== candidateText) candidateMain.delete();
     } else {
       candidateText.delete();
+      if (candidateMain !== candidateText) candidateMain.delete();
       candidateModel.delete();
     }
   }
@@ -213,6 +232,8 @@ export const buildNameplate = (
       plate,
       styled.backing,
       styled.relief,
+      ...(styled.subtitle ? [styled.subtitle] : []),
+      ...(reliefSource !== styled.relief ? [reliefSource] : []),
       styled.rawText,
     ]),
   ]);

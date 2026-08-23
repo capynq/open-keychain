@@ -8,5 +8,7 @@
   "capsule.description": "Простая округлая табличка",
   "soft-tag.description": "Табличка с мягким выступом",
   "bubble.description": "Органичная форма с пузырями",
-  "arch.description": "Форма с арочным верхом"
+  "arch.description": "Форма с арочным верхом",
+  "ribbon": "Лента",
+  "ribbon.description": "Симметричные хвостики со сдержанными сгибами"
 }

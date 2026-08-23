@@ -10,15 +10,15 @@ import {
 } from './model/types';
 
 export type DesignDocument = {
-  /** Version 2 uses the textSizeMm parameter name. */
-  version: 2;
+  version: 5;
   params: KeychainParams;
   appearanceOverrides?: PrintAppearanceOverrides;
   fontFallback?: boolean;
 };
 
+const V5_PREFIX = 'v5.';
 const V3_PREFIX = 'v3.';
-const COMPACT_PARAM_KEYS: Record<keyof KeychainParams, string> = {
+const V3_COMPACT_PARAM_KEYS: Partial<Record<keyof KeychainParams, string>> = {
   text: 't',
   fontId: 'f',
   templateId: 'm',
@@ -50,6 +50,54 @@ const COMPACT_PARAM_KEYS: Record<keyof KeychainParams, string> = {
   stakeShoulderMm: 'ad',
   jointBossMm: 'ae',
 };
+const V3_COMPACT_TO_PARAM = Object.fromEntries(
+  Object.entries(V3_COMPACT_PARAM_KEYS).map(([key, compact]) => [compact, key]),
+) as Record<string, keyof KeychainParams>;
+const COMPACT_PARAM_KEYS: Record<keyof KeychainParams, string> = {
+  text: 't',
+  subtitle: 'st',
+  subtitleFontId: 'sf',
+  subtitleOffsetXRatio: 'sx',
+  subtitleOffsetYRatio: 'sy',
+  magnetPocketPreset: 'mp',
+  magnetPocketPlacement: 'mn',
+  fontId: 'f',
+  templateId: 'm',
+  styleId: 's',
+  textSizeMm: 'h',
+  fontWeightMm: 'w',
+  baseThicknessMm: 'b',
+  reliefDepthMm: 'r',
+  paddingMm: 'p',
+  edgeInsetMm: 'e',
+  letterSpacingMm: 'l',
+  holeDiameterMm: 'd',
+  connectorWidthMm: 'c',
+  cornerRadiusMm: 'k',
+  stakeLengthMm: 'q',
+  plantAccentEnabled: 'a',
+  nameplateTiltDeg: 'i',
+  nameplateEmbedMm: 'n',
+  jointClearanceMm: 'j',
+  mechanicalGapMm: 'g',
+  maxJointAngleDeg: 'x',
+  minimumWallMm: 'u',
+  bottomClearanceMm: 'o',
+  reliefHaloMm: 'y',
+  ringOffsetMm: 'z',
+  bubbleLobeMm: 'aa',
+  tagTailMm: 'ab',
+  archCurveMm: 'ac',
+  stakeShoulderMm: 'ad',
+  jointBossMm: 'ae',
+  ribbonTailMm: 'af',
+  ribbonNotchMm: 'ag',
+  subtitleTextSizeMm: 'ah',
+  subtitleFontWeightMm: 'ai',
+  subtitleLetterSpacingMm: 'aj',
+  subtitleReliefDepthMm: 'ak',
+  subtitleGapMm: 'al',
+};
 const COMPACT_TO_PARAM = Object.fromEntries(
   Object.entries(COMPACT_PARAM_KEYS).map(([key, compact]) => [compact, key]),
 ) as Record<string, keyof KeychainParams>;
@@ -67,9 +115,24 @@ const isValidParams = (value: unknown): value is KeychainParams => {
   if (!STYLE_CATALOG.some((item) => item.id === value.styleId)) return false;
   return PARAM_KEYS.every((key) => {
     const field = value[key];
-    if (key === 'text' || key === 'fontId' || key === 'templateId' || key === 'styleId')
-      return typeof field === 'string';
+    if (
+      key === 'text' ||
+      key === 'subtitle' ||
+      key === 'subtitleFontId' ||
+      key === 'magnetPocketPreset' ||
+      key === 'magnetPocketPlacement' ||
+      key === 'fontId' ||
+      key === 'templateId' ||
+      key === 'styleId'
+    )
+      return key === 'magnetPocketPreset'
+        ? ['6x2', '8x2', '10x3', '12x3', '15x3'].includes(field as string)
+        : key === 'magnetPocketPlacement'
+          ? ['center', 'upper', 'lower', 'left', 'right'].includes(field as string)
+          : typeof field === 'string';
     if (key === 'plantAccentEnabled') return typeof field === 'boolean';
+    if (key === 'subtitleOffsetXRatio' || key === 'subtitleOffsetYRatio')
+      return typeof field === 'number' && Number.isFinite(field) && field >= -1 && field <= 1;
     return (
       typeof field === 'number' &&
       Number.isFinite(field) &&
@@ -112,16 +175,26 @@ const base64UrlToBytes = (encoded: string): Uint8Array => {
 
 export const encodeDesignDocument = (document: DesignDocument): string => {
   if (
-    document.version !== 2 ||
+    document.version !== 5 ||
     !isValidParams(document.params) ||
     (document.appearanceOverrides !== undefined && !isValidAppearance(document.appearanceOverrides))
   )
     throw new Error('Invalid design document');
   const bundledFont = FONT_CATALOG.some((font) => font.id === document.params.fontId);
+  const bundledSubtitleFont = FONT_CATALOG.some(
+    (font) => font.id === document.params.subtitleFontId,
+  );
   const safeDocument: DesignDocument = {
     ...document,
-    params: bundledFont ? document.params : { ...document.params, fontId: FONT_CATALOG[0].id },
-    ...(bundledFont ? {} : { fontFallback: true }),
+    params:
+      bundledFont && bundledSubtitleFont
+        ? document.params
+        : {
+            ...document.params,
+            ...(bundledFont ? {} : { fontId: FONT_CATALOG[0].id }),
+            ...(bundledSubtitleFont ? {} : { subtitleFontId: FONT_CATALOG[0].id }),
+          },
+    ...(bundledFont && bundledSubtitleFont ? {} : { fontFallback: true }),
   };
   const compactParams: Record<string, unknown> = {};
   PARAM_KEYS.forEach((key) => {
@@ -141,30 +214,40 @@ export const encodeDesignDocument = (document: DesignDocument): string => {
     };
   }
   if (safeDocument.fontFallback) compact.ff = true;
-  return `${V3_PREFIX}${bytesToBase64Url(new TextEncoder().encode(JSON.stringify(compact)))}`;
+  return `${V5_PREFIX}${bytesToBase64Url(new TextEncoder().encode(JSON.stringify(compact)))}`;
 };
 
 export const decodeDesignDocument = (encoded: string): DesignDocument | undefined => {
   try {
     if (encoded.length > 24_000) return undefined;
-    const isV3 = encoded.startsWith(V3_PREFIX);
-    if (!isV3) return undefined;
-    const payload = encoded.slice(V3_PREFIX.length);
+    const prefix = encoded.startsWith(V5_PREFIX)
+      ? V5_PREFIX
+      : encoded.startsWith(V3_PREFIX)
+        ? V3_PREFIX
+        : undefined;
+    if (!prefix) return undefined;
+    const payload = encoded.slice(prefix.length);
     const parsed: unknown = JSON.parse(new TextDecoder().decode(base64UrlToBytes(payload)));
-    return decodeV2Document(parsed);
+    return decodeCompactDocument(
+      parsed,
+      prefix === V3_PREFIX ? V3_COMPACT_TO_PARAM : COMPACT_TO_PARAM,
+    );
   } catch {
     return undefined;
   }
 };
 
-const decodeV2Document = (parsed: unknown): DesignDocument | undefined => {
+const decodeCompactDocument = (
+  parsed: unknown,
+  compactToParam: Record<string, keyof KeychainParams>,
+): DesignDocument | undefined => {
   if (!isRecord(parsed) || !isRecord(parsed.p)) return undefined;
   if (Object.keys(parsed).some((key) => !['p', 'a', 'ff'].includes(key))) return undefined;
   const compactParams = parsed.p;
-  if (Object.keys(compactParams).some((key) => !(key in COMPACT_TO_PARAM))) return undefined;
+  if (Object.keys(compactParams).some((key) => !(key in compactToParam))) return undefined;
   const params = { ...DEFAULT_PARAMS } as KeychainParams;
   for (const [compactKey, value] of Object.entries(compactParams)) {
-    params[COMPACT_TO_PARAM[compactKey]] = value as never;
+    params[compactToParam[compactKey]] = value as never;
   }
   if (!isValidParams(params)) return undefined;
   let appearanceOverrides: PrintAppearanceOverrides | undefined;
@@ -186,8 +269,9 @@ const decodeV2Document = (parsed: unknown): DesignDocument | undefined => {
   }
   if (parsed.ff !== undefined && typeof parsed.ff !== 'boolean') return undefined;
   if (!FONT_CATALOG.some((font) => font.id === params.fontId)) return undefined;
+  if (!FONT_CATALOG.some((font) => font.id === params.subtitleFontId)) return undefined;
   return {
-    version: 2,
+    version: 5,
     params: normalizeParams(params),
     ...(appearanceOverrides ? { appearanceOverrides } : {}),
     ...(parsed.ff ? { fontFallback: true } : {}),

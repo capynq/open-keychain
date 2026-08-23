@@ -37,7 +37,9 @@ export type ShapeParameter =
   | 'tagTailMm'
   | 'archCurveMm'
   | 'stakeShoulderMm'
-  | 'jointBossMm';
+  | 'jointBossMm'
+  | 'ribbonTailMm'
+  | 'ribbonNotchMm';
 export type CustomizerParameter = ShapeParameter | 'plantAccentEnabled';
 export const PARAMETER_RANGES = {
   textSizeMm: { min: 12, max: 30, step: 0.5, unit: 'mm' },
@@ -63,6 +65,8 @@ export const PARAMETER_RANGES = {
   archCurveMm: { min: 0, max: 6, step: 0.1, unit: 'mm' },
   stakeShoulderMm: { min: 0, max: 8, step: 0.1, unit: 'mm' },
   jointBossMm: { min: 0, max: 3, step: 0.1, unit: 'mm' },
+  ribbonTailMm: { min: 6, max: 24, step: 0.5, unit: 'mm' },
+  ribbonNotchMm: { min: 1, max: 10, step: 0.5, unit: 'mm' },
 } satisfies Record<ShapeParameter, ParameterRange>;
 export const PARAMETER_DEFINITIONS: Record<ShapeParameter, ParameterDefinition> =
   Object.fromEntries(
@@ -95,6 +99,8 @@ export const PARAMETER_DEFINITIONS: Record<ShapeParameter, ParameterDefinition> 
             archCurveMm: 'archCurve',
             stakeShoulderMm: 'stakeShoulder',
             jointBossMm: 'jointBoss',
+            ribbonTailMm: 'ribbonTail',
+            ribbonNotchMm: 'ribbonNotch',
           } satisfies Record<ShapeParameter, string>
         )[parameter],
         dependencies:
@@ -114,6 +120,8 @@ export const PARAMETER_DEFINITIONS: Record<ShapeParameter, ParameterDefinition> 
           !(parameter === 'bubbleLobeMm' && params.styleId !== 'bubble') &&
           !(parameter === 'tagTailMm' && params.styleId !== 'soft-tag') &&
           !(parameter === 'archCurveMm' && params.styleId !== 'arch') &&
+          !(parameter === 'ribbonTailMm' && params.styleId !== 'ribbon') &&
+          !(parameter === 'ribbonNotchMm' && params.styleId !== 'ribbon') &&
           !(
             parameter === 'cornerRadiusMm' &&
             params.templateId === 'plant-label' &&
@@ -148,6 +156,8 @@ export const TEMPLATE_PARAMETER_KEYS: Record<TemplateId, readonly ShapeParameter
     'bubbleLobeMm',
     'tagTailMm',
     'archCurveMm',
+    'ribbonTailMm',
+    'ribbonNotchMm',
   ],
   'articulated-name': [
     ...COMMON_PARAMETERS,
@@ -182,6 +192,19 @@ export const TEMPLATE_PARAMETER_KEYS: Record<TemplateId, readonly ShapeParameter
     'bubbleLobeMm',
     'tagTailMm',
     'archCurveMm',
+  ],
+  magnet: [
+    ...COMMON_PARAMETERS,
+    ...STANDARD_TEXT_PARAMETERS,
+    ...RELIEF_PARAMETERS,
+    'paddingMm',
+    'letterSpacingMm',
+    'cornerRadiusMm',
+    'bubbleLobeMm',
+    'tagTailMm',
+    'archCurveMm',
+    'ribbonTailMm',
+    'ribbonNotchMm',
   ],
 };
 export const templateParameterKeys = (templateId: TemplateId): readonly ShapeParameter[] => {
@@ -226,6 +249,8 @@ export const hasActiveParameter = (
     bubbleLobeMm: 'bubble',
     tagTailMm: 'soft-tag',
     archCurveMm: 'arch',
+    ribbonTailMm: 'ribbon',
+    ribbonNotchMm: 'ribbon',
   };
   if (
     styleParameter[parameter as ShapeParameter] &&
@@ -264,6 +289,8 @@ export const parameterRange = (
   }
   if (parameter === 'baseThicknessMm' && params.templateId === 'articulated-name')
     return { ...PARAMETER_RANGES.baseThicknessMm, min: 3.4 };
+  if (parameter === 'baseThicknessMm' && params.templateId === 'magnet')
+    return { ...PARAMETER_RANGES.baseThicknessMm, min: 4.4, max: 5 };
 
   if (parameter === 'nameplateEmbedMm') {
     const range = PARAMETER_RANGES.nameplateEmbedMm;

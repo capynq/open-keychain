@@ -5,9 +5,10 @@ export const TEMPLATE_PREVIEW_ASSETS: Record<TemplateId, string> = {
   'articulated-name': '/showcase/templates/articulated-name.png',
   nameplate: '/showcase/templates/nameplate.png',
   'plant-label': '/showcase/templates/plant-label.png',
+  magnet: '/showcase/templates/magnet.png',
 };
 
-export const STYLE_PREVIEW_ASSETS: Partial<Record<TemplateId, Record<StyleId, string>>> = {
+export const STYLE_PREVIEW_ASSETS: Partial<Record<TemplateId, Partial<Record<StyleId, string>>>> = {
   'name-keychain': {
     contour: '/showcase/styles/name-keychain-contour.png',
     capsule: '/showcase/styles/name-keychain-capsule.png',
@@ -21,6 +22,15 @@ export const STYLE_PREVIEW_ASSETS: Partial<Record<TemplateId, Record<StyleId, st
     'soft-tag': '/showcase/styles/plant-label-soft-tag.png',
     bubble: '/showcase/styles/plant-label-bubble.png',
     arch: '/showcase/styles/plant-label-arch.png',
+  },
+  magnet: {
+    plain: '/showcase/templates/magnet.png',
+    contour: '/showcase/styles/magnet-contour.png',
+    capsule: '/showcase/styles/magnet-capsule.png',
+    'soft-tag': '/showcase/styles/magnet-soft-tag.png',
+    bubble: '/showcase/styles/magnet-bubble.png',
+    arch: '/showcase/styles/magnet-arch.png',
+    ribbon: '/showcase/styles/magnet-ribbon.png',
   },
 };
 

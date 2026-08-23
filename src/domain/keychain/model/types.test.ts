@@ -21,6 +21,59 @@ import {
   type KeychainParams,
 } from './types';
 describe('keychain parameters', () => {
+  it('keeps Magnet roof and normalizes subtitle/ribbon scope', () => {
+    const plaque = normalizeParams({
+      ...DEFAULT_PARAMS,
+      templateId: 'magnet',
+      styleId: 'plain',
+      baseThicknessMm: 1.6,
+      subtitle: ' Date ',
+    });
+    expect(plaque.styleId).toBe('plain');
+    expect(plaque.baseThicknessMm).toBe(4.4);
+    expect(plaque.subtitle).toBe('Date');
+    expect(plaque.subtitleGapMm).toBe(1.5);
+    expect(normalizeParams({ ...plaque, subtitleGapMm: 99 }).subtitleGapMm).toBe(8);
+    expect(
+      normalizeParams({ ...DEFAULT_PARAMS, templateId: 'plant-label', styleId: 'ribbon' })
+        .ribbonTailMm,
+    ).toBe(0);
+  });
+  it('clears Magnet-only hardware fields outside the Magnet template', () => {
+    const normalized = normalizeParams({
+      ...DEFAULT_PARAMS,
+      templateId: 'nameplate',
+      magnetPocketPreset: '15x3',
+      magnetPocketPlacement: 'right',
+    });
+    expect(normalized.magnetPocketPreset).toBe('10x3');
+    expect(normalized.magnetPocketPlacement).toBe('center');
+  });
+  it('normalizes independent subtitle styling and offsets', () => {
+    const normalized = normalizeParams({
+      ...DEFAULT_PARAMS,
+      templateId: 'nameplate',
+      subtitle: '  Role  ',
+      subtitleFontId: 'local-font',
+      subtitleOffsetXRatio: 2,
+      subtitleOffsetYRatio: -2,
+      subtitleReliefDepthMm: 99,
+      subtitleGapMm: 99,
+    });
+    expect(normalized.subtitle).toBe('Role');
+    expect(normalized.subtitleFontId).toBe('local-font');
+    expect(normalized.subtitleOffsetXRatio).toBe(1);
+    expect(normalized.subtitleOffsetYRatio).toBe(-1);
+    expect(normalized.subtitleReliefDepthMm).toBe(1.5);
+    expect(normalized.subtitleGapMm).toBe(8);
+    expect(normalizeParams({ ...normalized, templateId: 'articulated-name' }).subtitle).toBe('');
+  });
+  it('keeps the generic thickness ceiling at 4 mm', () => {
+    expect(
+      parameterRange({ ...DEFAULT_PARAMS, templateId: 'name-keychain' }, 'baseThicknessMm').max,
+    ).toBe(4);
+    expect(normalizeParams({ ...DEFAULT_PARAMS, baseThicknessMm: 5 }).baseThicknessMm).toBe(4);
+  });
   it('uses a printable default font weight', () => {
     expect(DEFAULT_PARAMS.fontWeightMm).toBe(0.6);
   });
@@ -113,6 +166,21 @@ describe('keychain parameters', () => {
         'nameplateEmbedMm',
       ).max,
     ).toBeCloseTo(1.3);
+    expect(templateParameterKeys('magnet')).toEqual(
+      expect.arrayContaining(['letterSpacingMm', 'bubbleLobeMm', 'tagTailMm', 'archCurveMm']),
+    );
+    expect(
+      hasActiveParameter(
+        { ...DEFAULT_PARAMS, templateId: 'magnet', styleId: 'ribbon' },
+        'ribbonTailMm',
+      ),
+    ).toBe(true);
+    expect(
+      hasActiveParameter(
+        { ...DEFAULT_PARAMS, templateId: 'magnet', styleId: 'plain' },
+        'ribbonTailMm',
+      ),
+    ).toBe(false);
   });
   it('keeps registry dependencies before dependent randomizable parameters', () => {
     const ordered = orderedTemplateParameterKeys('nameplate');

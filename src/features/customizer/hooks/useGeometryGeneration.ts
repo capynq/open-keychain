@@ -11,7 +11,11 @@ import { GeometryClient } from '../../../infrastructure/geometry';
 import type { GeometryResult, KeychainParams } from '../../../domain/keychain';
 import type { FontDefinition } from '../../../domain/keychain/fonts/catalog';
 
-const geometryInputKey = (params: KeychainParams, fontDefinition?: FontDefinition): string =>
+const geometryInputKey = (
+  params: KeychainParams,
+  fontDefinition?: FontDefinition,
+  subtitleFontDefinition?: FontDefinition,
+): string =>
   JSON.stringify({
     params,
     font: fontDefinition
@@ -21,11 +25,19 @@ const geometryInputKey = (params: KeychainParams, fontDefinition?: FontDefinitio
           revision: fontDefinition.data?.byteLength,
         }
       : undefined,
+    subtitleFont: subtitleFontDefinition
+      ? {
+          id: subtitleFontDefinition.id,
+          source: subtitleFontDefinition.source,
+          revision: subtitleFontDefinition.data?.byteLength,
+        }
+      : undefined,
   });
 
 export const useGeometryGeneration = (
   params: KeychainParams,
   fontDefinition?: FontDefinition,
+  subtitleFontDefinition?: FontDefinition,
 ): {
   clientRef: MutableRefObject<GeometryClient | undefined>;
   result: GeometryResult | undefined;
@@ -37,6 +49,7 @@ export const useGeometryGeneration = (
     result: GeometryResult,
     forParams?: KeychainParams,
     forFont?: FontDefinition,
+    forSubtitleFont?: FontDefinition,
   ) => void;
   setError: Dispatch<SetStateAction<string | undefined>>;
 } => {
@@ -45,21 +58,26 @@ export const useGeometryGeneration = (
   const [result, setResult] = useState<GeometryResult>();
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string>();
-  const paramsKey = geometryInputKey(params, fontDefinition);
+  const paramsKey = geometryInputKey(params, fontDefinition, subtitleFontDefinition);
   const [resultParamsKey, setResultParamsKey] = useState<string>();
   const adoptedKeyRef = useRef<string | undefined>(undefined);
   const adoptResult = useCallback(
-    (next: GeometryResult, forParams = params, forFont = fontDefinition): void => {
+    (
+      next: GeometryResult,
+      forParams = params,
+      forFont = fontDefinition,
+      forSubtitleFont = subtitleFontDefinition,
+    ): void => {
       setResult(next);
 
-      const key = geometryInputKey(forParams, forFont);
+      const key = geometryInputKey(forParams, forFont, forSubtitleFont);
 
       adoptedKeyRef.current = key;
       setResultParamsKey(key);
       setBusy(false);
       setError(undefined);
     },
-    [fontDefinition, params],
+    [fontDefinition, params, subtitleFontDefinition],
   );
 
   useEffect(() => {
@@ -83,9 +101,9 @@ export const useGeometryGeneration = (
         setBusy(true);
         setError(undefined);
         clientRef.current
-          ?.request(params, fontDefinition)
+          ?.request(params, fontDefinition, subtitleFontDefinition)
           .then((next) => {
-            adoptResult(next, params, fontDefinition);
+            adoptResult(next, params, fontDefinition, subtitleFontDefinition);
           })
           .catch((cause: Error) => {
             if (cause.message === 'Preview generation superseded.') return;
@@ -97,7 +115,7 @@ export const useGeometryGeneration = (
     );
 
     return () => window.clearTimeout(timer);
-  }, [adoptResult, fontDefinition, params, paramsKey]);
+  }, [adoptResult, fontDefinition, params, paramsKey, subtitleFontDefinition]);
 
   return {
     clientRef,
