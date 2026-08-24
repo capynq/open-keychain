@@ -70,6 +70,26 @@ export const seoGuidesPath = (locale: SeoLocale): string => `${seoLocalePrefix(l
 export const seoGuidePath = (locale: SeoLocale, guide: SeoGuideDefinition): string =>
   `${seoGuidesPath(locale)}${guide.slug}/`;
 
+export type SeoAppRoute = {
+  kind: 'app';
+  locale: SeoLocale;
+  path: string;
+  templateId?: Exclude<TemplateId, 'magnet'>;
+  lastModified: string;
+};
+
+/** The finite set of localized customizer URLs that search engines may index. */
+export const SEO_APP_MANIFEST: readonly SeoAppRoute[] = SEO_LOCALES.flatMap((locale) => [
+  { kind: 'app' as const, locale, path: `/create?lang=${locale}`, lastModified: '2026-08-24' },
+  ...SEO_TEMPLATE_CATALOG.filter((template) => template.id !== 'magnet').map((template) => ({
+    kind: 'app' as const,
+    locale,
+    path: `/create?template=${template.id}&lang=${locale}`,
+    templateId: template.id as Exclude<TemplateId, 'magnet'>,
+    lastModified: '2026-08-24',
+  })),
+]);
+
 export const SEO_PAGE_MANIFEST = SEO_LOCALES.flatMap((locale) => [
   {
     kind: 'home' as const,
@@ -106,3 +126,4 @@ export const SEO_PAGE_MANIFEST = SEO_LOCALES.flatMap((locale) => [
 ]);
 
 export type SeoPageManifestEntry = (typeof SEO_PAGE_MANIFEST)[number];
+export const SEO_SITEMAP_MANIFEST = [...SEO_PAGE_MANIFEST, ...SEO_APP_MANIFEST] as const;

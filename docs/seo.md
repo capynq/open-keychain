@@ -10,8 +10,9 @@ that URL order and `lastmod` values match, and that all dates use the XML sitema
 
 ## Published indexable URLs
 
-The release contains exactly 33 indexable URLs: three localized home pages, three template hubs, twelve template
-pages, three guide hubs, and twelve guide pages.
+The release contains exactly 48 sitemap URLs: 33 static indexable URLs plus 15 finite localized customizer
+entrypoints. The static set contains three localized home pages, three template hubs, twelve template pages, three
+guide hubs, and twelve guide pages.
 
 - English: `/`, `/templates/`, `/templates/<template>/`, `/guides/`, and `/guides/<guide>/`
 - Russian: `/ru/`, `/ru/templates/`, `/ru/templates/<template>/`, `/ru/guides/`, and `/ru/guides/<guide>/`
@@ -21,8 +22,10 @@ The initial guide slugs are `stl-vs-3mf`, `how-to-print-a-name-keychain`, `artic
 `printable-plant-label-guide`. The four template slugs are `name-keychain`, `articulated-name`, `nameplate`, and
 `plant-label`.
 
-The interactive `/create` and `/profile` shells are intentionally `noindex,follow`. They remain linked from the
-indexable pages and are the product experience rather than search landing pages.
+The indexable customizer entrypoints are `/create?lang=<locale>` and
+`/create?template=<template>&lang=<locale>` for each of the four published templates and three supported locales.
+The bare `/create`, any invalid or extra query such as `design=`, non-normalized query ordering, and `/profile` remain
+`noindex,follow`; they remain linked from indexable pages as product experiences rather than search landing pages.
 
 ## Content and authority
 

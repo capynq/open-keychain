@@ -61,3 +61,30 @@ test('passes localized template links into the interactive customizer', async ({
     'true',
   );
 });
+
+test('publishes localized metadata for an indexable customizer URL', async ({ page }) => {
+  await page.goto('/create?template=nameplate&lang=ru');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'index,follow');
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    'href',
+    'https://open-keychain.com/create?template=nameplate&lang=ru',
+  );
+  await expect(page).toHaveTitle('Open Keychain 3D | Генератор именных табличек');
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+    'content',
+    /Создайте компактную именную табличку для стола/,
+  );
+  for (const hreflang of ['en', 'ru', 'uk', 'x-default']) {
+    await expect(page.locator(`link[rel="alternate"][hreflang="${hreflang}"]`)).toHaveCount(1);
+  }
+  const jsonLd = await page.locator('script[type="application/ld+json"]').textContent();
+  expect(JSON.parse(jsonLd ?? '{}')).toMatchObject({
+    '@type': 'WebApplication',
+    inLanguage: 'ru',
+    url: 'https://open-keychain.com/create?template=nameplate&lang=ru',
+  });
+
+  await page.goto('/create?lang=ru&template=nameplate');
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex,follow');
+});

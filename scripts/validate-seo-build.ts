@@ -1,7 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SEO_PAGE_MANIFEST, SEO_TEMPLATE_CATALOG } from '../src/infrastructure/seo/catalog';
+import {
+  SEO_PAGE_MANIFEST,
+  SEO_SITEMAP_MANIFEST,
+  SEO_TEMPLATE_CATALOG,
+} from '../src/infrastructure/seo/catalog';
 
 const SITE_URL = 'https://open-keychain.com';
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -16,6 +20,8 @@ const read = (relativePath: string): string => {
   if (!fs.existsSync(filePath)) fail(`missing ${relativePath}`);
   return fs.readFileSync(filePath, 'utf8');
 };
+const decodeXml = (value: string): string =>
+  value.replaceAll('&amp;', '&').replaceAll('&lt;', '<').replaceAll('&gt;', '>');
 
 type JsonLdNode = {
   '@type'?: string | string[];
@@ -48,14 +54,21 @@ const main = (): void => {
     fail('privacy page is indexable');
 
   const sitemap = read('sitemap.xml');
-  const sitemapUrls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
+  if (
+    !sitemap.startsWith('<?xml') ||
+    /<(?:loc|image:loc)>[^<]*&(?!(?:amp|lt|gt|quot|apos);)/.test(sitemap)
+  )
+    fail('sitemap is not well-formed XML');
+  const sitemapUrls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) =>
+    decodeXml(match[1]),
+  );
   const sitemapLastModified = [...sitemap.matchAll(/<lastmod>([^<]+)<\/lastmod>/g)].map(
     (match) => match[1],
   );
-  const sitemapImages = [...sitemap.matchAll(/<image:loc>([^<]+)<\/image:loc>/g)].map(
-    (match) => match[1],
+  const sitemapImages = [...sitemap.matchAll(/<image:loc>([^<]+)<\/image:loc>/g)].map((match) =>
+    decodeXml(match[1]),
   );
-  const expectedUrls = SEO_PAGE_MANIFEST.map((entry) => `${SITE_URL}${entry.path}`);
+  const expectedUrls = SEO_SITEMAP_MANIFEST.map((entry) => `${SITE_URL}${entry.path}`);
   if (
     sitemapUrls.length !== expectedUrls.length ||
     expectedUrls.some((url) => !sitemapUrls.includes(url))
@@ -63,7 +76,7 @@ const main = (): void => {
     fail('sitemap does not exactly match the SEO route manifest');
   }
   if (new Set(sitemapUrls).size !== sitemapUrls.length) fail('sitemap contains duplicate URLs');
-  const expectedLastModified = SEO_PAGE_MANIFEST.map((entry) => entry.lastModified);
+  const expectedLastModified = SEO_SITEMAP_MANIFEST.map((entry) => entry.lastModified);
   if (
     sitemapLastModified.length !== expectedLastModified.length ||
     expectedLastModified.some((date, index) => sitemapLastModified[index] !== date) ||
@@ -71,7 +84,7 @@ const main = (): void => {
   ) {
     fail('sitemap lastmod values do not match the page manifest');
   }
-  if (sitemapImages.length !== SEO_PAGE_MANIFEST.length)
+  if (sitemapImages.length !== SEO_SITEMAP_MANIFEST.length)
     fail('sitemap image locations do not match the page manifest');
   for (const imageUrl of sitemapImages) {
     if (!imageUrl.startsWith(`${SITE_URL}/`)) fail(`invalid sitemap image URL: ${imageUrl}`);
@@ -157,6 +170,10 @@ const main = (): void => {
     }
   }
 
+  for (const entry of SEO_SITEMAP_MANIFEST.filter((candidate) => candidate.kind === 'app')) {
+    if (!entry.path.startsWith('/create?')) fail(`invalid app sitemap path: ${entry.path}`);
+  }
+
   for (const template of SEO_TEMPLATE_CATALOG) {
     const imagePath = path.join(DIST_DIR, template.previewSrc.slice(1));
     if (!fs.existsSync(imagePath)) fail(`missing preview asset ${template.previewSrc}`);
@@ -167,7 +184,10 @@ const main = (): void => {
     ['profile/index.html', 'Open Keychain 3D | Your projects', '/profile'],
   ] as const) {
     const html = read(route);
-    if (!html.includes('meta name="robots" content="noindex,follow"'))
+    if (
+      route !== 'create/index.html' &&
+      !html.includes('meta name="robots" content="noindex,follow"')
+    )
       fail(`${route} is indexable`);
     if (!html.includes(expectedTitle)) fail(`${route} has an unexpected title`);
     if (!html.includes(`<link rel="canonical" href="${SITE_URL}${canonicalPath}"`))
@@ -178,7 +198,7 @@ const main = (): void => {
   if (!notFound.includes('meta name="robots" content="noindex,follow"'))
     fail('404 page is indexable');
   console.log(
-    `Validated ${SEO_PAGE_MANIFEST.length} SEO pages, app shells, sitemap, and 404 page.`,
+    `Validated ${SEO_PAGE_MANIFEST.length} SEO pages, ${SEO_SITEMAP_MANIFEST.length} sitemap URLs, app shells, and 404 page.`,
   );
 };
 

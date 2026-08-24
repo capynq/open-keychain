@@ -7,6 +7,7 @@ import uk from '../src/infrastructure/i18n/locales/uk.json';
 import {
   SEO_LOCALES,
   SEO_PAGE_MANIFEST,
+  SEO_SITEMAP_MANIFEST,
   SEO_TEMPLATE_CATALOG,
   seoHomePath,
   seoTemplatePath,
@@ -93,6 +94,13 @@ const escapeHtml = (value: string): string =>
 
 const escapeJson = (value: unknown): string =>
   (JSON.stringify(value) ?? '').replaceAll('<', '\\u003c').replaceAll('>', '\\u003e');
+const escapeXml = (value: string): string =>
+  value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&apos;');
 
 const ROOT_PLACEHOLDER = '<div id="root"><!-- seo-fallback --></div>';
 
@@ -733,6 +741,7 @@ const createAppShell = (
   title: string,
   description: string,
   canonicalPath: string,
+  indexable = false,
 ): string => {
   let html = source.replace(ROOT_PLACEHOLDER, '<div id="root"></div>');
   html = replaceHeadTag(html, /<title>[\s\S]*?<\/title>/, `<title>${escapeHtml(title)}</title>`);
@@ -741,11 +750,13 @@ const createAppShell = (
     /<meta name="description" content="[^"]*" \/>/,
     `<meta name="description" content="${escapeHtml(description)}" />`,
   );
-  html = replaceHeadTag(
-    html,
-    /<meta name="robots" content="[^"]*" \/>/,
-    '<meta name="robots" content="noindex,follow" />',
-  );
+  if (!indexable) {
+    html = replaceHeadTag(
+      html,
+      /<meta name="robots" content="[^"]*" \/>/,
+      '<meta name="robots" content="noindex,follow" />',
+    );
+  }
   html = replaceHeadTag(
     html,
     /<link rel="canonical" href="[^"]*" \/>/,
@@ -850,7 +861,7 @@ const main = (): void => {
   writeFile(path.join(DIST_DIR, 'profile/index.html'), profileShell);
   writeFile(path.join(DIST_DIR, 'profile.html'), profileShell);
 
-  const sitemapEntries = SEO_PAGE_MANIFEST.map((entry) => {
+  const sitemapEntries = SEO_SITEMAP_MANIFEST.map((entry) => {
     const template =
       entry.kind === 'template'
         ? SEO_TEMPLATE_CATALOG.find((candidate) => candidate.id === entry.templateId)
@@ -866,7 +877,7 @@ const main = (): void => {
             ?.previewSrc
         : '/brand/open-keychain-og.png') ??
       '/brand/open-keychain-og.png';
-    return `  <url>\n    <loc>${absoluteUrl(entry.path)}</loc>\n    <lastmod>${entry.lastModified}</lastmod>\n    <image:image>\n      <image:loc>${absoluteUrl(image)}</image:loc>\n    </image:image>\n  </url>`;
+    return `  <url>\n    <loc>${escapeXml(absoluteUrl(entry.path))}</loc>\n    <lastmod>${entry.lastModified}</lastmod>\n    <image:image>\n      <image:loc>${escapeXml(absoluteUrl(image))}</image:loc>\n    </image:image>\n  </url>`;
   }).join('\n');
   writeFile(
     path.join(DIST_DIR, 'sitemap.xml'),
