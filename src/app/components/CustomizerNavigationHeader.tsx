@@ -35,7 +35,7 @@ export const CustomizerNavigationHeader = ({
   hosted?: HostedAccountState;
   currentParams?: KeychainParams;
 }) => (
-  <header className="topbar">
+  <header className="topbar customizer-topbar">
     <BrandMark />
     <div className="topbar-export-actions">
       <button

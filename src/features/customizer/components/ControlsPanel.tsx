@@ -44,14 +44,10 @@ export const ControlsPanel = ({
   locale,
   customizer,
   onReset,
-  onNameEdited,
-  onTemplateSelected,
 }: {
   locale: Locale;
   customizer: ReturnType<typeof useCustomizerParams>;
   onReset: () => void;
-  onNameEdited: () => void;
-  onTemplateSelected: () => void;
 }) => {
   const {
     params,
@@ -474,7 +470,11 @@ export const ControlsPanel = ({
               ? t(locale, 'controlsScrollTop')
               : ''}
       </span>
-      <section className="control-section" data-testid="name-settings">
+      <section
+        className="control-section"
+        data-control-group="essentials"
+        data-testid="name-settings"
+      >
         <div className="section-heading">
           <h2>{t(locale, 'name')}</h2>
           <ResetIconButton label={t(locale, 'resetName')} onClick={() => resetSection('name')} />
@@ -486,7 +486,6 @@ export const ControlsPanel = ({
             value={params.text}
             maxLength={24}
             onChange={(event) => {
-              onNameEdited();
               updateText(event.target.value);
             }}
             placeholder={t(locale, 'namePlaceholder')}
@@ -501,7 +500,6 @@ export const ControlsPanel = ({
               value={params.subtitle}
               maxLength={24}
               onChange={(event) => {
-                onNameEdited();
                 if (!event.target.value.trim()) setFontTarget('primary');
                 updateSubtitle(event.target.value);
               }}
@@ -514,6 +512,7 @@ export const ControlsPanel = ({
         className="control-section"
         data-guide-target="shape"
         data-testid="template-settings"
+        data-control-group="design"
       >
         <div className="section-heading">
           <h2>{t(locale, 'template')}</h2>
@@ -533,7 +532,6 @@ export const ControlsPanel = ({
               guideTarget={params.templateId === template.id ? 'shape-control' : undefined}
               testId={`template-card-${template.id}`}
               onSelect={() => {
-                onTemplateSelected();
                 if (!template.supportsSubtitle) setFontTarget('primary');
                 selectTemplate(template.id);
               }}
@@ -542,7 +540,7 @@ export const ControlsPanel = ({
         </DesignCardRail>
       </section>
       {availableStyles.length > 0 && (
-        <section className="control-section">
+        <section className="control-section" data-control-group="design">
           <div className="section-heading">
             <h2>{t(locale, 'style')}</h2>
             <ResetIconButton
@@ -566,7 +564,7 @@ export const ControlsPanel = ({
         </section>
       )}
       {params.templateId === 'magnet' && (
-        <section className="control-section magnet-controls">
+        <section className="control-section magnet-controls" data-control-group="print">
           <div className="section-heading">
             <h2>{t(locale, 'magnetControls')}</h2>
           </div>
@@ -621,7 +619,7 @@ export const ControlsPanel = ({
           </label>
         </section>
       )}
-      <section className="control-section" data-testid="font-browser">
+      <section className="control-section" data-control-group="design" data-testid="font-browser">
         <div className="section-heading">
           <h2>
             {t(locale, 'font')}{' '}
@@ -870,7 +868,11 @@ export const ControlsPanel = ({
           </p>
         )}
       </section>
-      <section className="control-section shape-settings" data-testid="shape-settings">
+      <section
+        className="control-section shape-settings"
+        data-control-group="print"
+        data-testid="shape-settings"
+      >
         <div className="section-heading">
           <h2>{t(locale, 'shape')}</h2>
           <ResetIconButton label={t(locale, 'resetShape')} onClick={() => resetSection('shape')} />

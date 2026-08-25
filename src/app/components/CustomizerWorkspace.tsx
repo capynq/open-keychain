@@ -24,8 +24,6 @@ const WorkspaceContent = ({ locale, state }: { locale: Locale; state: Customizer
       <ControlsPanel
         locale={locale}
         customizer={state.customizer}
-        onNameEdited={state.guide.markNameEdited}
-        onTemplateSelected={state.guide.markTemplateEdited}
         onReset={() => {
           state.customizer.reset();
           state.setAppearanceOverrides({ version: 1 });

@@ -35,12 +35,14 @@ export const useExportActions = ({
   fontDefinition,
   subtitleFontDefinition,
   appearanceOverrides,
+  exportAllowed = true,
 }: {
   geometry: ExportSource;
   params: KeychainParams;
   fontDefinition?: FontDefinition;
   subtitleFontDefinition?: FontDefinition;
   appearanceOverrides?: PrintAppearanceOverrides;
+  exportAllowed?: boolean;
 }): ExportActionsState => {
   const [downloading, setDownloading] = useState(false);
   const [status, setStatus] = useState<ExportActionsState['status']>('idle');
@@ -57,7 +59,8 @@ export const useExportActions = ({
     mode: ThreeMfMode = 'separate-colors',
     requestedAppearanceOverrides: PrintAppearanceOverrides | undefined = appearanceOverrides,
   ): Promise<void> => {
-    if (!geometry.result?.printable || geometry.current === false || downloading) return;
+    if (!exportAllowed || !geometry.result?.printable || geometry.current === false || downloading)
+      return;
     lastRequest.current = { format, mode, appearanceOverrides: requestedAppearanceOverrides };
     setDownloading(true);
     setStatus('exporting');
@@ -108,7 +111,7 @@ export const useExportActions = ({
 
   return {
     downloading,
-    printable: Boolean(geometry.result?.printable && geometry.current !== false),
+    printable: Boolean(exportAllowed && geometry.result?.printable && geometry.current !== false),
     status,
     error,
     download,

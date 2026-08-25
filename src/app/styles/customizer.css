@@ -8,6 +8,17 @@
   padding: 18px clamp(30px, 4vw, 64px);
 }
 
+/* Keep the export/share controls available while the customizer workspace
+   scrolls, without affecting the landing and profile headers. */
+.customizer-topbar {
+  position: sticky;
+  z-index: 10;
+  top: 0;
+  background: #f6f4efed;
+  box-shadow: 0 5px 18px #30354512;
+  backdrop-filter: blur(12px);
+}
+
 .customizer-footer {
   display: flex;
   width: min(100% - 60px, 1440px);
@@ -36,105 +47,23 @@
   min-width: 0;
 }
 
-.customizer-guide {
-  margin: 18px clamp(30px, 4vw, 64px) 0;
-  padding: 14px 20px;
-  border: 1px solid #ead9c9;
-  border-radius: 14px;
-  background: linear-gradient(110deg, #fff8ed, #fffdf8 72%);
-  box-shadow: 0 8px 24px #b65a3c12;
-}
-
-.customizer-guide-heading {
+.summary-feedback-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
 }
 
-.customizer-guide-heading h2 {
-  margin: 0;
-  color: #303545;
-  font-size: 16px;
-  line-height: 1.2;
-}
-
-.customizer-guide-dismiss {
-  width: 28px;
-  height: 28px;
-  border: 1px solid #dfcfc1;
-  border-radius: 8px;
-  color: #6c6f79;
-  background: #fffdf8;
-  font-size: 20px;
-  line-height: 1;
-}
-
-.customizer-guide-dismiss:focus-visible,
-.customizer-guide-steps button:focus-visible {
-  outline: 2px solid #ef815e;
-  outline-offset: 2px;
-}
-
-.customizer-guide-steps {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin: 11px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.customizer-guide-steps li {
-  min-width: 0;
-  border-top: 2px solid #e5d9ce;
-}
-
-.customizer-guide-steps li.active {
-  border-color: #ef815e;
-}
-
-.customizer-guide-steps button {
-  display: flex;
-  width: 100%;
-  gap: 10px;
-  padding: 9px 6px 4px;
+.summary-fix-link {
+  flex: 0 0 auto;
   border: 0;
-  color: #303545;
+  color: #a74331;
   background: transparent;
-  text-align: left;
-}
-
-.customizer-guide-number {
-  color: #d35c3e;
-  font-size: 13px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-}
-
-.customizer-guide-steps button span:last-child {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-}
-
-.customizer-guide-steps strong {
-  font-size: 12px;
-}
-
-.customizer-guide-steps small {
-  color: #777a84;
-  font-size: 10px;
-  line-height: 1.3;
+  font-weight: 800;
+  text-decoration: underline;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .customizer-guide,
-  .customizer-guide * {
-    scroll-behavior: auto;
-    transition: none;
-  }
-
   .design-select-card,
   .design-select-card img,
   .design-card-rail-shell::after {
@@ -221,8 +150,8 @@
 .controls-panel select:focus-visible {
   border-color: var(--field-focus-ring);
   outline: 2px solid var(--field-focus-ring);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgb(239 129 94 / 22%);
+  outline-offset: -2px;
+  box-shadow: none;
 }
 
 .info-block {
@@ -337,8 +266,8 @@
 .range-control input:focus-visible {
   border-color: var(--field-focus-ring);
   outline: 2px solid var(--field-focus-ring);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgb(239 129 94 / 22%);
+  outline-offset: -2px;
+  box-shadow: none;
 }
 
 .select-control small {
@@ -1655,20 +1584,6 @@ input[type='range'] {
     flex-direction: column;
     gap: 5px;
     padding-bottom: 28px;
-  }
-
-  .customizer-guide {
-    margin: 14px 18px 0;
-    padding: 18px;
-  }
-
-  .customizer-guide-steps {
-    grid-template-columns: 1fr;
-    gap: 7px;
-  }
-
-  .customizer-guide-steps li {
-    border-top-width: 1px;
   }
 
   .controls-panel {

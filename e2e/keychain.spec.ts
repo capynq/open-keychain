@@ -405,9 +405,6 @@ for (const viewport of [
     page,
   }) => {
     await page.setViewportSize(viewport);
-    await page.addInitScript(() =>
-      window.localStorage.setItem('open-keychain.customizer-guide', 'dismissed'),
-    );
     await page.goto('/create');
     await expect(page.locator('.status-pill')).toHaveText('Ready to print', { timeout: 10000 });
     const layout = await page.evaluate(() => {
@@ -453,13 +450,24 @@ for (const viewport of [
     await expect(page.locator('.viewer')).toBeInViewport();
   });
 }
+
+for (const viewport of [
+  { name: 'desktop', width: 1440, height: 900 },
+  { name: 'mobile', width: 390, height: 844 },
+  { name: 'mobile-2x', width: 390, height: 844 },
+]) {
+  test(`renders one accessible export trigger on ${viewport.name}`, async ({ page }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.goto('/create');
+    await expect(page.locator('.export-header-button')).toHaveCount(1);
+    await expect(page.getByRole('button', { name: 'Export' })).toHaveCount(1);
+  });
+}
+
 test('keeps the complete articulated shape control set reachable in the scrollable pane', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 600 });
-  await page.addInitScript(() =>
-    window.localStorage.setItem('open-keychain.customizer-guide', 'dismissed'),
-  );
   await page.goto('/create');
   await page.getByRole('button', { name: 'Articulated name' }).click();
   const controls = page.locator('.controls-panel');
@@ -475,13 +483,10 @@ test('keeps the complete articulated shape control set reachable in the scrollab
   expect(scrollTop).toBeGreaterThan(0);
   await expect(page.getByLabel('Max joint angle')).toBeInViewport();
 });
-test('keeps the customizer footer in the desktop viewport with the guide visible', async ({
-  page,
-}) => {
+test('keeps the customizer footer in the desktop viewport', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/create');
   await expect(page.locator('.status-pill')).toHaveText('Ready to print', { timeout: 10000 });
-  await expect(page.locator('.customizer-guide')).toBeVisible();
 
   const pageState = await page.evaluate(() => {
     const footer = document.querySelector('.customizer-footer')!.getBoundingClientRect();

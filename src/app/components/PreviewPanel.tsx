@@ -220,13 +220,34 @@ const PreviewSummary = ({
         </div>
       </details>
       {status.feedback && !exportOpen && (
-        <p
-          className="summary-feedback"
-          role={status.className === 'attention' ? 'alert' : 'status'}
-          aria-live="polite"
-        >
-          {status.feedback}
-        </p>
+        <div className="summary-feedback-row">
+          <p
+            className="summary-feedback"
+            role={status.className === 'attention' ? 'alert' : 'status'}
+            aria-live="polite"
+          >
+            {status.feedback}
+          </p>
+          {status.className === 'attention' && (
+            <button
+              type="button"
+              className="summary-fix-link"
+              onClick={() => {
+                const controls = document.querySelector<HTMLElement>(
+                  `.controls-panel [data-control-group="${status.fixTarget}"]`,
+                );
+                const fallback = document.querySelector<HTMLElement>('.controls-panel');
+
+                (controls ?? fallback)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                (controls ?? fallback)
+                  ?.querySelector<HTMLElement>('input, select, button')
+                  ?.focus();
+              }}
+            >
+              {t(locale, 'fixThis')}
+            </button>
+          )}
+        </div>
       )}
     </section>
   );

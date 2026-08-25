@@ -12,6 +12,7 @@ export const ExportDialog = ({
   preflight,
   effectiveAppearance,
   onClose,
+  onExportSuccess,
 }: {
   locale: Locale;
   open: boolean;
@@ -19,6 +20,7 @@ export const ExportDialog = ({
   preflight: PreflightReport;
   effectiveAppearance?: PrintAppearance;
   onClose: () => void;
+  onExportSuccess?: () => void;
 }) => {
   const statusLabelKey =
     preflight.status === 'generating'
@@ -29,10 +31,20 @@ export const ExportDialog = ({
           ? 'printCheckBlocked'
           : 'printCheckReady';
   const wasOpen = useRef(false);
+  const reportedSuccess = useRef(false);
   useEffect(() => {
-    if (open && !wasOpen.current) exportState.clearStatus();
+    const justOpened = open && !wasOpen.current;
+    if (justOpened) {
+      exportState.clearStatus();
+      reportedSuccess.current = false;
+    }
+    if (!open) reportedSuccess.current = false;
+    if (!justOpened && open && exportState.status === 'success' && !reportedSuccess.current) {
+      reportedSuccess.current = true;
+      onExportSuccess?.();
+    }
     wasOpen.current = open;
-  }, [exportState, open]);
+  }, [exportState, onExportSuccess, open]);
   if (!open) return null;
   const handleDownload = (
     format: Parameters<ExportActionsState['download']>[0],

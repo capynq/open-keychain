@@ -11,7 +11,6 @@ import {
 } from '../../domain/keychain';
 import { ExportDialog, buildPreflightReport } from '../../features/export';
 import { AppHeader } from '../components/AppHeader';
-import { CustomizerOnboarding } from '../components/CustomizerOnboarding';
 import { CustomizerWorkspace } from '../components/CustomizerWorkspace';
 import { CustomizerFooter } from '../components/CustomizerFooter';
 import { Toast, type ToastVariant } from '../components/Toast';
@@ -59,13 +58,13 @@ export const CustomizerPage = ({
         locale={locale}
         onLocaleChange={onLocaleChange}
         exportOpen={state.exportOpen}
-        onExportOpen={() => state.setExportOpen(true)}
+        onExportOpen={state.openExport}
         onShare={() => void state.shareDesign()}
         onRandomize={state.randomize}
         onUndo={state.undo}
         canUndo={state.customizer.canUndo}
         randomizing={state.randomizing}
-        exportDisabled={!state.exportState.printable || state.randomizing}
+        exportDisabled={!state.canExport}
         hosted={state.hosted}
         currentParams={state.customizer.params}
       />
@@ -92,12 +91,6 @@ export const CustomizerPage = ({
 
           return <Toast variant={variant}>{message}</Toast>;
         })()}
-      <CustomizerOnboarding
-        locale={locale}
-        guide={state.guide}
-        printable={state.exportState.printable}
-        onExportOpen={() => state.setExportOpen(true)}
-      />
       <CustomizerWorkspace locale={locale} state={state} />
       <CustomizerFooter locale={locale} />
       <ExportDialog

@@ -7,7 +7,6 @@ import { useExportActions } from '../../features/export';
 import { useHostedAccount } from '../../features/hosted';
 import { previewStatus, type SurfacePresetId } from '../../features/preview';
 import { useAnalytics } from '../../infrastructure/telemetry';
-import { useCustomizerGuide } from './useCustomizerGuide';
 
 export const useCustomizerPageState = (
   locale: Locale,
@@ -39,14 +38,22 @@ export const useCustomizerPageState = (
     },
     locale,
   );
+  const canExport =
+    !randomizing &&
+    !geometry.busy &&
+    !geometry.error &&
+    Boolean(geometry.result?.printable && geometry.current !== false);
   const exportState = useExportActions({
     geometry,
     params: customizer.params,
     fontDefinition: customizer.selectedFont,
     subtitleFontDefinition: customizer.selectedSubtitleFont,
     appearanceOverrides,
+    exportAllowed: canExport,
   });
-  const guide = useCustomizerGuide();
+  const openExport = (): void => {
+    if (canExport) setExportOpen(true);
+  };
   const lastRouteInputKey = useRef(routeInputKey);
 
   useEffect(() => {
@@ -200,6 +207,8 @@ export const useCustomizerPageState = (
     setSurfacePreset,
     exportOpen,
     setExportOpen,
+    canExport,
+    openExport,
     appearanceOverrides,
     setAppearanceOverrides,
     shareDesign,
@@ -215,7 +224,6 @@ export const useCustomizerPageState = (
       style: activeStyle ? styleName(locale, activeStyle.id, activeStyle.name) : undefined,
       font: customizer.selectedFont.name,
     },
-    guide,
   };
 };
 
