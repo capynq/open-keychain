@@ -7,6 +7,9 @@ import {
   watchBrowserErrors,
 } from './helpers';
 
+const activeHeroImageSelector =
+  '.configurator-carousel-slide[data-showcase-kind="configurator"][data-active="true"] img';
+
 test('renders every declared route without browser errors', async ({ page }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
 
@@ -91,7 +94,7 @@ test('loads all reviewed landing visuals at the active responsive breakpoint', a
     ...Array.from({ length: 4 }, (_, index) =>
       waitForImageToLoad(page.locator('.landing-template-card img').nth(index)),
     ),
-    waitForImageToLoad(page.locator('.configurator-window img')),
+    waitForImageToLoad(page.locator(activeHeroImageSelector)),
   ]);
   const images = await page.locator('.landing-template-card img').evaluateAll((elements) =>
     elements.map((element) => {
@@ -112,18 +115,18 @@ test('loads all reviewed landing visuals at the active responsive breakpoint', a
     .poll(
       () =>
         page
-          .locator('.configurator-window img')
+          .locator(activeHeroImageSelector)
           .evaluate((element) => (element as HTMLImageElement).currentSrc),
       { timeout: 5_000 },
     )
     .toContain(expectedHeroAsset);
-  await waitForImageToLoad(page.locator('.configurator-window img'));
+  await waitForImageToLoad(page.locator(activeHeroImageSelector));
   expect(
     await page
-      .locator('.configurator-window img')
+      .locator(activeHeroImageSelector)
       .evaluate((element) => (element as HTMLImageElement).currentSrc),
   ).toContain(expectedHeroAsset);
-  const heroImageState = await page.locator('.configurator-window img').evaluate((element) => {
+  const heroImageState = await page.locator(activeHeroImageSelector).evaluate((element) => {
     const image = element as HTMLImageElement;
     return {
       width: image.naturalWidth,
@@ -144,9 +147,9 @@ test('loads all reviewed landing visuals at the active responsive breakpoint', a
   expect(heroImageState.height).toBe(expectedHeroDimensions.height);
   expect(heroImageState.width).toBeGreaterThan(heroImageState.renderedWidth);
   expect(heroImageState.height).toBeGreaterThan(heroImageState.renderedHeight);
-  await expect(page.locator('.configurator-window img')).toHaveAttribute('fetchpriority', 'high');
-  await expect(page.locator('.configurator-window img')).toHaveAttribute('loading', 'eager');
-  await expect(page.locator('.configurator-window img')).toHaveAttribute(
+  await expect(page.locator(activeHeroImageSelector)).toHaveAttribute('fetchpriority', 'high');
+  await expect(page.locator(activeHeroImageSelector)).toHaveAttribute('loading', 'eager');
+  await expect(page.locator(activeHeroImageSelector)).toHaveAttribute(
     'sizes',
     '(max-width: 760px) 100vw, 50vw',
   );
@@ -169,7 +172,7 @@ test('uses the density-appropriate mobile customizer capture on a mobile landing
     ...Array.from({ length: 4 }, (_, index) =>
       waitForImageToLoad(page.locator('.landing-template-card img').nth(index)),
     ),
-    waitForImageToLoad(page.locator('.configurator-window img')),
+    waitForImageToLoad(page.locator(activeHeroImageSelector)),
   ]);
   const expectedHeroAsset =
     testInfo.project.name === 'mobile-2x' ? 'create-mobile@2x.png' : 'create-mobile.png';
@@ -177,18 +180,18 @@ test('uses the density-appropriate mobile customizer capture on a mobile landing
     .poll(
       () =>
         page
-          .locator('.configurator-window img')
+          .locator(activeHeroImageSelector)
           .evaluate((element) => (element as HTMLImageElement).currentSrc),
       { timeout: 5_000 },
     )
     .toContain(expectedHeroAsset);
-  await waitForImageToLoad(page.locator('.configurator-window img'));
+  await waitForImageToLoad(page.locator(activeHeroImageSelector));
   expect(
     await page
-      .locator('.configurator-window img')
+      .locator(activeHeroImageSelector)
       .evaluate((element) => (element as HTMLImageElement).currentSrc),
   ).toContain(expectedHeroAsset);
-  const imageState = await page.locator('.configurator-window img').evaluate((element) => {
+  const imageState = await page.locator(activeHeroImageSelector).evaluate((element) => {
     const image = element as HTMLImageElement;
     return {
       width: image.naturalWidth,
@@ -207,7 +210,7 @@ test('uses the density-appropriate mobile customizer capture on a mobile landing
   expect(imageState.width).toBeGreaterThan(imageState.renderedWidth);
   expect(imageState.height).toBeGreaterThan(imageState.renderedHeight);
   expect(
-    await page.locator('.configurator-window img').evaluate((element) => {
+    await page.locator(activeHeroImageSelector).evaluate((element) => {
       const image = element as HTMLImageElement;
       return image.currentSrc.endsWith('/showcase/create-mobile.png');
     }),

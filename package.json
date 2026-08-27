@@ -32,6 +32,7 @@
     "bench:matrix": "node --import tsx scripts/bench-matrix-parent.ts",
     "test:geometry:matrix": "node --import tsx scripts/bench-matrix-parent.ts",
     "validation:fixtures": "node --import tsx scripts/generate-validation-fixtures.ts",
+    "validate:slicer": "node --import tsx scripts/validate-slicer.ts",
     "validate:self-hosted": "node --import tsx scripts/validate-static-deployment.ts && pnpm test:e2e:deployed",
     "package:self-hosted-evidence": "node --import tsx scripts/package-self-hosted-evidence.ts",
     "server": "tsx server/index.ts",
@@ -49,6 +50,7 @@
   "dependencies": {
     "@fastify/rate-limit": "^10.3.0",
     "better-auth": "^1.6.29",
+    "embla-carousel-react": "^8.6.0",
     "fastify": "^5.12.0",
     "fflate": "0.8.3",
     "i18next": "^26.3.6",

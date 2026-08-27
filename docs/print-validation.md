@@ -3,6 +3,18 @@
 Use 0.4 mm PLA, 0.2 mm layers, and no supports for the baseline. Complete one row for
 each supported template/style combination before the first public launch.
 
+## Repeatable PrusaSlicer smoke check
+
+The opt-in `pnpm validate:slicer` command slices every generated STL fixture with the
+checked-in `tools/slicer/prusaslicer-minimal-fff.ini` profile and writes a result manifest
+under `artifacts/`. Generate fixtures first with `pnpm validation:fixtures`. Set
+`PRUSASLICER_BIN` when the executable is not on `PATH`. This verifies that the files can be
+loaded and sliced; it does not replace inspection in the target slicer or a physical print.
+
+The same check is available from the manually dispatched and weekly
+`.github/workflows/slicer-validation.yml` workflow. Record the exact slicer version and
+profile in the manual evidence template for release decisions.
+
 | Fixture | Template/style           | Printer/profile | Dimensions | Holes/joints/stake | Relief | Supports | Status  | Evidence |
 | ------- | ------------------------ | --------------- | ---------- | ------------------ | ------ | -------- | ------- | -------- |
 | ALEX    | name-keychain / contour  |                 |            |                    |        | no       | pending |          |

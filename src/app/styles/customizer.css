@@ -378,8 +378,12 @@ p {
   z-index: 20;
   top: calc(env(safe-area-inset-top, 0px) + 16px);
   left: 50%;
-  width: min(calc(100% - 32px), 560px);
   box-sizing: border-box;
+  width: min(calc(100% - 32px), 560px);
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 11px 16px;
   border: 1px solid;
   border-radius: 999px;
@@ -388,6 +392,10 @@ p {
   font-weight: 800;
   line-height: 1.35;
   text-align: center;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  user-select: none;
+  -webkit-user-select: none;
   transform: translateX(-50%);
   animation: share-toast-in 180ms ease-out;
 }

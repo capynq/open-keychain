@@ -94,6 +94,56 @@
   font-weight: 700;
 }
 
+.viewer-unavailable {
+  display: grid;
+  max-width: 30rem;
+  margin: auto;
+  justify-items: center;
+  gap: 8px;
+  padding: 24px 26px;
+  border: 1px solid #d5c7b5;
+  border-radius: 18px;
+  background: rgb(255 252 245 / 92%);
+  box-shadow: 0 14px 30px #4b3d321c;
+  color: var(--slate, #39404d);
+  text-align: center;
+  line-height: 1.5;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.viewer-unavailable-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid #d98b69;
+  border-radius: 50%;
+  background: #fbe5d8;
+  color: #9a3d31;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.viewer-unavailable strong {
+  color: #293141;
+  font-size: 14px;
+}
+
+.viewer-unavailable p {
+  max-width: 26rem;
+  margin: 0;
+  color: #696d78;
+  font-size: 12px;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.viewer-toolbar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
 .appearance-controls {
   display: flex;
   align-items: center;

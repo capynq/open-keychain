@@ -33,6 +33,7 @@ export const CustomizerPage = ({
   const designValue = searchParams.get('design');
   const sharedDocument = designValue ? decodeDesignDocument(designValue) : undefined;
   const hasInvalidDesign = searchParams.has('design') && !sharedDocument;
+  const sharedFontFallback = Boolean(sharedDocument?.fontFallback);
   const requestedTemplate = searchParams.get('template');
   const templateId = TEMPLATE_CATALOG.some((template) => template.id === requestedTemplate)
     ? (requestedTemplate as TemplateId)
@@ -68,7 +69,11 @@ export const CustomizerPage = ({
         hosted={state.hosted}
         currentParams={state.customizer.params}
       />
-      {(hasInvalidDesign || state.shareStatus !== 'idle' || state.randomizeFailure) &&
+      {(hasInvalidDesign ||
+        sharedFontFallback ||
+        state.shareFontFallback ||
+        state.shareStatus !== 'idle' ||
+        state.randomizeFailure) &&
         (() => {
           const variant: ToastVariant = hasInvalidDesign
             ? 'error'
@@ -87,7 +92,9 @@ export const CustomizerPage = ({
                 ? t(locale, 'shareFailed')
                 : state.shareStatus === 'manual'
                   ? t(locale, 'shareManual')
-                  : t(locale, 'shareCopied');
+                  : sharedFontFallback || state.shareFontFallback
+                    ? t(locale, 'shareFontFallback')
+                    : t(locale, 'shareCopied');
 
           return <Toast variant={variant}>{message}</Toast>;
         })()}

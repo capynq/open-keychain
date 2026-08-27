@@ -168,6 +168,9 @@ export const Viewer = ({
   const activeViewRef = useRef<ViewId | 'custom'>('home');
 
   const [activeView, setActiveView] = useState<ViewId | 'custom'>('home');
+  const [previewCapability, setPreviewCapability] = useState<'available' | 'unavailable'>(
+    'available',
+  );
 
   useEffect(() => {
     resultRef.current = result;
@@ -204,11 +207,26 @@ export const Viewer = ({
 
     scene.background = new THREE.Color('#eee8df');
     const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: false,
-      powerPreference: 'high-performance',
-    });
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: false,
+        powerPreference: 'high-performance',
+      });
+    } catch {
+      queueMicrotask(() => setPreviewCapability('unavailable'));
+      return undefined;
+    }
+
+    const handleContextLost = (event: Event): void => {
+      event.preventDefault();
+      setPreviewCapability('unavailable');
+      stateRef.current?.controls.dispose();
+      stateRef.current = undefined;
+    };
+
+    renderer.domElement.addEventListener('webglcontextlost', handleContextLost, false);
 
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(host.clientWidth, host.clientHeight, false);
@@ -337,6 +355,7 @@ export const Viewer = ({
       platform.geometry.dispose();
       (platform.material as THREE.Material).dispose();
       renderer.dispose();
+      renderer.domElement.removeEventListener('webglcontextlost', handleContextLost);
       renderer.domElement.remove();
       stateRef.current = undefined;
     };
@@ -476,9 +495,20 @@ export const Viewer = ({
       aria-label="Interactive 3D preview"
       data-view={activeView}
       data-surface={surfacePreset}
+      data-preview-capability={previewCapability}
     >
       <div className="viewer-surface" ref={hostRef}>
-        <p className="viewer-caption">{t(locale, 'dragRotate')}</p>
+        {previewCapability === 'unavailable' ? (
+          <div className="viewer-unavailable" role="status">
+            <span className="viewer-unavailable-icon" aria-hidden="true">
+              !
+            </span>
+            <strong>{t(locale, 'previewUnavailableTitle')}</strong>
+            <p>{t(locale, 'previewUnavailable')}</p>
+          </div>
+        ) : (
+          <p className="viewer-caption">{t(locale, 'dragRotate')}</p>
+        )}
       </div>
       <div className="viewer-toolbar" aria-label="Preview camera views">
         {VIEW_DEFINITIONS.map((view) => (
@@ -489,6 +519,7 @@ export const Viewer = ({
             aria-label={t(locale, view.id === 'home' ? 'home' : view.id)}
             aria-pressed={activeView === view.id}
             title={t(locale, view.id === 'home' ? 'home' : view.id)}
+            disabled={previewCapability === 'unavailable'}
             onClick={() => setView(view.id)}
           >
             <CameraViewIcon icon={view.icon} />
@@ -499,6 +530,7 @@ export const Viewer = ({
           type="button"
           aria-label={t(locale, 'zoomOut')}
           title={t(locale, 'zoomOut')}
+          disabled={previewCapability === 'unavailable'}
           onClick={() => zoomBy(1.22)}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -509,6 +541,7 @@ export const Viewer = ({
           type="button"
           aria-label={t(locale, 'zoomIn')}
           title={t(locale, 'zoomIn')}
+          disabled={previewCapability === 'unavailable'}
           onClick={() => zoomBy(ZOOM_IN_FACTOR)}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">

@@ -245,6 +245,126 @@
   overflow: hidden;
 }
 
+.configurator-carousel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  touch-action: pan-y;
+}
+
+.configurator-carousel:focus-visible {
+  outline: 2px solid #b94d34;
+  outline-offset: -3px;
+}
+
+.configurator-carousel-track {
+  display: flex;
+  will-change: transform;
+}
+.configurator-carousel-slide {
+  flex: 0 0 100%;
+  min-width: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.configurator-carousel-slide img {
+  width: 100%;
+}
+.configurator-carousel-slide picture {
+  display: block;
+}
+.configurator-carousel-slide[data-showcase-kind='configurator'] img {
+  background: #f6f4ef;
+}
+.configurator-carousel-media {
+  display: block;
+  overflow: hidden;
+  background: #eee6da;
+  aspect-ratio: 16 / 10;
+}
+.configurator-carousel-media picture,
+.configurator-carousel-media img {
+  display: block;
+  width: 100%;
+}
+.configurator-carousel-media picture {
+  height: 100%;
+}
+.configurator-carousel-media img {
+  height: 100%;
+  object-fit: cover;
+}
+.configurator-carousel-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #d6d2c9;
+  border-radius: 50%;
+  background: #fffdf8e8;
+  color: #394052;
+  font-size: 27px;
+  line-height: 1;
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+.configurator-carousel-arrow:not(:disabled):hover,
+.configurator-carousel-arrow:not(:disabled):focus-visible {
+  background: #fff;
+  color: #a33e33;
+}
+.configurator-carousel-arrow:disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+.configurator-carousel-arrow:focus-visible,
+.configurator-carousel-dots button:focus-visible {
+  outline: 2px solid #b94d34;
+  outline-offset: 3px;
+}
+.configurator-carousel-prev {
+  left: 12px;
+}
+.configurator-carousel-next {
+  right: 12px;
+}
+.configurator-carousel-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.configurator-carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.configurator-carousel-dots button {
+  width: 22px;
+  height: 22px;
+  padding: 6px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.configurator-carousel-dots button span {
+  display: block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #c8c1b5;
+}
+.configurator-carousel-dots button[data-active='true'] span {
+  background: #b94d34;
+  box-shadow:
+    0 0 0 2px #f6f4ef,
+    0 0 0 3px #b94d34;
+}
+
 .configurator-window-bar {
   display: flex;
   min-height: 42px;
@@ -293,7 +413,6 @@
 }
 
 .configurator-window img {
-  height: auto;
   background: #f6f4ef;
 }
 
@@ -679,7 +798,10 @@
 
   .configurator-window img {
     width: 100%;
-    height: auto;
+  }
+
+  .configurator-carousel-media {
+    aspect-ratio: 390 / 844;
   }
 
   .landing-section-heading,
@@ -720,7 +842,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .configurator-showcase {
-    transform: none;
+  .configurator-carousel-arrow,
+  .configurator-carousel-dots button {
+    transition: none;
   }
 }

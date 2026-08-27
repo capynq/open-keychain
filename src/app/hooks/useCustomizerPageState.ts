@@ -22,6 +22,7 @@ export const useCustomizerPageState = (
     initialAppearanceOverrides ?? { version: 1 },
   );
   const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'manual' | 'failed'>('idle');
+  const [shareFontFallback, setShareFontFallback] = useState(false);
   const [randomizing, setRandomizing] = useState(false);
   const [randomizeFailure, setRandomizeFailure] = useState(false);
   const { track } = useAnalytics();
@@ -72,11 +73,15 @@ export const useCustomizerPageState = (
   }, [customizer, initialAppearanceOverrides, initialParams, routeInputKey]);
 
   useEffect(() => {
-    if (shareStatus === 'idle') return undefined;
+    if (shareStatus === 'idle' && !shareFontFallback) return undefined;
     const timeout = window.setTimeout(() => setShareStatus('idle'), 4_000);
+    const fallbackTimeout = window.setTimeout(() => setShareFontFallback(false), 4_000);
 
-    return () => window.clearTimeout(timeout);
-  }, [shareStatus]);
+    return () => {
+      window.clearTimeout(timeout);
+      window.clearTimeout(fallbackTimeout);
+    };
+  }, [shareFontFallback, shareStatus]);
 
   const shareDesign = async (): Promise<void> => {
     try {
@@ -87,6 +92,11 @@ export const useCustomizerPageState = (
         encodeDesignDocument({ version: 5, params: customizer.params, appearanceOverrides }),
       );
       const value = url.toString();
+
+      setShareFontFallback(
+        customizer.selectedFont.source !== 'bundled' ||
+          customizer.selectedSubtitleFont.source !== 'bundled',
+      );
       if (navigator.clipboard?.writeText) {
         try {
           await navigator.clipboard.writeText(value);
@@ -213,6 +223,7 @@ export const useCustomizerPageState = (
     setAppearanceOverrides,
     shareDesign,
     shareStatus,
+    shareFontFallback,
     randomizing,
     randomizeFailure,
     randomize,

@@ -24,6 +24,9 @@ Try the live [Open Keychain 3D printable keychain maker](https://open-keychain.c
 ## Use it locally
 
 The browser version is free to use and does not require an account. Fonts, geometry generation, preview, and exports run in the browser in the default build.
+The supported baseline is a modern browser with WebGL and WebAssembly. If WebGL is unavailable or
+lost, editing and validated export remain available while the interactive preview is replaced with
+an accessible message.
 
 ```sh
 pnpm install
@@ -40,6 +43,9 @@ is public by design; restrict it in Google Cloud by HTTP referrer to your produc
 local development origins. The app requests only Google family metadata and selected font files,
 never the entered name or preview text. If the key is missing or requests are blocked, the
 customizer keeps using the included fonts.
+Local TTF/OTF fonts are session-local and may require permission again after reconnecting a file.
+Shared links never embed font bytes: Google and local fonts are replaced with a bundled fallback and
+the recipient is warned so the appearance change is explicit.
 
 ## Self-host it
 

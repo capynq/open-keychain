@@ -93,8 +93,7 @@ export const useExportActions = ({
 
       setError(message);
       setStatus('error');
-      geometry.setError(message);
-      track('export_failed', { format, mode, template: params.templateId, category: 'generation' });
+      track('export_failed', { format, mode, template: params.templateId, category: 'export' });
     } finally {
       setDownloading(false);
     }

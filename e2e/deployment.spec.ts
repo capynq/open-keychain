@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { waitForImageToLoad, waitForReadyGeometry, watchBrowserErrors } from './helpers';
 
+const activeHeroImageSelector =
+  '.configurator-carousel-slide[data-showcase-kind="configurator"][data-active="true"] img';
+
 test('generates and exports through the deployed nginx image', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('link', { name: 'Open Keychain' })).toBeVisible();
@@ -33,7 +36,7 @@ test('loads responsive landing visuals and metadata in production', async ({ pag
     ...Array.from({ length: 4 }, (_, index) =>
       waitForImageToLoad(page.locator('.landing-template-card img').nth(index)),
     ),
-    waitForImageToLoad(page.locator('.configurator-window img')),
+    waitForImageToLoad(page.locator(activeHeroImageSelector)),
   ]);
 
   const templateSources = await page
@@ -43,7 +46,7 @@ test('loads responsive landing visuals and metadata in production', async ({ pag
   const expectedHero =
     testInfo.project.name === 'deployed-mobile' ? 'create-mobile@2x.png' : 'create-desktop.png';
   const heroSource = await page
-    .locator('.configurator-window img')
+    .locator(activeHeroImageSelector)
     .evaluate((element) => (element as HTMLImageElement).currentSrc);
   expect(heroSource).toContain(expectedHero);
 

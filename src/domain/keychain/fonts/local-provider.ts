@@ -281,14 +281,16 @@ export const createLocalFontStore = () => {
           record.handle = handle;
           record.name = file.name;
           record.fileName = file.name;
-          record.font = fontDefinitionFromBytes(id, file.name, await file.arrayBuffer());
+          const data = await file.arrayBuffer();
+          record.font = fontDefinitionFromBytes(id, file.name, data);
         } else if (record.handle) {
           const permission = record.handle.requestPermission
             ? await record.handle.requestPermission({ mode: 'read' })
             : 'granted';
           if (permission !== 'granted') return undefined;
           const file = await record.handle.getFile();
-          record.font = fontDefinitionFromBytes(id, record.fileName, await file.arrayBuffer());
+          const data = await file.arrayBuffer();
+          record.font = fontDefinitionFromBytes(id, record.fileName, data);
         } else {
           return undefined;
         }

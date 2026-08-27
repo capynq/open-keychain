@@ -22,14 +22,14 @@ const geometryInputKey = (
       ? {
           id: fontDefinition.id,
           source: fontDefinition.source,
-          revision: fontDefinition.data?.byteLength,
+          revision: fontDefinition.dataRevision ?? fontDefinition.data?.byteLength,
         }
       : undefined,
     subtitleFont: subtitleFontDefinition
       ? {
           id: subtitleFontDefinition.id,
           source: subtitleFontDefinition.source,
-          revision: subtitleFontDefinition.data?.byteLength,
+          revision: subtitleFontDefinition.dataRevision ?? subtitleFontDefinition.data?.byteLength,
         }
       : undefined,
   });
