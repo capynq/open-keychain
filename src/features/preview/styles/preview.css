@@ -42,8 +42,10 @@
 .viewer-toolbar button {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
   padding: 0;
   border: 0;
   border-radius: 999px;
@@ -225,10 +227,10 @@
 
 .appearance-control .reset-icon-button,
 .appearance-controls > .reset-icon-button {
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  min-height: 44px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
   padding: 0;
   border-radius: 999px;
 }
@@ -285,6 +287,16 @@
   .viewer-toolbar button {
     width: 44px;
     height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .appearance-control .reset-icon-button,
+  .appearance-controls > .reset-icon-button {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
   }
   .viewer-caption {
     bottom: 10px;

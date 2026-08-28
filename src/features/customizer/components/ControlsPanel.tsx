@@ -8,6 +8,7 @@ import {
   MAGNET_POCKET_PRESETS,
   type ShapeParameter,
   type FontCategory,
+  PARAMETER_GROUPS,
 } from '../../../domain/keychain';
 import type { KeychainParams } from '../../../domain/keychain';
 import {
@@ -62,7 +63,6 @@ export const ControlsPanel = ({
     updateText,
     updateSubtitle,
     updateSubtitleFont,
-    updateBackingSize,
     selectTemplate,
     resetSection,
     showsParameter,
@@ -394,46 +394,12 @@ export const ControlsPanel = ({
     </details>
   );
 
-  const parameterGroups: readonly { key: string; parameters: readonly ShapeParameter[] }[] = [
-    {
-      key: 'core',
-      parameters: ['baseThicknessMm', 'edgeInsetMm', 'holeDiameterMm'],
-    },
-    {
-      key: 'style',
-      parameters: [
-        'cornerRadiusMm',
-        'nameplateTiltDeg',
-        'nameplateEmbedMm',
-        'stakeLengthMm',
-        'reliefHaloMm',
-        'ringOffsetMm',
-        'bubbleLobeMm',
-        'tagTailMm',
-        'archCurveMm',
-        'stakeShoulderMm',
-        'ribbonTailMm',
-        'ribbonNotchMm',
-      ],
-    },
-    {
-      key: 'mechanical',
-      parameters: [
-        'connectorWidthMm',
-        'jointClearanceMm',
-        'mechanicalGapMm',
-        'maxJointAngleDeg',
-        'jointBossMm',
-      ],
-    },
-  ];
-
   const parameterLabel = (parameter: ShapeParameter): string => {
     if (parameter === 'baseThicknessMm')
       return t(locale, params.templateId === 'nameplate' ? 'plateThickness' : 'baseThickness');
     if (parameter === 'reliefDepthMm')
       return t(locale, params.templateId === 'nameplate' ? 'textLift' : 'raisedText');
-    if (parameter === 'edgeInsetMm') return t(locale, 'backingSize');
+    if (parameter === 'edgeInsetMm') return t(locale, 'edgeInset');
     return t(locale, PARAMETER_REGISTRY[parameter].labelKey);
   };
 
@@ -449,9 +415,7 @@ export const ControlsPanel = ({
         value={params[key] as number}
         {...definition}
         {...(parameter === 'edgeInsetMm' ? { min: Math.max(1.2, definition.min) } : {})}
-        onChange={(value) =>
-          parameter === 'edgeInsetMm' ? updateBackingSize(value) : update(key, value as never)
-        }
+        onChange={(value) => update(key, value as never)}
       />
     );
   };
@@ -982,14 +946,14 @@ export const ControlsPanel = ({
         </div>
         <div className="control-subsection shape-figure-settings" data-testid="figure-settings">
           <h3>{t(locale, 'figureSettings')}</h3>
-          {parameterGroups.map((group) => {
+          {PARAMETER_GROUPS.map((group) => {
             const controls = group.parameters.map(renderParameter).filter(Boolean);
-            if (!controls.length && group.key !== 'core') return null;
+            if (!controls.length) return null;
             return (
               <div className="parameter-group" data-parameter-group={group.key} key={group.key}>
-                <h4>
+                <h3>
                   {t(locale, `parameterGroup${group.key[0].toUpperCase()}${group.key.slice(1)}`)}
-                </h4>
+                </h3>
                 <div className="range-grid">{controls}</div>
               </div>
             );

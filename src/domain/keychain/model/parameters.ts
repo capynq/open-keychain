@@ -93,7 +93,7 @@ export const PARAMETER_DEFINITIONS: Record<ShapeParameter, ParameterDefinition> 
             nameplateTiltDeg: 'textTilt',
             nameplateEmbedMm: 'embedDepth',
             reliefHaloMm: 'reliefHalo',
-            ringOffsetMm: 'ringOffset',
+            ringOffsetMm: 'keyringHoleOffset',
             bubbleLobeMm: 'bubbleLobe',
             tagTailMm: 'tagTail',
             archCurveMm: 'archCurve',
@@ -140,6 +140,51 @@ export const CUSTOMIZER_PARAMETER_DEFINITIONS = {
 } as const;
 /** Single registry consumed by controls, randomization, and normalization. */
 export const PARAMETER_REGISTRY = PARAMETER_DEFINITIONS;
+/** Presentation groups for the registry-driven controls in Shape > Figure. */
+export const PARAMETER_GROUPS = [
+  {
+    key: 'common',
+    parameters: [
+      'baseThicknessMm',
+      'paddingMm',
+      'edgeInsetMm',
+      'holeDiameterMm',
+      'ringOffsetMm',
+    ] as const,
+  },
+  {
+    key: 'relief',
+    parameters: ['reliefHaloMm'] as const,
+  },
+  {
+    key: 'outline',
+    parameters: ['cornerRadiusMm', 'bubbleLobeMm', 'tagTailMm', 'archCurveMm'] as const,
+  },
+  {
+    key: 'templateDetails',
+    parameters: [
+      'nameplateTiltDeg',
+      'nameplateEmbedMm',
+      'stakeLengthMm',
+      'stakeShoulderMm',
+      'ribbonTailMm',
+      'ribbonNotchMm',
+    ] as const,
+  },
+  {
+    key: 'mechanics',
+    parameters: [
+      'connectorWidthMm',
+      'jointClearanceMm',
+      'mechanicalGapMm',
+      'maxJointAngleDeg',
+      'jointBossMm',
+    ] as const,
+  },
+] as const satisfies readonly {
+  key: string;
+  parameters: readonly ShapeParameter[];
+}[];
 const COMMON_PARAMETERS: readonly ShapeParameter[] = ['textSizeMm', 'baseThicknessMm'];
 const STANDARD_TEXT_PARAMETERS: readonly ShapeParameter[] = ['fontWeightMm', 'edgeInsetMm'];
 const RELIEF_PARAMETERS: readonly ShapeParameter[] = ['reliefDepthMm'];

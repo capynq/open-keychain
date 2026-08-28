@@ -8,6 +8,7 @@ import {
 import {
   buildStyle,
   capsule,
+  effectiveMargin,
   ringAssembly,
   roundedRect,
   sectionBounds,
@@ -568,11 +569,14 @@ const nameplateStyle = (wasm: GeometryWasm, input: StyleInput): StyleBuild => {
     (input.nameplateEmbedMm ?? 0.4) * MANIFOLD_SCALE + (input.reliefDepth ?? 1) * MANIFOLD_SCALE;
   const tiltMargin =
     Math.abs(Math.sin(((input.nameplateTiltDeg ?? 6) * Math.PI) / 180)) * textDepth;
-  const width = Math.max(34000, textWidth + input.padding * 2);
-  const height = Math.max(18000, textHeight + input.padding * 2 + tiltMargin * 2);
+  // Keep the default footprint stable while reserving visible backing around
+  // the relief when the optional halo is enabled.
+  const border = effectiveMargin(input) + Math.max(0, input.reliefHaloMm ?? 0) * MANIFOLD_SCALE;
+  const width = Math.max(34000, textWidth + border * 2);
+  const height = Math.max(18000, textHeight + border * 2 + tiltMargin * 2);
   const radius = Math.max(
     1500,
-    Math.min(input.cornerRadius ?? 4000, Math.min(width, height) / 2 - input.padding - 250),
+    Math.min(input.cornerRadius ?? 4000, Math.min(width, height) / 2 - border - 250),
   );
   const plate = roundedRect(wasm, width, height, radius);
   return { backing: plate, relief: input.text, subtitle: input.subtitle };
@@ -671,7 +675,8 @@ const plantFoundation = (
 const plantLabelStyle = (wasm: GeometryWasm, input: StyleInput, styleId: StyleId): StyleBuild => {
   const textWidth = input.textBounds.max[0] - input.textBounds.min[0];
   const textHeight = input.textBounds.max[1] - input.textBounds.min[1];
-  const foundationWidth = Math.max(34000, textWidth + input.padding * 2 + 7000);
+  const border = effectiveMargin(input) + Math.max(0, input.reliefHaloMm ?? 0) * MANIFOLD_SCALE;
+  const foundationWidth = Math.max(34000, textWidth + border * 2 + 7000);
   const foundationHeight = Math.max(5000, Math.min(8000, textHeight * 0.26));
   const radius = Math.max(
     1200,
@@ -719,7 +724,7 @@ const plantLabelStyle = (wasm: GeometryWasm, input: StyleInput, styleId: StyleId
   const labelFootprint = input.text.translate([0, textOffsetY]);
   const labelSubtitle = input.subtitle?.translate([0, textOffsetY]);
   const subtitleFootprint = labelSubtitle
-    ? labelSubtitle.offset(Math.max(600, input.textInset ?? input.padding), 'Round', 2, 64)
+    ? labelSubtitle.offset(effectiveMargin(input), 'Round', 2, 64)
     : undefined;
   const joined = union(
     wasm,

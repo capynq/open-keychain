@@ -99,10 +99,10 @@
   display: inline-grid;
   flex: 0 0 auto;
   place-items: center;
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  min-height: 44px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
   padding: 0;
   border: 1px solid #cecbc2;
   border-radius: 999px;
@@ -360,6 +360,15 @@
   .icon-button[data-icon-action='randomize']:active:not(:disabled) svg,
   .icon-button[data-icon-action='reset']:active:not(:disabled) svg {
     transform: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .icon-button {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
   }
 }
 

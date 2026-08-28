@@ -56,7 +56,6 @@ export const useCustomizerParams = (
   updateSubtitle: (subtitle: string) => void;
   updateSubtitleFont: (fontId: string) => void;
   selectTemplate: (templateId: TemplateId) => void;
-  updateBackingSize: (value: number) => void;
   resetSection: (section: CustomizerResetSection) => void;
   reset: () => void;
   showsParameter: (parameter: CustomizerParameter) => boolean;
@@ -226,15 +225,6 @@ export const useCustomizerParams = (
     setParamsDirect((current) => ({ ...current, subtitleFontId: fontId }));
   };
 
-  const updateBackingSize = (value: number): void => {
-    setFontNotice(undefined);
-    setParamsDirect((current) => ({
-      ...current,
-      paddingMm: value,
-      edgeInsetMm: value,
-    }));
-  };
-
   const selectTemplate = (templateId: TemplateId): void => {
     setFontNotice(undefined);
     const selected =
@@ -363,7 +353,6 @@ export const useCustomizerParams = (
     updateText,
     updateSubtitle,
     updateSubtitleFont,
-    updateBackingSize,
     selectTemplate,
     resetSection,
     reset,

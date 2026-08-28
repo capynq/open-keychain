@@ -10,6 +10,7 @@ const MAGNET_DIMENSIONS = {
   '12x3': [12, 3],
   '15x3': [15, 3],
 } as const;
+const BASELINE_MARGIN = 2.4 * 1000;
 export type Bounds2 = {
   min: Vec2;
   max: Vec2;
@@ -278,13 +279,20 @@ export const ringAssembly = (
   return result;
 };
 const plateStyle = (wasm: GeometryWasm, input: StyleInput, radius: number): CrossSection => {
-  const textInset = Math.max(600, input.textInset ?? input.padding);
+  const textInset = effectiveMargin(input);
   const textWidth = input.textBounds.max[0] - input.textBounds.min[0];
   const textHeight = input.textBounds.max[1] - input.textBounds.min[1];
   const width = Math.max(34000, textWidth + textInset * 2 + 6000);
   const height = Math.max(18000, textHeight + textInset * 2);
   return roundedRect(wasm, width, height, radius);
 };
+/**
+ * Resolve the material margin around the relief while retaining the historic
+ * default footprint. Each control contributes its delta from the 2.4 mm
+ * baseline, so changing either one still has a visible, predictable effect.
+ */
+export const effectiveMargin = (input: StyleInput): number =>
+  Math.max(600, input.padding + Math.max(0, input.textInset ?? 0) - BASELINE_MARGIN);
 export const finishStyle = (
   wasm: GeometryWasm,
   backing: CrossSection,
@@ -297,7 +305,7 @@ export const finishStyle = (
   }>,
   attachKeyring = true,
 ): StyleBuild => {
-  const textInset = Math.max(600, input.textInset ?? input.padding);
+  const textInset = effectiveMargin(input);
   const reliefHalo = Math.max(0, input.reliefHaloMm ?? 0) * 1000;
   const supportOffset = Math.max(600, Math.min(textInset + reliefHalo, 1200 + reliefHalo));
   const support = relief.offset(supportOffset, 'Round', 2, 64);
@@ -337,7 +345,7 @@ const finishMagnetStyle = (
   let magnetBacking = backing;
   if (input.subtitle) {
     const subtitleSupport = input.subtitle.offset(
-      Math.max(600, Math.min(input.textInset ?? input.padding, 1200)),
+      Math.max(600, Math.min(effectiveMargin(input), 1200)),
       'Round',
       2,
       64,
@@ -367,7 +375,7 @@ const finishMagnetStyle = (
   };
 };
 export const buildStyle = (wasm: GeometryWasm, styleId: StyleId, input: StyleInput): StyleBuild => {
-  const textInset = Math.max(600, input.textInset ?? input.padding);
+  const textInset = effectiveMargin(input);
   const textWidth = input.textBounds.max[0] - input.textBounds.min[0];
   const textHeight = input.textBounds.max[1] - input.textBounds.min[1];
   if (input.templateId === 'magnet' && styleId === 'plain') {

@@ -146,6 +146,23 @@ const geometryFingerprint = (result: Awaited<ReturnType<typeof buildKeychain>>['
   Number(result.dimensions.thicknessMm.toFixed(3)),
 ];
 describe('finished keychain geometry', () => {
+  it('preserves the established default Name-keychain contour baseline', async () => {
+    const { result } = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      templateId: 'name-keychain',
+      styleId: 'contour',
+      fontId: 'nunito',
+      text: 'ALEX',
+      paddingMm: 2.4,
+      edgeInsetMm: 2.4,
+      reliefHaloMm: 0,
+    });
+    expect(result.printable, JSON.stringify(result.issues)).toBe(true);
+    expect(result.dimensions.widthMm).toBeCloseTo(79.12, 2);
+    expect(result.dimensions.heightMm).toBeCloseTo(25.995, 2);
+    expect(result.dimensions.thicknessMm).toBeCloseTo(3.4, 2);
+  }, 30000);
+
   it('builds every magnet style with a blind rear pocket and no keyring', async () => {
     for (const styleId of [
       'plain',
@@ -515,10 +532,16 @@ describe('finished keychain geometry', () => {
         high: { reliefDepthMm: 2 },
       },
       {
-        label: 'backing size',
+        label: 'border padding',
         base: standard,
-        low: { paddingMm: 1.2, edgeInsetMm: 1.2 },
-        high: { paddingMm: 4, edgeInsetMm: 4 },
+        low: { paddingMm: 1.2 },
+        high: { paddingMm: 4 },
+      },
+      {
+        label: 'text edge inset',
+        base: standard,
+        low: { edgeInsetMm: 1.2 },
+        high: { edgeInsetMm: 4 },
       },
       {
         label: 'letter spacing',
@@ -605,10 +628,16 @@ describe('finished keychain geometry', () => {
         high: { reliefDepthMm: 2 },
       },
       {
-        label: 'nameplate backing',
+        label: 'nameplate border padding',
         base: nameplate,
-        low: { paddingMm: 1.2, edgeInsetMm: 1.2 },
-        high: { paddingMm: 4, edgeInsetMm: 4 },
+        low: { paddingMm: 1.2 },
+        high: { paddingMm: 4 },
+      },
+      {
+        label: 'nameplate text edge inset',
+        base: nameplate,
+        low: { edgeInsetMm: 1.2 },
+        high: { edgeInsetMm: 4 },
       },
       {
         label: 'nameplate radius',
@@ -643,10 +672,16 @@ describe('finished keychain geometry', () => {
         high: { reliefDepthMm: 2 },
       },
       {
-        label: 'plant backing',
+        label: 'plant border padding',
         base: plant,
-        low: { paddingMm: 1.2, edgeInsetMm: 1.2 },
-        high: { paddingMm: 4, edgeInsetMm: 4 },
+        low: { paddingMm: 1.2 },
+        high: { paddingMm: 4 },
+      },
+      {
+        label: 'plant text edge inset',
+        base: plant,
+        low: { edgeInsetMm: 1.2 },
+        high: { edgeInsetMm: 4 },
       },
       {
         label: 'plant letter spacing',

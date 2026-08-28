@@ -1307,6 +1307,18 @@ p {
   transition: 0.15s ease;
 }
 
+/* Section reset actions sit beside compact headings in the settings rail. */
+.controls-panel .section-heading > .reset-icon-button {
+  width: 36px;
+  height: 36px;
+}
+
+/* Keep the font browser's reset aligned with its 44px tab controls. */
+.controls-panel [data-testid='font-browser'] .section-heading > .reset-icon-button {
+  width: 44px;
+  height: 44px;
+}
+
 .reset-icon-button svg {
   width: 15px;
   height: 15px;
