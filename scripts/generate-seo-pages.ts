@@ -472,6 +472,10 @@ const renderFooter = (locale: SeoLocale): string => {
 
 const renderHomeMarkup = (locale: SeoLocale): string => {
   const copy = documents[locale].seo;
+  const printExampleOne =
+    locale === 'en' ? '/showcase/prints/example_1-en.png' : '/showcase/prints/example_1.png';
+  const printExampleTwo =
+    locale === 'en' ? '/showcase/prints/example_2-en.png' : '/showcase/prints/example_2.png';
   const templateCards = SEO_TEMPLATE_CATALOG.map((template) => {
     const templateCopy = copy.templates[template.key];
     return `<article class="seo-template-card">
@@ -506,8 +510,8 @@ const renderHomeMarkup = (locale: SeoLocale): string => {
       <h2 id="seo-examples-heading">${escapeHtml(copy.home.examplesHeading)}</h2>
       <p class="seo-section-lede">${escapeHtml(copy.home.examplesBody)}</p>
       <div class="seo-template-grid">
-        <figure class="seo-template-card"><img src="/showcase/prints/example_1.jpeg" alt="${escapeHtml(copy.home.examplesAltOne)}" width="1200" height="900" loading="lazy" /><figcaption>${escapeHtml(copy.home.examplesCaption)}</figcaption></figure>
-        <figure class="seo-template-card"><img src="/showcase/prints/example_2.jpeg" alt="${escapeHtml(copy.home.examplesAltTwo)}" width="1200" height="900" loading="lazy" /><figcaption>${escapeHtml(copy.home.examplesCaption)}</figcaption></figure>
+        <figure class="seo-template-card"><img src="${printExampleOne}" alt="${escapeHtml(copy.home.examplesAltOne)}" width="1254" height="1254" loading="lazy" /><figcaption>${escapeHtml(copy.home.examplesCaption)}</figcaption></figure>
+        <figure class="seo-template-card"><img src="${printExampleTwo}" alt="${escapeHtml(copy.home.examplesAltTwo)}" width="1254" height="1254" loading="lazy" /><figcaption>${escapeHtml(copy.home.examplesCaption)}</figcaption></figure>
       </div>
     </section>
     <section class="seo-section seo-split" aria-labelledby="seo-privacy-heading">

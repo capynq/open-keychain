@@ -24,7 +24,7 @@ const getSlides = (locale: Locale): Slide[] => [
   {
     id: 'print-example-1',
     kind: 'photo',
-    src: '/showcase/prints/example_1.jpeg',
+    src: locale === 'en' ? '/showcase/prints/example_1-en.png' : '/showcase/prints/example_1.png',
     alt: t(locale, 'landing.printExample1Alt'),
     label: t(locale, 'landing.printExampleLabel'),
     caption: t(locale, 'landing.printExample1Caption'),
@@ -32,7 +32,7 @@ const getSlides = (locale: Locale): Slide[] => [
   {
     id: 'print-example-2',
     kind: 'photo',
-    src: '/showcase/prints/example_2.jpeg',
+    src: locale === 'en' ? '/showcase/prints/example_2-en.png' : '/showcase/prints/example_2.png',
     alt: t(locale, 'landing.printExample2Alt'),
     label: t(locale, 'landing.printExampleLabel'),
     caption: t(locale, 'landing.printExample2Caption'),
@@ -193,7 +193,7 @@ export const ConfiguratorShowcase = ({ locale }: { locale: Locale }) => {
                     />
                   </picture>
                 ) : (
-                  <img src={slide.src} alt={slide.alt} width="4032" height="3024" loading="lazy" />
+                  <img src={slide.src} alt={slide.alt} width="1254" height="1254" loading="lazy" />
                 )}
               </div>
             </div>

@@ -15,8 +15,8 @@ test('provides three stable, fully framed showcase slides', async ({ page }) => 
 
   const slides = page.locator('[data-showcase-slide]');
   await expect(slides).toHaveCount(3);
-  await expect(slides.filter({ has: page.locator('img[src$="example_1.jpeg"]') })).toHaveCount(1);
-  await expect(slides.filter({ has: page.locator('img[src$="example_2.jpeg"]') })).toHaveCount(1);
+  await expect(slides.filter({ has: page.locator('img[src$="example_1-en.png"]') })).toHaveCount(1);
+  await expect(slides.filter({ has: page.locator('img[src$="example_2-en.png"]') })).toHaveCount(1);
   await expect(
     page.locator('[data-showcase-slide="configurator"][data-active="true"]'),
   ).toBeVisible();
@@ -113,6 +113,10 @@ test('uses localized captions and instant reduced-motion controls', async ({ pag
   await selectLocale(page, 'ru');
   await page.locator('[data-showcase-control="slide-2"]').click();
   await waitForSlide(page, 'print-example-1');
+  await expect(page.locator('[data-showcase-slide="print-example-1"] img')).toHaveAttribute(
+    'src',
+    /example_1\.png$/,
+  );
   await expect(page.locator('[data-showcase-slide="print-example-1"] img')).toHaveAttribute(
     'alt',
     /Фотография/,

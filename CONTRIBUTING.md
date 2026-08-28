@@ -13,7 +13,7 @@ pnpm test:e2e --workers=1
 The pre-push hook repairs formatting and lint issues in changed files, then selects the local gates from the files in the push:
 
 - Every code push runs typecheck, unit tests, and a production build with the deterministic Playwright Google-font key.
-- UI, route, export, public-asset, and E2E changes also run the full Playwright suite against that existing build.
+- UI, route, export, public-asset, and E2E changes also run the focused Playwright smoke suite (six checks across desktop and mobile) against that existing build.
 - Geometry and font changes also run `pnpm bench:matrix`.
 - Docker, nginx, or hosting changes also validate both Compose profiles and build/test the self-hosted image.
 - Documentation-only pushes run only the changed-file formatter/linter checks.
@@ -28,7 +28,10 @@ For a focused local run:
 pnpm typecheck
 pnpm test
 pnpm build
+pnpm test:e2e:smoke
 ```
+
+The full browser matrix remains available for release validation with `pnpm test:e2e --workers=1`. To opt into it from the pre-push hook, use `PUSH_E2E_MODE=full git push`; `PUSH_E2E_WORKERS` controls its worker count. Smoke validation defaults to two workers.
 
 ## Formatting
 

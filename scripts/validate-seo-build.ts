@@ -115,12 +115,17 @@ const main = (): void => {
     seenTitles.add(`${entry.locale}:${title}`);
     if (!html.includes('property="og:image:alt"')) fail(`${entry.path} has no og:image:alt`);
     if (entry.kind === 'home') {
-      if (
-        !html.includes('/showcase/prints/example_1.jpeg') ||
-        !html.includes('/showcase/prints/example_2.jpeg')
-      )
+      const printExampleOne =
+        entry.locale === 'en'
+          ? '/showcase/prints/example_1-en.png'
+          : '/showcase/prints/example_1.png';
+      const printExampleTwo =
+        entry.locale === 'en'
+          ? '/showcase/prints/example_2-en.png'
+          : '/showcase/prints/example_2.png';
+      if (!html.includes(printExampleOne) || !html.includes(printExampleTwo))
         fail(`${entry.path} is missing printed examples`);
-      if (!/example_[12]\.jpeg" alt="[^"]+" width="\d+" height="\d+"/.test(html))
+      if (!/example_[12](?:-en)?\.png" alt="[^"]+" width="\d+" height="\d+"/.test(html))
         fail(`${entry.path} examples lack dimensions or alt text`);
     }
     if (entry.kind === 'guide') {

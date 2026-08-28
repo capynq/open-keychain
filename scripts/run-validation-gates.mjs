@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { performance } from 'node:perf_hooks';
 import process from 'node:process';
+import { clearInterval, setInterval } from 'node:timers';
 
 const DEFAULT_CONCURRENCY = 2;
 
@@ -20,6 +21,11 @@ const gateCases = (output) => {
 const runCommand = (gate) =>
   new Promise((resolve) => {
     const startedAt = performance.now();
+    const elapsed = () => Math.round((performance.now() - startedAt) / 1000);
+    process.stdout.write(`[${gate.name}] started\n`);
+    const heartbeat = setInterval(() => {
+      process.stdout.write(`[${gate.name}] still running (${elapsed()}s)…\n`);
+    }, 15_000);
     const child = spawn(gate.command, gate.args ?? [], {
       cwd: process.cwd(),
       env: { ...process.env, ...(gate.env ?? {}) },
@@ -33,7 +39,8 @@ const runCommand = (gate) =>
     child.stderr.on('data', (chunk) => {
       stderr += chunk.toString();
     });
-    child.on('error', (error) =>
+    child.on('error', (error) => {
+      clearInterval(heartbeat);
       resolve({
         ...gate,
         ok: false,
@@ -41,9 +48,10 @@ const runCommand = (gate) =>
         durationMs: Math.round(performance.now() - startedAt),
         output: `${stderr}${error.message}\n`,
         cases: undefined,
-      }),
-    );
-    child.on('close', (status) =>
+      });
+    });
+    child.on('close', (status) => {
+      clearInterval(heartbeat);
       resolve({
         ...gate,
         ok: status === 0,
@@ -51,8 +59,8 @@ const runCommand = (gate) =>
         durationMs: Math.round(performance.now() - startedAt),
         output: `${stdout}${stderr}`,
         cases: gateCases(stdout),
-      }),
-    );
+      });
+    });
   });
 
 const runConcurrentGates = async (

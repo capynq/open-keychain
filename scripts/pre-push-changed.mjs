@@ -194,6 +194,13 @@ export const runPrePush = async () => {
   }
 
   const classification = classifyChangedFiles(files);
+  process.stdout.write(
+    `pre-push: ${files.length} changed file${files.length === 1 ? '' : 's'}; ` +
+      `core=${classification.needsCoreValidation ? 'yes' : 'no'}, ` +
+      `browser=${classification.needsBrowserValidation ? 'yes' : 'no'}, ` +
+      `geometry=${classification.needsGeometryBenchmark ? 'yes' : 'no'}, ` +
+      `docker=${classification.needsDockerValidation ? 'yes' : 'no'}\n`,
+  );
   if (classification.needsCoreValidation) {
     const buildResults = await runValidationGates(
       [
@@ -208,20 +215,26 @@ export const runPrePush = async () => {
     );
     if (buildResults.some((result) => !result.ok)) process.exit(1);
 
-    const gates = [
-      { name: 'typecheck', command: 'pnpm', args: ['typecheck'] },
-      { name: 'unit', command: 'pnpm', args: ['test'] },
-    ];
+    // `pnpm build` already runs `tsc -b`; avoid running the same typecheck twice.
+    const gates = [{ name: 'unit', command: 'pnpm', args: ['test'] }];
     if (classification.needsBrowserValidation) {
+      const browserCommand = process.env.PUSH_E2E_MODE === 'full' ? 'test:e2e' : 'test:e2e:smoke';
       gates.push({
         name: 'browser',
         command: 'pnpm',
-        args: ['test:e2e', '--workers=1'],
+        args:
+          browserCommand === 'test:e2e'
+            ? [browserCommand, `--workers=${process.env.PUSH_E2E_WORKERS ?? '2'}`]
+            : [browserCommand],
         env: { PLAYWRIGHT_USE_EXISTING_BUILD: 'true' },
       });
     }
     if (classification.needsGeometryBenchmark)
       gates.push({ name: 'geometry', command: 'pnpm', args: ['bench:matrix'] });
+    process.stdout.write(
+      `pre-push: running ${gates.map((gate) => gate.name).join(', ')} after build ` +
+        `(parallel limit ${process.env.VALIDATION_CONCURRENCY ?? '2'})\n`,
+    );
     const results = await runValidationGates(gates, {
       concurrency: Number.parseInt(process.env.VALIDATION_CONCURRENCY ?? '2', 10),
     });

@@ -2,10 +2,11 @@ import { defineConfig } from '@playwright/test';
 
 const externalBaseUrl = process.env.PLAYWRIGHT_BASE_URL;
 const useExistingBuild = process.env.PLAYWRIGHT_USE_EXISTING_BUILD === 'true';
+const smokeRun = process.env.PLAYWRIGHT_SMOKE === 'true';
 
 export default defineConfig({
   testDir: './e2e',
-  testIgnore: /(deployment|capture)\.spec\.ts/,
+  testIgnore: smokeRun ? /(deployment|capture)\.spec\.ts/ : /(deployment|capture|smoke)\.spec\.ts/,
   timeout: 30_000,
   use: {
     baseURL: externalBaseUrl ?? 'http://127.0.0.1:4173',

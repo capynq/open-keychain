@@ -35,6 +35,8 @@ pnpm dev
 
 Open the local address printed by Vite, then visit `/create` to start designing.
 
+For browser checks, `pnpm test:e2e:smoke` runs the fast six-check smoke suite on desktop and mobile. The full matrix is `pnpm test:e2e` and is reserved for release validation.
+
 ### Optional Google Fonts
 
 The included catalog works offline. To enable the opt-in Google Fonts browser, set
