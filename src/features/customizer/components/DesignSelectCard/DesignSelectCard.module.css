@@ -1,0 +1,105 @@
+:global(.design-select-card) {
+  position: relative;
+  flex: 0 0 148px;
+  aspect-ratio: 1.08 / 1;
+  min-width: 140px;
+  overflow: hidden;
+  scroll-snap-align: start;
+  border: 1px solid #d9d5cc;
+  border-radius: 13px;
+  padding: 0;
+  color: #fff;
+  background: #323b4d;
+  box-shadow: 0 5px 12px #30354514;
+  text-align: left;
+  isolation: isolate;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    background-color 0.16s ease;
+}
+
+:global(.design-select-card img) {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.16s ease;
+}
+:global(.design-select-card-overlay) {
+  position: absolute;
+  inset: 34% 0 0;
+  z-index: 1;
+  background: linear-gradient(180deg, transparent, #171d2bd9 74%);
+}
+:global(.design-select-card strong) {
+  display: block;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:global(.design-select-card-copy) {
+  position: absolute;
+  z-index: 2;
+  right: 10px;
+  bottom: 9px;
+  left: 10px;
+  display: grid;
+  gap: 3px;
+}
+:global(.design-select-card-description) {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #f8f5efcc;
+  font-size: 9px;
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+:global(.design-select-card:hover) {
+  transform: translateY(-2px) scale(1.018);
+  border-color: #ef815e;
+  box-shadow: 0 9px 18px #30354526;
+}
+:global(.design-select-card:hover img) {
+  transform: scale(1.025);
+}
+:global(.design-select-card:active) {
+  transform: scale(0.985);
+}
+:global(.design-select-card.selected) {
+  border-color: #ef815e;
+  box-shadow:
+    inset 0 0 0 2px #ef815e,
+    0 8px 18px #ef815e2b;
+}
+:global(.design-select-card.selected .design-select-card-overlay) {
+  background: linear-gradient(180deg, transparent, #141a29f2 70%);
+}
+:global(.design-select-card:focus-visible) {
+  outline: 2px solid #ef815e;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :global(.design-select-card),
+  :global(.design-select-card img) {
+    transition: none;
+  }
+  :global(.design-select-card:hover),
+  :global(.design-select-card:active),
+  :global(.design-select-card:hover img) {
+    transform: none;
+  }
+}
+
+@media (max-width: 760px) {
+  :global(.design-select-card) {
+    min-width: 0;
+    min-height: 44px;
+    aspect-ratio: auto;
+  }
+}

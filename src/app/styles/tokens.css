@@ -1,0 +1,12 @@
+:root {
+  --color-cream: #f6f4ef;
+  --color-surface: #fffdf8;
+  --color-ink: #202433;
+  --color-slate: #303545;
+  --color-muted: #8a8d95;
+  --color-terracotta: #ef815e;
+  --color-terracotta-dark: #9a3d31;
+  --radius-control: 9px;
+  --radius-pill: 999px;
+  --focus-ring: 2px solid var(--color-terracotta-dark);
+}

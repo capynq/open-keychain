@@ -1,3 +1,3 @@
-export * from './TelemetryProvider';
+export * from './TelemetryProvider/TelemetryProvider';
 export * from './events';
 export * from './useTelemetry';

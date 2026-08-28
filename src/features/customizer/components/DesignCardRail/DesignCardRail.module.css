@@ -1,0 +1,67 @@
+:global(.design-card-rail-shell) {
+  position: relative;
+  min-width: 0;
+}
+:global(.design-card-rail) {
+  display: flex;
+  min-width: 0;
+  gap: 9px;
+  padding: 6px 8px 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-padding-inline: 8px;
+  scroll-snap-type: x proximity;
+  scrollbar-color: #c9a08f transparent;
+  scrollbar-width: thin;
+}
+:global(.design-card-rail-shell::after) {
+  position: absolute;
+  z-index: 1;
+  top: 6px;
+  right: 0;
+  bottom: 10px;
+  width: 22px;
+  content: '';
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(270deg, #f6f4ef, transparent);
+  transition: opacity 0.16s ease;
+}
+:global(.design-card-rail-shell[data-scroll-state='middle']::after),
+:global(.design-card-rail-shell[data-scroll-state='top']::after) {
+  opacity: 1;
+}
+:global(.design-card-rail-shell::before) {
+  position: absolute;
+  right: 8px;
+  bottom: -1px;
+  z-index: 2;
+  color: #8f6254;
+  content: '→';
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease;
+}
+:global(.design-card-rail-shell[data-scroll-state='top']::before),
+:global(.design-card-rail-shell[data-scroll-state='middle']::before) {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  :global(.design-card-rail-shell::after) {
+    transition: none;
+  }
+}
+@media (max-width: 760px) {
+  :global(.design-card-rail) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    overflow: visible;
+    padding: 5px;
+  }
+  :global(.design-card-rail-shell::before) {
+    display: none;
+  }
+}

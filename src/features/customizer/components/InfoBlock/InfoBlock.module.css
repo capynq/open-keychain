@@ -1,0 +1,32 @@
+:global(.info-block) {
+  margin: 0.8rem 0 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid color-mix(in srgb, #d7c8bd 70%, #b94d34);
+  border-radius: 0.75rem;
+  background: #fbf8f4;
+  color: #626875;
+  font-size: 0.82rem;
+}
+:global(.info-block strong) {
+  display: block;
+  color: #1f2430;
+  font-size: 0.78rem;
+}
+:global(.info-block p) {
+  margin: 0.25rem 0 0;
+}
+:global(.info-block--warning) {
+  border-color: #d89020;
+}
+:global(.info-block--hardware) {
+  border-color: #b7a3d4;
+  background: #faf7ff;
+}
+:global(.info-block--tip) {
+  border-color: #9ec8a8;
+  background: #f4fbf4;
+}
+:global(.info-block--instruction) {
+  border-color: #a9bfd5;
+  background: #f4f8fc;
+}

@@ -5,11 +5,10 @@
   gap: clamp(30px, 4vw, 64px);
   flex: 1 1 0;
   height: auto;
+  overflow: hidden;
   padding: 18px clamp(30px, 4vw, 64px);
 }
 
-/* Keep the export/share controls available while the customizer workspace
-   scrolls, without affecting the landing and profile headers. */
 .customizer-topbar {
   position: sticky;
   z-index: 10;
@@ -21,13 +20,16 @@
 
 .customizer-footer {
   display: flex;
-  width: min(100% - 60px, 1440px);
+  flex: 0 0 auto;
+  width: 100%;
+  box-sizing: border-box;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin: 0 auto;
-  padding: 14px 0 20px;
+  margin: 0;
+  padding: 14px clamp(24px, 4vw, 64px) 20px;
   border-top: 1px solid #dfddd6;
+  background: #fffdf8;
   color: #707580;
   font-size: 10px;
 }
@@ -64,18 +66,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .design-select-card,
-  .design-select-card img,
-  .design-card-rail-shell::after {
-    transition: none;
-  }
-
-  .design-select-card:hover,
-  .design-select-card:active,
-  .design-select-card:hover img {
-    transform: none;
-  }
-
   .viewer-spinner {
     animation: none;
   }
@@ -154,42 +144,6 @@
   box-shadow: none;
 }
 
-.info-block {
-  margin: 0.8rem 0 0;
-  padding: 0.75rem 0.9rem;
-  border: 1px solid color-mix(in srgb, #d7c8bd 70%, #b94d34);
-  border-radius: 0.75rem;
-  background: #fbf8f4;
-  color: #626875;
-  font-size: 0.82rem;
-}
-.info-block strong {
-  display: block;
-  color: #1f2430;
-  font-size: 0.78rem;
-}
-.info-block p {
-  margin: 0.25rem 0 0;
-}
-.info-block--warning {
-  border-color: #d89020;
-}
-
-.info-block--hardware {
-  border-color: #b7a3d4;
-  background: #faf7ff;
-}
-
-.info-block--tip {
-  border-color: #9ec8a8;
-  background: #f4fbf4;
-}
-
-.info-block--instruction {
-  border-color: #a9bfd5;
-  background: #f4f8fc;
-}
-
 .select-control {
   display: grid;
   gap: var(--field-label-control-gap);
@@ -200,8 +154,7 @@
   font-size: 0.82rem;
 }
 
-.text-input,
-.range-control {
+.text-input {
   display: grid;
   width: 100%;
   min-width: 0;
@@ -262,8 +215,7 @@
 
 .text-input input:focus-visible,
 .text-input select:focus-visible,
-.select-control select:focus-visible,
-.range-control input:focus-visible {
+.select-control select:focus-visible {
   border-color: var(--field-focus-ring);
   outline: 2px solid var(--field-focus-ring);
   outline-offset: -2px;
@@ -450,228 +402,6 @@ p {
 
 .template-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.design-card-rail-shell {
-  position: relative;
-  min-width: 0;
-}
-
-.design-card-rail {
-  display: flex;
-  min-width: 0;
-  gap: 9px;
-  padding: 6px 8px 10px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scroll-padding-inline: 8px;
-  scroll-snap-type: x proximity;
-  scrollbar-color: #c9a08f transparent;
-  scrollbar-width: thin;
-}
-
-.design-card-rail-shell::after {
-  position: absolute;
-  z-index: 1;
-  top: 6px;
-  bottom: 10px;
-  width: 22px;
-  content: '';
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.16s ease;
-}
-
-.design-card-rail-shell::after {
-  right: 0;
-  background: linear-gradient(270deg, #f6f4ef, transparent);
-}
-
-.design-card-rail-shell[data-scroll-state='middle']::after,
-.design-card-rail-shell[data-scroll-state='top']::after {
-  opacity: 1;
-}
-
-.design-select-card {
-  position: relative;
-  flex: 0 0 148px;
-  aspect-ratio: 1.08 / 1;
-  min-width: 140px;
-  overflow: hidden;
-  scroll-snap-align: start;
-  border: 1px solid #d9d5cc;
-  border-radius: 13px;
-  padding: 0;
-  color: #fff;
-  background: #323b4d;
-  box-shadow: 0 5px 12px #30354514;
-  text-align: left;
-  isolation: isolate;
-  transition:
-    transform 0.16s ease,
-    border-color 0.16s ease,
-    box-shadow 0.16s ease,
-    background-color 0.16s ease;
-}
-
-.design-select-card img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.16s ease;
-}
-
-.design-select-card-overlay {
-  position: absolute;
-  inset: 34% 0 0;
-  z-index: 1;
-  background: linear-gradient(180deg, transparent, #171d2bd9 74%);
-}
-
-.design-select-card strong {
-  display: block;
-  overflow: hidden;
-  font-size: 11px;
-  line-height: 1.15;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.design-select-card-copy {
-  position: absolute;
-  z-index: 2;
-  right: 10px;
-  bottom: 9px;
-  left: 10px;
-  display: grid;
-  gap: 3px;
-}
-
-.design-select-card-description {
-  display: -webkit-box;
-  overflow: hidden;
-  color: #f8f5efcc;
-  font-size: 9px;
-  line-height: 1.25;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.design-select-card:hover {
-  transform: translateY(-2px) scale(1.018);
-  border-color: #ef815e;
-  box-shadow: 0 9px 18px #30354526;
-}
-
-.design-select-card:hover img {
-  transform: scale(1.025);
-}
-
-.design-select-card:active {
-  transform: scale(0.985);
-}
-
-.design-select-card.selected {
-  border-color: #ef815e;
-  box-shadow:
-    inset 0 0 0 2px #ef815e,
-    0 8px 18px #ef815e2b;
-}
-
-.design-select-card.selected .design-select-card-overlay {
-  background: linear-gradient(180deg, transparent, #141a29f2 70%);
-}
-
-.design-select-card:focus-visible {
-  outline: 2px solid #ef815e;
-  outline-offset: 3px;
-}
-
-.print-confidence {
-  margin-top: 12px;
-  border-top: 1px solid #e2ddd4;
-  color: #6c727e;
-  font-size: 11px;
-}
-
-.print-confidence summary {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding-top: 10px;
-  cursor: pointer;
-  list-style: none;
-}
-
-.print-confidence summary::-webkit-details-marker {
-  display: none;
-}
-
-.print-confidence summary::before {
-  content: '＋';
-  color: #9b4f3c;
-  font-weight: 700;
-}
-
-.print-confidence[open] summary::before {
-  content: '－';
-}
-
-.print-confidence summary strong {
-  margin-left: auto;
-  color: #9b4f3c;
-  font-size: 10px;
-}
-
-.print-confidence-body {
-  display: grid;
-  gap: 5px;
-  padding: 8px 0 2px 18px;
-}
-
-.print-confidence-body span:last-of-type {
-  color: #323b4d;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 10px;
-}
-
-.print-confidence-body p {
-  margin: 2px 0 0;
-  color: #8f6254;
-}
-
-.print-check-issues {
-  display: grid;
-  gap: 3px;
-  margin: 2px 0 0;
-  padding-left: 16px;
-}
-
-.print-check-issues .error {
-  color: #a24d38;
-}
-.print-check-issues .warning {
-  color: #856b22;
-}
-
-.design-card-rail-shell::before {
-  position: absolute;
-  right: 8px;
-  bottom: -1px;
-  z-index: 2;
-  color: #8f6254;
-  content: '→';
-  font-size: 13px;
-  font-weight: 700;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.16s ease;
-}
-
-.design-card-rail-shell[data-scroll-state='top']::before,
-.design-card-rail-shell[data-scroll-state='middle']::before {
-  opacity: 1;
 }
 
 .choice-card,
@@ -1307,13 +1037,11 @@ p {
   transition: 0.15s ease;
 }
 
-/* Section reset actions sit beside compact headings in the settings rail. */
 .controls-panel .section-heading > .reset-icon-button {
   width: 36px;
   height: 36px;
 }
 
-/* Keep the font browser's reset aligned with its 44px tab controls. */
 .controls-panel [data-testid='font-browser'] .section-heading > .reset-icon-button {
   width: 44px;
   height: 44px;
@@ -1363,27 +1091,6 @@ p {
   text-transform: uppercase;
 }
 
-.range-control {
-  gap: var(--field-label-control-gap);
-}
-
-.control-label {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--field-label-value-gap);
-  color: #4e5260;
-  font-size: 10px;
-  line-height: 16px;
-  margin: 0;
-  padding: 0;
-}
-
-.control-label span:last-child {
-  color: #8a8d95;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
 input[type='range'] {
   display: block;
   accent-color: #e87855;
@@ -1415,10 +1122,16 @@ input[type='range'] {
   max-width: 920px;
   min-width: 0;
   min-height: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   justify-self: center;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  scrollbar-color: #c9a08f transparent;
+  scrollbar-width: thin;
 }
 
 .preview-heading {
@@ -1480,6 +1193,8 @@ input[type='range'] {
   .preview-panel {
     order: -1;
     max-width: 760px;
+    height: auto;
+    overflow: visible;
   }
 
   .viewer-wrap {
@@ -1522,14 +1237,6 @@ input[type='range'] {
 
   .font-card > span {
     font-size: 13px;
-  }
-
-  .range-control {
-    min-height: 0;
-  }
-
-  .control-label {
-    line-height: 14px;
   }
 
   input[type='range'] {
@@ -1612,15 +1319,17 @@ input[type='range'] {
     flex-direction: column-reverse;
     flex: 0 0 auto;
     height: auto;
+    overflow: visible;
     padding: 24px 18px 48px;
     gap: 36px;
   }
 
   .customizer-footer {
-    width: calc(100% - 36px);
+    width: 100%;
     align-items: flex-start;
     flex-direction: column;
     gap: 5px;
+    padding-inline: 18px;
     padding-bottom: 28px;
   }
 
@@ -1651,25 +1360,6 @@ input[type='range'] {
     gap: 8px;
   }
 
-  /* Keep the existing two-column mobile flow; desktop card rails are a separate pass. */
-  .design-card-rail {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    overflow: visible;
-    padding: 5px;
-  }
-
-  .design-card-rail-shell::before {
-    display: none;
-  }
-
-  .design-select-card {
-    min-width: 0;
-    min-height: 44px;
-    aspect-ratio: auto;
-  }
-
   .choice-card,
   .font-card {
     min-height: 44px;
@@ -1684,21 +1374,16 @@ input[type='range'] {
     row-gap: 7px;
   }
 
-  .range-control {
-    min-height: 44px;
-  }
-
-  .control-label {
-    font-size: 12px;
-  }
-
   .preview-panel {
     max-width: none;
     min-height: 0;
+    height: auto;
+    overflow: visible;
   }
 
   .viewer-wrap {
     width: 100%;
+    height: min(360px, 75vw);
     aspect-ratio: 4 / 3;
     max-height: 360px;
   }

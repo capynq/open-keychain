@@ -1,9 +1,12 @@
 .viewer-wrap {
   position: relative;
   width: 100%;
+  height: clamp(280px, calc(100dvh - 420px), 500px);
+  flex: 0 0 auto;
   min-height: 0;
   aspect-ratio: 16 / 10;
   max-height: min(500px, calc(100% - 90px));
+  contain: size layout;
 }
 
 .viewer-loading {
@@ -178,17 +181,6 @@
   border-radius: 14px;
   background: #fffdf8;
   box-shadow: 0 10px 24px #3035450d;
-}
-
-.summary-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.summary-heading .eyebrow {
-  margin-bottom: 0;
 }
 
 .summary-metrics {
