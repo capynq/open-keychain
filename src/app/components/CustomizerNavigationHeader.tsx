@@ -7,6 +7,8 @@ import { t } from '../../infrastructure/i18n';
 import { BrandMark } from './BrandMark';
 import { LanguagePicker } from './LanguagePicker';
 import { PROFILE_ROUTE } from '../routes';
+import { Download, Share2, Shuffle, Undo2 } from 'lucide-react';
+import { IconButton } from './IconButton';
 
 export const CustomizerNavigationHeader = ({
   locale,
@@ -38,45 +40,45 @@ export const CustomizerNavigationHeader = ({
   <header className="topbar customizer-topbar">
     <BrandMark />
     <div className="topbar-export-actions">
-      <button
-        type="button"
+      <IconButton
+        action="export"
         className="export-header-button"
+        icon={Download}
+        label={t(locale, 'export')}
         onClick={onExportOpen}
         disabled={randomizing || exportDisabled}
-        aria-busy={randomizing || undefined}
+        busy={randomizing}
         aria-haspopup="dialog"
         aria-expanded={exportOpen}
-      >
-        {t(locale, 'export')}
-      </button>
-      <button
-        type="button"
+      />
+      <IconButton
+        action="share"
         className="share-header-button"
+        icon={Share2}
+        label={t(locale, 'share')}
         onClick={onShare}
         disabled={randomizing}
-      >
-        {t(locale, 'share')}
-      </button>
+      />
     </div>
     <div className="topbar-actions">
-      <button
-        type="button"
+      <IconButton
+        action="randomize"
         className="randomize-header-button"
+        icon={Shuffle}
+        label={t(locale, randomizing ? 'randomizing' : 'randomize')}
         onClick={onRandomize}
         disabled={randomizing}
-        aria-busy={randomizing}
-      >
-        {t(locale, randomizing ? 'randomizing' : 'randomize')}
-      </button>
+        busy={randomizing}
+      />
       {canUndo && (
-        <button
-          type="button"
+        <IconButton
+          action="undo"
           className="undo-header-button"
+          icon={Undo2}
+          label={t(locale, 'undo')}
           onClick={onUndo}
           disabled={randomizing}
-        >
-          {t(locale, 'undo')}
-        </button>
+        />
       )}
       <LanguagePicker locale={locale} onLocaleChange={onLocaleChange} />
       {hostedMode && hosted && (

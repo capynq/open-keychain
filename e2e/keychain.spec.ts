@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { selectLocale } from './helpers';
 const cameraViews = [
   'Home view',
   'Front view',
@@ -39,8 +40,7 @@ for (const flow of [
     await page.goto('/create');
 
     if (flow.locale === 'RU') {
-      const language = page.getByRole('combobox', { name: 'Language' });
-      await language.selectOption('ru');
+      await selectLocale(page, 'ru');
       await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
     }
 
@@ -86,7 +86,7 @@ for (const flow of [
     await page.keyboard.press('Enter');
     expect((await download).suggestedFilename()).toMatch(flow.filename);
     await expect(dialog).toContainText(/Download ready|Загрузка готова/);
-    await dialog.getByLabel(flow.locale === 'EN' ? 'Close' : 'Закрыть').click();
+    await dialog.locator('.modal-close').click();
     await expect(dialog).toBeHidden();
   });
 }
@@ -202,7 +202,7 @@ test('supports bounded zoom, preview surfaces, locales, and configurable 3MF exp
     .getByRole('button', { name: 'Reset surface' })
     .click();
   await expect(page.locator('.viewer')).toHaveAttribute('data-surface', 'matte');
-  await page.getByRole('combobox', { name: 'Language' }).selectOption('ru');
+  await selectLocale(page, 'ru');
   await page.getByRole('button', { name: 'Экспорт' }).click();
   await expect(page.getByRole('dialog', { name: 'Выберите экспорт' })).toBeVisible();
   await expect(
@@ -413,7 +413,7 @@ for (const viewport of [
       const exportButton = document.querySelector('.export-header-button')!.getBoundingClientRect();
       const shareButton = document.querySelector('.share-header-button')!.getBoundingClientRect();
       const languagePicker = document
-        .querySelector('.language-picker select')!
+        .querySelector('.language-picker-trigger')!
         .getBoundingClientRect();
       const viewer = document.querySelector('.viewer')!.getBoundingClientRect();
       return {

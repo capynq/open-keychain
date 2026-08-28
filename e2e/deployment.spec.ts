@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { waitForImageToLoad, waitForReadyGeometry, watchBrowserErrors } from './helpers';
+import {
+  selectLocale,
+  waitForImageToLoad,
+  waitForReadyGeometry,
+  watchBrowserErrors,
+} from './helpers';
 
 const activeHeroImageSelector =
   '.configurator-carousel-slide[data-showcase-kind="configurator"][data-active="true"] img';
@@ -91,9 +96,8 @@ test('returns a real 404 for unknown production paths', async ({ page }) => {
 test('keeps all supported languages and customizer readiness in production', async ({ page }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
   await page.goto('/');
-  const languagePicker = page.locator('.language-picker select');
-  for (const locale of ['en', 'ru', 'uk']) {
-    await languagePicker.selectOption(locale);
+  for (const locale of ['en', 'ru', 'uk'] as const) {
+    await selectLocale(page, locale);
     await expect(page.locator('html')).toHaveAttribute('lang', locale);
   }
   await page.goto('/create');

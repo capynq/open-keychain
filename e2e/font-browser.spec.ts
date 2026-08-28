@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { selectLocale } from './helpers';
 
 test('shows the expanded built-in catalog and optional filters', async ({ page }) => {
   await page.goto('/create');
@@ -234,14 +235,13 @@ test('keeps localized control names and touch targets usable', async ({ page }) 
   await page.goto('/create');
 
   await expect(page.getByLabel('Name or text')).toBeVisible();
-  const language = page.locator('.language-picker select');
-  await language.selectOption('ru');
+  await selectLocale(page, 'ru');
   await expect(page.getByLabel('Имя или текст')).toBeVisible();
   await expect(page.getByLabel('Элементы настройки')).toBeVisible();
-  await language.selectOption('uk');
+  await selectLocale(page, 'uk');
   await expect(page.getByLabel('Ім’я або текст')).toBeVisible();
 
-  await language.selectOption('en');
+  await selectLocale(page, 'en');
   const fontSection = page.locator('.control-section').filter({ hasText: /^Font\s/ });
   const targets = fontSection.locator(
     '.reset-icon-button, .font-source-tabs button, .font-filter-disclosure > summary',

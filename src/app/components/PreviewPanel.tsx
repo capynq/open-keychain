@@ -350,13 +350,10 @@ export const PreviewPanel = ({
           value={appearanceOverrides.base ?? geometry.result?.appearance.base.color ?? '#B84838'}
           onChange={(e) => onAppearanceChange({ ...appearanceOverrides, base: e.target.value })}
         />
-        <button
-          type="button"
-          aria-label={t(locale, 'resetBaseColor')}
+        <ResetIconButton
+          label={t(locale, 'resetBaseColor')}
           onClick={() => onAppearanceChange({ ...appearanceOverrides, base: undefined })}
-        >
-          {t(locale, 'resetBaseColor')}
-        </button>
+        />
       </div>
       <div className="appearance-control">
         <span>{t(locale, 'secondaryColor')}</span>
@@ -368,17 +365,17 @@ export const PreviewPanel = ({
           }
           onChange={(e) => onAppearanceChange({ ...appearanceOverrides, relief: e.target.value })}
         />
-        <button
-          type="button"
-          aria-label={t(locale, 'resetSecondaryColor')}
+        <ResetIconButton
+          label={t(locale, 'resetSecondaryColor')}
           onClick={() => onAppearanceChange({ ...appearanceOverrides, relief: undefined })}
-        >
-          {t(locale, 'resetSecondaryColor')}
-        </button>
+        />
       </div>
-      <button type="button" onClick={() => onAppearanceChange({ version: 1 })}>
-        {t(locale, 'resetColors')}
-      </button>
+      <div className="appearance-reset-all">
+        <ResetIconButton
+          label={t(locale, 'resetColors')}
+          onClick={() => onAppearanceChange({ version: 1 })}
+        />
+      </div>
     </div>
   </section>
 );

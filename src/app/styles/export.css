@@ -43,14 +43,12 @@
   position: relative;
   z-index: 1;
   flex: 0 0 auto;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border: 1px solid #d5d0c7;
-  border-radius: 8px;
+  border-radius: 999px;
   background: #fff;
   color: #303545;
-  font-size: 22px;
-  line-height: 1;
 }
 
 .modal-close:hover,
@@ -151,6 +149,15 @@
   background: transparent;
   font-size: 10px;
   font-weight: 800;
+}
+
+.export-inline-state .icon-button {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 999px;
 }
 
 .export-choice-grid {

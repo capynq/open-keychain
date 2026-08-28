@@ -19,7 +19,9 @@ import {
   type Locale,
 } from '../../../infrastructure/i18n';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, Info, RefreshCw } from 'lucide-react';
 import { ResetIconButton } from '../../../components/ResetIconButton';
+import { IconButton } from '../../../app/components/IconButton';
 import { type useCustomizerParams } from '../hooks/useCustomizerParams';
 import { RangeControl } from './RangeControl';
 import { DesignCardRail, DesignSelectCard } from './DesignSelectCard';
@@ -374,9 +376,11 @@ export const ControlsPanel = ({
             <span>{t(locale, 'fontSupportsText')}</span>
           </label>
         )}
-        <button
-          type="button"
+        <IconButton
+          action="clear-font-filters"
           className="font-filter-clear"
+          icon={RefreshCw}
+          label={t(locale, 'clearFontFilters')}
           disabled={
             activeBrowserState.category === 'all' &&
             activeBrowserState.search === '' &&
@@ -385,9 +389,7 @@ export const ControlsPanel = ({
           onClick={() =>
             updateFontBrowserState({ search: '', category: 'all', supportsTextOnly: true, page: 1 })
           }
-        >
-          {t(locale, 'clearFontFilters')}
-        </button>
+        />
       </div>
     </details>
   );
@@ -678,9 +680,12 @@ export const ControlsPanel = ({
             ) : customizer.googleError ? (
               <div className="font-provider-state" role="status">
                 <p>{t(locale, 'fontGoogleUnavailable')}</p>
-                <button type="button" onClick={() => void customizer.loadGoogleFonts()}>
-                  {t(locale, 'retry')}
-                </button>
+                <IconButton
+                  action="retry-google-fonts"
+                  icon={RefreshCw}
+                  label={t(locale, 'retry')}
+                  onClick={() => void customizer.loadGoogleFonts()}
+                />
               </div>
             ) : (
               <>
@@ -711,21 +716,21 @@ export const ControlsPanel = ({
                 )}
                 {pageCount > 1 && (
                   <nav className="font-pagination" aria-label={t(locale, 'fontPagination')}>
-                    <button
-                      type="button"
+                    <IconButton
+                      action="font-page-previous"
+                      icon={ChevronLeft}
+                      label={t(locale, 'previous')}
                       disabled={currentPage === 1}
                       onClick={() => updateFontBrowserState({ page: activeBrowserState.page - 1 })}
-                    >
-                      {t(locale, 'previous')}
-                    </button>
+                    />
                     <span>{t(locale, 'fontPage', { page: currentPage, pages: pageCount })}</span>
-                    <button
-                      type="button"
+                    <IconButton
+                      action="font-page-next"
+                      icon={ChevronRight}
+                      label={t(locale, 'next')}
                       disabled={currentPage === pageCount}
                       onClick={() => updateFontBrowserState({ page: activeBrowserState.page + 1 })}
-                    >
-                      {t(locale, 'next')}
-                    </button>
+                    />
                   </nav>
                 )}
               </>
@@ -758,7 +763,7 @@ export const ControlsPanel = ({
                         aria-label={t(locale, 'fontLocalAbout')}
                         title={t(locale, 'fontLocalAbout')}
                       >
-                        ⓘ
+                        <Info aria-hidden="true" focusable="false" size={16} strokeWidth={2} />
                       </summary>
                       <p>{t(locale, 'fontLocalAboutDescription')}</p>
                     </details>
@@ -807,21 +812,21 @@ export const ControlsPanel = ({
               )}
               {pageCount > 1 && (
                 <nav className="font-pagination" aria-label={t(locale, 'fontPagination')}>
-                  <button
-                    type="button"
+                  <IconButton
+                    action="font-page-previous"
+                    icon={ChevronLeft}
+                    label={t(locale, 'previous')}
                     disabled={currentPage === 1}
                     onClick={() => updateFontBrowserState({ page: activeBrowserState.page - 1 })}
-                  >
-                    {t(locale, 'previous')}
-                  </button>
+                  />
                   <span>{t(locale, 'fontPage', { page: currentPage, pages: pageCount })}</span>
-                  <button
-                    type="button"
+                  <IconButton
+                    action="font-page-next"
+                    icon={ChevronRight}
+                    label={t(locale, 'next')}
                     disabled={currentPage === pageCount}
                     onClick={() => updateFontBrowserState({ page: activeBrowserState.page + 1 })}
-                  >
-                    {t(locale, 'next')}
-                  </button>
+                  />
                 </nav>
               )}
             </>

@@ -984,6 +984,17 @@ p {
   height: 30px;
 }
 
+.font-filter-clear.icon-button,
+.font-provider-state .icon-button,
+.font-pagination .icon-button {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 999px;
+}
+
 .font-compatibility-toggle {
   display: flex;
   align-items: center;
@@ -1079,6 +1090,11 @@ p {
 
 .font-local-about summary::-webkit-details-marker {
   display: none;
+}
+
+.font-local-about summary svg {
+  width: 16px;
+  height: 16px;
 }
 
 .font-local-about p {
@@ -1281,11 +1297,11 @@ p {
   display: grid;
   flex: 0 0 auto;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 999px;
   background: transparent;
   color: #8a8d95;
   transition: 0.15s ease;
@@ -1309,8 +1325,8 @@ p {
 }
 
 .reset-icon-button:focus-visible {
-  outline: 2px solid #ef815e;
-  outline-offset: 1px;
+  outline: 2px solid #9a3d31;
+  outline-offset: -2px;
 }
 
 .range-grid {
@@ -1540,15 +1556,16 @@ input[type='range'] {
   .export-header-button {
     grid-area: export;
     justify-self: end;
-    min-height: 36px;
-    padding: 8px 16px;
-    font-size: 12px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
   }
 
   .topbar-export-actions {
     position: static;
     grid-area: export;
     justify-self: end;
+    transform: none;
     gap: 6px;
   }
 
@@ -1558,9 +1575,10 @@ input[type='range'] {
 
   .topbar-export-actions .export-header-button,
   .topbar-export-actions .share-header-button {
-    min-height: 36px;
-    padding: 8px 12px;
-    font-size: 12px;
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
   }
 
   .topbar-actions {

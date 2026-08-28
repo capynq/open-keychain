@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { waitForImageToLoad, watchBrowserErrors } from './helpers';
+import { selectLocale, waitForImageToLoad, watchBrowserErrors } from './helpers';
 
 const carousel = '.configurator-carousel';
 const activeSlide = '[data-showcase-slide][data-active="true"]';
@@ -110,7 +110,7 @@ test('uses localized captions and instant reduced-motion controls', async ({ pag
   const assertNoBrowserErrors = watchBrowserErrors(page);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
-  await page.getByRole('combobox', { name: 'Language' }).selectOption('ru');
+  await selectLocale(page, 'ru');
   await page.locator('[data-showcase-control="slide-2"]').click();
   await waitForSlide(page, 'print-example-1');
   await expect(page.locator('[data-showcase-slide="print-example-1"] img')).toHaveAttribute(

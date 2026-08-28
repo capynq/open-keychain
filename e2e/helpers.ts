@@ -87,6 +87,11 @@ export const waitForImageToLoad = async (image: Locator): Promise<void> => {
     .toBe(true);
 };
 
+export const selectLocale = async (page: Page, locale: 'en' | 'ru' | 'uk'): Promise<void> => {
+  await page.locator('.language-picker-trigger').click();
+  await page.locator(`[data-language-option="${locale}"]`).click();
+};
+
 export const prepareForCapture = async (page: Page): Promise<void> => {
   await waitForLocalFonts(page);
   await page.addStyleTag({

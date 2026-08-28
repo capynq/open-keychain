@@ -30,6 +30,9 @@
 
 .brand-mark {
   display: flex;
+  width: min(172px, 100%);
+  max-width: 172px;
+  min-width: 0;
   gap: 10px;
   align-items: center;
   color: #303545;
@@ -65,7 +68,11 @@
 
 .brand-mark > span {
   display: block;
+  min-width: 0;
   margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .github-link {
@@ -87,57 +94,89 @@
   color: #bf563f;
 }
 
+.icon-button {
+  position: relative;
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid #cecbc2;
+  border-radius: 999px;
+  background: #fffdf8;
+  color: #303545;
+  cursor: pointer;
+  font: inherit;
+  transition:
+    border-color 0.12s ease,
+    background-color 0.12s ease,
+    color 0.12s ease,
+    box-shadow 0.12s ease,
+    transform 0.12s ease;
+}
+
+.icon-button:hover {
+  border-color: #ef815e;
+  background: #fff7ef;
+  color: #9a3d31;
+}
+
+.icon-button > svg {
+  transition: transform 0.12s ease;
+}
+
+.icon-button:focus-visible {
+  outline: 2px solid #9a3d31;
+  outline-offset: -2px;
+  border-color: #9a3d31;
+}
+
+.icon-button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
 .export-header-button {
-  justify-self: center;
-  min-height: 40px;
   border: 0;
-  border-radius: 10px;
-  padding: 9px 24px;
   background: #ef815e;
   color: #fff;
   box-shadow: 0 5px 12px #ef815e38;
-  font-size: 13px;
-  font-weight: 900;
 }
 
 .topbar-export-actions {
   position: absolute;
-  left: 50%;
+  left: calc(50% - 22px);
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-/* Anchor the export control itself to the viewport midpoint while allowing
-   the adjacent Share control to extend to its right. */
-.topbar-export-actions .export-header-button {
-  transform: translateX(-50%);
-}
-
 .share-header-button {
-  min-height: 40px;
-  border: 1px solid #cecbc2;
-  border-radius: 10px;
-  padding: 9px 18px;
   background: #fffdf8;
-  color: #303545;
-  font-size: 13px;
-  font-weight: 900;
 }
 
-.share-header-button:hover,
-.share-header-button:focus-visible {
-  border-color: #ef815e;
-  color: #bf563f;
-}
-
-.export-header-button:hover {
+.icon-button.export-header-button:hover {
   background: #d96547;
 }
 
-.export-header-button:focus-visible {
-  outline: 2px solid #ef815e;
-  outline-offset: 2px;
+.icon-button.export-header-button:hover,
+.icon-button.export-header-button:focus-visible {
+  color: #fff7ef;
+}
+
+.icon-button[data-icon-action='randomize']:active:not(:disabled) svg {
+  transform: rotate(18deg);
+}
+
+.icon-button[data-icon-action='reset']:active:not(:disabled) svg {
+  transform: rotate(-35deg);
 }
 
 .account-menu {
@@ -217,39 +256,111 @@
 
 .randomize-header-button,
 .undo-header-button {
-  min-height: 32px;
-  border: 1px solid #cecbc2;
-  border-radius: 8px;
-  padding: 6px 10px;
   background: #fffdf8;
+}
+
+.language-picker {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.language-picker-trigger {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  max-width: 100%;
+  min-width: 76px;
+  padding: 0 10px;
+  gap: 6px;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.language-picker-trigger[aria-expanded='true'] > svg {
+  transform: rotate(180deg);
+}
+
+.language-picker-flag,
+.language-picker-option-flag {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.language-picker-code {
+  color: #555b68;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.language-picker-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 8px);
+  right: 0;
+  display: grid;
+  width: max-content;
+  min-width: 190px;
+  gap: 3px;
+  padding: 7px;
+  border: 1px solid #cecbc2;
+  border-radius: 14px;
+  background: #fffdf8;
+  box-shadow: 0 14px 36px #3035452b;
+}
+
+.language-picker-option {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
   color: #303545;
+  cursor: pointer;
+  font: inherit;
   font-size: 11px;
   font-weight: 800;
 }
 
-.randomize-header-button:hover,
-.undo-header-button:hover,
-.randomize-header-button:focus-visible,
-.undo-header-button:focus-visible {
-  border-color: #ef815e;
+.language-picker-option svg {
+  margin-left: auto;
   color: #bf563f;
 }
 
-.randomize-header-button:disabled,
-.undo-header-button:disabled {
-  cursor: wait;
-  opacity: 0.6;
+.language-picker-option:hover,
+.language-picker-option:focus-visible,
+.language-picker-option.selected {
+  border-color: #ef815e;
+  background: #fff7ef;
+  color: #9a3d31;
 }
 
-.language-picker select {
-  height: 28px;
-  border: 1px solid #cecbc2;
-  border-radius: 8px;
-  padding: 0 6px;
-  color: #303545;
-  background: #fffdf8;
-  font-size: 10px;
-  font-weight: 800;
+.language-picker-option:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px #ef815e;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icon-button {
+    transition: none;
+  }
+
+  .icon-button > svg {
+    transition: none;
+  }
+
+  .icon-button:active:not(:disabled) {
+    transform: none;
+  }
+
+  .icon-button[data-icon-action='randomize']:active:not(:disabled) svg,
+  .icon-button[data-icon-action='reset']:active:not(:disabled) svg {
+    transform: none;
+  }
 }
 
 .analytics-consent {

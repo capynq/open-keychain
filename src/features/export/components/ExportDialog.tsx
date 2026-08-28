@@ -4,6 +4,8 @@ import type { ExportActionsState } from '../model/use-export-actions';
 import type { PreflightReport } from '../model/preflight';
 import type { PrintAppearance } from '../../../domain/keychain';
 import { issueMessage } from '../../../infrastructure/i18n';
+import { X, RefreshCw } from 'lucide-react';
+import { IconButton } from '../../../app/components/IconButton';
 
 export const ExportDialog = ({
   locale,
@@ -71,16 +73,15 @@ export const ExportDialog = ({
             <p className="eyebrow">{t(locale, 'export')}</p>
             <h2 id="export-title">{t(locale, 'exportTitle')}</h2>
           </div>
-          <button
-            type="button"
+          <IconButton
+            action="close-export"
             className="modal-close"
+            icon={X}
+            label={t(locale, 'close')}
             onClick={onClose}
-            aria-label={t(locale, 'close')}
             autoFocus={!exportState.downloading}
             disabled={exportState.downloading}
-          >
-            ×
-          </button>
+          />
         </div>
         <p className="export-modal-copy">{t(locale, 'exportDescription')}</p>
         <details className="export-preflight" open={preflight.status === 'blocked'}>
@@ -151,17 +152,23 @@ export const ExportDialog = ({
         {exportState.status === 'success' && (
           <div className="export-inline-state success" role="status" aria-live="polite">
             <p>{t(locale, 'exportCompleted')}</p>
-            <button type="button" onClick={onClose}>
-              {t(locale, 'close')}
-            </button>
+            <IconButton
+              action="close-export-success"
+              icon={X}
+              label={t(locale, 'close')}
+              onClick={onClose}
+            />
           </div>
         )}
         {exportState.status === 'error' && (
           <div className="export-inline-state error" role="alert">
             <p>{t(locale, 'exportFailed')}</p>
-            <button type="button" onClick={() => void exportState.retry()}>
-              {t(locale, 'retry')}
-            </button>
+            <IconButton
+              action="retry-export"
+              icon={RefreshCw}
+              label={t(locale, 'retry')}
+              onClick={() => void exportState.retry()}
+            />
           </div>
         )}
         <div className="export-choice-grid">

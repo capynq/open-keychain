@@ -30,6 +30,8 @@ const landingTextSelectors = [
   '.analytics-consent p a',
   '.analytics-consent-decline',
   '.analytics-consent-accept',
+  '.language-picker-trigger',
+  '.icon-button',
 ] as const;
 
 const focusSelectors = [
@@ -147,6 +149,7 @@ test('keeps landing focus indicators visible against their surfaces', async ({ p
           selector,
           outline: styles.outlineColor,
           style: styles.outlineStyle,
+          boxShadow: styles.boxShadow,
           ratio: contrast(styles.outlineColor, background),
         },
       ];
@@ -154,7 +157,56 @@ test('keeps landing focus indicators visible against their surfaces', async ({ p
   }, focusSelectors);
 
   for (const indicator of indicators) {
-    expect(indicator.style, `${indicator.selector} should expose a focus outline`).not.toBe('none');
-    expect(indicator.ratio, `${indicator.selector} focus outline`).toBeGreaterThanOrEqual(3);
+    expect(
+      indicator.style !== 'none' || indicator.boxShadow !== 'none',
+      `${indicator.selector} should expose a focus indicator`,
+    ).toBe(true);
+    if (indicator.style !== 'none')
+      expect(indicator.ratio, `${indicator.selector} focus outline`).toBeGreaterThanOrEqual(3);
+  }
+});
+
+test('keeps icon action hover states visually distinct and contrasting', async ({ page }) => {
+  await page.goto('/create');
+  const actions = page.locator(
+    '.export-header-button, .share-header-button, .randomize-header-button, .language-picker-trigger',
+  );
+
+  for (const action of await actions.all()) {
+    const before = await action.evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return { background: styles.backgroundColor, foreground: styles.color };
+    });
+    await action.hover();
+    const after = await action.evaluate((element) => {
+      const parse = (value: string): [number, number, number] => {
+        const channels = value.match(/rgba?\(([^)]+)\)/)?.[1].split(',') ?? [];
+        return channels.slice(0, 3).map((channel) => Number.parseFloat(channel.trim())) as [
+          number,
+          number,
+          number,
+        ];
+      };
+      const luminance = (value: [number, number, number]): number =>
+        value
+          .map((channel) => channel / 255)
+          .map((channel) =>
+            channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
+          )
+          .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+      const styles = getComputedStyle(element);
+      const background = luminance(parse(styles.backgroundColor));
+      const foreground = luminance(parse(styles.color));
+      return {
+        background: styles.backgroundColor,
+        foreground: styles.color,
+        ratio:
+          (Math.max(background, foreground) + 0.05) / (Math.min(background, foreground) + 0.05),
+      };
+    });
+    expect(after.background !== before.background || after.foreground !== before.foreground).toBe(
+      true,
+    );
+    expect(after.ratio).toBeGreaterThanOrEqual(3);
   }
 });

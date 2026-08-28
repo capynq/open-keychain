@@ -4,6 +4,7 @@ import {
   waitForImageToLoad,
   waitForLocalFonts,
   waitForReadyGeometry,
+  selectLocale,
   watchBrowserErrors,
 } from './helpers';
 
@@ -239,9 +240,38 @@ test('updates the localized landing title', async ({ page }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
 
   await page.goto('/');
-  await page.getByRole('combobox', { name: 'Language' }).selectOption('ru');
+  await selectLocale(page, 'ru');
   await expect(page).toHaveTitle('Open Keychain 3D | Генератор именных брелоков');
   await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
+  assertNoBrowserErrors();
+});
+
+test('keeps the language flag picker accessible and keyboard navigable', async ({ page }) => {
+  const assertNoBrowserErrors = watchBrowserErrors(page);
+
+  await page.goto('/');
+  const picker = page.locator('.language-picker');
+  const trigger = picker.locator('.language-picker-trigger');
+  await expect(trigger).toContainText('🇬🇧');
+  await expect(trigger).toHaveAttribute('aria-label', 'Language: English');
+
+  await trigger.click();
+  const menu = picker.getByRole('listbox', { name: 'Language' });
+  await expect(menu.getByRole('option')).toHaveCount(3);
+  await expect(menu.locator('[data-language-option="en"]')).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
+  await expect(trigger).toContainText('🇷🇺');
+  await expect(trigger).toHaveAttribute('aria-label', 'Язык: Русский');
+
+  await trigger.click();
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
   assertNoBrowserErrors();
 });
 
@@ -266,7 +296,7 @@ test('publishes crawler metadata and route-aware canonical URLs', async ({ page 
       .locator('script[type="application/ld+json"]')
       .evaluate((element) => element.textContent),
   ).toContain('WebApplication');
-  await page.getByRole('combobox', { name: 'Language' }).selectOption('ru');
+  await selectLocale(page, 'ru');
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     'content',
     /Создавайте бесплатные/,
@@ -327,7 +357,7 @@ for (const locale of ['en', 'ru', 'uk'] as const) {
     const assertNoBrowserErrors = watchBrowserErrors(page);
 
     await page.goto('/');
-    await page.getByRole('combobox', { name: 'Language' }).selectOption(locale);
+    await selectLocale(page, locale);
     await expect(page.locator('.configurator-showcase-caption')).toBeVisible();
     await expect(page.locator('.landing-process span').first()).toHaveCSS('font-size', '24px');
     const gap = await page.locator('.configurator-showcase').evaluate((showcase) => {

@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
+import { ZoomIn, ZoomOut } from 'lucide-react';
 import type { GeometryResult, PrintAppearance } from '../../../domain/keychain';
 import { t, type Locale } from '../../../infrastructure/i18n';
 import {
@@ -533,9 +534,7 @@ export const Viewer = ({
           disabled={previewCapability === 'unavailable'}
           onClick={() => zoomBy(1.22)}
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M5 12h14" />
-          </svg>
+          <ZoomOut aria-hidden="true" focusable="false" size={18} strokeWidth={2} />
         </button>
         <button
           type="button"
@@ -544,9 +543,7 @@ export const Viewer = ({
           disabled={previewCapability === 'unavailable'}
           onClick={() => zoomBy(ZOOM_IN_FACTOR)}
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
+          <ZoomIn aria-hidden="true" focusable="false" size={18} strokeWidth={2} />
         </button>
       </div>
     </div>
