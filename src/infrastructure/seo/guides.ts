@@ -46,11 +46,12 @@ export const SEO_HUB_COPY: Localized<{
 export const SEO_GUIDE_COPY: Record<SeoLocale, Record<string, SeoGuideCopy>> = {
   en: {
     stlVs3mf: {
-      title: 'Open Keychain 3D | STL vs 3MF',
-      description: 'Understand when to use STL or 3MF for a personalized printable model.',
-      heading: 'STL vs 3MF: which export should you use?',
+      title: 'Open Keychain 3D | 3MF vs STL files for 3D printing',
+      description:
+        'Compare 3MF vs STL files for 3D printing and choose the right export for your slicer workflow.',
+      heading: '3MF vs STL files: which export should you use?',
       intro:
-        'Both formats can carry your printable design, but they suit different slicer workflows.',
+        '3MF vs STL files suit different slicer workflows. Here is a concise comparison for printable name designs.',
       sections: [
         {
           heading: 'Choose STL for broad compatibility',
@@ -91,16 +92,17 @@ export const SEO_GUIDE_COPY: Record<SeoLocale, Record<string, SeoGuideCopy>> = {
       title: 'Open Keychain 3D | Print an articulated name',
       description:
         'Prepare and print a flexible articulated name keychain with validated captive joints.',
-      heading: 'How to 3D print an articulated name',
-      intro: 'Use linked letters and captive joints to make a playful flexible name keychain.',
+      heading: 'Articulated vs standard keychains: which should you print?',
+      intro:
+        'Compare articulated and standard keychains, then choose the printable format that fits your name and use case.',
       sections: [
         {
-          heading: 'Use a heavy font and short text',
+          heading: 'Articulated keychains need clearance',
           body: 'Articulated letters need strong strokes and enough room for joints. Short names generally produce the most dependable results.',
         },
         {
-          heading: 'Respect joint clearance',
-          body: 'The generator validates the joint geometry. If it reports a problem, try a shorter name, a heavier font, or more clearance.',
+          heading: 'Standard keychains are simpler',
+          body: 'A standard name keychain has one connected body and is often the easier choice for a first print or longer name.',
         },
         {
           heading: 'Print flat and move gently',
@@ -218,11 +220,11 @@ export const SEO_GUIDE_COPY: Record<SeoLocale, Record<string, SeoGuideCopy>> = {
   },
   uk: {
     stlVs3mf: {
-      title: 'Open Keychain 3D | STL чи 3MF',
-      description: 'Дізнайтеся, коли використовувати STL або 3MF для персоналізованої моделі.',
-      heading: 'STL чи 3MF: який експорт обрати?',
+      title: 'Open Keychain 3D | Файли 3MF чи STL для 3D-друку',
+      description: 'Порівняйте файли 3MF і STL для 3D-друку та оберіть формат для свого слайсера.',
+      heading: 'Файли 3MF чи STL: який експорт обрати?',
       intro:
-        'Обидва формати підходять для друку, але призначені для різних робочих процесів у слайсері.',
+        'Файли 3MF і STL підходять для різних робочих процесів у слайсері. Ось коротке порівняння для іменних моделей.',
       sections: [
         {
           heading: 'Оберіть STL для сумісності',
@@ -260,11 +262,12 @@ export const SEO_GUIDE_COPY: Record<SeoLocale, Record<string, SeoGuideCopy>> = {
       ],
     },
     articulatedPrinting: {
-      title: 'Open Keychain 3D | Друк рухомого імені',
+      title: 'Open Keychain 3D | Шарнірний чи звичайний брелок',
       description:
         'Підготуйте та надрукуйте гнучкий іменний брелок із перевіреними рухомими з’єднаннями.',
-      heading: 'Як надрукувати рухоме ім’я',
-      intro: 'З’єднані літери та шарніри створюють гнучкий і незвичайний брелок.',
+      heading: 'Шарнірний чи звичайний брелок: що надрукувати?',
+      intro:
+        'Порівняйте шарнірний і звичайний брелоки та оберіть формат для свого імені й завдання.',
       sections: [
         {
           heading: 'Використовуйте щільний шрифт і короткий текст',

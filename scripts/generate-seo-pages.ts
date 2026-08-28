@@ -53,6 +53,11 @@ type SeoCopy = {
     privacyHeading: string;
     privacyBody: string;
     faqHeading: string;
+    examplesHeading: string;
+    examplesBody: string;
+    examplesCaption: string;
+    examplesAltOne: string;
+    examplesAltTwo: string;
     faq: Faq[];
   };
   templates: Record<SeoTemplateDefinition['key'], TemplateCopy>;
@@ -220,6 +225,7 @@ const jsonLdForHome = (locale: SeoLocale, title: string, description: string) =>
         '@id': `${SITE_URL}/#organization`,
         name: documents[locale].seo.brand,
         url: SITE_URL,
+        logo: absoluteUrl('/brand/open-keychain-mark.svg'),
         sameAs: ['https://github.com/capynq/open-keychain'],
       },
       {
@@ -253,6 +259,7 @@ const jsonLdForHome = (locale: SeoLocale, title: string, description: string) =>
         isPartOf: { '@id': `${pageUrl}#website` },
         inLanguage: locale,
         headline: title,
+        image: absoluteUrl('/brand/open-keychain-og.png'),
       },
       {
         '@type': 'BreadcrumbList',
@@ -286,6 +293,7 @@ const jsonLdForTemplate = (
         '@id': `${SITE_URL}/#organization`,
         name: documents[locale].seo.brand,
         url: SITE_URL,
+        logo: absoluteUrl('/brand/open-keychain-mark.svg'),
         sameAs: ['https://github.com/capynq/open-keychain'],
       },
       {
@@ -366,6 +374,7 @@ const jsonLdForArticle = (
       '@id': `${SITE_URL}/#organization`,
       name: documents[locale].seo.brand,
       url: SITE_URL,
+      logo: absoluteUrl('/brand/open-keychain-mark.svg'),
       sameAs: ['https://github.com/capynq/open-keychain'],
     },
     {
@@ -492,6 +501,15 @@ const renderHomeMarkup = (locale: SeoLocale): string => {
       <div><p class="seo-eyebrow">${escapeHtml(copy.home.workflowHeading)}</p><h2 id="seo-workflow-heading">${escapeHtml(copy.home.workflowHeading)}</h2></div>
       <p>${escapeHtml(copy.home.workflowBody)}</p>
     </section>
+    <section class="seo-section" aria-labelledby="seo-examples-heading">
+      <p class="seo-eyebrow">${escapeHtml(copy.navigation.templates)}</p>
+      <h2 id="seo-examples-heading">${escapeHtml(copy.home.examplesHeading)}</h2>
+      <p class="seo-section-lede">${escapeHtml(copy.home.examplesBody)}</p>
+      <div class="seo-template-grid">
+        <figure class="seo-template-card"><img src="/showcase/prints/example_1.jpeg" alt="${escapeHtml(copy.home.examplesAltOne)}" width="1200" height="900" loading="lazy" /><figcaption>${escapeHtml(copy.home.examplesCaption)}</figcaption></figure>
+        <figure class="seo-template-card"><img src="/showcase/prints/example_2.jpeg" alt="${escapeHtml(copy.home.examplesAltTwo)}" width="1200" height="900" loading="lazy" /><figcaption>${escapeHtml(copy.home.examplesCaption)}</figcaption></figure>
+      </div>
+    </section>
     <section class="seo-section seo-split" aria-labelledby="seo-privacy-heading">
       <div><p class="seo-eyebrow">${escapeHtml(copy.home.privacyHeading)}</p><h2 id="seo-privacy-heading">${escapeHtml(copy.home.privacyHeading)}</h2></div>
       <p>${escapeHtml(copy.home.privacyBody)}</p>
@@ -611,6 +629,7 @@ const renderPage = (
           '@id': `${SITE_URL}/#organization`,
           name: documents[locale].seo.brand,
           url: SITE_URL,
+          logo: absoluteUrl('/brand/open-keychain-mark.svg'),
           sameAs: ['https://github.com/capynq/open-keychain'],
         },
         {
@@ -712,6 +731,7 @@ const renderPage = (
     <meta property="og:title" content="${escapeHtml(title)}" />
     <meta property="og:description" content="${escapeHtml(description)}" />
     <meta property="og:image" content="${absoluteUrl(image)}" />
+    <meta property="og:image:alt" content="${escapeHtml(isHome ? copy.home.heading : title)}" />
     <meta property="og:image:width" content="${imageDimensions.width}" />
     <meta property="og:image:height" content="${imageDimensions.height}" />
     <meta name="twitter:card" content="summary_large_image" />
@@ -810,6 +830,12 @@ const main = (): void => {
     /<meta name="description" content="[^"]*" \/>/,
     `<meta name="description" content="${escapeHtml(documents.en.seo.home.description)}" />`,
   );
+  if (!rootIndex.includes('property="og:image:alt"')) {
+    rootIndex = rootIndex.replace(
+      /(<meta property="og:image" content="[^"]*" \/>)/,
+      `$1\n    <meta property="og:image:alt" content="${escapeHtml(documents.en.seo.home.heading)}" />`,
+    );
+  }
   if (!rootIndex.includes('hreflang="x-default"')) {
     rootIndex = rootIndex.replace('</head>', `    ${alternateLinks('home')}\n  </head>`);
   }

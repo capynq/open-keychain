@@ -92,6 +92,8 @@ const main = (): void => {
     if (!fs.existsSync(imagePath)) fail(`missing sitemap image asset: ${imageUrl}`);
   }
 
+  const seenTitles = new Set<string>();
+
   for (const entry of SEO_PAGE_MANIFEST) {
     const relativePath = entry.path === '/' ? 'index.html' : `${entry.path.slice(1)}index.html`;
     const html = read(relativePath);
@@ -108,6 +110,19 @@ const main = (): void => {
     const title = html.match(/<title>([^<]+)<\/title>/)?.[1] ?? '';
     if (title.length > 60) fail(`${entry.path} title is not concise (${title.length})`);
     if (!title.startsWith('Open Keychain 3D | ')) fail(`${entry.path} title is not brand-first`);
+    if (seenTitles.has(`${entry.locale}:${title}`))
+      fail(`${entry.path} duplicates a localized title`);
+    seenTitles.add(`${entry.locale}:${title}`);
+    if (!html.includes('property="og:image:alt"')) fail(`${entry.path} has no og:image:alt`);
+    if (entry.kind === 'home') {
+      if (
+        !html.includes('/showcase/prints/example_1.jpeg') ||
+        !html.includes('/showcase/prints/example_2.jpeg')
+      )
+        fail(`${entry.path} is missing printed examples`);
+      if (!/example_[12]\.jpeg" alt="[^"]+" width="\d+" height="\d+"/.test(html))
+        fail(`${entry.path} examples lack dimensions or alt text`);
+    }
     if (entry.kind === 'guide') {
       const creatorLinks = html.match(/href="\/create\?/g) ?? [];
       if (creatorLinks.length !== 1)

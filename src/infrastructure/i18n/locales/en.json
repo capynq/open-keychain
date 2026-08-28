@@ -402,10 +402,10 @@
     "brand": "Open Keychain 3D",
     "languageLabel": "Language",
     "home": {
-      "title": "Open Keychain 3D | Name keychain maker",
-      "description": "Make free 3D printable name keychains, articulated names, nameplates, and plant labels in your browser. Export STL or 3MF locally.",
-      "heading": "Make a 3D printable keychain from any name.",
-      "intro": "Open Keychain 3D turns a name or short label into a printable model without installing CAD software or uploading your design.",
+      "title": "Open Keychain 3D | Free 3D printable name-keychain generator",
+      "description": "Use a free 3D printable name-keychain generator in your browser. Create a name keychain without CAD, then export STL or 3MF locally.",
+      "heading": "Create a free 3D printable name keychain.",
+      "intro": "Open Keychain 3D turns a name or short label into a printable model without CAD software or uploading your design.",
       "cta": "Start designing a keychain",
       "templatesHeading": "Choose a printable template",
       "templatesBody": "Start with a name keychain, articulated name, nameplate, or plant label, then adjust the style and export a file for your slicer.",
@@ -414,6 +414,11 @@
       "privacyHeading": "Your design stays on your device",
       "privacyBody": "Names, geometry parameters, and exported files are processed locally. Check every file in your slicer before printing.",
       "faqHeading": "Printable keychain questions",
+      "examplesHeading": "Printed examples",
+      "examplesBody": "Examples from the project gallery are illustrative; check your own sliced preview before printing.",
+      "examplesCaption": "Printed example",
+      "examplesAltOne": "Printed Open Keychain 3D example",
+      "examplesAltTwo": "Another printed Open Keychain 3D example",
       "faq": [
         {
           "question": "Can I export an STL file?",
@@ -431,8 +436,8 @@
     },
     "templates": {
       "nameKeychain": {
-        "title": "Open Keychain 3D | Name keychain maker",
-        "description": "Create a personalized 3D printable name keychain with a keyring hole. Choose a style, preview the geometry, and export STL or 3MF locally.",
+        "title": "Open Keychain 3D | Personalized name-keychain generator",
+        "description": "Generate a personalized 3D printable name keychain with a keyring hole. Preview the geometry and export STL or 3MF locally.",
         "heading": "Create a personalized 3D printable name keychain.",
         "intro": "Turn a first name, nickname, or short word into a practical keychain tag. The name keychain template includes a keyring hole and raised lettering designed for a straightforward home print.",
         "benefits": [
@@ -475,10 +480,10 @@
         ]
       },
       "nameplate": {
-        "title": "Open Keychain 3D | Custom nameplate maker",
-        "description": "Design a compact 3D printable nameplate for a desk, drawer, shelf, or workspace. Preview the text and export STL or 3MF locally.",
-        "heading": "Design a compact 3D printable nameplate.",
-        "intro": "Make a personalized plaque for a desk, drawer, shelf, or maker workspace. The nameplate template keeps the lettering readable and the backing easy to inspect before export.",
+        "title": "Open Keychain 3D | Nameplate generator with STL export",
+        "description": "Use a nameplate generator for a desk, drawer, shelf, or workspace. Preview your 3D printable nameplate and export STL or 3MF locally.",
+        "heading": "Generate a 3D printable nameplate.",
+        "intro": "Create a personalized nameplate for a desk, drawer, shelf, or maker workspace, then preview and export the STL or 3MF.",
         "benefits": [
           "Compact plaque shape",
           "Readable raised lettering",

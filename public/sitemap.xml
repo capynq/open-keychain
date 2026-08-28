@@ -1,63 +1,339 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://open-keychain.com/</loc>
-    <lastmod>2026-08-19</lastmod>
-  </url>
-  <url>
-    <loc>https://open-keychain.com/ru/</loc>
-    <lastmod>2026-08-19</lastmod>
-  </url>
-  <url>
-    <loc>https://open-keychain.com/uk/</loc>
-    <lastmod>2026-08-19</lastmod>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/brand/open-keychain-og.png</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://open-keychain.com/templates/name-keychain/</loc>
-    <lastmod>2026-08-19</lastmod>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/showcase/templates/name-keychain.png</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://open-keychain.com/templates/articulated-name/</loc>
-    <lastmod>2026-08-19</lastmod>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/showcase/templates/articulated-name.png</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://open-keychain.com/templates/nameplate/</loc>
-    <lastmod>2026-08-19</lastmod>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/showcase/templates/nameplate.png</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://open-keychain.com/templates/plant-label/</loc>
-    <lastmod>2026-08-19</lastmod>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/showcase/templates/plant-label.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/templates/</loc>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/brand/open-keychain-og.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/guides/</loc>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/brand/open-keychain-og.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/guides/stl-vs-3mf/</loc>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/showcase/templates/name-keychain.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/guides/how-to-print-a-name-keychain/</loc>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/showcase/templates/name-keychain.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/guides/articulated-vs-standard-keychain/</loc>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/showcase/templates/articulated-name.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/guides/printable-plant-label-guide/</loc>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/showcase/templates/plant-label.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/ru/</loc>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/brand/open-keychain-og.png</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://open-keychain.com/ru/templates/name-keychain/</loc>
-    <lastmod>2026-08-19</lastmod>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/showcase/templates/name-keychain.png</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://open-keychain.com/ru/templates/articulated-name/</loc>
-    <lastmod>2026-08-19</lastmod>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/showcase/templates/articulated-name.png</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://open-keychain.com/ru/templates/nameplate/</loc>
-    <lastmod>2026-08-19</lastmod>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/showcase/templates/nameplate.png</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://open-keychain.com/ru/templates/plant-label/</loc>
-    <lastmod>2026-08-19</lastmod>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/showcase/templates/plant-label.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/ru/templates/</loc>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/brand/open-keychain-og.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/ru/guides/</loc>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/brand/open-keychain-og.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/ru/guides/stl-vs-3mf/</loc>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/showcase/templates/name-keychain.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/ru/guides/how-to-print-a-name-keychain/</loc>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/showcase/templates/name-keychain.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/ru/guides/articulated-vs-standard-keychain/</loc>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/showcase/templates/articulated-name.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/ru/guides/printable-plant-label-guide/</loc>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/showcase/templates/plant-label.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/uk/</loc>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/brand/open-keychain-og.png</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://open-keychain.com/uk/templates/name-keychain/</loc>
-    <lastmod>2026-08-19</lastmod>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/showcase/templates/name-keychain.png</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://open-keychain.com/uk/templates/articulated-name/</loc>
-    <lastmod>2026-08-19</lastmod>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/showcase/templates/articulated-name.png</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://open-keychain.com/uk/templates/nameplate/</loc>
-    <lastmod>2026-08-19</lastmod>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/showcase/templates/nameplate.png</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://open-keychain.com/uk/templates/plant-label/</loc>
-    <lastmod>2026-08-19</lastmod>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/showcase/templates/plant-label.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/uk/templates/</loc>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/brand/open-keychain-og.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/uk/guides/</loc>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/brand/open-keychain-og.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/uk/guides/stl-vs-3mf/</loc>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/showcase/templates/name-keychain.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/uk/guides/how-to-print-a-name-keychain/</loc>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/showcase/templates/name-keychain.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/uk/guides/articulated-vs-standard-keychain/</loc>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/showcase/templates/articulated-name.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/uk/guides/printable-plant-label-guide/</loc>
+    <lastmod>2026-08-22</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/showcase/templates/plant-label.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/create?lang=en</loc>
+    <lastmod>2026-08-24</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/brand/open-keychain-og.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/create?template=name-keychain&amp;lang=en</loc>
+    <lastmod>2026-08-24</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/brand/open-keychain-og.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/create?template=articulated-name&amp;lang=en</loc>
+    <lastmod>2026-08-24</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/brand/open-keychain-og.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/create?template=nameplate&amp;lang=en</loc>
+    <lastmod>2026-08-24</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/brand/open-keychain-og.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/create?template=plant-label&amp;lang=en</loc>
+    <lastmod>2026-08-24</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/brand/open-keychain-og.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/create?lang=ru</loc>
+    <lastmod>2026-08-24</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/brand/open-keychain-og.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/create?template=name-keychain&amp;lang=ru</loc>
+    <lastmod>2026-08-24</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/brand/open-keychain-og.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/create?template=articulated-name&amp;lang=ru</loc>
+    <lastmod>2026-08-24</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/brand/open-keychain-og.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/create?template=nameplate&amp;lang=ru</loc>
+    <lastmod>2026-08-24</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/brand/open-keychain-og.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/create?template=plant-label&amp;lang=ru</loc>
+    <lastmod>2026-08-24</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/brand/open-keychain-og.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/create?lang=uk</loc>
+    <lastmod>2026-08-24</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/brand/open-keychain-og.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/create?template=name-keychain&amp;lang=uk</loc>
+    <lastmod>2026-08-24</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/brand/open-keychain-og.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/create?template=articulated-name&amp;lang=uk</loc>
+    <lastmod>2026-08-24</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/brand/open-keychain-og.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/create?template=nameplate&amp;lang=uk</loc>
+    <lastmod>2026-08-24</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/brand/open-keychain-og.png</image:loc>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://open-keychain.com/create?template=plant-label&amp;lang=uk</loc>
+    <lastmod>2026-08-24</lastmod>
+    <image:image>
+      <image:loc>https://open-keychain.com/brand/open-keychain-og.png</image:loc>
+    </image:image>
   </url>
 </urlset>

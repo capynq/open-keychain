@@ -13,6 +13,14 @@
   var pageType = script && script.getAttribute('data-page-type');
   var pageId = script && script.getAttribute('data-page-id');
   var spaShell = script && script.getAttribute('data-spa') === 'true';
+  var campaignSource = null;
+  try {
+    var requestedSource = new window.URL(window.location.href).searchParams.get('source');
+    if (['github', 'maker-directory', 'community'].indexOf(requestedSource) !== -1)
+      campaignSource = requestedSource;
+  } catch {
+    /* URL parsing is best effort; never block the page. */
+  }
   var labels =
     {
       en: [
@@ -48,6 +56,7 @@
     clean.page_type = pageType;
     clean.page_id = pageId;
     clean.locale = locale;
+    if (campaignSource) clean.source = campaignSource;
     return { api_key: key, event: event, distinct_id: 'seo-static-page', properties: clean };
   }
 

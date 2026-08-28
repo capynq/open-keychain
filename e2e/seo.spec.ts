@@ -70,7 +70,7 @@ test('publishes localized metadata for an indexable customizer URL', async ({ pa
     'href',
     'https://open-keychain.com/create?template=nameplate&lang=ru',
   );
-  await expect(page).toHaveTitle('Open Keychain 3D | Генератор именных табличек');
+  await expect(page).toHaveTitle('Open Keychain 3D | Генератор табличек с экспортом STL');
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     'content',
     /Создайте компактную именную табличку для стола/,
