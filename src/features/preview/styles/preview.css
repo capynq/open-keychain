@@ -283,12 +283,19 @@
     flex-basis: 54px;
     gap: 2px;
     padding: 5px;
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .viewer-toolbar::-webkit-scrollbar {
+    display: none;
   }
   .viewer-toolbar button {
     width: 44px;
     height: 44px;
     min-width: 44px;
     min-height: 44px;
+    flex: 0 0 44px;
   }
 
   .appearance-control .reset-icon-button,

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import process from 'node:process';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL, URL } from 'node:url';
@@ -30,6 +30,11 @@ const extensionOf = (file) => {
   return match?.[0].toLowerCase() ?? '';
 };
 
+const isSourceTestFile = (file) => {
+  const normalized = file.replaceAll('\\', '/');
+  return normalized.startsWith('src/') && /\.test\.[^.]+$/.test(normalized);
+};
+
 const isDocumentationFile = (file) => {
   const normalized = file.replaceAll('\\', '/');
   if (normalized.startsWith('public/') || normalized.startsWith('src/')) return false;
@@ -45,6 +50,7 @@ const isDocumentationFile = (file) => {
 
 const isBrowserRelevantFile = (file) => {
   const normalized = file.replaceAll('\\', '/');
+  if (isSourceTestFile(normalized)) return false;
   return (
     normalized.startsWith('e2e/') ||
     normalized.startsWith('public/') ||
@@ -167,7 +173,7 @@ const runDockerValidation = () => {
 
 export const runPrePush = async () => {
   if (hasChanges(['diff', '--quiet']) || hasChanges(['diff', '--cached', '--quiet'])) {
-    process.stderr.write('pre-push: commit or stash tracked changes before automatic repair.\n');
+    process.stderr.write('pre-push: commit or stash tracked changes before validation.\n');
     process.exit(1);
   }
 
@@ -181,17 +187,7 @@ export const runPrePush = async () => {
   if (files.length === 0) process.exit(0);
 
   const script = fileURLToPath(new URL('./validate-changed.mjs', import.meta.url));
-  run(process.execPath, [script, '--fix', '--', ...files]);
-  const existingFiles = files.filter((file) => existsSync(file));
-  if (existingFiles.length > 0) run('git', ['add', '--update', '--', ...existingFiles]);
   run(process.execPath, [script, '--', ...files]);
-
-  const stagedChanges = spawnSync('git', ['diff', '--cached', '--quiet']);
-  if (stagedChanges.status !== 0) {
-    run('git', ['commit', '--amend', '--no-edit', '--no-verify']);
-    process.stderr.write('pre-push: automatic fixes were committed; run git push again.\n');
-    process.exit(1);
-  }
 
   const classification = classifyChangedFiles(files);
   process.stdout.write(

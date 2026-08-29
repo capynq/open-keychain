@@ -10,6 +10,12 @@ const cameraViews = [
   'Bottom view',
 ];
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('open-keychain.analytics-consent', 'declined');
+  });
+});
+
 for (const flow of [
   {
     locale: 'EN',
@@ -358,11 +364,11 @@ test('keeps subtitle fields full-width, spaced, and keyboard-visible', async ({ 
 test('shows only template-relevant shape controls', async ({ page }) => {
   await page.goto('/create');
   await page.getByRole('button', { name: 'Plant label' }).click();
-  await expect(page.getByLabel('Keyring hole')).toHaveCount(0);
+  await expect(page.getByRole('slider', { name: 'Keyring hole diameter' })).toHaveCount(0);
   await expect(page.getByLabel('Letter spacing')).toBeVisible();
   await expect(page.getByLabel('Stake length')).toBeVisible();
   await page.getByRole('button', { name: 'Articulated name' }).click();
-  await expect(page.getByLabel('Keyring hole')).toBeVisible();
+  await expect(page.getByRole('slider', { name: 'Keyring hole diameter' })).toBeVisible();
   await expect(page.getByLabel('Letter spacing')).toHaveCount(0);
   await expect(page.getByLabel('Border padding')).toHaveCount(0);
   await page.getByRole('button', { name: 'Nameplate' }).click();
@@ -446,7 +452,7 @@ for (const viewport of [
     expect(layout.viewerWidth).toBeGreaterThan(360);
     expect(layout.viewerHeight).toBeGreaterThan(260);
     await expect(page.getByRole('button', { name: 'Export' })).toBeVisible();
-    await expect(page.getByLabel('Keyring hole')).toBeVisible();
+    await expect(page.getByRole('slider', { name: 'Keyring hole diameter' })).toBeVisible();
     await expect(page.locator('.viewer')).toBeInViewport();
   });
 }

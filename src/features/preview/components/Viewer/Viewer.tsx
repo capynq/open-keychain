@@ -35,6 +35,7 @@ type ViewerState = {
   key: THREE.DirectionalLight;
   zoomScale: number;
   displayOffsetZ: number;
+  invalidate?: () => void;
 };
 const DEFAULT_ZOOM_SCALE = 0.65;
 const MIN_ZOOM_SCALE = 0.42;
@@ -185,6 +186,7 @@ export const Viewer = ({
       activeViewRef.current = id;
       setActiveView(id);
       fitViewer(state, result, id);
+      state.invalidate?.();
     },
     [result],
   );
@@ -199,6 +201,7 @@ export const Viewer = ({
       MAX_ZOOM_SCALE,
     );
     fitViewer(state, current, activeViewRef.current, false);
+    state.invalidate?.();
     setActiveView(activeViewRef.current);
   }, []);
 
@@ -332,23 +335,32 @@ export const Viewer = ({
       camera.updateProjectionMatrix();
       const current = resultRef.current;
       if (current) fitViewer(viewerState, current, activeViewRef.current, false);
+      invalidate();
     };
     const resizeObserver = new ResizeObserver(resize);
 
     resizeObserver.observe(host);
-    resize();
-    stateRef.current = viewerState;
     let frame = 0;
-    const animate = () => {
+    const render = () => {
+      frame = 0;
       controls.update();
       renderer.render(scene, camera);
-      frame = requestAnimationFrame(animate);
     };
+    const invalidate = () => {
+      if (frame === 0) frame = requestAnimationFrame(render);
+    };
+    const handleControlsChange = () => invalidate();
 
-    animate();
+    controls.addEventListener('change', handleControlsChange);
+    viewerState.invalidate = invalidate;
+    stateRef.current = viewerState;
+    resize();
+    invalidate();
+
     return () => {
       cancelAnimationFrame(frame);
       resizeObserver.disconnect();
+      controls.removeEventListener('change', handleControlsChange);
       controls.dispose();
       disposeChildren(group);
       floor.geometry.dispose();
@@ -395,6 +407,7 @@ export const Viewer = ({
     state.key.shadow.camera.far = Math.max(300, maxDimension * 4);
     state.key.shadow.camera.updateProjectionMatrix();
     fitViewer(state, result, selected);
+    state.invalidate?.();
   }, [result]);
 
   useEffect(() => {
@@ -408,6 +421,7 @@ export const Viewer = ({
     if (relief instanceof THREE.Mesh) {
       (relief.material as THREE.MeshStandardMaterial).color.set(appearance.relief.color);
     }
+    state.invalidate?.();
   }, [appearance]);
 
   useEffect(() => {
@@ -491,6 +505,7 @@ export const Viewer = ({
       syncPlatform(state, current);
       fitViewer(state, current, activeViewRef.current, false);
     }
+    state.invalidate?.();
   }, [surfacePreset]);
   return (
     <div
@@ -498,6 +513,7 @@ export const Viewer = ({
       aria-label="Interactive 3D preview"
       data-view={activeView}
       data-surface={surfacePreset}
+      data-render-mode="on-demand"
       data-preview-capability={previewCapability}
     >
       <div className="viewer-surface" ref={hostRef}>

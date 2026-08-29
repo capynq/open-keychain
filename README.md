@@ -37,6 +37,11 @@ Open the local address printed by Vite, then visit `/create` to start designing.
 
 For browser checks, `pnpm test:e2e:smoke` runs the fast six-check smoke suite on desktop and mobile. The full matrix is `pnpm test:e2e` and is reserved for release validation.
 
+The supported development toolchain is Node 22+ with pnpm 10. TypeScript checks use the native
+TypeScript 7 compiler; the repository may retain a private TypeScript 6 compatibility alias until
+the lint parser fully supports TypeScript 7. `pnpm build:artifact` reuses an already-passed
+typecheck when CI or browser checks need to consume the production artifact.
+
 ### Optional Google Fonts
 
 The included catalog works offline. To enable the opt-in Google Fonts browser, set
@@ -91,10 +96,22 @@ The default local and self-hosted workflows keep generation and export on the de
 ## Development
 
 ```sh
-pnpm validate
+pnpm typecheck
+pnpm test
+pnpm build
 pnpm bench:matrix
-pnpm test:e2e --workers=1
+pnpm test:e2e:smoke
 ```
+
+For the shortest feedback loop, use `pnpm test:fast` for focused unit checks and
+`pnpm test:e2e:smoke` for browser changes. The complete unit suite remains `pnpm test`; the full
+201-test browser matrix is a release gate. Set `PUSH_E2E_MODE=full` when an explicit full browser
+run is required from the pre-push hook, and use `PUSH_E2E_WORKERS` to tune its worker count.
+Use `pnpm test:e2e:performance` for the dedicated six-case preview performance regression suite.
+
+Bun is an experimental shadow runtime for local tooling only. It does not replace Node in Docker,
+CI, the geometry matrix, slicer validation, or release workflows. The geometry matrix is automated
+printability evidence and is not a claim of physical-printer validation.
 
 Install Chromium for the browser checks once with `pnpm exec playwright install chromium`. Use `pnpm capture:ui` when the reviewed customizer screenshots need to be refreshed; it is an explicit capture command and does not run in ordinary CI.
 

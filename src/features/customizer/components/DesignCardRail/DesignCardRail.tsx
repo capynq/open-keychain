@@ -1,13 +1,16 @@
 import type { ReactNode } from 'react';
 import { useRef } from 'react';
-import './DesignCardRail.module.css';
+import styles from './DesignCardRail.module.css';
 
 export type DesignCardRailProps = { label: string; className?: string; children: ReactNode };
 
 export const DesignCardRail = ({ label, className, children }: DesignCardRailProps) => {
   const railRef = useRef<HTMLDivElement>(null);
   return (
-    <div className="design-card-rail-shell" data-scroll-state="top">
+    <div
+      className={`${styles['design-card-rail-root-marker']} design-card-rail-shell`}
+      data-scroll-state="top"
+    >
       <div
         ref={railRef}
         className={`design-card-rail${className ? ` ${className}` : ''}`}

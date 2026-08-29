@@ -1,3 +1,7 @@
+.design-card-rail-root-marker {
+  display: block;
+}
+
 :global(.design-card-rail-shell) {
   position: relative;
   min-width: 0;

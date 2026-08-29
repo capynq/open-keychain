@@ -107,19 +107,24 @@ const runConcurrentGates = async (
   return results;
 };
 
-/** Build exactly once, then fan out independent consumers of the artifact. */
+/** Check prerequisites, build exactly once, then fan out independent consumers of the artifact. */
 export const runValidationGates = async (
   gates,
   { concurrency = DEFAULT_CONCURRENCY, printOutput = true } = {},
 ) => {
   const buildGates = gates.filter((gate) => gate.name === 'build');
-  const dependentGates = gates.filter((gate) => gate.name !== 'build');
+  const prerequisiteGates = gates.filter((gate) => gate.name === 'typecheck');
+  const dependentGates = gates.filter((gate) => gate.name !== 'build' && gate.name !== 'typecheck');
+  const prerequisiteResults = prerequisiteGates.length
+    ? await runConcurrentGates(prerequisiteGates, { concurrency: 1, printOutput })
+    : [];
+  if (prerequisiteResults.some((result) => !result.ok)) return prerequisiteResults;
   const buildResults = buildGates.length
     ? await runConcurrentGates(buildGates, { concurrency: 1, printOutput })
     : [];
-  if (buildResults.some((result) => !result.ok)) return buildResults;
+  if (buildResults.some((result) => !result.ok)) return [...prerequisiteResults, ...buildResults];
   const results = await runConcurrentGates(dependentGates, { concurrency, printOutput });
-  return [...buildResults, ...results];
+  return [...prerequisiteResults, ...buildResults, ...results];
 };
 
 export const defaultCiGates = [
@@ -130,7 +135,7 @@ export const defaultCiGates = [
   {
     name: 'build',
     command: 'pnpm',
-    args: ['build'],
+    args: ['build:artifact'],
     env: { VITE_GOOGLE_FONTS_API_KEY: 'playwright-google-fonts-key' },
   },
 ];

@@ -1,5 +1,5 @@
 import { useId, useRef } from 'react';
-import './DesignSelectCard.module.css';
+import styles from './DesignSelectCard.module.css';
 
 export type DesignSelectCardProps = {
   title: string;
@@ -41,7 +41,7 @@ export const DesignSelectCard = ({
     <button
       ref={buttonRef}
       type="button"
-      className={`design-select-card${selected ? ' selected' : ''}`}
+      className={`${styles['design-select-card-root-marker']} design-select-card${selected ? ' selected' : ''}`}
       aria-pressed={selected}
       aria-label={accessibleLabel ?? title}
       aria-describedby={description ? descriptionId : undefined}

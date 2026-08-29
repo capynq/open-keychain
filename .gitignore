@@ -2,6 +2,7 @@ node_modules/
 .pnpm-store/
 dist/
 .vite/
+node_modules/.cache/
 .netlify/
 coverage/
 playwright-report/

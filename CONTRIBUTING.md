@@ -5,12 +5,14 @@ Open Keychain is a client-side React, Three.js, and Manifold project. Geometry a
 Before opening a pull request:
 
 ```sh
-pnpm validate
+pnpm typecheck
+pnpm test
+pnpm build
 pnpm bench:matrix
-pnpm test:e2e --workers=1
+pnpm test:e2e:smoke
 ```
 
-The pre-push hook repairs formatting and lint issues in changed files, then selects the local gates from the files in the push:
+The pre-push hook checks formatting and lint for changed files, then selects the local gates from the files in the push. It never rewrites files, amends commits, or pushes on your behalf:
 
 - Every code push runs typecheck, unit tests, and a production build with the deterministic Playwright Google-font key.
 - UI, route, export, public-asset, and E2E changes also run the focused Playwright smoke suite (six checks across desktop and mobile) against that existing build.
@@ -26,12 +28,18 @@ For a focused local run:
 
 ```sh
 pnpm typecheck
-pnpm test
-pnpm build
+pnpm test:fast
+pnpm build:artifact
 pnpm test:e2e:smoke
+pnpm test:e2e:performance
 ```
 
 The full browser matrix remains available for release validation with `pnpm test:e2e --workers=1`. To opt into it from the pre-push hook, use `PUSH_E2E_MODE=full git push`; `PUSH_E2E_WORKERS` controls its worker count. Smoke validation defaults to two workers.
+
+`pnpm test` is the complete unit aggregate, including server and script tests. The geometry matrix
+must remain at its recorded full case count for geometry/export changes; it is an automated gate,
+not physical-printer evidence. Node 22+ with pnpm 10 is the canonical runtime. Bun may be used for
+experimental local comparisons, but production containers, CI, and release validation stay on Node.
 
 ## Formatting
 
@@ -45,4 +53,4 @@ Use the existing style and camera tests as templates for new geometry cases. Add
 
 Use conventional commit messages such as `feat(geometry): preserve counters during bridging` or `fix(viewer): keep long models inside the camera bounds`. Husky and lint-staged run staged-file checks before commits; Commitlint rejects messages outside the conventional format.
 
-Keep pull requests focused, explain user-facing behavior, and update README or localization when the public behavior changes. Never commit credentials, production environment files, generated meshes, or browser test artifacts.
+Keep pull requests focused, explain user-facing behavior, and update README or localization when the public behavior changes. Never commit credentials, production environment files, generated meshes, or browser test artifacts. Do not use `capture:ui`, `pnpm fix`, or auto-fix hooks in unattended validation because they can modify tracked files.

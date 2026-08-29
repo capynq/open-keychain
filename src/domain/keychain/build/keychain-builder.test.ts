@@ -723,31 +723,43 @@ describe('finished keychain geometry', () => {
 
   for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'] as const) {
     for (const font of FONT_CATALOG) {
-      it(`contains Latin relief for ${font.name} ${styleId}`, async () => {
-        const { result } = await buildKeychain(wasm, {
-          ...DEFAULT_PARAMS,
-          fontId: font.id,
-          styleId,
-          text: 'ALEX',
-        });
-        expect(result.printable, JSON.stringify(result.issues)).toBe(true);
-        expect(result.issues.some((issue) => issue.code === 'relief-outside-backing')).toBe(false);
-        expect(result.dimensions.widthMm).toBeLessThanOrEqual(120.1);
-      }, 30000);
+      it.concurrent(
+        `contains Latin relief for ${font.name} ${styleId}`,
+        async () => {
+          const { result } = await buildKeychain(wasm, {
+            ...DEFAULT_PARAMS,
+            fontId: font.id,
+            styleId,
+            text: 'ALEX',
+          });
+          expect(result.printable, JSON.stringify(result.issues)).toBe(true);
+          expect(result.issues.some((issue) => issue.code === 'relief-outside-backing')).toBe(
+            false,
+          );
+          expect(result.dimensions.widthMm).toBeLessThanOrEqual(120.1);
+        },
+        30000,
+      );
     }
   }
   for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'] as const) {
     for (const font of FONT_CATALOG.filter((font) => font.scripts.includes('cyrillic'))) {
-      it(`contains Cyrillic relief for ${font.name} ${styleId}`, async () => {
-        const { result } = await buildKeychain(wasm, {
-          ...DEFAULT_PARAMS,
-          fontId: font.id,
-          styleId,
-          text: 'НИКИТА',
-        });
-        expect(result.printable, JSON.stringify(result.issues)).toBe(true);
-        expect(result.issues.some((issue) => issue.code === 'relief-outside-backing')).toBe(false);
-      }, 30000);
+      it.concurrent(
+        `contains Cyrillic relief for ${font.name} ${styleId}`,
+        async () => {
+          const { result } = await buildKeychain(wasm, {
+            ...DEFAULT_PARAMS,
+            fontId: font.id,
+            styleId,
+            text: 'НИКИТА',
+          });
+          expect(result.printable, JSON.stringify(result.issues)).toBe(true);
+          expect(result.issues.some((issue) => issue.code === 'relief-outside-backing')).toBe(
+            false,
+          );
+        },
+        30000,
+      );
     }
   }
   for (const fontId of [
@@ -761,26 +773,30 @@ describe('finished keychain geometry', () => {
     'lobster',
     'pangolin',
   ]) {
-    it(`builds Cyrillic НИКИТА with ${fontId}`, async () => {
-      const { result, exportMesh } = await buildKeychain(
-        wasm,
-        { ...DEFAULT_PARAMS, fontId, styleId: 'contour', text: 'НИКИТА' },
-        true,
-      );
-      expect(result.printable, JSON.stringify(result.issues)).toBe(true);
-      expect(exportMesh).toBeDefined();
-      expect(topology(exportMesh!).components).toBeGreaterThan(0);
-      if (
-        FONT_CATALOG.find((font) => font.id === fontId)?.minimumFittedTextHeightMm &&
-        result.dimensions.widthMm > 120.1
-      ) {
-        expect(result.issues).toContainEqual(
-          expect.objectContaining({ severity: 'warning', code: 'text-over-width' }),
+    it.concurrent(
+      `builds Cyrillic НИКИТА with ${fontId}`,
+      async () => {
+        const { result, exportMesh } = await buildKeychain(
+          wasm,
+          { ...DEFAULT_PARAMS, fontId, styleId: 'contour', text: 'НИКИТА' },
+          true,
         );
-      } else {
-        expect(result.dimensions.widthMm).toBeLessThanOrEqual(120.1);
-      }
-    }, 30000);
+        expect(result.printable, JSON.stringify(result.issues)).toBe(true);
+        expect(exportMesh).toBeDefined();
+        expect(topology(exportMesh!).components).toBeGreaterThan(0);
+        if (
+          FONT_CATALOG.find((font) => font.id === fontId)?.minimumFittedTextHeightMm &&
+          result.dimensions.widthMm > 120.1
+        ) {
+          expect(result.issues).toContainEqual(
+            expect.objectContaining({ severity: 'warning', code: 'text-over-width' }),
+          );
+        } else {
+          expect(result.dimensions.widthMm).toBeLessThanOrEqual(120.1);
+        }
+      },
+      30000,
+    );
   }
   it('applies the print-safe minimum weight to Cyrillic calligraphic text', async () => {
     const automatic = await buildKeychain(wasm, {

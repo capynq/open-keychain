@@ -37,6 +37,16 @@ describe('classifyChangedFiles', () => {
     expect(result.needsDockerValidation).toBe(false);
   });
 
+  it('keeps source tests out of the browser gate', () => {
+    const result = classifyChangedFiles([
+      'src/domain/keychain/build/keychain-builder.test.ts',
+      'src/features/customizer/model/reset.test.ts',
+    ]);
+    expect(result.needsCoreValidation).toBe(true);
+    expect(result.needsBrowserValidation).toBe(false);
+    expect(result.needsGeometryBenchmark).toBe(true);
+  });
+
   it('selects Compose and self-hosted validation for hosting changes', () => {
     const result = classifyChangedFiles(['docker-compose.yml', 'nginx.conf']);
     expect(result.needsCoreValidation).toBe(true);

@@ -152,7 +152,7 @@
 
 .topbar-export-actions {
   position: absolute;
-  left: calc(50% - 22px);
+  left: calc(50% - 18px);
   display: flex;
   align-items: center;
   gap: 8px;
