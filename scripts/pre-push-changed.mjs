@@ -57,6 +57,11 @@ const isBrowserRelevantFile = (file) => {
     normalized.startsWith('src/app/') ||
     normalized.startsWith('src/components/') ||
     normalized.startsWith('src/features/') ||
+    normalized.startsWith('src/pages/') ||
+    normalized.startsWith('src/widgets/') ||
+    normalized.startsWith('src/shared/ui/') ||
+    normalized.startsWith('src/shared/lib/') ||
+    normalized.startsWith('src/shared/styles/') ||
     normalized.startsWith('src/infrastructure/export/') ||
     normalized.startsWith('src/infrastructure/i18n/') ||
     normalized.startsWith('src/infrastructure/seo/') ||
@@ -71,6 +76,7 @@ const isGeometryOrFontFile = (file) => {
   const normalized = file.replaceAll('\\', '/');
   return (
     normalized.startsWith('src/domain/keychain/') ||
+    normalized.startsWith('src/entities/keychain/') ||
     normalized.startsWith('src/infrastructure/geometry/') ||
     normalized.startsWith('public/fonts/') ||
     normalized === 'public/manifold.wasm' ||

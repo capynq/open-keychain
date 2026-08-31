@@ -47,7 +47,7 @@
     "format:check": "prettier . --check",
     "validate:changed": "node scripts/validate-changed.mjs",
     "validate:ci": "node scripts/run-validation-gates.mjs",
-    "lint": "eslint . --cache --cache-location node_modules/.cache/eslint",
+    "lint": "eslint . --cache --cache-location node_modules/.cache/eslint --max-warnings=0",
     "lint:fix": "eslint . --fix",
     "fix": "pnpm format && pnpm lint:fix",
     "validate": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",

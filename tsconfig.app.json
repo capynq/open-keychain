@@ -3,7 +3,17 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "rootDir": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@/app/*": ["./src/app/*"],
+      "@/components/*": ["./src/components/*"],
+      "@/domain/*": ["./src/domain/*"],
+      "@/entities/*": ["./src/entities/*"],
+      "@/features/*": ["./src/features/*"],
+      "@/infrastructure/*": ["./src/infrastructure/*"],
+      "@/pages/*": ["./src/pages/*"],
+      "@/shared/*": ["./src/shared/*"],
+      "@/types/*": ["./src/types/*"],
+      "@/widgets/*": ["./src/widgets/*"]
     },
     "target": "ES2022",
     "useDefineForClassFields": true,

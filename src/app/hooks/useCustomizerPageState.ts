@@ -1,11 +1,16 @@
 import { useEffect, useReducer, useRef, useState, type SetStateAction } from 'react';
-import { DEFAULT_PARAMS, encodeDesignDocument, normalizeParams } from '../../domain/keychain';
-import type { KeychainParams, PrintAppearanceOverrides } from '../../domain/keychain';
-import { styleName, t, templateName, type Locale } from '../../infrastructure/i18n';
+import {
+  DEFAULT_PARAMS,
+  normalizeParams,
+  type KeychainParams,
+  type PrintAppearanceOverrides,
+} from '../../entities/keychain';
+import { styleName, templateName, type Locale } from '../../infrastructure/i18n';
 import { useCustomizerParams, useGeometryGeneration } from '../../features/customizer';
 import { useExportActions } from '../../features/export';
 import { useHostedAccount } from '../../features/hosted';
 import { previewStatus, type SurfacePresetId } from '../../features/preview';
+import { useShareDesign } from '../../features/share';
 import { useAnalytics } from '../../infrastructure/telemetry';
 
 export const useCustomizerPageState = (
@@ -21,8 +26,6 @@ export const useCustomizerPageState = (
       typeof next === 'function' ? next(current) : next,
     initialAppearanceOverrides ?? { version: 1 },
   );
-  const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'manual' | 'failed'>('idle');
-  const [shareFontFallback, setShareFontFallback] = useState(false);
   const [randomizing, setRandomizing] = useState(false);
   const [randomizeFailure, setRandomizeFailure] = useState(false);
   const { track } = useAnalytics();
@@ -32,6 +35,14 @@ export const useCustomizerPageState = (
     customizer.selectedFont,
     customizer.selectedSubtitleFont,
   );
+  const share = useShareDesign({
+    locale,
+    params: customizer.params,
+    appearanceOverrides,
+    hasNonBundledFont:
+      customizer.selectedFont.source !== 'bundled' ||
+      customizer.selectedSubtitleFont.source !== 'bundled',
+  });
   const hosted = useHostedAccount(
     customizer.params,
     (projectParams) => {
@@ -72,59 +83,6 @@ export const useCustomizerPageState = (
     setAppearanceOverrides(initialAppearanceOverrides ?? { version: 1 });
   }, [customizer, initialAppearanceOverrides, initialParams, routeInputKey]);
 
-  useEffect(() => {
-    if (shareStatus === 'idle' && !shareFontFallback) return undefined;
-    const timeout = window.setTimeout(() => setShareStatus('idle'), 4_000);
-    const fallbackTimeout = window.setTimeout(() => setShareFontFallback(false), 4_000);
-
-    return () => {
-      window.clearTimeout(timeout);
-      window.clearTimeout(fallbackTimeout);
-    };
-  }, [shareFontFallback, shareStatus]);
-
-  const shareDesign = async (): Promise<void> => {
-    try {
-      const url = new URL(window.location.href);
-
-      url.searchParams.set(
-        'design',
-        encodeDesignDocument({ version: 5, params: customizer.params, appearanceOverrides }),
-      );
-      const value = url.toString();
-
-      setShareFontFallback(
-        customizer.selectedFont.source !== 'bundled' ||
-          customizer.selectedSubtitleFont.source !== 'bundled',
-      );
-      if (navigator.clipboard?.writeText) {
-        try {
-          await navigator.clipboard.writeText(value);
-          setShareStatus('copied');
-          return;
-        } catch {
-          // Continue with the legacy clipboard and manual-copy fallbacks.
-        }
-      }
-      const textarea = document.createElement('textarea');
-
-      textarea.value = value;
-      textarea.setAttribute('readonly', '');
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = '0';
-      document.body.appendChild(textarea);
-      textarea.select();
-      const copied = document.execCommand('copy');
-
-      textarea.remove();
-      if (copied) setShareStatus('copied');
-      else if (window.prompt(t(locale, 'shareManualPrompt'), value) !== null)
-        setShareStatus('manual');
-      else setShareStatus('failed');
-    } catch {
-      setShareStatus('failed');
-    }
-  };
   const activeStyle = customizer.availableStyles.find(
     (style) => style.id === customizer.params.styleId,
   );
@@ -221,9 +179,9 @@ export const useCustomizerPageState = (
     openExport,
     appearanceOverrides,
     setAppearanceOverrides,
-    shareDesign,
-    shareStatus,
-    shareFontFallback,
+    shareDesign: share.shareDesign,
+    shareStatus: share.shareStatus,
+    shareFontFallback: share.shareFontFallback,
     randomizing,
     randomizeFailure,
     randomize,

@@ -20,6 +20,19 @@ describe('classifyChangedFiles', () => {
     expect(result.needsDockerValidation).toBe(false);
   });
 
+  it('selects browser and geometry gates for new FSD layers', () => {
+    const result = classifyChangedFiles([
+      'src/pages/customizer/CustomizerPage.tsx',
+      'src/shared/ui/IconButton.tsx',
+      'src/shared/lib/clipboard.ts',
+      'src/entities/keychain/build/index.ts',
+    ]);
+
+    expect(result.needsCoreValidation).toBe(true);
+    expect(result.needsBrowserValidation).toBe(true);
+    expect(result.needsGeometryBenchmark).toBe(true);
+  });
+
   it('keeps deleted application files in gate classification', () => {
     const result = classifyChangedFiles(['src/features/export/RemovedExporter.ts']);
     expect(result.needsCoreValidation).toBe(true);

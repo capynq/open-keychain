@@ -1,20 +1,13 @@
 import { t, type Locale } from '../../../infrastructure/i18n';
 import { useLocation } from 'react-router';
-import {
-  DEFAULT_PARAMS,
-  normalizeParams,
-  TEMPLATE_CATALOG,
-  type KeychainParams,
-  type TemplateId,
-  applyPrintAppearanceOverrides,
-  decodeDesignDocument,
-} from '../../../domain/keychain';
+import { applyPrintAppearanceOverrides } from '../../../entities/keychain';
 import { ExportDialog, buildPreflightReport } from '../../../features/export';
 import { AppHeader } from '../../components/AppHeader/AppHeader';
 import { CustomizerWorkspace } from '../../components/CustomizerWorkspace/CustomizerWorkspace';
 import { CustomizerFooter } from '../../components/CustomizerFooter/CustomizerFooter';
 import { Toast, type ToastVariant } from '../../components/Toast/Toast';
 import { useCustomizerPageState } from '../../hooks/useCustomizerPageState';
+import { parseCustomizerRoute } from '../../../pages/customizer/model/parseCustomizerRoute';
 import './CustomizerPage.module.css';
 import '../../styles/customizer.css';
 import '../../styles/preview.css';
@@ -27,29 +20,12 @@ export const CustomizerPage = ({
   onLocaleChange: (locale: Locale) => void;
 }) => {
   const location = useLocation();
-  const projectParams = (location.state as { projectParams?: Record<string, unknown> } | null)
-    ?.projectParams;
-  const searchParams = new URLSearchParams(location.search);
-  const designValue = searchParams.get('design');
-  const sharedDocument = designValue ? decodeDesignDocument(designValue) : undefined;
-  const hasInvalidDesign = searchParams.has('design') && !sharedDocument;
-  const sharedFontFallback = Boolean(sharedDocument?.fontFallback);
-  const requestedTemplate = searchParams.get('template');
-  const templateId = TEMPLATE_CATALOG.some((template) => template.id === requestedTemplate)
-    ? (requestedTemplate as TemplateId)
-    : undefined;
-  const initialParams: KeychainParams | undefined =
-    sharedDocument?.params ??
-    (projectParams
-      ? normalizeParams({ ...DEFAULT_PARAMS, ...projectParams } as KeychainParams)
-      : templateId
-        ? normalizeParams({ ...DEFAULT_PARAMS, templateId })
-        : undefined);
+  const routeModel = parseCustomizerRoute(location.search, location.state);
   const state = useCustomizerPageState(
     locale,
-    initialParams,
-    sharedDocument?.appearanceOverrides,
-    designValue ?? undefined,
+    routeModel.initialParams,
+    routeModel.initialAppearanceOverrides,
+    routeModel.routeInputKey,
   );
 
   return (
@@ -69,13 +45,13 @@ export const CustomizerPage = ({
         hosted={state.hosted}
         currentParams={state.customizer.params}
       />
-      {(hasInvalidDesign ||
-        sharedFontFallback ||
+      {(routeModel.hasInvalidDesign ||
+        routeModel.sharedFontFallback ||
         state.shareFontFallback ||
         state.shareStatus !== 'idle' ||
         state.randomizeFailure) &&
         (() => {
-          const variant: ToastVariant = hasInvalidDesign
+          const variant: ToastVariant = routeModel.hasInvalidDesign
             ? 'error'
             : state.randomizeFailure
               ? 'error'
@@ -84,7 +60,7 @@ export const CustomizerPage = ({
                 : state.shareStatus === 'manual'
                   ? 'manual'
                   : 'success';
-          const message = hasInvalidDesign
+          const message = routeModel.hasInvalidDesign
             ? t(locale, 'shareInvalid')
             : state.randomizeFailure
               ? t(locale, 'randomizeFailed')
@@ -92,7 +68,7 @@ export const CustomizerPage = ({
                 ? t(locale, 'shareFailed')
                 : state.shareStatus === 'manual'
                   ? t(locale, 'shareManual')
-                  : sharedFontFallback || state.shareFontFallback
+                  : routeModel.sharedFontFallback || state.shareFontFallback
                     ? t(locale, 'shareFontFallback')
                     : t(locale, 'shareCopied');
 
