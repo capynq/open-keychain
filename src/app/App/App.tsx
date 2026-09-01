@@ -1,15 +1,8 @@
-import { lazy, Suspense, useState } from 'react';
-import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router';
+import { Suspense, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 
-import {
-  detectInitialLocale,
-  resolveAppSeoUrl,
-  resolveDisplayLocale,
-  resolveSeoRoute,
-} from '@/features/seo';
-import { SeoPage } from '@/pages/seo/SeoPage';
+import { detectInitialLocale, resolveAppSeoUrl, resolveDisplayLocale } from '@/features/seo';
 
-import { hostedMode } from '../../features/hosted/config';
 import { type Locale } from '../../infrastructure/i18n/config';
 import { setLocale } from '../../infrastructure/i18n/utils';
 import './App.module.css';
@@ -17,29 +10,13 @@ import '../styles/app.css';
 import '../styles/landing.css';
 import { useAnalytics } from '../../infrastructure/telemetry/useTelemetry';
 import { AnalyticsConsentBanner } from '../components/AnalyticsConsentBanner/AnalyticsConsentBanner';
+import { RouteErrorBoundary } from '../components/RouteErrorBoundary/RouteErrorBoundary';
 import { RouteLoading } from '../components/RouteLoading/RouteLoading';
 import { useAppAnalytics } from '../hooks/useAppAnalytics';
 import { useAppNavigationEffects } from '../hooks/useAppNavigationEffects';
-import { CREATE_ROUTE, LANDING_ROUTE, PROFILE_ROUTE } from '../routes';
+import { CREATE_ROUTE, PROFILE_ROUTE } from '../routes';
 import { AppSeoHead, useAppSeo } from '../seo/useAppSeo';
-
-const LandingPage = lazy(() =>
-  import('@/pages/landing/LandingPage').then(({ LandingPage: page }) => ({ default: page })),
-);
-const CustomizerPage = lazy(() =>
-  import('@/pages/customizer/CustomizerPage').then(({ CustomizerPage: page }) => ({
-    default: page,
-  })),
-);
-const ProfilePage = lazy(() =>
-  import('@/pages/profile/ProfilePage').then(({ ProfilePage: page }) => ({ default: page })),
-);
-const PrivacyPage = lazy(() =>
-  import('@/pages/seo/PrivacyPage').then(({ PrivacyPage: page }) => ({ default: page })),
-);
-const SeoNotFoundPage = lazy(() =>
-  import('@/pages/seo/SeoNotFoundPage').then(({ SeoNotFoundPage: page }) => ({ default: page })),
-);
+import { AppRoutes } from './AppRoutes';
 
 type LocaleSetter = (value: Locale | ((previous: Locale) => Locale)) => void;
 
@@ -130,52 +107,21 @@ const App = () => {
         isCustomizer={isCustomizer}
         isProfile={isProfile}
       />
-      <Suspense fallback={<RouteLoading locale={displayLocale} />}>
-        <Routes>
-          <Route
-            path={LANDING_ROUTE}
-            element={<LandingPage locale={displayLocale} onLocaleChange={onLocaleChange} />}
+      <RouteErrorBoundary
+        locale={displayLocale}
+        resetKey={`${location.pathname}${location.search}${location.hash}`}
+      >
+        <Suspense fallback={<RouteLoading locale={displayLocale} />}>
+          <AppRoutes
+            location={location}
+            normalizedPath={normalizedPath}
+            displayLocale={displayLocale}
+            onLocaleChange={onLocaleChange}
+            onSeoCtaClick={onSeoCtaClick}
+            onSeoLocaleChange={onSeoLocaleChange}
           />
-          <Route
-            path={CREATE_ROUTE}
-            element={<CustomizerPage locale={displayLocale} onLocaleChange={onLocaleChange} />}
-          />
-          <Route
-            path={PROFILE_ROUTE}
-            element={
-              hostedMode ? (
-                <ProfilePage locale={displayLocale} onLocaleChange={onLocaleChange} />
-              ) : (
-                <Navigate to={LANDING_ROUTE} replace />
-              )
-            }
-          />
-          <Route
-            path="*"
-            element={(() => {
-              const seoRoute = resolveSeoRoute(location.pathname);
-
-              if (normalizedPath === '/privacy') {
-                return <PrivacyPage locale={displayLocale} onLocaleChange={onSeoLocaleChange} />;
-              }
-
-              return seoRoute ? (
-                <SeoPage
-                  route={
-                    seoRoute.kind === 'home' && seoRoute.path === '/'
-                      ? { ...seoRoute, locale: displayLocale }
-                      : seoRoute
-                  }
-                  onCtaClick={onSeoCtaClick}
-                  onLocaleChange={onSeoLocaleChange}
-                />
-              ) : (
-                <SeoNotFoundPage locale={displayLocale} />
-              );
-            })()}
-          />
-        </Routes>
-      </Suspense>
+        </Suspense>
+      </RouteErrorBoundary>
       <AnalyticsConsentBanner locale={displayLocale} />
     </>
   );

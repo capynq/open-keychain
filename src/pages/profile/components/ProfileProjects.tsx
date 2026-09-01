@@ -1,9 +1,11 @@
 import { Link } from 'react-router';
 
-import type { HostedProject } from '../../../features/hosted';
+import { CREATE_ROUTE } from '@/app/routes';
 
-import { CREATE_ROUTE } from '../../../app/routes';
-import { t, type Locale } from '../../../infrastructure/i18n';
+import type { HostedProject } from '../../../features/hosted/api/hosted-api';
+import type { Locale } from '../../../infrastructure/i18n/config';
+
+import { t } from '../../../infrastructure/i18n/utils';
 
 export const ProfileProjects = ({
   locale,

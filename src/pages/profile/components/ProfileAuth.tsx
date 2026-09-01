@@ -1,8 +1,8 @@
 import type { FormEventHandler } from 'react';
 
-import type { Locale } from '../../../infrastructure/i18n';
+import type { Locale } from '../../../infrastructure/i18n/config';
 
-import { t } from '../../../infrastructure/i18n';
+import { t } from '../../../infrastructure/i18n/utils';
 
 export const ProfileAuth = ({
   locale,

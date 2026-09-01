@@ -1,35 +1,60 @@
-import { lazy } from 'react';
+import type { ComponentType } from 'react';
 
 import type { SeoRoute } from '@/features/seo';
 
+import { createRetryableLazy } from '@/shared/ui/RetryableLazy';
+
+import type { Locale } from '../../infrastructure/i18n/config';
 import type { SeoCtaClick, SeoLocaleChange } from './model/types';
 
-const SeoGuidePage = lazy(() =>
-  import('./SeoGuidePage').then(({ SeoGuidePage: page }) => ({ default: page })),
+type SeoPageProps = {
+  locale: Locale;
+  onCtaClick?: SeoCtaClick;
+  onLocaleChange?: SeoLocaleChange;
+};
+type SeoDispatcherProps = {
+  route: SeoRoute;
+  onCtaClick?: SeoCtaClick;
+  onLocaleChange?: SeoLocaleChange;
+  resetKey?: string;
+};
+type SeoHomeProps = SeoPageProps & { route: Extract<SeoRoute, { kind: 'home' }> };
+type SeoTemplateProps = SeoPageProps & { route: Extract<SeoRoute, { kind: 'template' }> };
+type SeoGuideProps = SeoPageProps & { route: Extract<SeoRoute, { kind: 'guide' }> };
+type SeoHubProps = SeoPageProps & { route: Extract<SeoRoute, { kind: 'templates' | 'guides' }> };
+
+const SeoGuidePage = createRetryableLazy<SeoGuideProps>(() =>
+  import('./SeoGuidePage').then(({ SeoGuidePage: page }) => ({
+    default: page as ComponentType<SeoGuideProps>,
+  })),
 );
-const SeoHomePage = lazy(() =>
-  import('./SeoHomePage').then(({ SeoHomePage: page }) => ({ default: page })),
+const SeoHomePage = createRetryableLazy<SeoHomeProps>(() =>
+  import('./SeoHomePage').then(({ SeoHomePage: page }) => ({
+    default: page as ComponentType<SeoHomeProps>,
+  })),
 );
-const SeoHubPage = lazy(() =>
-  import('./SeoHubPage').then(({ SeoHubPage: page }) => ({ default: page })),
+const SeoHubPage = createRetryableLazy<SeoHubProps>(() =>
+  import('./SeoHubPage').then(({ SeoHubPage: page }) => ({
+    default: page as ComponentType<SeoHubProps>,
+  })),
 );
-const SeoTemplatePage = lazy(() =>
-  import('./SeoTemplatePage').then(({ SeoTemplatePage: page }) => ({ default: page })),
+const SeoTemplatePage = createRetryableLazy<SeoTemplateProps>(() =>
+  import('./SeoTemplatePage').then(({ SeoTemplatePage: page }) => ({
+    default: page as ComponentType<SeoTemplateProps>,
+  })),
 );
 
 export const SeoPage = ({
   route,
   onCtaClick,
   onLocaleChange,
-}: {
-  route: SeoRoute;
-  onCtaClick?: SeoCtaClick;
-  onLocaleChange?: SeoLocaleChange;
-}) => {
+  resetKey = route.path,
+}: SeoDispatcherProps) => {
   switch (route.kind) {
     case 'home':
       return (
         <SeoHomePage
+          resetKey={resetKey}
           locale={route.locale}
           route={route}
           onCtaClick={onCtaClick}
@@ -39,6 +64,7 @@ export const SeoPage = ({
     case 'template':
       return (
         <SeoTemplatePage
+          resetKey={resetKey}
           locale={route.locale}
           route={route}
           onCtaClick={onCtaClick}
@@ -48,6 +74,7 @@ export const SeoPage = ({
     case 'guide':
       return (
         <SeoGuidePage
+          resetKey={resetKey}
           locale={route.locale}
           route={route}
           onCtaClick={onCtaClick}
@@ -58,6 +85,7 @@ export const SeoPage = ({
     case 'guides':
       return (
         <SeoHubPage
+          resetKey={resetKey}
           locale={route.locale}
           route={route}
           onCtaClick={onCtaClick}

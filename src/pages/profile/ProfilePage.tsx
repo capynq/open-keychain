@@ -1,9 +1,12 @@
 import { useLocation, useNavigate } from 'react-router';
 
-import type { KeychainParams } from '../../domain/keychain/model/types';
+import type { KeychainParams } from '@/entities/keychain/model/types';
 
-import { AppHeader } from '../../app/components/AppHeader/AppHeader';
-import { t, type Locale } from '../../infrastructure/i18n';
+import { AppHeader } from '@/app/components/AppHeader/AppHeader';
+
+import type { Locale } from '../../infrastructure/i18n/config';
+
+import { t } from '../../infrastructure/i18n/utils';
 import { ProfileAuth } from './components/ProfileAuth';
 import { ProfileProjects } from './components/ProfileProjects';
 import { ProfileSaveCard } from './components/ProfileSaveCard';

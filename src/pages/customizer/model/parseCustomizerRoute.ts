@@ -2,17 +2,16 @@ import type {
   KeychainParams,
   PrintAppearanceOverrides,
   TemplateId,
-} from '../../../entities/keychain';
+} from '@/entities/keychain/model/types';
 
-import { decodeDesignDocument } from '../../../domain/keychain/design-document';
+import { decodeDesignDocument } from '@/entities/keychain/design-document';
 import {
-  DEFAULT_PARAMS,
   articulatedFallbackFont,
   fontDefinition,
   fontSupportsArticulatedName,
-  normalizeParams,
-  TEMPLATE_CATALOG,
-} from '../../../entities/keychain';
+} from '@/entities/keychain/fonts/catalog';
+import { DEFAULT_PARAMS, normalizeParams } from '@/entities/keychain/model/types';
+import { TEMPLATE_CATALOG } from '@/entities/keychain/templates/template-builder';
 
 type CustomizerLocationState = {
   projectParams?: Record<string, unknown>;

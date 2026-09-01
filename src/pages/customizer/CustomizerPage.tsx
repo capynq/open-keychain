@@ -1,13 +1,17 @@
 import { useLocation } from 'react-router';
 
-import { AppHeader } from '../../app/components/AppHeader/AppHeader';
-import { CustomizerFooter } from '../../app/components/CustomizerFooter/CustomizerFooter';
-import { CustomizerWorkspace } from '../../app/components/CustomizerWorkspace/CustomizerWorkspace';
-import { Toast, type ToastVariant } from '../../app/components/Toast/Toast';
-import { useCustomizerPageState } from '../../app/hooks/useCustomizerPageState';
-import { applyPrintAppearanceOverrides } from '../../entities/keychain';
-import { ExportDialog, buildPreflightReport } from '../../features/export';
-import { t, type Locale } from '../../infrastructure/i18n';
+import { AppHeader } from '@/app/components/AppHeader/AppHeader';
+import { CustomizerFooter } from '@/app/components/CustomizerFooter/CustomizerFooter';
+import { CustomizerWorkspace } from '@/app/components/CustomizerWorkspace/CustomizerWorkspace';
+import { Toast, type ToastVariant } from '@/app/components/Toast/Toast';
+import { useCustomizerPageState } from '@/app/hooks/useCustomizerPageState';
+import { applyPrintAppearanceOverrides } from '@/entities/keychain/model/types';
+
+import type { Locale } from '../../infrastructure/i18n/config';
+
+import { ExportDialog } from '../../features/export/components/ExportDialog/ExportDialog';
+import { buildPreflightReport } from '../../features/export/model/preflight';
+import { t } from '../../infrastructure/i18n/utils';
 import { parseCustomizerRoute } from './model/parseCustomizerRoute';
 import './CustomizerPage.module.css';
 import '../../app/styles/customizer.css';

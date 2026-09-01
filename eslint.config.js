@@ -60,6 +60,11 @@ export default defineConfig([
         {
           allow: [
             // Existing entry points are temporary compatibility APIs; additions must be direct files.
+            'src/entities/keychain/design-document.ts',
+            'src/entities/keychain/fonts/catalog.ts',
+            'src/entities/keychain/fonts/local-provider.ts',
+            'src/entities/keychain/model/types.ts',
+            'src/entities/keychain/templates/template-builder.ts',
             'src/app/App/index.ts',
             'src/app/components/AccountPopover/index.ts',
             'src/app/components/AnalyticsConsentBanner/index.ts',
@@ -175,13 +180,39 @@ export default defineConfig([
     },
   },
   {
-    files: ['src/pages/seo/**/*.{ts,tsx}'],
+    files: ['src/pages/**/*.{ts,tsx}'],
     rules: {
       'no-barrel-files/prefer-source-imports': [
         'error',
         {
           fixStyle: 'preserve-alias',
-          ignore: ['@/features/seo', '@/infrastructure/i18n'],
+          ignore: ['@/features/seo', '@/entities/keychain'],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/pages/**/*.{ts,tsx}'],
+    ignores: [
+      'src/pages/customizer/CustomizerPage.tsx',
+      'src/pages/landing/LandingPage.tsx',
+      'src/pages/profile/ProfilePage.tsx',
+      'src/pages/profile/components/ProfileProjects.tsx',
+      'src/pages/profile/components/ProfileSaveCard.tsx',
+      'src/pages/seo/SeoHomePage.tsx',
+      'src/pages/seo/components/SeoHeader.tsx',
+      'src/pages/seo/components/SeoFooter.tsx',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/app', '@/app/**', '**/app', '**/app/**'],
+              message: 'Pages cannot depend on app implementations; move shared UI to widgets.',
+            },
+          ],
         },
       ],
     },
@@ -194,7 +225,16 @@ export default defineConfig([
         {
           patterns: [
             {
-              group: ['@/app/**', '@/features/**'],
+              group: [
+                '@/app',
+                '@/app/**',
+                '@/features',
+                '@/features/**',
+                '**/app',
+                '**/app/**',
+                '**/features',
+                '**/features/**',
+              ],
               message: 'Entities cannot depend on app or feature layers.',
             },
           ],
@@ -210,7 +250,16 @@ export default defineConfig([
         {
           patterns: [
             {
-              group: ['@/app/**', '@/pages/**', '**/app/**'],
+              group: [
+                '@/app',
+                '@/app/**',
+                '@/pages',
+                '@/pages/**',
+                '**/app',
+                '**/app/**',
+                '**/pages',
+                '**/pages/**',
+              ],
               message: 'Features cannot depend on app or page implementations.',
             },
           ],
@@ -226,7 +275,20 @@ export default defineConfig([
         {
           patterns: [
             {
-              group: ['@/app/**', '@/features/**', '@/entities/**'],
+              group: [
+                '@/app',
+                '@/app/**',
+                '@/features',
+                '@/features/**',
+                '@/entities',
+                '@/entities/**',
+                '**/app',
+                '**/app/**',
+                '**/features',
+                '**/features/**',
+                '**/entities',
+                '**/entities/**',
+              ],
               message: 'Shared code cannot depend on upper layers.',
             },
           ],

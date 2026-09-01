@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 
-import type { KeychainParams } from '../../../domain/keychain/model/types';
+import type { KeychainParams } from '@/entities/keychain/model/types';
 
-import { FONT_CATALOG } from '../../../domain/keychain/fonts/catalog';
-import { isLocalFontId } from '../../../domain/keychain/fonts/local-provider';
+import { FONT_CATALOG } from '@/entities/keychain/fonts/catalog';
+import { isLocalFontId } from '@/entities/keychain/fonts/local-provider';
+
+import type { Locale } from '../../../infrastructure/i18n/config';
+
 import {
   currentUser,
   deleteProject,
@@ -14,8 +17,8 @@ import {
   signUp,
   type HostedProject,
   type HostedUser,
-} from '../../../features/hosted';
-import { t, type Locale } from '../../../infrastructure/i18n';
+} from '../../../features/hosted/api/hosted-api';
+import { t } from '../../../infrastructure/i18n/utils';
 
 const projectParamsForHosting = (params: KeychainParams): Record<string, unknown> => ({
   ...params,

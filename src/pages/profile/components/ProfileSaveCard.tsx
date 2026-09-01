@@ -2,8 +2,11 @@ import type { FormEventHandler } from 'react';
 
 import { Link } from 'react-router';
 
-import { CREATE_ROUTE } from '../../../app/routes';
-import { t, type Locale } from '../../../infrastructure/i18n';
+import { CREATE_ROUTE } from '@/app/routes';
+
+import type { Locale } from '../../../infrastructure/i18n/config';
+
+import { t } from '../../../infrastructure/i18n/utils';
 
 export const ProfileSaveCard = ({
   locale,

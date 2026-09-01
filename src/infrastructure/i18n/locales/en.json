@@ -123,6 +123,7 @@
   "fontGoogleEmpty": "Google Fonts returned no compatible fonts. Try another filter or use the built-in collection.",
   "fontRuntimeLoadFailed": "This font could not be loaded. Your current font remains selected.",
   "retry": "Retry",
+  "routeLoadError": "This page could not be loaded. Try again.",
   "fontSearch": "Search fonts",
   "fontSearchPlaceholder": "Search by font or category",
   "filterFonts": "Filter fonts",

@@ -55,6 +55,10 @@ point; concrete SEO pages are private siblings and are never re-exported from
 that dispatcher. The former `src/legacy` adapter layer has been removed;
 application wiring imports concrete page files directly.
 
+The remaining page-to-application seams are listed explicitly in the ESLint
+configuration as migration exceptions. Do not add new exceptions; move shared
+presentation and orchestration into `widgets` or lower layers first.
+
 The ESLint flat config enforces lower-layer rules, import ordering, and the
 no-barrel rule for new modules. Existing slice entry points are explicitly
 allow-listed while their consumers migrate to direct imports; new compatibility

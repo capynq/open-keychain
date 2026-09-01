@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { encodeDesignDocument } from '../../../domain/keychain/design-document';
-import {
-  DEFAULT_PARAMS,
-  fontDefinition,
-  fontSupportsArticulatedName,
-} from '../../../entities/keychain';
+import { encodeDesignDocument } from '@/entities/keychain/design-document';
+import { fontDefinition, fontSupportsArticulatedName } from '@/entities/keychain/fonts/catalog';
+import { DEFAULT_PARAMS } from '@/entities/keychain/model/types';
+
 import { parseCustomizerRoute } from './parseCustomizerRoute';
 
 describe('parseCustomizerRoute', () => {
