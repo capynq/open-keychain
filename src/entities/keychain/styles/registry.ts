@@ -1,10 +1,11 @@
+import type { StyleId } from '../../../domain/keychain/model/types';
+import type { GeometryWasm } from '../../../infrastructure/geometry/manifold-types';
+
 import {
   buildStyle,
   type StyleBuild,
   type StyleInput,
 } from '../../../domain/keychain/styles/style-builder';
-import type { StyleId } from '../../../domain/keychain/model/types';
-import type { GeometryWasm } from '../../../infrastructure/geometry/manifold-types';
 
 export type StyleBuilder = (wasm: GeometryWasm, input: StyleInput) => StyleBuild;
 

@@ -1,4 +1,5 @@
 import type { TemplateId } from '../../../domain/keychain';
+
 import { templateCreatePath as sharedTemplateCreatePath } from '../../../shared/lib/create-path';
 
 export { createPath } from '../../../shared/lib/create-path';

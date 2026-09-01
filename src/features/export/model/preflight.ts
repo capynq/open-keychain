@@ -1,13 +1,14 @@
-import {
-  DEFAULT_PRINT_PROFILE,
-  printProfileFor,
-  type GeometryConstraints,
-} from '../../../domain/keychain';
 import type {
   GeometryResult,
   PrintAppearance,
   PrintProfile,
   ValidationIssue,
+} from '../../../domain/keychain';
+
+import {
+  DEFAULT_PRINT_PROFILE,
+  printProfileFor,
+  type GeometryConstraints,
 } from '../../../domain/keychain';
 
 export type PreflightStatus = 'generating' | 'ready' | 'ready-with-warnings' | 'blocked';

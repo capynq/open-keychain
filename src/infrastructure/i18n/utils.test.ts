@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { issueMessage, styleName, t } from './utils';
 describe('i18n utilities', () => {
   it('translates messages with interpolation', () => {

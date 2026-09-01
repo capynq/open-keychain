@@ -1,7 +1,8 @@
-import type { Locale } from '../../../../infrastructure/i18n';
-import { issueMessage, t } from '../../../../infrastructure/i18n';
 import type { PrintAppearance } from '../../../../domain/keychain';
+import type { Locale } from '../../../../infrastructure/i18n';
 import type { PreflightReport } from '../../model/preflight';
+
+import { issueMessage, t } from '../../../../infrastructure/i18n';
 
 export const ExportPreflight = ({
   locale,

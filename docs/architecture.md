@@ -13,10 +13,11 @@ top-level directories are the current layer vocabulary:
 | `shared`   | reusable UI, utilities, infrastructure, and types              | `shared`                                             |
 
 Dependencies point downward only. A lower layer must not import an upper
-layer, and slices within a layer should communicate through their public
-`index.ts` API rather than reaching into another slice's internals. Keep
-application composition in `app`; do not move feature decisions into shared
-utilities.
+layer, and slices within a layer should communicate through an explicit public
+API when one is intentionally retained. Avoid adding barrel files for
+convenience; prefer direct source imports so dependency edges stay visible.
+Keep application composition in `app`; do not move feature decisions into
+shared utilities.
 
 ## Composition and models
 
@@ -48,12 +49,14 @@ must not introduce dependencies on those legacy paths. Once the migration is
 complete, remove the adapter exception and enforce the stricter boundary for
 all entities and shared code.
 
-The current `src/pages/*` entrypoints are also transitional: they delegate to
-`src/legacy/pages/*` while route compositions are moved out of `src/app`. New
-page code must not import `app` implementations; the legacy adapters are the
-only temporary exception and are scheduled for deletion.
+Route compositions live in `src/pages/*`, with one page component per directory.
+The SEO dispatcher in `src/pages/seo/SeoPage.tsx` is the sole route-kind entry
+point; concrete SEO pages are private siblings and are never re-exported from
+that dispatcher. The former `src/legacy` adapter layer has been removed;
+application wiring imports concrete page files directly.
 
-The ESLint flat config enforces the immediately actionable lower-layer rules
-for new `entities` and `shared` files. Rules are intentionally scoped to those
-directories during migration so existing application code can be moved in
-small, reviewable steps.
+The ESLint flat config enforces lower-layer rules, import ordering, and the
+no-barrel rule for new modules. Existing slice entry points are explicitly
+allow-listed while their consumers migrate to direct imports; new compatibility
+barrels are rejected. Run `pnpm format:check`, `pnpm lint`, `pnpm typecheck`,
+`pnpm test`, and `pnpm build` before handing off a refactor.

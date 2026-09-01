@@ -1,8 +1,11 @@
 import type { ReactNode } from 'react';
+
 import { Link } from 'react-router';
+
+import type { Locale } from '../../../infrastructure/i18n/config';
+import type { SeoCtaClick } from '../model/types';
+
 import { createPath } from '../../../shared/lib/create-path';
-import type { Locale } from '../../../infrastructure/i18n';
-import type { SeoCtaClick } from '../model';
 
 export const CreateLink = ({
   locale,

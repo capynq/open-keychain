@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
+
 import { useRef } from 'react';
+
 import styles from './DesignCardRail.module.css';
 
 export type DesignCardRailProps = { label: string; className?: string; children: ReactNode };

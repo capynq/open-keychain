@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PARAMS, normalizeParams } from './model/types';
+
 import { decodeDesignDocument, encodeDesignDocument } from './design-document';
+import { DEFAULT_PARAMS, normalizeParams } from './model/types';
 
 describe('design document codec', () => {
   it('round-trips unicode params and appearance', () => {

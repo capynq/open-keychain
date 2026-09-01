@@ -1,4 +1,4 @@
-import type { Faq } from '../model';
+import type { Faq } from '../model/types';
 
 export const FaqList = ({ items }: { items: readonly Faq[] }) => (
   <div className="seo-faq">

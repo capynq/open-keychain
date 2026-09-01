@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+
 import { SEO_PAGE_MANIFEST } from '../src/infrastructure/seo/catalog';
 import { selectLocale } from './helpers';
 
@@ -47,6 +48,24 @@ test('keeps the workflow link anchored on localized SEO home pages', async ({ pa
     .locator('#how-it-works')
     .evaluate((element) => element.getBoundingClientRect().top);
   expect(targetTop).toBeGreaterThanOrEqual(headerBottom - 1);
+});
+
+test('uses the query locale for the root SEO home', async ({ page }) => {
+  await page.goto('/?lang=ru');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(
+    'Превратите имя в вещь для печати.',
+  );
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    'href',
+    'https://open-keychain.com/',
+  );
+  const jsonLd = await page.locator('script[type="application/ld+json"]').textContent();
+  const graph = JSON.parse(jsonLd ?? '{}')['@graph'] as Array<Record<string, unknown>>;
+  expect(graph.find((entry) => entry['@type'] === 'WebPage')).toMatchObject({
+    inLanguage: 'ru',
+    url: 'https://open-keychain.com/',
+  });
 });
 
 test('keeps privacy and unknown routes noindex', async ({ page }) => {

@@ -1,5 +1,7 @@
 import { Link } from 'react-router';
+
 import type { Locale } from '../../../../infrastructure/i18n';
+
 import { t } from '../../../../infrastructure/i18n';
 import { templateCreatePath, type TemplateShowcase } from '../content';
 import styles from './TemplatePreviewCard.module.css';

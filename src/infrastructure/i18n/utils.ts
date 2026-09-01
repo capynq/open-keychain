@@ -1,6 +1,8 @@
 import type { TFunction } from 'i18next';
-import i18n from './config';
+
 import type { Locale } from './config';
+
+import i18n from './config';
 export type { Locale } from './config';
 const keyByIssueCode: Record<string, string> = {
   'empty-text': 'errorEmptyText',

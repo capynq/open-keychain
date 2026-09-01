@@ -1,8 +1,9 @@
-import { ControlsPanel } from '../../../features/customizer';
 import type { Locale } from '../../../infrastructure/i18n';
+import type { CustomizerPageState } from '../../hooks/useCustomizerPageState';
+
+import { ControlsPanel } from '../../../features/customizer';
 import { useAnalytics } from '../../../infrastructure/telemetry';
 import { PreviewPanel } from '../PreviewPanel/PreviewPanel';
-import type { CustomizerPageState } from '../../hooks/useCustomizerPageState';
 import './CustomizerWorkspace.module.css';
 
 export const CustomizerWorkspace = ({

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PARAMS, decodeDesignDocument, normalizeParams } from '../../../entities/keychain';
+
+import { decodeDesignDocument } from '../../../domain/keychain/design-document';
+import { DEFAULT_PARAMS, normalizeParams } from '../../../domain/keychain/model/types';
 import { buildShareUrl } from './share-url';
 
 describe('buildShareUrl', () => {

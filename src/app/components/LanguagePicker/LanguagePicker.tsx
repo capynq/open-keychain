@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+
 import type { Locale } from '../../../infrastructure/i18n';
+
 import { t } from '../../../infrastructure/i18n';
 import styles from './LanguagePicker.module.css';
 

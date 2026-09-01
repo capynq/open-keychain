@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+
 import type { GeometryResult } from '../../../domain/keychain';
+
 import { previewStatus } from './preview-status';
 
 const result = (overrides: Partial<GeometryResult> = {}): GeometryResult => ({

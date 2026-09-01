@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type posthog from 'posthog-js';
-import { AnalyticsContext, type AnalyticsConsent } from '../telemetry-context';
+
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+
 import { sanitizeProperties, type AnalyticsEvent, type AnalyticsProperties } from '../events';
+import { AnalyticsContext, type AnalyticsConsent } from '../telemetry-context';
 import './TelemetryProvider.module.css';
 
 const CONSENT_KEY = 'open-keychain.analytics-consent';

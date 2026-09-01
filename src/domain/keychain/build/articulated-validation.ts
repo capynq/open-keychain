@@ -1,11 +1,12 @@
 import type { Manifold } from '../../../infrastructure/geometry/manifold-types';
+import type { KeychainParams, ValidationIssue } from '../model/types';
+import type { ArticulatedBuild } from '../templates/template-builder';
+
 import {
   MANIFOLD_SCALE,
   asMesh,
   validateMesh,
 } from '../../../infrastructure/geometry/manifold-utils';
-import type { ArticulatedBuild } from '../templates/template-builder';
-import type { KeychainParams, ValidationIssue } from '../model/types';
 
 const hasSolidIntersection = (left: Manifold, right: Manifold): boolean => {
   const intersection = left.intersect(right);

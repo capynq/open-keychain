@@ -1,4 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
+
+import { FONT_CATALOG, isLocalFontId, type KeychainParams } from '../../../domain/keychain';
+import { t, type Locale } from '../../../infrastructure/i18n';
 import {
   currentUser,
   listProjects,
@@ -9,10 +12,8 @@ import {
   type HostedProject,
   type HostedUser,
 } from '../api/hosted-api';
-import { hostedMode } from '../config';
-import { FONT_CATALOG, isLocalFontId, type KeychainParams } from '../../../domain/keychain';
 import { HOSTED_PROJECT_SCHEMA_VERSION } from '../api/hosted-api';
-import { t, type Locale } from '../../../infrastructure/i18n';
+import { hostedMode } from '../config';
 
 export type HostedAccountState = {
   account: HostedUser | undefined;

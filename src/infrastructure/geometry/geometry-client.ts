@@ -1,3 +1,4 @@
+import type { FontDefinition } from '../../domain/keychain/fonts/catalog';
 import type {
   ExportFormat,
   GeometryResult,
@@ -7,8 +8,8 @@ import type {
   WorkerResponse,
   PrintAppearanceOverrides,
 } from '../../domain/keychain/model/types';
+
 import { validateGeometryResult } from '../../domain/keychain/model/types';
-import type { FontDefinition } from '../../domain/keychain/fonts/catalog';
 export class GeometryClient {
   private readonly worker: Worker;
   private nextRequestId = 1;

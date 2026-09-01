@@ -1,4 +1,5 @@
 import type { HostedAccountState } from '../../../features/hosted';
+
 import { t, type Locale } from '../../../infrastructure/i18n';
 import './AccountPopover.module.css';
 

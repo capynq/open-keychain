@@ -1,11 +1,13 @@
-import { Viewer, type PreviewStatus, type SurfacePresetId } from '../../../features/preview';
+import { ResetIconButton } from '@/shared/ui/ResetIconButton';
+
 import type { GeometryResult, PrintAppearanceOverrides } from '../../../domain/keychain';
+
 import { applyPrintAppearanceOverrides } from '../../../domain/keychain';
+import { Viewer, type PreviewStatus, type SurfacePresetId } from '../../../features/preview';
 import { t, type Locale } from '../../../infrastructure/i18n';
-import { ResetIconButton } from '../../../components/ResetIconButton/ResetIconButton';
+import styles from './PreviewPanel.module.css';
 import { PreviewSummary, type PreviewModelInfo } from './PreviewSummary';
 import { SurfacePopover } from './SurfacePopover';
-import styles from './PreviewPanel.module.css';
 
 export type PreviewPanelProps = {
   locale: Locale;

@@ -1,6 +1,5 @@
-import i18n from '@/infrastructure/i18n/config';
 import { Link } from 'react-router';
-import { t, type Locale } from '@/infrastructure/i18n';
+
 import {
   SEO_GUIDE_CATALOG,
   SEO_TEMPLATE_CATALOG,
@@ -11,6 +10,9 @@ import {
   SEO_GUIDE_COPY,
   SEO_HUB_COPY,
 } from '@/features/seo';
+import { t, type Locale } from '@/infrastructure/i18n';
+import i18n from '@/infrastructure/i18n/config';
+
 import styles from './LandingFaq.module.css';
 import '../../../../shared/styles/seo-links.css';
 

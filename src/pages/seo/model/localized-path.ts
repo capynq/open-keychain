@@ -7,8 +7,9 @@ import {
   seoTemplatePath,
   seoTemplatesPath,
   type SeoRoute,
-} from '../../../features/seo';
-import type { Locale } from '../../../infrastructure/i18n';
+} from '@/features/seo';
+
+import type { Locale } from '../../../infrastructure/i18n/config';
 
 /** Return the localized URL for the same SEO route in another locale. */
 export const localizedPath = (route: SeoRoute, locale: Locale): string => {

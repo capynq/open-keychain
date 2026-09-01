@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { ResetIconButton } from '../../../components/ResetIconButton/ResetIconButton';
-import { t, type Locale } from '../../../infrastructure/i18n';
+
+import { ResetIconButton } from '@/shared/ui/ResetIconButton';
+
 import type { SurfacePresetId } from '../../../features/preview';
+
+import { t, type Locale } from '../../../infrastructure/i18n';
 
 const SURFACE_PRESETS: readonly SurfacePresetId[] = ['matte', 'graph', 'dark', 'wood', 'metal'];
 

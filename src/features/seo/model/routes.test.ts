@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { resolveDisplayLocale } from './routes';
 
 describe('SEO locale precedence', () => {

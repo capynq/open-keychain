@@ -7,9 +7,11 @@ import {
   type MutableRefObject,
   type SetStateAction,
 } from 'react';
-import { GeometryClient } from '../../../infrastructure/geometry';
+
 import type { GeometryResult, KeychainParams } from '../../../domain/keychain';
 import type { FontDefinition } from '../../../domain/keychain/fonts/catalog';
+
+import { GeometryClient } from '../../../infrastructure/geometry';
 
 const geometryInputKey = (
   params: KeychainParams,

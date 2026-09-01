@@ -1,9 +1,10 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+
 import { FONT_CATALOG } from '../fonts/catalog';
-import { buildKeychain, createWasm } from './keychain-builder';
 import { DEFAULT_PARAMS, type KeychainParams, type MeshBuffer } from '../model/types';
+import { buildKeychain, createWasm } from './keychain-builder';
 const originalFetch = globalThis.fetch;
 let wasm: Awaited<ReturnType<typeof createWasm>>;
 beforeAll(async () => {

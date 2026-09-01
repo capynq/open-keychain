@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+
+import type { FontNotice } from '../model/customizer-types';
+
 import {
   FONT_CATALOG,
   articulatedFallbackFont,
@@ -12,7 +15,6 @@ import {
   type FontDefinition,
 } from '../../../domain/keychain';
 import {
-  PARAMETER_RANGES,
   hasActiveParameter,
   parameterRange,
   type CustomizerParameter,
@@ -21,8 +23,6 @@ import {
 } from '../../../domain/keychain';
 import { DEFAULT_PARAMS, type KeychainParams, type TemplateId } from '../../../domain/keychain';
 import { STYLE_CATALOG, TEMPLATE_CATALOG } from '../../../domain/keychain';
-import type { FontNotice } from '../model/customizer-types';
-import { resetParamsForSection, type CustomizerResetSection } from '../model/reset';
 import {
   randomizeParams,
   randomizeWithValidation,
@@ -30,6 +30,7 @@ import {
   type RandomizeTransaction,
   type RandomizeValidation,
 } from '../model/randomizer';
+import { resetParamsForSection, type CustomizerResetSection } from '../model/reset';
 
 export const useCustomizerParams = (
   initialParams?: KeychainParams,
@@ -390,5 +391,3 @@ export const useCustomizerParams = (
     canUndo,
   };
 };
-
-export { PARAMETER_RANGES };

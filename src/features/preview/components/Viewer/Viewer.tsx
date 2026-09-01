@@ -1,10 +1,12 @@
+import { ZoomIn, ZoomOut } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
-import { ZoomIn, ZoomOut } from 'lucide-react';
+
 import type { GeometryResult, PrintAppearance } from '../../../../domain/keychain';
+
 import { t, type Locale } from '../../../../infrastructure/i18n';
 import {
   applyCameraPose,

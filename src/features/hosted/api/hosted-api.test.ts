@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
 import { currentUser, deleteProject, signOut } from './hosted-api';
 
 describe('hosted API project mutations', () => {

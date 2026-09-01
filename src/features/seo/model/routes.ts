@@ -1,4 +1,5 @@
 import type { Location } from 'react-router';
+
 import { detectLocale, supportedLocales, type Locale } from '@/infrastructure/i18n';
 import {
   SEO_GUIDE_CATALOG,

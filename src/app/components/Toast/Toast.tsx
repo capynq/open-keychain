@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+
 import styles from './Toast.module.css';
 
 export type ToastVariant = 'success' | 'manual' | 'error';

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+
 import { ROUTE_MANIFEST } from '../src/app/routes';
 import {
   waitForImageToLoad,

@@ -1,18 +1,18 @@
-import { STYLE_CATALOG } from './styles/style-builder';
-import { TEMPLATE_CATALOG } from './templates/template-builder';
+import { FONT_CATALOG } from './fonts/catalog';
 import {
   hasActiveParameter,
   PARAMETER_RANGES,
   parameterRange,
   type ShapeParameter,
 } from './model/parameters';
-import { FONT_CATALOG } from './fonts/catalog';
 import {
   DEFAULT_PARAMS,
   normalizeParams,
   type KeychainParams,
   type PrintAppearanceOverrides,
 } from './model/types';
+import { STYLE_CATALOG } from './styles/style-builder';
+import { TEMPLATE_CATALOG } from './templates/template-builder';
 
 export type DesignDocument = {
   version: 5;

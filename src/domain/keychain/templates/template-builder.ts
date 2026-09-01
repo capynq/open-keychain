@@ -1,4 +1,11 @@
+import type {
+  CrossSection,
+  DisposableGeometry,
+  GeometryWasm,
+  Manifold,
+} from '../../../infrastructure/geometry/manifold-types';
 import type { StyleId, TemplateId } from '../model/types';
+
 import {
   DEFAULT_GEOMETRY_CONSTRAINTS,
   DEFAULT_PRINT_PROFILE,
@@ -16,12 +23,6 @@ import {
   type StyleBuild,
   type StyleInput,
 } from '../styles/style-builder';
-import type {
-  CrossSection,
-  DisposableGeometry,
-  GeometryWasm,
-  Manifold,
-} from '../../../infrastructure/geometry/manifold-types';
 type Solid = Manifold;
 type Vec2 = [number, number];
 const MANIFOLD_SCALE = 1000;

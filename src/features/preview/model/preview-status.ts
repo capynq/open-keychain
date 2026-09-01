@@ -1,4 +1,5 @@
 import type { GeometryResult, ValidationIssue } from '../../../domain/keychain';
+
 import { issueMessage, t, type Locale } from '../../../infrastructure/i18n';
 
 export type PreviewFixTarget = 'design' | 'print' | 'essentials';

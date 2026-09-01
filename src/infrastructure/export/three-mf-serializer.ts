@@ -1,4 +1,5 @@
 import { zipSync, strToU8 } from 'fflate';
+
 import {
   DEFAULT_PRINT_APPEARANCE,
   type MeshBuffer,

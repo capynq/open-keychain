@@ -1,5 +1,6 @@
-import { encodeDesignDocument } from '../../../entities/keychain';
 import type { KeychainParams, PrintAppearanceOverrides } from '../../../entities/keychain';
+
+import { encodeDesignDocument } from '../../../domain/keychain/design-document';
 
 export const buildShareUrl = (
   locationHref: string,

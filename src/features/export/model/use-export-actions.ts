@@ -1,7 +1,5 @@
 import { useRef, useState, type MutableRefObject, type Dispatch, type SetStateAction } from 'react';
-import { completeExportIntent, requestExportIntent } from '../../hosted/api/hosted-api';
-import { hostedMode } from '../../hosted/config';
-import type { GeometryClient } from '../../../infrastructure/geometry';
+
 import type {
   ExportFormat,
   GeometryResult,
@@ -10,7 +8,11 @@ import type {
   PrintAppearanceOverrides,
 } from '../../../domain/keychain';
 import type { FontDefinition } from '../../../domain/keychain/fonts/catalog';
+import type { GeometryClient } from '../../../infrastructure/geometry';
+
 import { useAnalytics } from '../../../infrastructure/telemetry';
+import { completeExportIntent, requestExportIntent } from '../../hosted/api/hosted-api';
+import { hostedMode } from '../../hosted/config';
 
 export type ExportActionsState = {
   downloading: boolean;

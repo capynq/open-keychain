@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+
 import { selectLocale, waitForImageToLoad, watchBrowserErrors } from './helpers';
 
 const carousel = '.configurator-carousel';

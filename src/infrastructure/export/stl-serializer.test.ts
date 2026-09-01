@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { serializeBinaryStl } from './stl-serializer';
 describe('binary STL export', () => {
   it('writes a valid single-triangle binary STL', () => {

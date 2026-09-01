@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { STYLE_BUILDERS, STYLE_CATALOG, TEMPLATE_BUILDERS, TEMPLATE_CATALOG } from './index';
 
 describe('keychain entity registries', () => {

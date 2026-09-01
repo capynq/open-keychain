@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { resolveSeoRoute } from './catalog';
+import { describe, expect, it } from 'vitest';
+
 import { appSeoCanonical, buildSeoJsonLd, resolveAppSeoUrl, seoOgImagePath } from './app-metadata';
+import { resolveSeoRoute } from './catalog';
 
 describe('customizer SEO URL resolver', () => {
   it('accepts only localized bare and template URLs', () => {

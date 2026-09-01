@@ -1,9 +1,21 @@
-import { SeoGuidePage } from './SeoGuidePage';
-import { SeoHomePage } from './SeoHomePage';
-import { SeoHubPage } from './SeoHubPage';
-import { SeoTemplatePage } from './SeoTemplatePage';
-import type { SeoCtaClick, SeoLocaleChange } from './model';
+import { lazy } from 'react';
+
 import type { SeoRoute } from '@/features/seo';
+
+import type { SeoCtaClick, SeoLocaleChange } from './model/types';
+
+const SeoGuidePage = lazy(() =>
+  import('./SeoGuidePage').then(({ SeoGuidePage: page }) => ({ default: page })),
+);
+const SeoHomePage = lazy(() =>
+  import('./SeoHomePage').then(({ SeoHomePage: page }) => ({ default: page })),
+);
+const SeoHubPage = lazy(() =>
+  import('./SeoHubPage').then(({ SeoHubPage: page }) => ({ default: page })),
+);
+const SeoTemplatePage = lazy(() =>
+  import('./SeoTemplatePage').then(({ SeoTemplatePage: page }) => ({ default: page })),
+);
 
 export const SeoPage = ({
   route,

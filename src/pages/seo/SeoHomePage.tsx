@@ -1,15 +1,20 @@
-import { t, type Locale } from '../../infrastructure/i18n';
-import {
-  ConfiguratorShowcase,
-  LandingFaq,
-  LandingRunModes,
-  LandingTemplates,
-  LandingTrust,
-  LandingWorkflow,
-} from '@/components/landing/sections';
-import { CreateLink, SeoFooter, SeoHeader, SeoShell } from './components';
-import type { SeoCtaClick, SeoLocaleChange } from './model';
 import type { SeoRoute } from '@/features/seo';
+
+import { ConfiguratorShowcase } from '@/app/components/landing/ConfiguratorShowcase/ConfiguratorShowcase';
+import { LandingFaq } from '@/app/components/landing/LandingFaq/LandingFaq';
+import { LandingRunModes } from '@/app/components/landing/LandingRunModes/LandingRunModes';
+import { LandingTemplates } from '@/app/components/landing/LandingTemplates/LandingTemplates';
+import { LandingTrust } from '@/app/components/landing/LandingTrust/LandingTrust';
+import { LandingWorkflow } from '@/app/components/landing/LandingWorkflow/LandingWorkflow';
+
+import type { SeoCtaClick, SeoLocaleChange } from './model/types';
+
+import { type Locale } from '../../infrastructure/i18n/config';
+import { t } from '../../infrastructure/i18n/utils';
+import { CreateLink } from './components/SeoCta';
+import { SeoFooter } from './components/SeoFooter';
+import { SeoHeader } from './components/SeoHeader';
+import { SeoShell } from './components/SeoShell';
 
 export const SeoHomePage = ({
   locale,

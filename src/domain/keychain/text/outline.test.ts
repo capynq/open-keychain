@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { flattenText, layoutText } from './outline';
 describe('font coordinate normalization', () => {
   it('maps OpenType Y-down outlines into world-space Y-up', () => {

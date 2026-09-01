@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+
 import './InfoBlock.module.css';
 
 export const InfoBlock = ({

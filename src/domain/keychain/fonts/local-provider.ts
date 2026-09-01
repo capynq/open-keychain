@@ -1,4 +1,5 @@
 import * as opentype from 'opentype.js';
+
 import type { FontDefinition, FontScript } from './catalog';
 
 declare global {

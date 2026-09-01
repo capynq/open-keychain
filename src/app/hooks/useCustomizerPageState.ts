@@ -1,16 +1,17 @@
 import { useEffect, useReducer, useRef, useState, type SetStateAction } from 'react';
+
 import {
   DEFAULT_PARAMS,
   normalizeParams,
   type KeychainParams,
   type PrintAppearanceOverrides,
 } from '../../entities/keychain';
-import { styleName, templateName, type Locale } from '../../infrastructure/i18n';
 import { useCustomizerParams, useGeometryGeneration } from '../../features/customizer';
 import { useExportActions } from '../../features/export';
 import { useHostedAccount } from '../../features/hosted';
 import { previewStatus, type SurfacePresetId } from '../../features/preview';
 import { useShareDesign } from '../../features/share';
+import { styleName, templateName, type Locale } from '../../infrastructure/i18n';
 import { useAnalytics } from '../../infrastructure/telemetry';
 
 export const useCustomizerPageState = (

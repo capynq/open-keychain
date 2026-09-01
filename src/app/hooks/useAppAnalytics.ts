@@ -1,8 +1,11 @@
-import { useEffect } from 'react';
 import type { Location } from 'react-router';
-import { resolveSeoRoute } from '../../infrastructure/seo/catalog';
-import type { useAnalytics } from '../../infrastructure/telemetry';
+
+import { useEffect } from 'react';
+
 import type { Locale } from '../../infrastructure/i18n';
+import type { useAnalytics } from '../../infrastructure/telemetry';
+
+import { resolveSeoRoute } from '../../infrastructure/seo/catalog';
 
 type AnalyticsTrack = ReturnType<typeof useAnalytics>['track'];
 

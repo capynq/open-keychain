@@ -1,5 +1,4 @@
 export * from '../../infrastructure/seo/catalog';
-export * from '../../infrastructure/seo/catalog';
 export {
   LEGACY_PRIVACY_PATH,
   PRIVACY_PATH,

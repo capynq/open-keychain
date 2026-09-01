@@ -1,9 +1,13 @@
 import { useNavigate } from 'react-router';
-import { t, type Locale } from '../../../infrastructure/i18n';
-import { seoGuidesPath, seoHomePath, seoTemplatesPath, type SeoRoute } from '../../../features/seo';
-import { LandingNavigationHeader } from '../../../components/LandingNavigationHeader/LandingNavigationHeader';
-import { localizedPath } from '../model';
-import type { SeoLocaleChange } from '../model';
+
+import { LandingNavigationHeader } from '@/app/components/LandingNavigationHeader/LandingNavigationHeader';
+import { seoGuidesPath, seoHomePath, seoTemplatesPath, type SeoRoute } from '@/features/seo';
+
+import type { SeoLocaleChange } from '../model/types';
+
+import { type Locale } from '../../../infrastructure/i18n/config';
+import { t } from '../../../infrastructure/i18n/utils';
+import { localizedPath } from '../model/localized-path';
 
 export const SeoHeader = ({
   locale,

@@ -1,7 +1,8 @@
 import { unzipSync, strFromU8 } from 'fflate';
 import { describe, expect, it } from 'vitest';
-import { serializeThreeMf } from './three-mf-serializer';
+
 import { ARTICULATED_PRINT_APPEARANCE, type MeshBuffer } from '../../domain/keychain/model/types';
+import { serializeThreeMf } from './three-mf-serializer';
 const triangle: MeshBuffer = {
   positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
   indices: new Uint32Array([0, 1, 2]),

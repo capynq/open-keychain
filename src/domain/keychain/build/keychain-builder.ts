@@ -1,19 +1,24 @@
 import Module from 'manifold-3d';
 import * as opentype from 'opentype.js';
+
+import type { CrossSection, GeometryWasm } from '../../../infrastructure/geometry/manifold-types';
+import type { StandardStyledGeometry } from './styled-types';
+
+import {
+  MANIFOLD_SCALE,
+  asMesh,
+  disposeGeometry,
+  finiteBounds,
+  mergeMeshes,
+  sectionArea,
+  validateMesh,
+} from '../../../infrastructure/geometry/manifold-utils';
 import {
   effectiveFontWeightMm,
   fontDefinition,
   fontSupportsArticulatedName,
   type FontDefinition,
 } from '../fonts/catalog';
-import { flattenText, hasRequiredGlyphs, layoutText, type GlyphOutline } from '../text/outline';
-import {
-  buildTemplate,
-  isArticulatedBuild,
-  releaseArticulatedBuild,
-  type ArticulatedBuild,
-  type TemplateBuild,
-} from '../templates/template-builder';
 import {
   ARTICULATED_PRINT_APPEARANCE,
   DEFAULT_GEOMETRY_CONSTRAINTS,
@@ -29,20 +34,17 @@ import {
   type MeshBuffer,
   type ValidationIssue,
 } from '../model/types';
-import type { CrossSection, GeometryWasm } from '../../../infrastructure/geometry/manifold-types';
-import { validateArticulatedBuild } from './articulated-validation';
-import { buildNameplate } from '../templates/nameplate-builder';
-import type { StandardStyledGeometry } from './styled-types';
 import { archWarp } from '../styles/style-builder';
+import { buildNameplate } from '../templates/nameplate-builder';
 import {
-  MANIFOLD_SCALE,
-  asMesh,
-  disposeGeometry,
-  finiteBounds,
-  mergeMeshes,
-  sectionArea,
-  validateMesh,
-} from '../../../infrastructure/geometry/manifold-utils';
+  buildTemplate,
+  isArticulatedBuild,
+  releaseArticulatedBuild,
+  type ArticulatedBuild,
+  type TemplateBuild,
+} from '../templates/template-builder';
+import { flattenText, hasRequiredGlyphs, layoutText, type GlyphOutline } from '../text/outline';
+import { validateArticulatedBuild } from './articulated-validation';
 const MAX_WIDTH_MM = 120;
 const MIN_TEXT_HEIGHT_MM = 12;
 const WIDTH_FIT_ITERATIONS = 6;

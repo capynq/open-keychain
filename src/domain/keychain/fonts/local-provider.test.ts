@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { fontDefinitionFromBytes, isLocalFontId } from './local-provider';
 import { readFileSync } from 'node:fs';
+import { describe, expect, it } from 'vitest';
+
+import { fontDefinitionFromBytes, isLocalFontId } from './local-provider';
 
 describe('local font metadata', () => {
   it('uses OpenType names and marks imported fonts as non-articulated', () => {

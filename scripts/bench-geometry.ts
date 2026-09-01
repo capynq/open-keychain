@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
+
 import { buildKeychain, createWasm } from '../src/domain/keychain/build/keychain-builder';
 import { DEFAULT_PARAMS } from '../src/domain/keychain/model/types';
 const originalFetch = globalThis.fetch;

@@ -1,7 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
 import type { Locale } from '@/infrastructure/i18n';
+
 import { t } from '@/infrastructure/i18n';
+
 import styles from './ConfiguratorShowcase.module.css';
 
 type Slide = {

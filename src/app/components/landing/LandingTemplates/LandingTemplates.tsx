@@ -1,5 +1,7 @@
 import type { Locale } from '@/infrastructure/i18n';
+
 import { t } from '@/infrastructure/i18n';
+
 import { TEMPLATE_SHOWCASE } from '../content';
 import { LandingSectionHeading } from '../LandingSectionHeading/LandingSectionHeading';
 import { TemplatePreviewCard } from '../TemplatePreviewCard/TemplatePreviewCard';

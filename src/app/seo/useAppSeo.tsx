@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { t, type Locale } from '../../infrastructure/i18n';
+
 import {
   appSeoCanonical,
   appSeoCopy,
@@ -14,9 +14,9 @@ import {
   SEO_TEMPLATE_CATALOG,
   type SeoRoute,
 } from '@/features/seo';
-import { SeoSocialImageTags } from './SeoSocialImageTags';
 
-export { detectInitialLocale, localeFromSearch } from '@/features/seo';
+import { t, type Locale } from '../../infrastructure/i18n';
+import { SeoSocialImageTags } from './SeoSocialImageTags';
 
 const SITE_URL = 'https://open-keychain.com';
 

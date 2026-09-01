@@ -1,3 +1,8 @@
+import { ChevronLeft, ChevronRight, Info, RefreshCw } from 'lucide-react';
+import { useMemo, useState } from 'react';
+
+import type { KeychainParams } from '@/domain/keychain';
+
 import {
   FONT_CATEGORY_ORDER,
   FONT_CATALOG,
@@ -9,7 +14,7 @@ import {
   type ShapeParameter,
   type FontCategory,
 } from '@/domain/keychain';
-import type { KeychainParams } from '@/domain/keychain';
+import { type useCustomizerParams } from '@/features/customizer/hooks/useCustomizerParams';
 import {
   styleDescription,
   styleName,
@@ -18,18 +23,16 @@ import {
   t,
   type Locale,
 } from '@/infrastructure/i18n';
-import { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Info, RefreshCw } from 'lucide-react';
-import { ResetIconButton } from '@/components/ResetIconButton/ResetIconButton';
-import { IconButton } from '@/app/components/IconButton/IconButton';
-import { type useCustomizerParams } from '@/features/customizer/hooks/useCustomizerParams';
-import { RangeControl } from '../RangeControl/RangeControl';
+import { IconButton } from '@/shared/ui/IconButton';
+import { ResetIconButton } from '@/shared/ui/ResetIconButton';
+
+import { stylePreviewAsset, TEMPLATE_PREVIEW_ASSETS } from '../design-card-assets';
 import { DesignCardRail } from '../DesignCardRail/DesignCardRail';
 import { DesignSelectCard } from '../DesignSelectCard/DesignSelectCard';
-import { stylePreviewAsset, TEMPLATE_PREVIEW_ASSETS } from '../design-card-assets';
+import { RangeControl } from '../RangeControl/RangeControl';
+import styles from './ControlsPanel.module.css';
 import { ParameterGroupList } from './ParameterGroupList';
 import { useControlsScrollState } from './useControlsScrollState';
-import styles from './ControlsPanel.module.css';
 
 type FontSourceTab = 'bundled' | 'google' | 'local';
 type FontTarget = 'primary' | 'secondary';

@@ -1,10 +1,11 @@
+import type { StyleId, TemplateId } from '../../../domain/keychain/model/types';
+import type { StyleInput } from '../../../domain/keychain/styles/style-builder';
+import type { GeometryWasm } from '../../../infrastructure/geometry/manifold-types';
+
 import {
   buildTemplate,
   type TemplateBuild,
 } from '../../../domain/keychain/templates/template-builder';
-import type { StyleId, TemplateId } from '../../../domain/keychain/model/types';
-import type { StyleInput } from '../../../domain/keychain/styles/style-builder';
-import type { GeometryWasm } from '../../../infrastructure/geometry/manifold-types';
 
 export type TemplateBuilder = (
   wasm: GeometryWasm,

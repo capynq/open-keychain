@@ -1,24 +1,29 @@
 import { lazy, Suspense, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router';
-import { useAnalytics } from '../../infrastructure/telemetry';
-import { setLocale, type Locale } from '../../infrastructure/i18n';
-import { CREATE_ROUTE, LANDING_ROUTE, PROFILE_ROUTE } from '../routes';
-import { hostedMode } from '../../features/hosted/config';
-import './App.module.css';
-import '../styles/app.css';
-import '../styles/landing.css';
-import { AnalyticsConsentBanner } from '../components/AnalyticsConsentBanner/AnalyticsConsentBanner';
-import { RouteLoading } from '../components/RouteLoading/RouteLoading';
-import { AppSeoHead, useAppSeo } from '../seo/useAppSeo';
-import { useAppAnalytics } from '../hooks/useAppAnalytics';
-import { useAppNavigationEffects } from '../hooks/useAppNavigationEffects';
-import { PrivacyPage, SeoNotFoundPage, SeoPage } from '@/pages/seo';
+
 import {
   detectInitialLocale,
   resolveAppSeoUrl,
   resolveDisplayLocale,
   resolveSeoRoute,
 } from '@/features/seo';
+import { PrivacyPage } from '@/pages/seo/PrivacyPage';
+import { SeoNotFoundPage } from '@/pages/seo/SeoNotFoundPage';
+import { SeoPage } from '@/pages/seo/SeoPage';
+
+import { hostedMode } from '../../features/hosted/config';
+import { type Locale } from '../../infrastructure/i18n/config';
+import { setLocale } from '../../infrastructure/i18n/utils';
+import './App.module.css';
+import '../styles/app.css';
+import '../styles/landing.css';
+import { useAnalytics } from '../../infrastructure/telemetry/useTelemetry';
+import { AnalyticsConsentBanner } from '../components/AnalyticsConsentBanner/AnalyticsConsentBanner';
+import { RouteLoading } from '../components/RouteLoading/RouteLoading';
+import { useAppAnalytics } from '../hooks/useAppAnalytics';
+import { useAppNavigationEffects } from '../hooks/useAppNavigationEffects';
+import { CREATE_ROUTE, LANDING_ROUTE, PROFILE_ROUTE } from '../routes';
+import { AppSeoHead, useAppSeo } from '../seo/useAppSeo';
 
 const LandingPage = lazy(() =>
   import('@/pages/landing/LandingPage').then(({ LandingPage: page }) => ({ default: page })),
@@ -152,7 +157,11 @@ const App = () => {
 
               return seoRoute ? (
                 <SeoPage
-                  route={seoRoute}
+                  route={
+                    seoRoute.kind === 'home' && seoRoute.path === '/'
+                      ? { ...seoRoute, locale: displayLocale }
+                      : seoRoute
+                  }
                   onCtaClick={onSeoCtaClick}
                   onLocaleChange={onSeoLocaleChange}
                 />

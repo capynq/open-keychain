@@ -1,16 +1,17 @@
-import {
-  DEFAULT_PARAMS,
-  articulatedFallbackFont,
-  decodeDesignDocument,
-  fontDefinition,
-  fontSupportsArticulatedName,
-  normalizeParams,
-  TEMPLATE_CATALOG,
-} from '../../../entities/keychain';
 import type {
   KeychainParams,
   PrintAppearanceOverrides,
   TemplateId,
+} from '../../../entities/keychain';
+
+import { decodeDesignDocument } from '../../../domain/keychain/design-document';
+import {
+  DEFAULT_PARAMS,
+  articulatedFallbackFont,
+  fontDefinition,
+  fontSupportsArticulatedName,
+  normalizeParams,
+  TEMPLATE_CATALOG,
 } from '../../../entities/keychain';
 
 type CustomizerLocationState = {

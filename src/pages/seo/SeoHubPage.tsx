@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { t, type Locale } from '../../infrastructure/i18n';
+
 import {
   SEO_GUIDE_CATALOG,
   SEO_GUIDE_COPY,
@@ -9,8 +9,15 @@ import {
   seoTemplatePath,
   type SeoRoute,
 } from '@/features/seo';
-import { CreateLink, SeoFooter, SeoHeader, SeoShell } from './components';
-import type { SeoCtaClick, SeoLocaleChange } from './model';
+
+import type { SeoCtaClick, SeoLocaleChange } from './model/types';
+
+import { type Locale } from '../../infrastructure/i18n/config';
+import { t } from '../../infrastructure/i18n/utils';
+import { CreateLink } from './components/SeoCta';
+import { SeoFooter } from './components/SeoFooter';
+import { SeoHeader } from './components/SeoHeader';
+import { SeoShell } from './components/SeoShell';
 import { templateTranslationKey } from './lib/translation';
 
 export const SeoHubPage = ({

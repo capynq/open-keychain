@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 import sharp from 'sharp';
+
 import {
   assertPngCapture,
   assertVisibleModel,

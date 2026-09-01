@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+
 import { selectLocale } from './helpers';
 
 test('shows the expanded built-in catalog and optional filters', async ({ page }) => {

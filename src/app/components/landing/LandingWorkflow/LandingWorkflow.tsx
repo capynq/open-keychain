@@ -1,5 +1,7 @@
 import type { Locale } from '@/infrastructure/i18n';
+
 import { t } from '@/infrastructure/i18n';
+
 import { HOW_IT_WORKS } from '../content';
 import { LandingSectionHeading } from '../LandingSectionHeading/LandingSectionHeading';
 import styles from './LandingWorkflow.module.css';

@@ -1,6 +1,7 @@
 import type { GeometryResult } from '../../../domain/keychain';
-import { t, type Locale } from '../../../infrastructure/i18n';
 import type { PreviewStatus } from '../../../features/preview';
+
+import { t, type Locale } from '../../../infrastructure/i18n';
 
 export type PreviewModelInfo = {
   templateId: string;

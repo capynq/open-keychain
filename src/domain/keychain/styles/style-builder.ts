@@ -1,6 +1,7 @@
+import type { CrossSection, GeometryWasm } from '../../../infrastructure/geometry/manifold-types';
 import type { GeometryConstraints, PrintProfile, StyleId, TemplateId } from '../model/types';
 import type { GlyphOutline } from '../text/outline';
-import type { CrossSection, GeometryWasm } from '../../../infrastructure/geometry/manifold-types';
+
 import { sectionArea } from '../../../infrastructure/geometry/manifold-utils';
 export type Vec2 = [number, number];
 const MAGNET_DIMENSIONS = {

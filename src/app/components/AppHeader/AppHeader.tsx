@@ -1,7 +1,9 @@
 import { lazy, Suspense } from 'react';
-import type { HostedAccountState } from '../../../features/hosted';
+
 import type { KeychainParams } from '../../../domain/keychain';
+import type { HostedAccountState } from '../../../features/hosted';
 import type { Locale } from '../../../infrastructure/i18n';
+
 import { LandingNavigationHeader } from '../LandingNavigationHeader/LandingNavigationHeader';
 import './AppHeader.module.css';
 

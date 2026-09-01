@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+
 import '../SeoPage.css';
 import '../../../shared/styles/seo-links.css';
 

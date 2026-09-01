@@ -1,11 +1,14 @@
 import { Link } from 'react-router';
-import { hostedMode } from '@/features/hosted/config';
+
 import type { Locale } from '@/infrastructure/i18n';
-import { t } from '@/infrastructure/i18n';
+
 import { PROFILE_ROUTE } from '@/app/routes';
+import { hostedMode } from '@/features/hosted/config';
+import { t } from '@/infrastructure/i18n';
+
 import { BrandMark } from '../BrandMark/BrandMark';
-import { LanguagePicker } from '../LanguagePicker/LanguagePicker';
 import { createPath } from '../landing/content';
+import { LanguagePicker } from '../LanguagePicker/LanguagePicker';
 import styles from './LandingNavigationHeader.module.css';
 
 export type SeoNavigation = {

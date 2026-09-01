@@ -1,4 +1,4 @@
-import type { Locale } from '../../../infrastructure/i18n';
+import type { Locale } from '../../../infrastructure/i18n/config';
 
 export type Faq = { question: string; answer: string };
 

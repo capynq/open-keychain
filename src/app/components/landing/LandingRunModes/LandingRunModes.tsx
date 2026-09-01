@@ -1,5 +1,7 @@
 import type { Locale } from '@/infrastructure/i18n';
+
 import { t } from '@/infrastructure/i18n';
+
 import { RUN_OPTIONS } from '../content';
 import { LandingSectionHeading } from '../LandingSectionHeading/LandingSectionHeading';
 import { RunModeCard } from '../RunModeCard/RunModeCard';

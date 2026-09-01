@@ -1,14 +1,16 @@
-import { hostedMode } from '../../../features/hosted/config';
-import type { HostedAccountState } from '../../../features/hosted';
-import type { KeychainParams } from '../../../domain/keychain';
-import { Link } from 'react-router';
-import type { Locale } from '../../../infrastructure/i18n';
-import { t } from '../../../infrastructure/i18n';
-import { BrandMark } from '../BrandMark/BrandMark';
-import { LanguagePicker } from '../LanguagePicker/LanguagePicker';
-import { PROFILE_ROUTE } from '../../routes';
 import { Download, Share2, Shuffle, Undo2 } from 'lucide-react';
+import { Link } from 'react-router';
+
+import type { KeychainParams } from '../../../domain/keychain';
+import type { HostedAccountState } from '../../../features/hosted';
+import type { Locale } from '../../../infrastructure/i18n';
+
+import { hostedMode } from '../../../features/hosted/config';
+import { t } from '../../../infrastructure/i18n';
+import { PROFILE_ROUTE } from '../../routes';
+import { BrandMark } from '../BrandMark/BrandMark';
 import { IconButton } from '../IconButton/IconButton';
+import { LanguagePicker } from '../LanguagePicker/LanguagePicker';
 import styles from './CustomizerNavigationHeader.module.css';
 
 export const CustomizerNavigationHeader = ({

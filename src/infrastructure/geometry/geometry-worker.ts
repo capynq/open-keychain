@@ -1,6 +1,4 @@
 import { buildKeychain, createWasm } from '../../domain/keychain/build/keychain-builder';
-import { serializeBinaryStl } from '../export/stl-serializer';
-import { serializeThreeMf } from '../export/three-mf-serializer';
 import {
   sanitizeFilename,
   applyPrintAppearanceOverrides,
@@ -8,6 +6,8 @@ import {
   type WorkerRequest,
   type WorkerResponse,
 } from '../../domain/keychain/model/types';
+import { serializeBinaryStl } from '../export/stl-serializer';
+import { serializeThreeMf } from '../export/three-mf-serializer';
 let wasmPromise: ReturnType<typeof createWasm> | undefined;
 const localFonts = new Map<string, Parameters<typeof buildKeychain>[3]>();
 const getWasm = () => {

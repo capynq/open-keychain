@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+
 import { selectLocale } from './helpers';
 const cameraViews = [
   'Home view',

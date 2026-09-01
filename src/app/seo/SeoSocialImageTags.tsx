@@ -1,4 +1,5 @@
 import { SEO_LOCALES } from '@/features/seo';
+
 import type { Locale } from '../../infrastructure/i18n';
 
 const SITE_URL = 'https://open-keychain.com';

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { sanitizeProperties } from './events';
 
 describe('analytics event properties', () => {

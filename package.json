@@ -83,6 +83,8 @@
     "eslint": "10.8.1",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-i18next": "^6.1.5",
+    "eslint-plugin-no-barrel-files": "^2.2.0",
+    "eslint-plugin-perfectionist": "^5.11.0",
     "eslint-plugin-react-hooks": "7.1.1",
     "eslint-plugin-react-refresh": "0.5.4",
     "husky": "^9.1.7",

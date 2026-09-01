@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+
+import { encodeDesignDocument } from '../../../domain/keychain/design-document';
 import {
   DEFAULT_PARAMS,
-  encodeDesignDocument,
   fontDefinition,
   fontSupportsArticulatedName,
 } from '../../../entities/keychain';

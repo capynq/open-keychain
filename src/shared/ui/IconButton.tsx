@@ -1,5 +1,6 @@
-import type { ButtonHTMLAttributes } from 'react';
 import type { LucideIcon } from 'lucide-react';
+import type { ButtonHTMLAttributes } from 'react';
+
 import styles from './IconButton.module.css';
 
 export type IconButtonProps = Omit<

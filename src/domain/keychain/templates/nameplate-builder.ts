@@ -1,4 +1,6 @@
 import type { GeometryWasm, Manifold } from '../../../infrastructure/geometry/manifold-types';
+import type { StandardStyledGeometry } from '../build/styled-types';
+
 import {
   MANIFOLD_SCALE,
   asMesh,
@@ -15,7 +17,6 @@ import {
   type MeshBuffer,
   type ValidationIssue,
 } from '../model/types';
-import type { StandardStyledGeometry } from '../build/styled-types';
 
 const deleteGeometry = disposeGeometry;
 

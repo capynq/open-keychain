@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+
 import { waitForReadyGeometry } from './helpers';
 
 test('reaches the first ready customizer preview within the startup budget', async ({ page }) => {

@@ -1,7 +1,8 @@
-import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+
 import { buildKeychain, createWasm } from '../src/domain/keychain/build/keychain-builder';
 import { DEFAULT_PARAMS, type KeychainParams } from '../src/domain/keychain/model/types';
 import { serializeBinaryStl } from '../src/infrastructure/export/stl-serializer';

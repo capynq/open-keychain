@@ -1,7 +1,12 @@
 import { Link } from 'react-router';
-import { t, type Locale } from '../../infrastructure/i18n';
+
 import { seoHomePath, type SeoRoute } from '@/features/seo';
-import { SeoFooter, SeoHeader, SeoShell } from './components';
+
+import { type Locale } from '../../infrastructure/i18n/config';
+import { t } from '../../infrastructure/i18n/utils';
+import { SeoFooter } from './components/SeoFooter';
+import { SeoHeader } from './components/SeoHeader';
+import { SeoShell } from './components/SeoShell';
 
 const homeRoute = (locale: Locale): SeoRoute & { kind: 'home' } => ({
   kind: 'home',

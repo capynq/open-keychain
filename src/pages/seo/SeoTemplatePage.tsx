@@ -1,9 +1,16 @@
 import { Link } from 'react-router';
-import { t, type Locale } from '../../infrastructure/i18n';
+
 import { SEO_TEMPLATE_CATALOG, type SeoRoute } from '@/features/seo';
 import { templateCreatePath } from '@/shared/lib/create-path';
-import { FaqList, SeoFooter, SeoHeader, SeoShell } from './components';
-import type { Faq, SeoCtaClick, SeoLocaleChange } from './model';
+
+import type { Faq, SeoCtaClick, SeoLocaleChange } from './model/types';
+
+import { type Locale } from '../../infrastructure/i18n/config';
+import { t } from '../../infrastructure/i18n/utils';
+import { FaqList } from './components/FaqList';
+import { SeoFooter } from './components/SeoFooter';
+import { SeoHeader } from './components/SeoHeader';
+import { SeoShell } from './components/SeoShell';
 import { localizedObjects, templateTranslationKey } from './lib/translation';
 
 export const SeoTemplatePage = ({

@@ -1,5 +1,5 @@
-import type { CrossSection, DisposableGeometry, Manifold } from './manifold-types';
 import type { MeshBuffer } from '../../domain/keychain/model/types';
+import type { CrossSection, DisposableGeometry, Manifold } from './manifold-types';
 
 export const MANIFOLD_SCALE = 1000;
 
