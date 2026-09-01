@@ -7,8 +7,6 @@ import {
   resolveDisplayLocale,
   resolveSeoRoute,
 } from '@/features/seo';
-import { PrivacyPage } from '@/pages/seo/PrivacyPage';
-import { SeoNotFoundPage } from '@/pages/seo/SeoNotFoundPage';
 import { SeoPage } from '@/pages/seo/SeoPage';
 
 import { hostedMode } from '../../features/hosted/config';
@@ -35,6 +33,12 @@ const CustomizerPage = lazy(() =>
 );
 const ProfilePage = lazy(() =>
   import('@/pages/profile/ProfilePage').then(({ ProfilePage: page }) => ({ default: page })),
+);
+const PrivacyPage = lazy(() =>
+  import('@/pages/seo/PrivacyPage').then(({ PrivacyPage: page }) => ({ default: page })),
+);
+const SeoNotFoundPage = lazy(() =>
+  import('@/pages/seo/SeoNotFoundPage').then(({ SeoNotFoundPage: page }) => ({ default: page })),
 );
 
 type LocaleSetter = (value: Locale | ((previous: Locale) => Locale)) => void;

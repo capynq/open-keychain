@@ -210,7 +210,7 @@ export default defineConfig([
         {
           patterns: [
             {
-              group: ['@/app/**', '@/pages/**', '../app/**', '../../app/**', '../../../app/**'],
+              group: ['@/app/**', '@/pages/**', '**/app/**'],
               message: 'Features cannot depend on app or page implementations.',
             },
           ],

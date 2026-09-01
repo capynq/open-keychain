@@ -1,11 +1,12 @@
 import { X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 
+import { IconButton } from '@/shared/ui/IconButton';
+
 import type { PrintAppearance } from '../../../../domain/keychain';
 import type { PreflightReport } from '../../model/preflight';
 import type { ExportActionsState } from '../../model/use-export-actions';
 
-import { IconButton } from '../../../../app/components/IconButton/IconButton';
 import { t, type Locale } from '../../../../infrastructure/i18n';
 import { ExportChoices } from './ExportChoices';
 import { ExportPreflight } from './ExportPreflight';

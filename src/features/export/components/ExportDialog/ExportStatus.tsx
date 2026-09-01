@@ -1,8 +1,9 @@
 import { RefreshCw, X } from 'lucide-react';
 
+import { IconButton } from '@/shared/ui/IconButton';
+
 import type { ExportActionsState } from '../../model/use-export-actions';
 
-import { IconButton } from '../../../../app/components/IconButton/IconButton';
 import { t, type Locale } from '../../../../infrastructure/i18n';
 
 export const ExportStatus = ({
