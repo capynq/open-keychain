@@ -72,8 +72,6 @@ export const useCustomizerParams = (
     ...DEFAULT_PARAMS,
     ...initialParams,
   }));
-  // Keep an eagerly updated snapshot so an async randomization cannot commit
-  // over an edit made while its validation request was pending.
   const paramsRef = useRef(params);
 
   useEffect(() => {

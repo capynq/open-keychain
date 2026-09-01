@@ -1,6 +1,9 @@
 import {
   DEFAULT_PARAMS,
+  articulatedFallbackFont,
   decodeDesignDocument,
+  fontDefinition,
+  fontSupportsArticulatedName,
   normalizeParams,
   TEMPLATE_CATALOG,
 } from '../../../entities/keychain';
@@ -22,6 +25,19 @@ export type CustomizerRouteModel = {
   sharedFontFallback: boolean;
 };
 
+const normalizeInitialParams = (params: KeychainParams): KeychainParams => {
+  const normalized = normalizeParams(params);
+
+  if (
+    normalized.templateId === 'articulated-name' &&
+    !fontSupportsArticulatedName(fontDefinition(normalized.fontId), normalized.text)
+  ) {
+    return { ...normalized, fontId: articulatedFallbackFont(normalized.text).id };
+  }
+
+  return normalized;
+};
+
 export const parseCustomizerRoute = (search: string, state: unknown): CustomizerRouteModel => {
   const projectParams = (state as CustomizerLocationState | null)?.projectParams;
   const searchParams = new URLSearchParams(search);
@@ -31,13 +47,14 @@ export const parseCustomizerRoute = (search: string, state: unknown): Customizer
   const templateId = TEMPLATE_CATALOG.some((template) => template.id === requestedTemplate)
     ? (requestedTemplate as TemplateId)
     : undefined;
-  const initialParams: KeychainParams | undefined =
+  const rawInitialParams: KeychainParams | undefined =
     sharedDocument?.params ??
     (projectParams
-      ? normalizeParams({ ...DEFAULT_PARAMS, ...projectParams } as KeychainParams)
+      ? ({ ...DEFAULT_PARAMS, ...projectParams } as KeychainParams)
       : templateId
-        ? normalizeParams({ ...DEFAULT_PARAMS, templateId })
+        ? { ...DEFAULT_PARAMS, templateId }
         : undefined);
+  const initialParams = rawInitialParams ? normalizeInitialParams(rawInitialParams) : undefined;
 
   return {
     initialParams,

@@ -3,12 +3,18 @@
 }
 
 :global(.landing-template-card) {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   min-height: 304px;
   padding: 12px 12px 20px;
   border: 1px solid #dfddd6;
   border-radius: 14px;
   background: #fffdf8;
+}
+
+:global(.landing-template-card-action) {
+  margin-top: auto;
 }
 
 :global(.landing-template-image-wrap) {

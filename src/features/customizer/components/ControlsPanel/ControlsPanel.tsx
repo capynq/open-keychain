@@ -8,7 +8,6 @@ import {
   MAGNET_POCKET_PRESETS,
   type ShapeParameter,
   type FontCategory,
-  PARAMETER_GROUPS,
 } from '@/domain/keychain';
 import type { KeychainParams } from '@/domain/keychain';
 import {
@@ -19,7 +18,7 @@ import {
   t,
   type Locale,
 } from '@/infrastructure/i18n';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Info, RefreshCw } from 'lucide-react';
 import { ResetIconButton } from '@/components/ResetIconButton/ResetIconButton';
 import { IconButton } from '@/app/components/IconButton/IconButton';
@@ -28,6 +27,8 @@ import { RangeControl } from '../RangeControl/RangeControl';
 import { DesignCardRail } from '../DesignCardRail/DesignCardRail';
 import { DesignSelectCard } from '../DesignSelectCard/DesignSelectCard';
 import { stylePreviewAsset, TEMPLATE_PREVIEW_ASSETS } from '../design-card-assets';
+import { ParameterGroupList } from './ParameterGroupList';
+import { useControlsScrollState } from './useControlsScrollState';
 import styles from './ControlsPanel.module.css';
 
 type FontSourceTab = 'bundled' | 'google' | 'local';
@@ -71,8 +72,6 @@ export const ControlsPanel = ({
     rangeFor,
   } = customizer;
   const [fontSource, setFontSource] = useState<FontSourceTab>('bundled');
-  // This is intentionally session-local: selecting a target changes where the
-  // browser applies a font, but is not part of the design document.
   const [fontTarget, setFontTarget] = useState<FontTarget>('primary');
   const [fontBrowserState, setFontBrowserState] = useState(INITIAL_FONT_BROWSER_STATE);
   const [fontLoadError, setFontLoadError] = useState(false);
@@ -83,8 +82,7 @@ export const ControlsPanel = ({
   const [openCategories, setOpenCategories] = useState<Set<FontCategory>>(
     () => new Set(FONT_CATEGORY_ORDER),
   );
-  const controlsRef = useRef<HTMLElement>(null);
-  const [scrollState, setScrollState] = useState<'top' | 'middle' | 'bottom' | 'none'>('none');
+  const { controlsRef, scrollState } = useControlsScrollState();
   const fileSystemPickerAvailable =
     typeof window !== 'undefined' && typeof window.showOpenFilePicker === 'function';
   const fontsPerPage = 12;
@@ -191,30 +189,6 @@ export const ControlsPanel = ({
   const resetActiveFontLabel =
     activeFontTarget === 'secondary' ? t(locale, 'resetSubtitle') : t(locale, 'resetFont');
 
-  useEffect(() => {
-    const controls = controlsRef.current;
-    if (!controls) return undefined;
-    const updateScrollState = (): void => {
-      const atTop = controls.scrollTop <= 1;
-      const atBottom = controls.scrollHeight - controls.clientHeight - controls.scrollTop <= 1;
-      setScrollState(
-        controls.scrollHeight <= controls.clientHeight
-          ? 'none'
-          : atTop
-            ? 'top'
-            : atBottom
-              ? 'bottom'
-              : 'middle',
-      );
-    };
-    updateScrollState();
-    controls.addEventListener('scroll', updateScrollState, { passive: true });
-    window.addEventListener('resize', updateScrollState);
-    return () => {
-      controls.removeEventListener('scroll', updateScrollState);
-      window.removeEventListener('resize', updateScrollState);
-    };
-  }, []);
   const activateFontSource = (source: FontSourceTab): void => {
     setFontSource(source);
     if (source === 'google' && !customizer.googleFonts.length && !customizer.googleError)
@@ -550,7 +524,7 @@ export const ControlsPanel = ({
             >
               {MAGNET_POCKET_PRESETS.map((preset) => (
                 <option key={preset.id} value={preset.id}>
-                  {preset.id} mm
+                  {preset.id} {t(locale, 'millimeterUnit')}
                 </option>
               ))}
             </select>
@@ -946,31 +920,13 @@ export const ControlsPanel = ({
             </div>
           )}
         </div>
-        <div className="control-subsection shape-figure-settings" data-testid="figure-settings">
-          <h3>{t(locale, 'figureSettings')}</h3>
-          {PARAMETER_GROUPS.map((group) => {
-            const controls = group.parameters.map(renderParameter).filter(Boolean);
-            if (!controls.length) return null;
-            return (
-              <div className="parameter-group" data-parameter-group={group.key} key={group.key}>
-                <h3>
-                  {t(locale, `parameterGroup${group.key[0].toUpperCase()}${group.key.slice(1)}`)}
-                </h3>
-                <div className="range-grid">{controls}</div>
-              </div>
-            );
-          })}
-          {showsParameter('plantAccentEnabled') && (
-            <label className="check-control">
-              <input
-                type="checkbox"
-                checked={params.plantAccentEnabled}
-                onChange={(event) => update('plantAccentEnabled', event.target.checked)}
-              />
-              <span>{t(locale, 'plantAccents')}</span>
-            </label>
-          )}
-        </div>
+        <ParameterGroupList
+          locale={locale}
+          params={params}
+          showsParameter={showsParameter}
+          update={update}
+          renderParameter={renderParameter}
+        />
       </section>
       <button
         type="button"

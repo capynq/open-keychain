@@ -11,9 +11,7 @@ export const CustomizerWorkspace = ({
 }: {
   locale: Locale;
   state: CustomizerPageState;
-}) => <WorkspaceContent locale={locale} state={state} />;
-
-const WorkspaceContent = ({ locale, state }: { locale: Locale; state: CustomizerPageState }) => {
+}) => {
   const { track } = useAnalytics();
   const setSurface = (preset: CustomizerPageState['surfacePreset']): void => {
     state.setSurfacePreset(preset);

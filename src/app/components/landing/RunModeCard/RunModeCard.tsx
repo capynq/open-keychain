@@ -1,8 +1,7 @@
 import { Link } from 'react-router';
 import type { Locale } from '../../../../infrastructure/i18n';
 import { t } from '../../../../infrastructure/i18n';
-import { CREATE_ROUTE } from '../../../routes';
-import type { RunOption } from '../content';
+import { createPath, type RunOption } from '../content';
 import styles from './RunModeCard.module.css';
 
 export const RunModeCard = ({ locale, option }: { locale: Locale; option: RunOption }) => (
@@ -16,7 +15,7 @@ export const RunModeCard = ({ locale, option }: { locale: Locale; option: RunOpt
       ))}
     </ul>
     {option === 'browser' && (
-      <Link to={CREATE_ROUTE} className="landing-card-link">
+      <Link to={createPath(locale)} className="landing-card-link">
         {t(locale, 'landing.startDesigning')} <span aria-hidden="true">→</span>
       </Link>
     )}

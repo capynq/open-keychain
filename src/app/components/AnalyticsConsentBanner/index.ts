@@ -1,0 +1,1 @@
+export { AnalyticsConsentBanner } from './AnalyticsConsentBanner';

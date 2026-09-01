@@ -14,18 +14,35 @@ export type SeoTemplateDefinition = {
 export type SeoGuideDefinition = {
   slug: string;
   key: 'stlVs3mf' | 'nameKeychainPrinting' | 'articulatedPrinting' | 'plantLabelPrinting';
+  ogImageSrc: string;
   lastModified: string;
 };
 
 export const SEO_GUIDE_CATALOG: readonly SeoGuideDefinition[] = [
-  { slug: 'stl-vs-3mf', key: 'stlVs3mf', lastModified: '2026-08-22' },
-  { slug: 'how-to-print-a-name-keychain', key: 'nameKeychainPrinting', lastModified: '2026-08-22' },
+  {
+    slug: 'stl-vs-3mf',
+    key: 'stlVs3mf',
+    ogImageSrc: '/showcase/prints/example_1-en.png',
+    lastModified: '2026-08-22',
+  },
+  {
+    slug: 'how-to-print-a-name-keychain',
+    key: 'nameKeychainPrinting',
+    ogImageSrc: '/showcase/templates/name-keychain.png',
+    lastModified: '2026-08-22',
+  },
   {
     slug: 'articulated-vs-standard-keychain',
     key: 'articulatedPrinting',
+    ogImageSrc: '/showcase/templates/articulated-name.png',
     lastModified: '2026-08-22',
   },
-  { slug: 'printable-plant-label-guide', key: 'plantLabelPrinting', lastModified: '2026-08-22' },
+  {
+    slug: 'printable-plant-label-guide',
+    key: 'plantLabelPrinting',
+    ogImageSrc: '/showcase/templates/plant-label.png',
+    lastModified: '2026-08-22',
+  },
 ];
 
 export const SEO_TEMPLATE_CATALOG: readonly SeoTemplateDefinition[] = [
@@ -127,3 +144,42 @@ export const SEO_PAGE_MANIFEST = SEO_LOCALES.flatMap((locale) => [
 
 export type SeoPageManifestEntry = (typeof SEO_PAGE_MANIFEST)[number];
 export const SEO_SITEMAP_MANIFEST = [...SEO_PAGE_MANIFEST, ...SEO_APP_MANIFEST] as const;
+
+/** A normalized SEO route used by both the browser and the static generator. */
+export type SeoRoute =
+  | { kind: 'home'; locale: SeoLocale; path: string }
+  | { kind: 'templates'; locale: SeoLocale; path: string }
+  | { kind: 'guides'; locale: SeoLocale; path: string }
+  | {
+      kind: 'template';
+      locale: SeoLocale;
+      path: string;
+      templateId: Exclude<TemplateId, 'magnet'>;
+    }
+  | { kind: 'guide'; locale: SeoLocale; path: string; guideSlug: string };
+
+export type SeoPageKind = SeoRoute['kind'] | 'privacy' | 'not-found' | 'app';
+
+const trimPath = (pathname: string): string => {
+  const value = pathname.replace(/\/+$/, '');
+  return value || '/';
+};
+
+/** Resolve only the finite, localized, trailing-slash-insensitive SEO vocabulary. */
+export const resolveSeoRoute = (pathname: string): SeoRoute | undefined => {
+  const normalized = trimPath(pathname);
+  const entry = SEO_PAGE_MANIFEST.find((candidate) => trimPath(candidate.path) === normalized);
+  if (!entry) return undefined;
+  if (entry.kind === 'template') {
+    return {
+      kind: entry.kind,
+      locale: entry.locale,
+      path: entry.path,
+      templateId: entry.templateId as Exclude<TemplateId, 'magnet'>,
+    };
+  }
+  if (entry.kind === 'guide') {
+    return { kind: entry.kind, locale: entry.locale, path: entry.path, guideSlug: entry.guideSlug };
+  }
+  return { kind: entry.kind, locale: entry.locale, path: entry.path };
+};

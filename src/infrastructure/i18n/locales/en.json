@@ -7,6 +7,12 @@
   "resetSecondaryColor": "Reset secondary color",
   "printColors": "Print colors",
   "openSource": "Open source ↗",
+  "brandName": "Open Keychain",
+  "github": "GitHub",
+  "email": "Email",
+  "millimeterUnit": "mm",
+  "dimensionSeparator": "×",
+  "listSeparator": "·",
   "profile": "Profile",
   "profileTitle": "Your maker space",
   "profileSignedOut": "Sign in to keep your project settings together.",
@@ -33,6 +39,7 @@
   "share": "Share",
   "shareCopied": "Link copied",
   "shareManual": "Link ready",
+  "copyLink": "Copy link",
   "shareManualPrompt": "Copy this design link:",
   "shareFailed": "Copy failed",
   "shareInvalid": "Invalid design link",
@@ -299,6 +306,7 @@
     "navHow": "How it works",
     "navProducts": "Templates",
     "navRun": "Run it",
+    "navFaq": "FAQ",
     "heroKicker": "Local-first 3D product maker",
     "heroTitle": "Turn a name into something you can print.",
     "heroBody": "Make a personalized product in minutes, export STL or 3MF, and take the file straight to your slicer.",
@@ -370,11 +378,11 @@
       "selfHost": {
         "eyebrow": "Available now",
         "title": "Self-host the static app",
-        "status": "Docker or static hosting",
+        "status": "Static hosting",
         "items": [
           "Serve the built files from your own infrastructure",
           "Keep the same local browser workflow",
-          "Read the Docker and static setup in the README"
+          "Publish the built files from your own infrastructure"
         ]
       },
       "hosted": {
@@ -387,10 +395,11 @@
     "trustLabel": "Privacy and beta notes",
     "localFirstKicker": "Local-first by default",
     "localFirstTitle": "Your design work stays close to you.",
-    "localFirstBody": "In the default browser and self-hosted workflows, fonts, geometry generation and exports run locally. Open Keychain is MIT-licensed open source.",
+    "localFirstBody": "In the browser workflow, fonts, geometry generation and exports run locally. Open Keychain is MIT-licensed open source.",
     "betaKicker": "Beta, with honest limits",
     "betaTitle": "A generated file is not a physical-print guarantee.",
     "betaBody": "Check every export in your slicer and test it on your own printer. Printer, material and settings can all change the result.",
+    "resourcesTitle": "Explore templates and guides",
     "footerLicense": "MIT licensed · open source"
   },
   "templateDescriptions": {
@@ -402,6 +411,7 @@
   },
   "seo": {
     "brand": "Open Keychain 3D",
+    "notFoundTitle": "Page not found",
     "languageLabel": "Language",
     "home": {
       "title": "Open Keychain 3D | Free 3D printable name-keychain generator",
@@ -529,6 +539,7 @@
     "navigation": {
       "home": "Open Keychain 3D",
       "templates": "Templates",
+      "guides": "Guides",
       "howItWorks": "How it works",
       "github": "View source",
       "privacy": "Privacy note",

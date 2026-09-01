@@ -90,7 +90,7 @@ const writeRecord = async (record: LocalFontRecord): Promise<void> => {
       request.onerror = () => reject(request.error);
     });
   } catch {
-    // Session-only operation remains useful when storage is blocked.
+    return;
   }
 };
 
@@ -99,7 +99,7 @@ const deleteRecord = async (id: string): Promise<void> => {
     const db = await openDatabase();
     db.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).delete(id);
   } catch {
-    // Nothing to do for a session-only record.
+    return;
   }
 };
 
@@ -228,7 +228,7 @@ export const createLocalFontStore = () => {
           records.push(record);
           imported.push(record);
         } catch {
-          // Invalid fonts are ignored so one bad file does not block the selection.
+          continue;
         }
       }
       return imported;
@@ -255,7 +255,7 @@ export const createLocalFontStore = () => {
           imported.push(record);
           await writeRecord(record);
         } catch {
-          // Invalid fonts are ignored so one bad file does not block the selection.
+          continue;
         }
       }
       return imported;

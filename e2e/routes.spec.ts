@@ -20,7 +20,9 @@ test('renders every declared route without browser errors', async ({ page }) => 
     await expect(page.getByRole('main')).toBeVisible();
 
     if (route.id === 'landing') {
-      await expect(page).toHaveTitle('Open Keychain 3D | Name keychain maker');
+      await expect(page).toHaveTitle(
+        'Open Keychain 3D | Free 3D printable name-keychain generator',
+      );
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await expect(page.locator('.landing-button-primary')).toBeVisible();
     } else {
@@ -38,7 +40,7 @@ test('takes the primary landing call to action to the customizer', async ({ page
 
   await page.goto('/');
   await page.getByRole('link', { name: 'Start designing' }).first().click();
-  await expect(page).toHaveURL(/\/create$/);
+  await expect(page).toHaveURL('/create?lang=en');
   await waitForReadyGeometry(page);
   assertNoBrowserErrors();
 });
@@ -201,7 +203,6 @@ test('uses the density-appropriate mobile customizer capture on a mobile landing
       renderedHeight: image.clientHeight,
     };
   });
-  // Browsers expose density-corrected intrinsic dimensions for a 2x srcset candidate.
   const expectedMobileIntrinsicDimensions =
     testInfo.project.name === 'mobile-2x'
       ? { width: 390, height: 844 }
@@ -219,12 +220,12 @@ test('uses the density-appropriate mobile customizer capture on a mobile landing
   assertNoBrowserErrors();
 });
 
-test('redirects an unknown path to the landing page', async ({ page }) => {
+test('renders an unknown path as a noindex not-found page', async ({ page }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
 
   await page.goto('/not-a-route');
-  await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex,follow');
   assertNoBrowserErrors();
 });
 
@@ -241,7 +242,7 @@ test('updates the localized landing title', async ({ page }) => {
 
   await page.goto('/');
   await selectLocale(page, 'ru');
-  await expect(page).toHaveTitle('Open Keychain 3D | Генератор именных брелоков');
+  await expect(page).toHaveTitle('Open Keychain 3D | Генератор брелоков для 3D-печати');
   await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
   assertNoBrowserErrors();
 });
@@ -291,11 +292,10 @@ test('publishes crawler metadata and route-aware canonical URLs', async ({ page 
     'href',
     'https://open-keychain.com/',
   );
-  expect(
-    await page
-      .locator('script[type="application/ld+json"]')
-      .evaluate((element) => element.textContent),
-  ).toContain('WebApplication');
+  const landingJsonLd = JSON.parse(
+    (await page.locator('script[type="application/ld+json"]').textContent()) ?? '{}',
+  ) as { '@graph'?: Array<Record<string, unknown>> };
+  expect(landingJsonLd['@graph']?.some((entry) => entry['@type'] === 'WebApplication')).toBe(false);
   await selectLocale(page, 'ru');
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     'content',
@@ -338,7 +338,7 @@ test('accepts analytics consent without blocking the primary action', async ({ p
     'accepted',
   );
   await page.getByRole('link', { name: 'Start designing' }).first().click();
-  await expect(page).toHaveURL(/\/create$/);
+  await expect(page).toHaveURL('/create?lang=en');
   assertNoBrowserErrors();
 });
 

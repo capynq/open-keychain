@@ -569,8 +569,6 @@ const nameplateStyle = (wasm: GeometryWasm, input: StyleInput): StyleBuild => {
     (input.nameplateEmbedMm ?? 0.4) * MANIFOLD_SCALE + (input.reliefDepth ?? 1) * MANIFOLD_SCALE;
   const tiltMargin =
     Math.abs(Math.sin(((input.nameplateTiltDeg ?? 6) * Math.PI) / 180)) * textDepth;
-  // Keep the default footprint stable while reserving visible backing around
-  // the relief when the optional halo is enabled.
   const border = effectiveMargin(input) + Math.max(0, input.reliefHaloMm ?? 0) * MANIFOLD_SCALE;
   const width = Math.max(34000, textWidth + border * 2);
   const height = Math.max(18000, textHeight + border * 2 + tiltMargin * 2);

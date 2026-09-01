@@ -1,12 +1,12 @@
 # Search visibility checklist
 
-The public SEO pages are generated during `pnpm build` from the typed catalog in
-[`src/infrastructure/seo/catalog.ts`](../src/infrastructure/seo/catalog.ts). The build emits localized HTML pages,
-route-aware app shells, a sitemap, and a real 404 page into `dist/`.
+The public SEO pages are rendered by React from the typed catalog and public API in
+[`src/features/seo`](../src/features/seo). The build emits one `index.html`;
+the SPA fallback serves localized routes, `/privacy`, and a noindex not-found state.
 
 The catalog is the source of truth for the sitemap: every entry has a canonical path, locale, and page-specific
-`lastModified` date. `scripts/validate-seo-build.ts` checks that the sitemap has exactly one URL per catalog entry,
-that URL order and `lastmod` values match, and that all dates use the XML sitemap `YYYY-MM-DD` format.
+`lastModified` date. Keep the tracked sitemap synchronized with the published route catalog when
+adding or removing indexable pages.
 
 ## Published indexable URLs
 
@@ -37,7 +37,10 @@ Initial search intent is deliberately narrow and descriptive:
 - 3D printable nameplate
 - printable plant label
 
-The localized pages use stable URLs and reciprocal `hreflang` links. Their JSON-LD is emitted as a linked `@graph`:
-the organization, localized website, web application, and breadcrumb list use stable `@id` references so crawlers can
-associate each landing page with the product and its parent site. Add genuinely useful examples, print settings, and
-maker guides only when they answer a real search question; avoid doorway pages and repeated keyword variations.
+The localized pages use stable URLs and reciprocal `hreflang` links. Their JSON-LD is rendered with the route metadata
+so crawlers that execute the SPA can associate each page with the product and its parent site. Add genuinely useful
+examples, print settings, and maker guides only when they answer a real search question; avoid doorway pages and
+repeated keyword variations.
+
+Guide routes emit `Article` JSON-LD with localized headline, author, publisher, image, and modification date. The
+customizer is the only route that emits `WebApplication` JSON-LD; privacy and unknown routes remain noindex.

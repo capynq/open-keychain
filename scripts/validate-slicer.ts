@@ -4,7 +4,7 @@ import path from 'node:path';
 
 const packageJson = JSON.parse(await fs.readFile('package.json', 'utf8')) as { version: string };
 const release = `v${packageJson.version}`;
-const fixtureDir = path.resolve('artifacts', 'self-hosted-beta', release);
+const fixtureDir = path.resolve('artifacts', 'release', release);
 const profilePath = path.resolve('tools/slicer/prusaslicer-minimal-fff.ini');
 const outputDir = path.join(fixtureDir, 'slicer-validation');
 const executable = process.env.PRUSASLICER_BIN || 'prusa-slicer';

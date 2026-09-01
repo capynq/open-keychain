@@ -501,7 +501,6 @@ export const buildKeychain = async (
         message:
           'This name is wider than the recommended 120 mm at the minimum 12 mm text height; export remains available.',
       });
-      // Keep the requested size. Width is a recommendation, not a geometry blocker.
     } else {
       const minimum = buildStyledGeometry(minimumScale);
       if (minimum.widthMm > MAX_WIDTH_MM) {

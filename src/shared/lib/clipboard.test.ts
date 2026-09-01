@@ -14,7 +14,9 @@ describe('copyTextToClipboard', () => {
     const textarea = {
       setAttribute: vi.fn(),
       style: {},
+      focus: vi.fn(),
       select: vi.fn(),
+      setSelectionRange: vi.fn(),
       remove: vi.fn(),
     };
     const documentMock = {

@@ -54,31 +54,24 @@ Local TTF/OTF fonts are session-local and may require permission again after rec
 Shared links never embed font bytes: Google and local fonts are replaced with a bundled fallback and
 the recipient is warned so the appearance change is explicit.
 
-## Self-host it
-
-### Docker
-
-```sh
-docker compose up -d --build
-```
-
-Open <http://localhost:8080>. The image builds the app and serves it with nginx; no database or environment variables are required for the default local workflow.
-
-### Static hosting
+## Build and publish
 
 ```sh
 pnpm install
 pnpm build
 ```
 
-Serve `dist/` from any static host. Configure an SPA fallback to `index.html` for `/` and `/create`, and allow normal static access to `/manifold.wasm`, `/fonts/`, `/showcase/`, and hashed `/assets/` files. [`nginx.conf`](nginx.conf) is a working reference.
+Publish the resulting `dist/` directory on a static host such as Netlify. The repository's
+`netlify.toml` configures the build and SPA fallbacks. Static hosts must allow access to
+`/manifold.wasm`, `/fonts/`, `/showcase/`, and hashed `/assets/` files.
 
-The generated SEO pages are self-contained HTML and include a small, consent-gated analytics
-bundle. It sends only page type, page ID, locale, and CTA metadata after a visitor opts in;
-names, query strings, and exported files are never included. Set `VITE_POSTHOG_KEY` (and
+SEO pages are rendered by the React application and use the same consent-gated analytics as the
+customizer. Only coarse page type, page ID, locale, and CTA metadata is sent after opt-in; names,
+query strings, geometry, and exported files are never included. Set `VITE_POSTHOG_KEY` (and
 optionally `VITE_POSTHOG_HOST`) at build time to enable it. See [`docs/analytics.md`](docs/analytics.md).
 
-For the optional hosted profile, use [`docs/hosting-readiness.md`](docs/hosting-readiness.md) for domain, HTTPS, secrets, backup, and private-pilot gates. Billing is not enabled.
+The optional Fastify API remains available for deployments that provide PostgreSQL and the
+environment in [`.env.example`](.env.example). It is started locally with `pnpm server`.
 
 ## What you can make
 
@@ -91,7 +84,7 @@ The customizer exports printable STL and 3MF files. Review the downloaded model 
 
 ## Privacy and future hosting
 
-The default local and self-hosted workflows keep generation and export on the device running the browser. The optional SEO analytics is consent-gated and sends only coarse page metadata; it never sends names, search strings, generated geometry, or exported files. This repository contains no active payment flow, price list, or hosted workspace offering. A future hosted workspace is only a concept for saved projects, seller presets, and repeat-order/batch tools.
+The browser workflow keeps generation and export on the device running the browser. The optional SEO analytics is consent-gated and sends only coarse page metadata; it never sends names, search strings, generated geometry, or exported files. This repository contains no active payment flow, price list, or hosted workspace offering. A future hosted workspace is only a concept for saved projects, seller presets, and repeat-order/batch tools.
 
 ## Development
 
@@ -109,8 +102,8 @@ For the shortest feedback loop, use `pnpm test:fast` for focused unit checks and
 run is required from the pre-push hook, and use `PUSH_E2E_WORKERS` to tune its worker count.
 Use `pnpm test:e2e:performance` for the dedicated six-case preview performance regression suite.
 
-Bun is an experimental shadow runtime for local tooling only. It does not replace Node in Docker,
-CI, the geometry matrix, slicer validation, or release workflows. The geometry matrix is automated
+Bun is an experimental shadow runtime for local tooling only. It does not replace Node in CI,
+the geometry matrix, slicer validation, or release workflows. The geometry matrix is automated
 printability evidence and is not a claim of physical-printer validation.
 
 Install Chromium for the browser checks once with `pnpm exec playwright install chromium`. Use `pnpm capture:ui` when the reviewed customizer screenshots need to be refreshed; it is an explicit capture command and does not run in ordinary CI.

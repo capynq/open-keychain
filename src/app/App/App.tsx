@@ -1,14 +1,24 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router';
 import { useAnalytics } from '../../infrastructure/telemetry';
-import { setLocale, t, type Locale } from '../../infrastructure/i18n';
+import { setLocale, type Locale } from '../../infrastructure/i18n';
 import { CREATE_ROUTE, LANDING_ROUTE, PROFILE_ROUTE } from '../routes';
 import { hostedMode } from '../../features/hosted/config';
 import './App.module.css';
 import '../styles/app.css';
+import '../styles/landing.css';
 import { AnalyticsConsentBanner } from '../components/AnalyticsConsentBanner/AnalyticsConsentBanner';
-import { detectInitialLocale, useAppSeo } from '../seo/useAppSeo';
-import { resolveAppSeoUrl } from '../../infrastructure/seo/app-metadata';
+import { RouteLoading } from '../components/RouteLoading/RouteLoading';
+import { AppSeoHead, useAppSeo } from '../seo/useAppSeo';
+import { useAppAnalytics } from '../hooks/useAppAnalytics';
+import { useAppNavigationEffects } from '../hooks/useAppNavigationEffects';
+import { PrivacyPage, SeoNotFoundPage, SeoPage } from '@/pages/seo';
+import {
+  detectInitialLocale,
+  resolveAppSeoUrl,
+  resolveDisplayLocale,
+  resolveSeoRoute,
+} from '@/features/seo';
 
 const LandingPage = lazy(() =>
   import('@/pages/landing/LandingPage').then(({ LandingPage: page }) => ({ default: page })),
@@ -22,15 +32,24 @@ const ProfilePage = lazy(() =>
   import('@/pages/profile/ProfilePage').then(({ ProfilePage: page }) => ({ default: page })),
 );
 
-const RouteLoading = ({ locale }: { locale: Locale }) => (
-  <div className="route-loading" role="status" aria-live="polite">
-    {t(locale, 'fontLoading')}
-  </div>
-);
+type LocaleSetter = (value: Locale | ((previous: Locale) => Locale)) => void;
+
+const createSeoCtaHandler =
+  (
+    track: ReturnType<typeof useAnalytics>['track'],
+    currentLocale: Locale,
+    setActiveLocale: LocaleSetter,
+  ) =>
+  (ctaLocale: Locale, cta: string): void => {
+    track('seo_cta_clicked', { locale: ctaLocale, cta });
+    if (ctaLocale === currentLocale) return;
+    setActiveLocale(ctaLocale);
+    void setLocale(ctaLocale);
+  };
 
 const App = () => {
   const [locale, setActiveLocale] = useState<Locale>(() =>
-    detectInitialLocale(window.location.search),
+    detectInitialLocale(window.location.search, window.location.pathname),
   );
   const location = useLocation();
   const navigate = useNavigate();
@@ -38,13 +57,19 @@ const App = () => {
   const isCustomizer = normalizedPath === CREATE_ROUTE;
   const isProfile = normalizedPath === PROFILE_ROUTE;
   const { consent, track } = useAnalytics();
+  const appSeo = isCustomizer ? resolveAppSeoUrl(location.pathname, location.search) : undefined;
+  const appSeoIndexable = appSeo?.indexable ?? false;
+  const appSeoTemplate = appSeo?.template;
+  const analyticsPath = appSeoTemplate
+    ? `${normalizedPath}/template/${appSeoTemplate}`
+    : normalizedPath;
 
-  useEffect(() => {
-    void setLocale(locale);
-  }, [locale]);
+  useAppNavigationEffects(location, locale);
+
+  const displayLocale = resolveDisplayLocale(location, locale);
 
   useAppSeo({
-    locale,
+    locale: displayLocale,
     pathname: location.pathname,
     search: location.search,
     normalizedPath,
@@ -52,15 +77,19 @@ const App = () => {
     isProfile,
   });
 
-  useEffect(() => {
-    track(normalizedPath === '/' ? 'landing_view' : 'page_view', {
-      locale,
-      path: normalizedPath,
-    });
-  }, [consent, isCustomizer, locale, normalizedPath, track]);
+  useAppAnalytics({
+    appSeoIndexable,
+    appSeoTemplate,
+    analyticsPath,
+    consent,
+    displayLocale,
+    location,
+    normalizedPath,
+    track,
+  });
 
   const onLocaleChange = (nextLocale: Locale): void => {
-    track('language_changed', { from: locale, to: nextLocale });
+    track('language_changed', { from: displayLocale, to: nextLocale });
     if (isCustomizer) {
       const appSeo = resolveAppSeoUrl(location.pathname, location.search);
       if (appSeo.indexable) {
@@ -75,32 +104,66 @@ const App = () => {
     void setLocale(nextLocale);
   };
 
+  const onSeoCtaClick = createSeoCtaHandler(track, locale, setActiveLocale);
+  const onSeoLocaleChange = (nextLocale: Locale): void => {
+    track('seo_language_changed', { from: displayLocale, to: nextLocale });
+    setActiveLocale(nextLocale);
+    void setLocale(nextLocale);
+  };
+
   return (
     <>
-      <Suspense fallback={<RouteLoading locale={locale} />}>
+      <AppSeoHead
+        locale={displayLocale}
+        pathname={location.pathname}
+        search={location.search}
+        normalizedPath={normalizedPath}
+        isCustomizer={isCustomizer}
+        isProfile={isProfile}
+      />
+      <Suspense fallback={<RouteLoading locale={displayLocale} />}>
         <Routes>
           <Route
             path={LANDING_ROUTE}
-            element={<LandingPage locale={locale} onLocaleChange={onLocaleChange} />}
+            element={<LandingPage locale={displayLocale} onLocaleChange={onLocaleChange} />}
           />
           <Route
             path={CREATE_ROUTE}
-            element={<CustomizerPage locale={locale} onLocaleChange={onLocaleChange} />}
+            element={<CustomizerPage locale={displayLocale} onLocaleChange={onLocaleChange} />}
           />
           <Route
             path={PROFILE_ROUTE}
             element={
               hostedMode ? (
-                <ProfilePage locale={locale} onLocaleChange={onLocaleChange} />
+                <ProfilePage locale={displayLocale} onLocaleChange={onLocaleChange} />
               ) : (
                 <Navigate to={LANDING_ROUTE} replace />
               )
             }
           />
-          <Route path="*" element={<Navigate to={LANDING_ROUTE} replace />} />
+          <Route
+            path="*"
+            element={(() => {
+              const seoRoute = resolveSeoRoute(location.pathname);
+
+              if (normalizedPath === '/privacy') {
+                return <PrivacyPage locale={displayLocale} onLocaleChange={onSeoLocaleChange} />;
+              }
+
+              return seoRoute ? (
+                <SeoPage
+                  route={seoRoute}
+                  onCtaClick={onSeoCtaClick}
+                  onLocaleChange={onSeoLocaleChange}
+                />
+              ) : (
+                <SeoNotFoundPage locale={displayLocale} />
+              );
+            })()}
+          />
         </Routes>
       </Suspense>
-      <AnalyticsConsentBanner locale={locale} />
+      <AnalyticsConsentBanner locale={displayLocale} />
     </>
   );
 };

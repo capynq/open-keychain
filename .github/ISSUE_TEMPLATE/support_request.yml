@@ -1,5 +1,5 @@
 name: Support request
-description: Ask for help using or self-hosting Open Keychain
+description: Ask for help using Open Keychain or its optional API
 title: 'support: '
 labels:
   - question

@@ -17,10 +17,9 @@ The pre-push hook checks formatting and lint for changed files, then selects the
 - Every code push runs typecheck, unit tests, and a production build with the deterministic Playwright Google-font key.
 - UI, route, export, public-asset, and E2E changes also run the focused Playwright smoke suite (six checks across desktop and mobile) against that existing build.
 - Geometry and font changes also run `pnpm bench:matrix`.
-- Docker, nginx, or hosting changes also validate both Compose profiles and build/test the self-hosted image.
 - Documentation-only pushes run only the changed-file formatter/linter checks.
 
-Install Chromium once with `pnpm exec playwright install chromium`. Docker is needed only for hosting-related changes.
+Install Chromium once with `pnpm exec playwright install chromium`.
 
 The hook can be bypassed with `HUSKY=0 git push`, but that skips all of these local safety gates and leaves GitHub's main-branch quality workflow as the remaining check.
 
@@ -39,7 +38,7 @@ The full browser matrix remains available for release validation with `pnpm test
 `pnpm test` is the complete unit aggregate, including server and script tests. The geometry matrix
 must remain at its recorded full case count for geometry/export changes; it is an automated gate,
 not physical-printer evidence. Node 22+ with pnpm 10 is the canonical runtime. Bun may be used for
-experimental local comparisons, but production containers, CI, and release validation stay on Node.
+experimental local comparisons, but CI and release validation stay on Node.
 
 ## Formatting
 
@@ -48,6 +47,12 @@ Run `pnpm format` before committing and use `pnpm format:check` in CI. TypeScrip
 Prettier does not infer semantic groups between variables and methods. The targeted ESLint `padding-line-between-statements` rule inserts a blank line after declarations before expressions or returns in React feature code; keep one intentional blank line between hook calls, derived values, effects, handlers, and returns. Prettier preserves it but collapses repeated blank lines.
 
 Use the existing style and camera tests as templates for new geometry cases. Add a regression test for every new validation rule, export format, locale, or viewer interaction.
+
+Frontend additions follow the FSD boundaries documented in `docs/architecture.md`:
+one component per file, composition-only pages, and dedicated model, hook, and
+library modules. Keep SEO catalog, locale precedence, canonical/privacy paths,
+and structured-data rules centralized; extend their unit tests and the relevant
+Playwright route checks together with any change.
 
 ## Commit and review workflow
 

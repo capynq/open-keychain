@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PARAMS } from './model/types';
+import { DEFAULT_PARAMS, normalizeParams } from './model/types';
 import { decodeDesignDocument, encodeDesignDocument } from './design-document';
 
 describe('design document codec', () => {
@@ -40,6 +40,15 @@ describe('design document codec', () => {
       magnetPocketPlacement: 'upper',
     });
   });
+  it.each(['articulated-name', 'nameplate', 'plant-label', 'magnet'] as const)(
+    'encodes normalized %s template parameters',
+    (templateId) => {
+      const params = normalizeParams({ ...DEFAULT_PARAMS, templateId });
+      const encoded = encodeDesignDocument({ version: 5, params });
+
+      expect(decodeDesignDocument(encoded)?.params.templateId).toBe(templateId);
+    },
+  );
   it('round-trips independent subtitle font and placement controls', () => {
     const encoded = encodeDesignDocument({
       version: 5,

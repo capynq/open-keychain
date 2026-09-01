@@ -1,5 +1,27 @@
 import { isBrowser } from './browser';
 
+const copyWithLegacyCommand = (value: string): boolean => {
+  const textarea = document.createElement('textarea');
+  textarea.value = value;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  const body = document.body;
+
+  if (!body) return false;
+
+  body.appendChild(textarea);
+  try {
+    textarea.focus();
+    textarea.select();
+    textarea.setSelectionRange(0, textarea.value.length);
+
+    return document.execCommand('copy');
+  } finally {
+    textarea.remove();
+  }
+};
+
 /**
  * Copy text using the modern clipboard API, falling back to the legacy
  * selection command. Returns false when the browser cannot copy the value.
@@ -13,25 +35,9 @@ export const copyTextToClipboard = async (value: string): Promise<boolean> => {
 
       return true;
     } catch {
-      // Continue with the legacy clipboard fallback.
+      return copyWithLegacyCommand(value);
     }
   }
 
-  const textarea = document.createElement('textarea');
-  textarea.value = value;
-  textarea.setAttribute('readonly', '');
-  textarea.style.position = 'fixed';
-  textarea.style.opacity = '0';
-  const body = document.body;
-
-  if (!body) return false;
-
-  body.appendChild(textarea);
-  try {
-    textarea.select();
-
-    return document.execCommand('copy');
-  } finally {
-    textarea.remove();
-  }
+  return copyWithLegacyCommand(value);
 };

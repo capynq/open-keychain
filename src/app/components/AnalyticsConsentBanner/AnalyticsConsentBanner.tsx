@@ -12,7 +12,7 @@ export const AnalyticsConsentBanner = ({ locale }: { locale: Locale }) => {
         <h2 id="analytics-consent-title">{t(locale, 'analytics.consentTitle')}</h2>
         <p>
           {t(locale, 'analytics.consentBody')}{' '}
-          <a href="/privacy.html">{t(locale, 'analytics.privacyLink')}</a>
+          <a href="/privacy">{t(locale, 'analytics.privacyLink')}</a>
         </p>
       </div>
       <div className="analytics-consent-actions">

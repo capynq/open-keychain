@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PARAMS, encodeDesignDocument } from '../../../entities/keychain';
+import {
+  DEFAULT_PARAMS,
+  encodeDesignDocument,
+  fontDefinition,
+  fontSupportsArticulatedName,
+} from '../../../entities/keychain';
 import { parseCustomizerRoute } from './parseCustomizerRoute';
 
 describe('parseCustomizerRoute', () => {
@@ -8,6 +13,18 @@ describe('parseCustomizerRoute', () => {
 
     expect(route.initialParams?.templateId).toBe('magnet');
     expect(route.hasInvalidDesign).toBe(false);
+  });
+
+  it('chooses an articulated-compatible font for a template query', () => {
+    const route = parseCustomizerRoute('?template=articulated-name', null);
+
+    expect(route.initialParams?.templateId).toBe('articulated-name');
+    expect(
+      fontSupportsArticulatedName(
+        fontDefinition(route.initialParams?.fontId ?? ''),
+        route.initialParams?.text ?? '',
+      ),
+    ).toBe(true);
   });
 
   it('prefers a shared v5 document over template and project state', () => {

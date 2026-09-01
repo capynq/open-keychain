@@ -1,4 +1,3 @@
-/* eslint-disable padding-line-between-statements */
 import type { Locale } from '../../../infrastructure/i18n';
 import { AppHeader } from '../../components/AppHeader/AppHeader';
 import { LandingHero } from '../../components/landing/LandingHero/LandingHero';
@@ -6,10 +5,10 @@ import { LandingFooter } from '../../components/landing/LandingFooter/LandingFoo
 import { LandingRunModes } from '../../components/landing/LandingRunModes/LandingRunModes';
 import { LandingTemplates } from '../../components/landing/LandingTemplates/LandingTemplates';
 import { LandingTrust } from '../../components/landing/LandingTrust/LandingTrust';
+import { LandingFaq } from '../../components/landing/LandingFaq/LandingFaq';
 import { LandingWorkflow } from '../../components/landing/LandingWorkflow/LandingWorkflow';
 import { useAnalytics } from '../../../infrastructure/telemetry';
 import './LandingPage.module.css';
-import '../../styles/landing.css';
 
 export const LandingPage = ({
   locale,
@@ -31,6 +30,7 @@ export const LandingPage = ({
         <LandingTemplates locale={locale} />
         <LandingRunModes locale={locale} />
         <LandingTrust locale={locale} />
+        <LandingFaq locale={locale} />
       </main>
       <LandingFooter locale={locale} />
     </div>

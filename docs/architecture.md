@@ -18,6 +18,21 @@ layer, and slices within a layer should communicate through their public
 application composition in `app`; do not move feature decisions into shared
 utilities.
 
+## Composition and models
+
+Keep one exported React component per file. Route pages are composition-only:
+they select widgets and features and should not contain catalog data, metadata,
+or large state machines. Put typed interfaces and pure selectors in `model/`,
+side effects and reusable state in `hooks/`, and browser-independent helpers in
+`lib/`. Reuse the existing public header, footer, language picker, landing
+sections, and controls instead of creating route-specific duplicates.
+
+SEO and locale invariants have one source of truth in `features/seo`: localized
+paths take precedence over conflicting query locales, generic app paths preserve
+their query/state locale, privacy remains canonical at `/privacy`, and only the
+customizer emits `WebApplication` structured data. Changes to these contracts
+must include unit coverage and focused browser coverage.
+
 ## Migration aliases
 
 TypeScript, Vite, and Vitest expose matching aliases for `@/app/*`,

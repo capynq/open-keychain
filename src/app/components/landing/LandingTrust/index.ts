@@ -1,0 +1,1 @@
+export { LandingTrust } from './LandingTrust';

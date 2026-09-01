@@ -86,20 +86,9 @@ const isGeometryOrFontFile = (file) => {
   );
 };
 
-const isDockerOrHostingFile = (file) => {
+const isHostingFile = (file) => {
   const normalized = file.replaceAll('\\', '/');
-  return (
-    /(^|\/)Dockerfile(?:\.|$)/i.test(normalized) ||
-    normalized === '.dockerignore' ||
-    normalized.startsWith('docker-compose') ||
-    normalized.startsWith('nginx') ||
-    normalized === '.env.hosted.example' ||
-    normalized === 'netlify.toml' ||
-    normalized === 'playwright.deployment.config.ts' ||
-    normalized.startsWith('scripts/validate-static-deployment') ||
-    normalized.startsWith('scripts/package-self-hosted-evidence') ||
-    normalized.startsWith('server/')
-  );
+  return normalized === 'netlify.toml' || normalized.startsWith('server/');
 };
 
 export const classifyChangedFiles = (files) => {
@@ -109,7 +98,7 @@ export const classifyChangedFiles = (files) => {
     needsCoreValidation: !documentationOnly,
     needsBrowserValidation: files.some(isBrowserRelevantFile),
     needsGeometryBenchmark: files.some(isGeometryOrFontFile),
-    needsDockerValidation: files.some(isDockerOrHostingFile),
+    needsHostingValidation: files.some(isHostingFile),
   };
 };
 
@@ -129,52 +118,6 @@ export const collectChangedFiles = (hookInput, captureDiff = capture) => {
       }),
     ),
   ];
-};
-
-const runDockerValidation = () => {
-  run('docker', ['compose', '-f', 'docker-compose.yml', 'config']);
-  run('docker', [
-    'compose',
-    '--env-file',
-    '.env.hosted.example',
-    '-f',
-    'docker-compose.hosted.yml',
-    'config',
-  ]);
-
-  let validationStatus = 1;
-  try {
-    const up = runResult('docker', [
-      'compose',
-      'up',
-      '-d',
-      '--build',
-      '--wait',
-      '--wait-timeout',
-      '120',
-    ]);
-    validationStatus = up.error ? 1 : (up.status ?? 1);
-    if (validationStatus === 0) {
-      const validation = runResult('pnpm', ['validate:self-hosted'], {
-        env: {
-          ...process.env,
-          PLAYWRIGHT_BASE_URL: 'http://127.0.0.1:8080',
-          SELF_HOSTED_BASE_URL: 'http://127.0.0.1:8080',
-        },
-      });
-      validationStatus = validation.error ? 1 : (validation.status ?? 1);
-    }
-
-    if (validationStatus !== 0) {
-      runResult('docker', ['compose', 'logs', '--no-color']);
-    }
-  } finally {
-    const cleanup = runResult('docker', ['compose', 'down', '--volumes', '--remove-orphans']);
-    if (validationStatus === 0 && (cleanup.error || cleanup.status !== 0)) {
-      validationStatus = cleanup.status ?? 1;
-    }
-  }
-  if (validationStatus !== 0) process.exit(validationStatus);
 };
 
 export const runPrePush = async () => {
@@ -201,7 +144,7 @@ export const runPrePush = async () => {
       `core=${classification.needsCoreValidation ? 'yes' : 'no'}, ` +
       `browser=${classification.needsBrowserValidation ? 'yes' : 'no'}, ` +
       `geometry=${classification.needsGeometryBenchmark ? 'yes' : 'no'}, ` +
-      `docker=${classification.needsDockerValidation ? 'yes' : 'no'}\n`,
+      `hosting=${classification.needsHostingValidation ? 'yes' : 'no'}\n`,
   );
   if (classification.needsCoreValidation) {
     const buildResults = await runValidationGates(
@@ -217,7 +160,6 @@ export const runPrePush = async () => {
     );
     if (buildResults.some((result) => !result.ok)) process.exit(1);
 
-    // `pnpm build` already runs `tsc -b`; avoid running the same typecheck twice.
     const gates = [{ name: 'unit', command: 'pnpm', args: ['test'] }];
     if (classification.needsBrowserValidation) {
       const browserCommand = process.env.PUSH_E2E_MODE === 'full' ? 'test:e2e' : 'test:e2e:smoke';
@@ -242,7 +184,6 @@ export const runPrePush = async () => {
     });
     if (results.some((result) => !result.ok)) process.exit(1);
   }
-  if (classification.needsDockerValidation) runDockerValidation();
 };
 
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {

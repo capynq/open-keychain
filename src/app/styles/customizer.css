@@ -352,6 +352,55 @@ p {
   animation: share-toast-in 180ms ease-out;
 }
 
+.share-manual-content {
+  display: grid;
+  width: 100%;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.share-manual-input {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  border: 1px solid #d7c79f;
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: #fffdf8;
+  color: #493d27;
+  font: inherit;
+  font-weight: 600;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.share-manual-copy {
+  border: 1px solid #9b722c;
+  border-radius: 6px;
+  padding: 6px 10px;
+  background: #fffdf8;
+  color: #72501d;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.share-manual-copy:hover,
+.share-manual-copy:focus-visible {
+  background: #fff4d8;
+}
+
+@media (max-width: 640px) {
+  .share-manual-content {
+    grid-template-columns: 1fr auto;
+  }
+
+  .share-manual-content > span {
+    grid-column: 1 / -1;
+  }
+}
+
 .toast-success {
   border-color: #9ec8a8;
   background: rgb(240 250 241 / 96%);

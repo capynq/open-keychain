@@ -72,7 +72,31 @@ export const CustomizerPage = ({
                     ? t(locale, 'shareFontFallback')
                     : t(locale, 'shareCopied');
 
-          return <Toast variant={variant}>{message}</Toast>;
+          return (
+            <Toast variant={variant}>
+              {state.shareStatus === 'manual' && state.shareUrl ? (
+                <div className="share-manual-content">
+                  <span>{message}</span>
+                  <input
+                    aria-label={t(locale, 'shareManualPrompt')}
+                    className="share-manual-input"
+                    onFocus={(event) => event.currentTarget.select()}
+                    readOnly
+                    value={state.shareUrl}
+                  />
+                  <button
+                    className="share-manual-copy"
+                    onClick={() => void state.shareDesign()}
+                    type="button"
+                  >
+                    {t(locale, 'copyLink')}
+                  </button>
+                </div>
+              ) : (
+                message
+              )}
+            </Toast>
+          );
         })()}
       <CustomizerWorkspace locale={locale} state={state} />
       <CustomizerFooter locale={locale} />

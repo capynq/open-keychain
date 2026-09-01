@@ -1,0 +1,28 @@
+# Open Keychain 3D
+
+Open Keychain 3D is a browser-based, open-source customizer for printable 3D keychains,
+nameplates, plant labels, and related small objects.
+
+- Website: https://open-keychain.com/
+- Customizer: https://open-keychain.com/create
+- Privacy: https://open-keychain.com/privacy
+- Source code: https://github.com/capynq/open-keychain
+- License: MIT
+
+## Templates
+
+- https://open-keychain.com/templates/name-keychain/
+- https://open-keychain.com/templates/articulated-name/
+- https://open-keychain.com/templates/nameplate/
+- https://open-keychain.com/templates/plant-label/
+
+## Guides
+
+- https://open-keychain.com/guides/stl-vs-3mf/
+- https://open-keychain.com/guides/how-to-print-a-name-keychain/
+- https://open-keychain.com/guides/articulated-vs-standard-keychain/
+- https://open-keychain.com/guides/printable-plant-label-guide/
+
+Geometry generation and STL/3MF export run locally in the browser. The project does not claim
+physical-printer validation for every printer or material. The API server is optional and is not
+required for the local-first customizer workflow.

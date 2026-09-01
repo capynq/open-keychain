@@ -8,7 +8,7 @@ describe('classifyChangedFiles', () => {
       needsCoreValidation: false,
       needsBrowserValidation: false,
       needsGeometryBenchmark: false,
-      needsDockerValidation: false,
+      needsHostingValidation: false,
     });
   });
 
@@ -17,7 +17,7 @@ describe('classifyChangedFiles', () => {
     expect(result.needsCoreValidation).toBe(true);
     expect(result.needsBrowserValidation).toBe(true);
     expect(result.needsGeometryBenchmark).toBe(false);
-    expect(result.needsDockerValidation).toBe(false);
+    expect(result.needsHostingValidation).toBe(false);
   });
 
   it('selects browser and geometry gates for new FSD layers', () => {
@@ -47,7 +47,7 @@ describe('classifyChangedFiles', () => {
     expect(result.needsCoreValidation).toBe(true);
     expect(result.needsGeometryBenchmark).toBe(true);
     expect(result.needsBrowserValidation).toBe(true);
-    expect(result.needsDockerValidation).toBe(false);
+    expect(result.needsHostingValidation).toBe(false);
   });
 
   it('keeps source tests out of the browser gate', () => {
@@ -60,10 +60,10 @@ describe('classifyChangedFiles', () => {
     expect(result.needsGeometryBenchmark).toBe(true);
   });
 
-  it('selects Compose and self-hosted validation for hosting changes', () => {
-    const result = classifyChangedFiles(['docker-compose.yml', 'nginx.conf']);
+  it('selects core validation for API hosting changes', () => {
+    const result = classifyChangedFiles(['server/app.ts']);
     expect(result.needsCoreValidation).toBe(true);
-    expect(result.needsDockerValidation).toBe(true);
+    expect(result.needsHostingValidation).toBe(true);
     expect(result.needsBrowserValidation).toBe(false);
     expect(result.needsGeometryBenchmark).toBe(false);
   });

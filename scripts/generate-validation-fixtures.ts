@@ -10,7 +10,7 @@ import { VALIDATION_FIXTURES as fixtures } from './validation-fixtures';
 
 const packageJson = JSON.parse(await fs.readFile('package.json', 'utf8')) as { version: string };
 const release = `v${packageJson.version}`;
-const outputDir = path.resolve('artifacts', 'self-hosted-beta', release);
+const outputDir = path.resolve('artifacts', 'release', release);
 const originalFetch = globalThis.fetch;
 globalThis.fetch = (async (input: string | URL) => {
   const url = String(input);

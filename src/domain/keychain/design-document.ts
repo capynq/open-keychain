@@ -1,6 +1,11 @@
 import { STYLE_CATALOG } from './styles/style-builder';
 import { TEMPLATE_CATALOG } from './templates/template-builder';
-import { PARAMETER_RANGES, parameterRange, type ShapeParameter } from './model/parameters';
+import {
+  hasActiveParameter,
+  PARAMETER_RANGES,
+  parameterRange,
+  type ShapeParameter,
+} from './model/parameters';
 import { FONT_CATALOG } from './fonts/catalog';
 import {
   DEFAULT_PARAMS,
@@ -101,8 +106,9 @@ const isValidParams = (value: unknown): value is KeychainParams => {
       typeof field === 'number' &&
       Number.isFinite(field) &&
       (key in PARAMETER_RANGES
-        ? field >= parameterRange(value as KeychainParams, key as ShapeParameter).min &&
-          field <= parameterRange(value as KeychainParams, key as ShapeParameter).max
+        ? (!hasActiveParameter(value as KeychainParams, key as ShapeParameter) && field === 0) ||
+          (field >= parameterRange(value as KeychainParams, key as ShapeParameter).min &&
+            field <= parameterRange(value as KeychainParams, key as ShapeParameter).max)
         : key === 'minimumWallMm'
           ? field >= 0.8 && field <= 3
           : key === 'bottomClearanceMm'

@@ -12,7 +12,7 @@ const gateCases = (output) => {
       const summary = JSON.parse(lines[index]);
       if (Number.isFinite(summary.cases)) return summary.cases;
     } catch {
-      // Most gates do not emit JSON summaries.
+      continue;
     }
   }
   return undefined;
@@ -107,7 +107,6 @@ const runConcurrentGates = async (
   return results;
 };
 
-/** Check prerequisites, build exactly once, then fan out independent consumers of the artifact. */
 export const runValidationGates = async (
   gates,
   { concurrency = DEFAULT_CONCURRENCY, printOutput = true } = {},

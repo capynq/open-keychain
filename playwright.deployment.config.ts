@@ -5,7 +5,7 @@ export default defineConfig({
   testMatch: /deployment\.spec\.ts/,
   timeout: 45_000,
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:8080',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'https://open-keychain.com',
     trace: 'retain-on-failure',
   },
   projects: [

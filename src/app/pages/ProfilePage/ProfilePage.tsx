@@ -144,7 +144,7 @@ export const ProfilePage = ({
       <AppHeader variant="landing" locale={locale} onLocaleChange={onLocaleChange} />
       <main className="profile-page" aria-label={t(locale, 'profile')}>
         <section className="profile-intro">
-          <p className="eyebrow">OPEN KEYCHAIN</p>
+          <p className="eyebrow">{t(locale, 'brandName')}</p>
           <h1>{t(locale, 'profileTitle')}</h1>
           <p>
             {account
@@ -260,7 +260,7 @@ export const ProfilePage = ({
                 </label>
               )}
               <label>
-                Email
+                {t(locale, 'email')}
                 <input
                   type="email"
                   value={email}

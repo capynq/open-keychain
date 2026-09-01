@@ -1,5 +1,6 @@
 import { defineConfig } from 'eslint/config';
 import eslint from '@eslint/js';
+import i18next from 'eslint-plugin-i18next';
 import prettier from 'eslint-config-prettier';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
@@ -26,7 +27,7 @@ export default defineConfig([
         tsconfigRootDir: import.meta.dirname,
       },
     },
-    plugins: { 'react-refresh': reactRefresh },
+    plugins: { 'react-refresh': reactRefresh, i18next },
     rules: {
       'no-console': ['error', { allow: ['warn', 'error'] }],
       'func-style': ['error', 'expression', { allowArrowFunctions: true }],
@@ -46,13 +47,12 @@ export default defineConfig([
       'brace-style': ['error', '1tbs', { allowSingleLine: false }],
       'no-lonely-if': 'error',
       'no-else-return': ['error', { allowElseIf: false }],
+      'i18next/no-literal-string': 'error',
     },
   },
   {
     files: ['src/entities/**/*.{ts,tsx}'],
     rules: {
-      // Transitional adapter boundary: entities may wrap the legacy domain and
-      // geometry implementations until those modules move into entities/shared.
       'no-restricted-imports': [
         'error',
         {
@@ -132,6 +132,18 @@ export default defineConfig([
       ],
     },
   },
+  {
+    files: ['src/app/seo/**/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': [
+        'error',
+        {
+          allowConstantExport: true,
+          allowExportNames: ['useAppSeo', 'detectInitialLocale', 'localeFromSearch'],
+        },
+      ],
+    },
+  },
   prettier,
   {
     files: [
@@ -150,6 +162,12 @@ export default defineConfig([
           next: ['expression', 'return'],
         },
       ],
+    },
+  },
+  {
+    files: ['src/app/pages/LandingPage/**/*.{ts,tsx}'],
+    rules: {
+      'padding-line-between-statements': 'off',
     },
   },
 ]);

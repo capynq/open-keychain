@@ -1,4 +1,2 @@
-/create /create.html 200
-/create/* /create/index.html 200
-/profile /profile.html 200
-/profile/* /profile/index.html 200
+/privacy.html /privacy 301
+/* /index.html 200

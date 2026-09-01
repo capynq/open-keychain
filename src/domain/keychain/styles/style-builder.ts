@@ -430,7 +430,6 @@ export const buildStyle = (wasm: GeometryWasm, styleId: StyleId, input: StyleInp
     right.delete();
     const relief = input.text;
     if (input.templateId === 'magnet') {
-      // The fixed 4.4 mm Magnet baseline leaves at least 1.2 mm of roof for a 3.2 mm pocket.
       const result = finishMagnetStyle(wasm, backing, relief, input, 'left');
       return { ...result, subtitle: input.subtitle };
     }

@@ -18,8 +18,6 @@ export type AnalyticsEvent =
 
 export type AnalyticsProperties = Record<string, string | number | boolean | undefined>;
 
-// Keep this list deliberately small: values sent by either the app or the static
-// SEO pages must be coarse product metadata, never form input or URL contents.
 const SAFE_PROPERTY_KEYS = new Set([
   'category',
   'count',

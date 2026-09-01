@@ -39,7 +39,7 @@ export const CustomizerNavigationHeader = ({
   currentParams?: KeychainParams;
 }) => (
   <header className={`${styles.root} topbar customizer-topbar`}>
-    <BrandMark />
+    <BrandMark locale={locale} />
     <div className="topbar-export-actions">
       <IconButton
         action="export"

@@ -1,8 +1,7 @@
 import { Link } from 'react-router';
 import type { Locale } from '@/infrastructure/i18n';
 import { t } from '@/infrastructure/i18n';
-import { CREATE_ROUTE } from '@/app/routes';
-import { HOW_IT_WORKS } from '../content';
+import { createPath, HOW_IT_WORKS } from '../content';
 import { ConfiguratorShowcase } from '../ConfiguratorShowcase/ConfiguratorShowcase';
 import styles from './LandingHero.module.css';
 
@@ -23,7 +22,7 @@ export const LandingHero = ({
       <div className="landing-actions">
         <Link
           className="landing-button landing-button-primary"
-          to={CREATE_ROUTE}
+          to={createPath(locale)}
           onClick={onStartDesigning}
         >
           {t(locale, 'landing.startDesigning')}

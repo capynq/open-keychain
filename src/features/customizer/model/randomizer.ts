@@ -148,8 +148,7 @@ export const randomizeWithValidation = async (
           attempts: index + 1,
         };
     } catch {
-      // A failed worker request is equivalent to a rejected candidate. Keep
-      // trying without ever committing a partially validated design.
+      continue;
     }
   }
   return { status: 'exhausted', params: current, attempts };

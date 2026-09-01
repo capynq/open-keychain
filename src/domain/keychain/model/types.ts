@@ -473,9 +473,6 @@ export const normalizeParams = (params: KeychainParams): NormalizedParams => {
   };
   if (normalized.templateId === 'magnet')
     normalized.baseThicknessMm = clamp(params.baseThicknessMm, 4.4, 5);
-  // Keep stale controls from a previous template/style from affecting later
-  // builds. The registry is intentionally represented here explicitly so old
-  // persisted payloads are normalized deterministically as well.
   if (normalized.templateId !== 'name-keychain' && normalized.templateId !== 'nameplate')
     normalized.reliefHaloMm = 0;
   if (normalized.templateId !== 'name-keychain' && normalized.templateId !== 'articulated-name')
@@ -508,6 +505,11 @@ export const normalizeParams = (params: KeychainParams): NormalizedParams => {
   )
     normalized.archCurveMm = 0;
   if (normalized.templateId !== 'plant-label') normalized.stakeShoulderMm = 0;
+  if (normalized.templateId === 'plant-label') {
+    const foundationHeight = Math.max(5, Math.min(8, normalized.textSizeMm * 0.26));
+    const cornerRadiusMax = Math.max(1.5, Math.floor((foundationHeight / 2 - 0.5) / 0.5) * 0.5);
+    normalized.cornerRadiusMm = clamp(normalized.cornerRadiusMm, 1.5, cornerRadiusMax);
+  }
   if (normalized.templateId !== 'articulated-name') normalized.jointBossMm = 0;
   if (normalized.templateId !== 'magnet') {
     normalized.magnetPocketPreset = DEFAULT_MAGNET_POCKET_PRESET;

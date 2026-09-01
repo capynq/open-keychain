@@ -36,7 +36,6 @@ export const useCustomizerPageState = (
     customizer.selectedSubtitleFont,
   );
   const share = useShareDesign({
-    locale,
     params: customizer.params,
     appearanceOverrides,
     hasNonBundledFont:
@@ -182,6 +181,7 @@ export const useCustomizerPageState = (
     shareDesign: share.shareDesign,
     shareStatus: share.shareStatus,
     shareFontFallback: share.shareFontFallback,
+    shareUrl: share.shareUrl,
     randomizing,
     randomizeFailure,
     randomize,

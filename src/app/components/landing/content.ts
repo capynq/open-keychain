@@ -1,4 +1,7 @@
 import type { TemplateId } from '../../../domain/keychain';
+import { templateCreatePath as sharedTemplateCreatePath } from '../../../shared/lib/create-path';
+
+export { createPath } from '../../../shared/lib/create-path';
 
 export const HOW_IT_WORKS = ['name', 'shape', 'export'] as const;
 export const SUPPORTED_PRODUCTS = ['keychain', 'articulated', 'nameplate', 'plantLabel'] as const;
@@ -14,7 +17,7 @@ export type TemplateShowcase = {
 };
 
 export const templateCreatePath = (locale: string, templateId: TemplateId): string =>
-  `/create?template=${encodeURIComponent(templateId)}&lang=${encodeURIComponent(locale)}`;
+  sharedTemplateCreatePath(locale, templateId);
 
 export const TEMPLATE_SHOWCASE: readonly TemplateShowcase[] = [
   {
