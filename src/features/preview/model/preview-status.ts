@@ -1,6 +1,7 @@
-import type { GeometryResult, ValidationIssue } from '../../../domain/keychain';
+import type { GeometryResult, ValidationIssue } from '../../../domain/keychain/model/types';
+import type { Locale } from '../../../infrastructure/i18n/config';
 
-import { issueMessage, t, type Locale } from '../../../infrastructure/i18n';
+import { issueMessage, t } from '../../../infrastructure/i18n/utils';
 
 export type PreviewFixTarget = 'design' | 'print' | 'essentials';
 

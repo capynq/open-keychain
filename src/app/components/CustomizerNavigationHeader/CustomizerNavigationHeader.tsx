@@ -1,12 +1,12 @@
 import { Download, Share2, Shuffle, Undo2 } from 'lucide-react';
 import { Link } from 'react-router';
 
-import type { KeychainParams } from '../../../domain/keychain';
-import type { HostedAccountState } from '../../../features/hosted';
-import type { Locale } from '../../../infrastructure/i18n';
+import type { KeychainParams } from '../../../domain/keychain/model/types';
+import type { HostedAccountState } from '../../../features/hosted/hooks/useHostedAccount';
+import type { Locale } from '../../../infrastructure/i18n/config';
 
 import { hostedMode } from '../../../features/hosted/config';
-import { t } from '../../../infrastructure/i18n';
+import { t } from '../../../infrastructure/i18n/utils';
 import { PROFILE_ROUTE } from '../../routes';
 import { BrandMark } from '../BrandMark/BrandMark';
 import { IconButton } from '../IconButton/IconButton';

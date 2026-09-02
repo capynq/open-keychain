@@ -1,4 +1,4 @@
-import type { TemplateId } from '../../domain/keychain';
+import type { TemplateId } from '../../domain/keychain/model/types';
 
 export const SEO_LOCALES = ['en', 'ru', 'uk'] as const;
 export type SeoLocale = (typeof SEO_LOCALES)[number];

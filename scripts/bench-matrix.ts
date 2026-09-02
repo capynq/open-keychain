@@ -2,7 +2,6 @@ import { unzipSync, strFromU8 } from 'fflate';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import { TEMPLATE_CATALOG, type TemplateDefinition, type TemplateId } from '../src/domain/keychain';
 import { buildKeychain, createWasm } from '../src/domain/keychain/build/keychain-builder';
 import {
   FONT_CATALOG,
@@ -13,7 +12,12 @@ import {
   DEFAULT_PARAMS,
   type KeychainParams,
   type MeshBuffer,
+  type TemplateId,
 } from '../src/domain/keychain/model/types';
+import {
+  TEMPLATE_CATALOG,
+  type TemplateDefinition,
+} from '../src/domain/keychain/templates/template-builder';
 import { serializeBinaryStl } from '../src/infrastructure/export/stl-serializer';
 import { serializeThreeMf } from '../src/infrastructure/export/three-mf-serializer';
 

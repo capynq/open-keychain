@@ -1,8 +1,8 @@
-import type { Locale } from '../../../infrastructure/i18n';
+import type { Locale } from '../../../infrastructure/i18n/config';
 import type { CustomizerPageState } from '../../hooks/useCustomizerPageState';
 
-import { ControlsPanel } from '../../../features/customizer';
-import { useAnalytics } from '../../../infrastructure/telemetry';
+import { ControlsPanel } from '../../../features/customizer/components/ControlsPanel/ControlsPanel';
+import { useAnalytics } from '../../../infrastructure/telemetry/useTelemetry';
 import { PreviewPanel } from '../PreviewPanel/PreviewPanel';
 import './CustomizerWorkspace.module.css';
 

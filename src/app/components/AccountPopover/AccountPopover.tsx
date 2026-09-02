@@ -1,6 +1,7 @@
-import type { HostedAccountState } from '../../../features/hosted';
+import type { HostedAccountState } from '../../../features/hosted/hooks/useHostedAccount';
+import type { Locale } from '../../../infrastructure/i18n/config';
 
-import { t, type Locale } from '../../../infrastructure/i18n';
+import { t } from '../../../infrastructure/i18n/utils';
 import './AccountPopover.module.css';
 
 export const AccountPopover = ({

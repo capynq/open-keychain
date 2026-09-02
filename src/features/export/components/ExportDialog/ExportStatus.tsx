@@ -2,9 +2,10 @@ import { RefreshCw, X } from 'lucide-react';
 
 import { IconButton } from '@/shared/ui/IconButton';
 
+import type { Locale } from '../../../../infrastructure/i18n/config';
 import type { ExportActionsState } from '../../model/use-export-actions';
 
-import { t, type Locale } from '../../../../infrastructure/i18n';
+import { t } from '../../../../infrastructure/i18n/utils';
 
 export const ExportStatus = ({
   locale,

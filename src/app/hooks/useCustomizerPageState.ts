@@ -1,18 +1,22 @@
 import { useEffect, useReducer, useRef, useState, type SetStateAction } from 'react';
 
+import type { SurfacePresetId } from '../../features/preview/components/Viewer/Viewer';
+import type { Locale } from '../../infrastructure/i18n/config';
+
 import {
   DEFAULT_PARAMS,
   normalizeParams,
   type KeychainParams,
   type PrintAppearanceOverrides,
-} from '../../entities/keychain';
-import { useCustomizerParams, useGeometryGeneration } from '../../features/customizer';
-import { useExportActions } from '../../features/export';
-import { useHostedAccount } from '../../features/hosted';
-import { previewStatus, type SurfacePresetId } from '../../features/preview';
-import { useShareDesign } from '../../features/share';
-import { styleName, templateName, type Locale } from '../../infrastructure/i18n';
-import { useAnalytics } from '../../infrastructure/telemetry';
+} from '../../domain/keychain/model/types';
+import { useCustomizerParams } from '../../features/customizer/hooks/useCustomizerParams';
+import { useGeometryGeneration } from '../../features/customizer/hooks/useGeometryGeneration';
+import { useExportActions } from '../../features/export/model/use-export-actions';
+import { useHostedAccount } from '../../features/hosted/hooks/useHostedAccount';
+import { previewStatus } from '../../features/preview/model/preview-status';
+import { useShareDesign } from '../../features/share/useShareDesign';
+import { styleName, templateName } from '../../infrastructure/i18n/utils';
+import { useAnalytics } from '../../infrastructure/telemetry/useTelemetry';
 
 export const useCustomizerPageState = (
   locale: Locale,

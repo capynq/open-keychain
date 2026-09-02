@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { STYLE_BUILDERS, STYLE_CATALOG, TEMPLATE_BUILDERS, TEMPLATE_CATALOG } from './index';
+import { STYLE_CATALOG } from '../../domain/keychain/styles/style-builder';
+import { TEMPLATE_CATALOG } from '../../domain/keychain/templates/template-builder';
+import { STYLE_BUILDERS } from './styles/registry';
+import { TEMPLATE_BUILDERS } from './templates/registry';
 
 describe('keychain entity registries', () => {
   it('exposes one builder for every catalog style', () => {

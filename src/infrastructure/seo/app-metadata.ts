@@ -1,4 +1,5 @@
-import { supportedLocales, t, type Locale } from '../i18n';
+import { supportedLocales, type Locale } from '../i18n/config';
+import { t } from '../i18n/utils';
 import {
   SEO_GUIDE_CATALOG,
   SEO_PAGE_MANIFEST,

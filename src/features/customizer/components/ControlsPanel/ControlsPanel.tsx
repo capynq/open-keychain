@@ -1,19 +1,16 @@
 import { ChevronLeft, ChevronRight, Info, RefreshCw } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-import type { KeychainParams } from '@/domain/keychain';
-
 import {
   FONT_CATEGORY_ORDER,
   FONT_CATALOG,
   fontSupportsArticulatedName,
   fontSupportsText,
-  TEMPLATE_CATALOG,
-  PARAMETER_REGISTRY,
-  MAGNET_POCKET_PRESETS,
-  type ShapeParameter,
   type FontCategory,
-} from '@/domain/keychain';
+} from '@/domain/keychain/fonts/catalog';
+import { PARAMETER_REGISTRY, type ShapeParameter } from '@/domain/keychain/model/parameters';
+import { MAGNET_POCKET_PRESETS, type KeychainParams } from '@/domain/keychain/model/types';
+import { TEMPLATE_CATALOG } from '@/domain/keychain/templates/template-builder';
 import { type useCustomizerParams } from '@/features/customizer/hooks/useCustomizerParams';
 import {
   styleDescription,

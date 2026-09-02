@@ -9,20 +9,27 @@ import {
   fontSupportsArticulatedName,
   fontSupportsText,
   textUsesCyrillic,
-  createGoogleFontProvider,
+  type FontDefinition,
+} from '../../../domain/keychain/fonts/catalog';
+import { createGoogleFontProvider } from '../../../domain/keychain/fonts/google-provider';
+import {
   createLocalFontStore,
   type LocalFontRecord,
-  type FontDefinition,
-} from '../../../domain/keychain';
+} from '../../../domain/keychain/fonts/local-provider';
 import {
   hasActiveParameter,
   parameterRange,
   type CustomizerParameter,
   type ParameterRange,
   type ShapeParameter,
-} from '../../../domain/keychain';
-import { DEFAULT_PARAMS, type KeychainParams, type TemplateId } from '../../../domain/keychain';
-import { STYLE_CATALOG, TEMPLATE_CATALOG } from '../../../domain/keychain';
+} from '../../../domain/keychain/model/parameters';
+import {
+  DEFAULT_PARAMS,
+  type KeychainParams,
+  type TemplateId,
+} from '../../../domain/keychain/model/types';
+import { STYLE_CATALOG } from '../../../domain/keychain/styles/style-builder';
+import { TEMPLATE_CATALOG } from '../../../domain/keychain/templates/template-builder';
 import {
   randomizeParams,
   randomizeWithValidation,

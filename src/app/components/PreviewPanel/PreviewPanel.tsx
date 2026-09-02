@@ -1,10 +1,15 @@
 import { ResetIconButton } from '@/shared/ui/ResetIconButton';
 
-import type { GeometryResult, PrintAppearanceOverrides } from '../../../domain/keychain';
+import type {
+  GeometryResult,
+  PrintAppearanceOverrides,
+} from '../../../domain/keychain/model/types';
+import type { PreviewStatus } from '../../../features/preview/model/preview-status';
+import type { Locale } from '../../../infrastructure/i18n/config';
 
-import { applyPrintAppearanceOverrides } from '../../../domain/keychain';
-import { Viewer, type PreviewStatus, type SurfacePresetId } from '../../../features/preview';
-import { t, type Locale } from '../../../infrastructure/i18n';
+import { applyPrintAppearanceOverrides } from '../../../domain/keychain/model/types';
+import { Viewer, type SurfacePresetId } from '../../../features/preview/components/Viewer/Viewer';
+import { t } from '../../../infrastructure/i18n/utils';
 import styles from './PreviewPanel.module.css';
 import { PreviewSummary, type PreviewModelInfo } from './PreviewSummary';
 import { SurfacePopover } from './SurfacePopover';

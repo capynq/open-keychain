@@ -6,8 +6,8 @@ import { PROFILE_ROUTE } from '@/app/routes';
 import { hostedMode } from '@/features/hosted/config';
 import { t } from '@/infrastructure/i18n';
 
+import { createPath } from '../../../shared/lib/create-path';
 import { BrandMark } from '../BrandMark/BrandMark';
-import { createPath } from '../landing/content';
 import { LanguagePicker } from '../LanguagePicker/LanguagePicker';
 import styles from './LandingNavigationHeader.module.css';
 

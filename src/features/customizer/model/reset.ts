@@ -1,4 +1,8 @@
-import { DEFAULT_PARAMS, normalizeParams, type KeychainParams } from '../../../domain/keychain';
+import {
+  DEFAULT_PARAMS,
+  normalizeParams,
+  type KeychainParams,
+} from '../../../domain/keychain/model/types';
 
 export type CustomizerResetSection = 'name' | 'subtitle' | 'template' | 'style' | 'font' | 'shape';
 

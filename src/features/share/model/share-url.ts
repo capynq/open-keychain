@@ -1,4 +1,7 @@
-import type { KeychainParams, PrintAppearanceOverrides } from '../../../entities/keychain';
+import type {
+  KeychainParams,
+  PrintAppearanceOverrides,
+} from '../../../domain/keychain/model/types';
 
 import { encodeDesignDocument } from '../../../domain/keychain/design-document';
 

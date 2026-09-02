@@ -15,7 +15,9 @@ import {
   type SeoRoute,
 } from '@/features/seo';
 
-import { t, type Locale } from '../../infrastructure/i18n';
+import type { Locale } from '../../infrastructure/i18n/config';
+
+import { t } from '../../infrastructure/i18n/utils';
 import { SeoSocialImageTags } from './SeoSocialImageTags';
 
 const SITE_URL = 'https://open-keychain.com';

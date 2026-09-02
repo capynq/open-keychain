@@ -1,7 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react';
 
-import { FONT_CATALOG, isLocalFontId, type KeychainParams } from '../../../domain/keychain';
-import { t, type Locale } from '../../../infrastructure/i18n';
+import type { KeychainParams } from '../../../domain/keychain/model/types';
+import type { Locale } from '../../../infrastructure/i18n/config';
+
+import { FONT_CATALOG } from '../../../domain/keychain/fonts/catalog';
+import { isLocalFontId } from '../../../domain/keychain/fonts/local-provider';
+import { t } from '../../../infrastructure/i18n/utils';
 import {
   currentUser,
   listProjects,

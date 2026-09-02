@@ -1,8 +1,12 @@
 import type { ReactNode } from 'react';
 
-import type { CustomizerParameter, KeychainParams, ShapeParameter } from '@/domain/keychain';
+import type { KeychainParams } from '@/domain/keychain/model/types';
 
-import { PARAMETER_GROUPS } from '@/domain/keychain';
+import {
+  PARAMETER_GROUPS,
+  type CustomizerParameter,
+  type ShapeParameter,
+} from '@/domain/keychain/model/parameters';
 import { t, type Locale } from '@/infrastructure/i18n';
 
 export type ParameterGroupListProps = {

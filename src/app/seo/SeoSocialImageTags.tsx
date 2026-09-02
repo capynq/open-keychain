@@ -1,6 +1,6 @@
 import { SEO_LOCALES } from '@/features/seo';
 
-import type { Locale } from '../../infrastructure/i18n';
+import type { Locale } from '../../infrastructure/i18n/config';
 
 const SITE_URL = 'https://open-keychain.com';
 const OG_LOCALE: Record<Locale, string> = { en: 'en_US', ru: 'ru_RU', uk: 'uk_UA' };

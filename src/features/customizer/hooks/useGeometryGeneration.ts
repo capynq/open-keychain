@@ -8,10 +8,10 @@ import {
   type SetStateAction,
 } from 'react';
 
-import type { GeometryResult, KeychainParams } from '../../../domain/keychain';
 import type { FontDefinition } from '../../../domain/keychain/fonts/catalog';
+import type { GeometryResult, KeychainParams } from '../../../domain/keychain/model/types';
 
-import { GeometryClient } from '../../../infrastructure/geometry';
+import { GeometryClient } from '../../../infrastructure/geometry/geometry-client';
 
 const geometryInputKey = (
   params: KeychainParams,

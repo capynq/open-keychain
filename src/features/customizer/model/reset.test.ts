@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_PARAMS, type KeychainParams } from '../../../domain/keychain';
+import { DEFAULT_PARAMS, type KeychainParams } from '../../../domain/keychain/model/types';
 import { resetParamsForSection } from './reset';
 
 const changedParams = (): KeychainParams => ({

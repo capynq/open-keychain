@@ -1,9 +1,9 @@
 import { Check, ChevronDown } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-import type { Locale } from '../../../infrastructure/i18n';
+import type { Locale } from '../../../infrastructure/i18n/config';
 
-import { t } from '../../../infrastructure/i18n';
+import { t } from '../../../infrastructure/i18n/utils';
 import styles from './LanguagePicker.module.css';
 
 const LOCALE_OPTIONS: readonly { value: Locale; flag: string; labelKey: string }[] = [

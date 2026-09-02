@@ -4,8 +4,9 @@ import type { Locale } from '@/infrastructure/i18n';
 
 import { t } from '@/infrastructure/i18n';
 
+import { createPath } from '../../../../shared/lib/create-path';
 import { ConfiguratorShowcase } from '../ConfiguratorShowcase/ConfiguratorShowcase';
-import { createPath, HOW_IT_WORKS } from '../content';
+import { HOW_IT_WORKS } from '../content';
 import styles from './LandingHero.module.css';
 
 const stepNumber = (index: number) => String(index + 1).padStart(2, '0');

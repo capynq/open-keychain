@@ -1,8 +1,8 @@
 import { lazy, Suspense } from 'react';
 
-import type { KeychainParams } from '../../../domain/keychain';
-import type { HostedAccountState } from '../../../features/hosted';
-import type { Locale } from '../../../infrastructure/i18n';
+import type { KeychainParams } from '../../../domain/keychain/model/types';
+import type { HostedAccountState } from '../../../features/hosted/hooks/useHostedAccount';
+import type { Locale } from '../../../infrastructure/i18n/config';
 
 import { LandingNavigationHeader } from '../LandingNavigationHeader/LandingNavigationHeader';
 import './AppHeader.module.css';

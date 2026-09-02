@@ -1,5 +1,7 @@
-import { t, type Locale } from '../../../infrastructure/i18n';
-import { useAnalytics } from '../../../infrastructure/telemetry';
+import type { Locale } from '../../../infrastructure/i18n/config';
+
+import { t } from '../../../infrastructure/i18n/utils';
+import { useAnalytics } from '../../../infrastructure/telemetry/useTelemetry';
 import './AnalyticsConsentBanner.module.css';
 
 export const AnalyticsConsentBanner = ({ locale }: { locale: Locale }) => {

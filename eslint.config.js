@@ -148,6 +148,13 @@ export default defineConfig([
           ],
         },
       ],
+      'no-barrel-files/prefer-source-imports': [
+        'error',
+        {
+          fixStyle: 'preserve-alias',
+          ignore: ['@/entities/keychain'],
+        },
+      ],
       'perfectionist/sort-imports': [
         'error',
         {
@@ -175,18 +182,6 @@ export default defineConfig([
           customGroups: [],
           environment: 'node',
           useExperimentalDependencyDetection: true,
-        },
-      ],
-    },
-  },
-  {
-    files: ['src/pages/**/*.{ts,tsx}'],
-    rules: {
-      'no-barrel-files/prefer-source-imports': [
-        'error',
-        {
-          fixStyle: 'preserve-alias',
-          ignore: ['@/features/seo', '@/entities/keychain'],
         },
       ],
     },

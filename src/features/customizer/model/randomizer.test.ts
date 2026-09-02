@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_PARAMS } from '../../../domain/keychain';
+import { DEFAULT_PARAMS } from '../../../domain/keychain/model/types';
 import { randomizeParams, randomizeWithValidation } from './randomizer';
 
 describe('randomizeParams', () => {

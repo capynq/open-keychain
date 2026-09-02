@@ -1,6 +1,7 @@
+import type { Locale } from '../../../../infrastructure/i18n/config';
 import type { ExportActionsState } from '../../model/use-export-actions';
 
-import { t, type Locale } from '../../../../infrastructure/i18n';
+import { t } from '../../../../infrastructure/i18n/utils';
 
 export const ExportChoices = ({
   locale,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { GeometryResult } from '../../../domain/keychain';
+import type { GeometryResult } from '../../../domain/keychain/model/types';
 
 import { buildPreflightReport } from './preflight';
 

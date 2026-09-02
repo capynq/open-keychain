@@ -2,7 +2,9 @@ import type { Location } from 'react-router';
 
 import { useEffect } from 'react';
 
-import { setLocale, type Locale } from '../../infrastructure/i18n';
+import type { Locale } from '../../infrastructure/i18n/config';
+
+import { setLocale } from '../../infrastructure/i18n/utils';
 
 /** Keeps browser scroll and the active i18n locale in sync with navigation. */
 export const useAppNavigationEffects = (location: Location, locale: Locale): void => {

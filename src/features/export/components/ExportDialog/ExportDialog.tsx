@@ -3,11 +3,12 @@ import { useEffect, useRef } from 'react';
 
 import { IconButton } from '@/shared/ui/IconButton';
 
-import type { PrintAppearance } from '../../../../domain/keychain';
+import type { PrintAppearance } from '../../../../domain/keychain/model/types';
+import type { Locale } from '../../../../infrastructure/i18n/config';
 import type { PreflightReport } from '../../model/preflight';
 import type { ExportActionsState } from '../../model/use-export-actions';
 
-import { t, type Locale } from '../../../../infrastructure/i18n';
+import { t } from '../../../../infrastructure/i18n/utils';
 import { ExportChoices } from './ExportChoices';
 import { ExportPreflight } from './ExportPreflight';
 import { ExportStatus } from './ExportStatus';

@@ -5,9 +5,10 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
 
-import type { GeometryResult, PrintAppearance } from '../../../../domain/keychain';
+import type { GeometryResult, PrintAppearance } from '../../../../domain/keychain/model/types';
+import type { Locale } from '../../../../infrastructure/i18n/config';
 
-import { t, type Locale } from '../../../../infrastructure/i18n';
+import { t } from '../../../../infrastructure/i18n/utils';
 import {
   applyCameraPose,
   cameraPose,

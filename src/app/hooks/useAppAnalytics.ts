@@ -2,7 +2,7 @@ import type { Location } from 'react-router';
 
 import { useEffect } from 'react';
 
-import type { Locale } from '../../infrastructure/i18n';
+import type { Locale } from '../../infrastructure/i18n/config';
 import type { useAnalytics } from '../../infrastructure/telemetry';
 
 import { resolveSeoRoute } from '../../infrastructure/seo/catalog';

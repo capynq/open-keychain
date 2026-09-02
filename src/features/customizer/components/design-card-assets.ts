@@ -1,4 +1,4 @@
-import type { StyleId, TemplateId } from '../../../domain/keychain';
+import type { StyleId, TemplateId } from '../../../domain/keychain/model/types';
 
 export const TEMPLATE_PREVIEW_ASSETS: Record<TemplateId, string> = {
   'name-keychain': '/showcase/templates/name-keychain.png',

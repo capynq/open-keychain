@@ -1,6 +1,8 @@
 import { Link } from 'react-router';
 
-import { t, type Locale } from '../../../infrastructure/i18n';
+import type { Locale } from '../../../infrastructure/i18n/config';
+
+import { t } from '../../../infrastructure/i18n/utils';
 import { LANDING_ROUTE } from '../../routes';
 import styles from './BrandMark.module.css';
 

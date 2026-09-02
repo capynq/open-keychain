@@ -1,8 +1,6 @@
-import type { TemplateId } from '../../../domain/keychain';
+import type { TemplateId } from '../../../domain/keychain/model/types';
 
 import { templateCreatePath as sharedTemplateCreatePath } from '../../../shared/lib/create-path';
-
-export { createPath } from '../../../shared/lib/create-path';
 
 export const HOW_IT_WORKS = ['name', 'shape', 'export'] as const;
 export const SUPPORTED_PRODUCTS = ['keychain', 'articulated', 'nameplate', 'plantLabel'] as const;

@@ -3,13 +3,13 @@ import type {
   PrintAppearance,
   PrintProfile,
   ValidationIssue,
-} from '../../../domain/keychain';
+} from '../../../domain/keychain/model/types';
 
 import {
   DEFAULT_PRINT_PROFILE,
   printProfileFor,
   type GeometryConstraints,
-} from '../../../domain/keychain';
+} from '../../../domain/keychain/model/types';
 
 export type PreflightStatus = 'generating' | 'ready' | 'ready-with-warnings' | 'blocked';
 

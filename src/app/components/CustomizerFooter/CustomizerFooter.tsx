@@ -1,6 +1,6 @@
-import type { Locale } from '../../../infrastructure/i18n';
+import type { Locale } from '../../../infrastructure/i18n/config';
 
-import { t } from '../../../infrastructure/i18n';
+import { t } from '../../../infrastructure/i18n/utils';
 import styles from './CustomizerFooter.module.css';
 
 export const CustomizerFooter = ({ locale }: { locale: Locale }) => (

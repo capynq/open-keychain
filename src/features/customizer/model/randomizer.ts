@@ -1,18 +1,22 @@
 import {
   FONT_CATALOG,
-  TEMPLATE_CATALOG,
   fontSupportsArticulatedName,
   fontSupportsText,
+  type FontDefinition,
+} from '../../../domain/keychain/fonts/catalog';
+import {
   hasActiveParameter,
-  normalizeParams,
   parameterRange,
   orderedTemplateParameterKeys,
-  type FontDefinition,
-  type KeychainParams,
   type ShapeParameter,
+} from '../../../domain/keychain/model/parameters';
+import {
+  normalizeParams,
+  type KeychainParams,
   type TemplateId,
   type GeometryResult,
-} from '../../../domain/keychain';
+} from '../../../domain/keychain/model/types';
+import { TEMPLATE_CATALOG } from '../../../domain/keychain/templates/template-builder';
 
 /** A source returning a value in [0, 1). Injectable so random designs are testable. */
 export type RandomSource = () => number;

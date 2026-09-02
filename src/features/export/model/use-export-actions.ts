@@ -1,16 +1,16 @@
 import { useRef, useState, type MutableRefObject, type Dispatch, type SetStateAction } from 'react';
 
+import type { FontDefinition } from '../../../domain/keychain/fonts/catalog';
 import type {
   ExportFormat,
   GeometryResult,
   KeychainParams,
   ThreeMfMode,
   PrintAppearanceOverrides,
-} from '../../../domain/keychain';
-import type { FontDefinition } from '../../../domain/keychain/fonts/catalog';
-import type { GeometryClient } from '../../../infrastructure/geometry';
+} from '../../../domain/keychain/model/types';
+import type { GeometryClient } from '../../../infrastructure/geometry/geometry-client';
 
-import { useAnalytics } from '../../../infrastructure/telemetry';
+import { useAnalytics } from '../../../infrastructure/telemetry/useTelemetry';
 import { completeExportIntent, requestExportIntent } from '../../hosted/api/hosted-api';
 import { hostedMode } from '../../hosted/config';
 

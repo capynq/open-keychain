@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import type { KeychainParams, PrintAppearanceOverrides } from '../../entities/keychain';
+import type { KeychainParams, PrintAppearanceOverrides } from '../../domain/keychain/model/types';
 
-import { copyTextToClipboard } from '../../shared/lib';
+import { copyTextToClipboard } from '../../shared/lib/clipboard';
 import { buildShareUrl } from './model/share-url';
 
 export type ShareDesignStatus = 'idle' | 'copied' | 'manual' | 'failed';

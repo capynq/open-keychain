@@ -1,9 +1,10 @@
 import { Link } from 'react-router';
 
-import type { Locale } from '../../../../infrastructure/i18n';
+import type { Locale } from '../../../../infrastructure/i18n/config';
 
-import { t } from '../../../../infrastructure/i18n';
-import { createPath, type RunOption } from '../content';
+import { t } from '../../../../infrastructure/i18n/utils';
+import { createPath } from '../../../../shared/lib/create-path';
+import { type RunOption } from '../content';
 import styles from './RunModeCard.module.css';
 
 export const RunModeCard = ({ locale, option }: { locale: Locale; option: RunOption }) => (
