@@ -145,6 +145,37 @@ test('customizes a name, uses every icon camera preset, and downloads STL', asyn
     .click();
   expect((await download).suggestedFilename()).toMatch(/^keychain-oliver-capsule\.stl$/);
 });
+
+test('rotates past both poles with the full-sphere preview camera', async ({ page }, testInfo) => {
+  await page.goto('/create');
+  await expect(page.locator('.viewer-surface canvas')).toBeVisible();
+  await page.getByRole('button', { name: 'Top view' }).click();
+
+  const viewer = page.locator('.viewer');
+  const surface = page.locator('.viewer-surface');
+  const canvas = surface.locator('canvas');
+  const bounds = await canvas.boundingBox();
+  expect(bounds).toBeTruthy();
+
+  await page.mouse.move(bounds!.x + bounds!.width * 0.5, bounds!.y + bounds!.height * 0.84);
+  await page.mouse.down();
+  await page.mouse.move(bounds!.x + bounds!.width * 0.5, bounds!.y + bounds!.height * 0.16, {
+    steps: 12,
+  });
+  await page.waitForTimeout(100);
+  const beforePole = await canvas.screenshot();
+  await page.mouse.move(bounds!.x + bounds!.width * 0.5, bounds!.y - bounds!.height * 0.2, {
+    steps: 12,
+  });
+  await page.waitForTimeout(100);
+  const pastPole = await canvas.screenshot();
+  await page.mouse.up();
+
+  await expect(viewer).toHaveAttribute('data-view', 'custom');
+  await expect(canvas).toBeVisible();
+  if (testInfo.project.name === 'desktop') expect(pastPole.equals(beforePole)).toBe(false);
+});
+
 test('treats adjusted NIKITA Bubble geometry as ready and keeps width warnings exportable', async ({
   page,
 }) => {
