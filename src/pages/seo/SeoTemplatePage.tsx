@@ -55,9 +55,11 @@ export const SeoTemplatePage = ({
           </Link>
         </p>
         <h2>{t(locale, 'seo.home.templatesHeading')}</h2>
-        <ul>
+        <ul className="seo-feature-list">
           {benefits.map((benefit) => (
-            <li key={benefit}>{benefit}</li>
+            <li className="seo-feature-card" key={benefit}>
+              {benefit}
+            </li>
           ))}
         </ul>
         <h2>{t(locale, 'seo.home.faqHeading')}</h2>
