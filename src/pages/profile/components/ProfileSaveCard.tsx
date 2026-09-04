@@ -31,11 +31,17 @@ export const ProfileSaveCard = ({
 }) => (
   <aside className="profile-card profile-actions">
     {canSaveCurrent ? (
-      <form onSubmit={onSave}>
+      <form
+        onSubmit={onSave}
+        toolname="save-keychain-project"
+        tooldescription="Save the current keychain design as a named project. A person must submit this form."
+      >
         <h2>{t(locale, 'profileSaveCurrent')}</h2>
         <label>
           {t(locale, 'profileProjectName')}
           <input
+            name="projectName"
+            toolparamdescription="The name to use for the saved keychain project."
             value={projectName}
             onChange={(event) => onProjectNameChange(event.target.value)}
             placeholder={defaultProjectName}

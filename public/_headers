@@ -2,7 +2,13 @@
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Origin-Agent-Cluster: ?1
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), tools=(self)
+  Link: </llms.txt>; rel="describedby"; type="text/markdown"
+
+/llms.txt
+  Content-Type: text/markdown; charset=UTF-8
+  Cache-Control: public, max-age=3600, must-revalidate
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable

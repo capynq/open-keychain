@@ -6,6 +6,7 @@ import { CustomizerWorkspace } from '@/app/components/CustomizerWorkspace/Custom
 import { Toast, type ToastVariant } from '@/app/components/Toast/Toast';
 import { useCustomizerPageState } from '@/app/hooks/useCustomizerPageState';
 import { applyPrintAppearanceOverrides } from '@/entities/keychain/model/types';
+import { useWebMcp } from '@/features/webmcp/hooks/useWebMcp';
 
 import type { Locale } from '../../infrastructure/i18n/config';
 
@@ -17,6 +18,7 @@ import './CustomizerPage.module.css';
 import '../../app/styles/customizer.css';
 import '../../app/styles/preview.css';
 
+/* eslint-disable max-lines-per-function */
 export const CustomizerPage = ({
   locale,
   onLocaleChange,
@@ -32,6 +34,13 @@ export const CustomizerPage = ({
     routeModel.initialAppearanceOverrides,
     routeModel.routeInputKey,
   );
+  useWebMcp(state.customizer, {
+    ...state.modelInfo,
+    printable: Boolean(state.geometry.result?.printable),
+    busy: state.geometry.busy,
+    error: state.geometry.error,
+    dimensions: state.geometry.result?.dimensions,
+  });
 
   return (
     <main className="app-shell" aria-label="Customizer">

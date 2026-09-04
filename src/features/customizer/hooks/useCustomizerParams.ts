@@ -25,6 +25,7 @@ import {
 } from '../../../domain/keychain/model/parameters';
 import {
   DEFAULT_PARAMS,
+  normalizeParams,
   type KeychainParams,
   type TemplateId,
 } from '../../../domain/keychain/model/types';
@@ -63,6 +64,9 @@ export const useCustomizerParams = (
   updateText: (text: string) => void;
   updateSubtitle: (subtitle: string) => void;
   updateSubtitleFont: (fontId: string) => void;
+  applyDesign: (
+    changes: Pick<Partial<KeychainParams>, 'text' | 'subtitle' | 'templateId' | 'styleId'>,
+  ) => void;
   selectTemplate: (templateId: TemplateId) => void;
   resetSection: (section: CustomizerResetSection) => void;
   reset: () => void;
@@ -231,6 +235,45 @@ export const useCustomizerParams = (
     setParamsDirect((current) => ({ ...current, subtitleFontId: fontId }));
   };
 
+  const applyDesign = (
+    changes: Pick<Partial<KeychainParams>, 'text' | 'subtitle' | 'templateId' | 'styleId'>,
+  ): void => {
+    setFontNotice(undefined);
+    setParamsDirect((current) => {
+      const templateId = changes.templateId ?? current.templateId;
+      const template =
+        TEMPLATE_CATALOG.find((item) => item.id === templateId) ?? TEMPLATE_CATALOG[0];
+      const currentFont =
+        allFonts.find((font) => font.id === current.fontId) ?? fontDefinition(current.fontId);
+      const text = changes.text ?? current.text;
+      const replacement =
+        templateId === 'articulated-name' && !fontSupportsArticulatedName(currentFont, text)
+          ? articulatedFallbackFont(text)
+          : !fontSupportsText(currentFont, text)
+            ? allFonts.find((font) => fontSupportsText(font, text))
+            : undefined;
+
+      const requestedStyle = changes.styleId ?? current.styleId;
+      const styleId =
+        templateId === 'magnet'
+          ? 'plain'
+          : template.styles.includes(requestedStyle)
+            ? requestedStyle
+            : 'contour';
+      const next = {
+        ...current,
+        ...changes,
+        templateId,
+        styleId,
+        text,
+        subtitle: templateId === 'articulated-name' ? '' : (changes.subtitle ?? current.subtitle),
+        fontId: replacement?.id ?? current.fontId,
+      };
+
+      return normalizeParams(next);
+    });
+  };
+
   const selectTemplate = (templateId: TemplateId): void => {
     setFontNotice(undefined);
     const selected =
@@ -359,6 +402,7 @@ export const useCustomizerParams = (
     updateText,
     updateSubtitle,
     updateSubtitleFont,
+    applyDesign,
     selectTemplate,
     resetSection,
     reset,

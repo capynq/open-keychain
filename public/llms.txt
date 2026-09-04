@@ -1,28 +1,36 @@
 # Open Keychain 3D
 
-Open Keychain 3D is a browser-based, open-source customizer for printable 3D keychains,
-nameplates, plant labels, and related small objects.
+> Open Keychain 3D is a browser-based, open-source customizer for printable 3D keychains,
+> nameplates, plant labels, and related small objects.
 
-- Website: https://open-keychain.com/
-- Customizer: https://open-keychain.com/create
-- Privacy: https://open-keychain.com/privacy
-- Source code: https://github.com/capynq/open-keychain
-- License: MIT
+Geometry generation and STL/3MF export run locally in the browser. WebMCP is a progressive,
+native-only enhancement: supported browsers may register tools while `/create` is open. The
+optional API server is not required for the customizer workflow.
+
+## Product
+
+- [Open Keychain 3D](https://open-keychain.com/) — product home and localized content.
+- [Customizer](https://open-keychain.com/create) — create and export a printable design.
+- [Privacy](https://open-keychain.com/privacy) — privacy and analytics information.
 
 ## Templates
 
-- https://open-keychain.com/templates/name-keychain/
-- https://open-keychain.com/templates/articulated-name/
-- https://open-keychain.com/templates/nameplate/
-- https://open-keychain.com/templates/plant-label/
+- [Template catalog](https://open-keychain.com/templates/) — browse printable design templates.
+- [Name keychain](https://open-keychain.com/templates/name-keychain/) — a standard name keychain.
+- [Articulated name](https://open-keychain.com/templates/articulated-name/) — linked articulated letters.
+- [Nameplate](https://open-keychain.com/templates/nameplate/) — a rounded embedded nameplate.
+- [Plant label](https://open-keychain.com/templates/plant-label/) — a printable garden label.
 
 ## Guides
 
-- https://open-keychain.com/guides/stl-vs-3mf/
-- https://open-keychain.com/guides/how-to-print-a-name-keychain/
-- https://open-keychain.com/guides/articulated-vs-standard-keychain/
-- https://open-keychain.com/guides/printable-plant-label-guide/
+- [Guide catalog](https://open-keychain.com/guides/) — printing and format guidance.
+- [STL vs 3MF](https://open-keychain.com/guides/stl-vs-3mf/) — choose an export format.
+- [How to print a name keychain](https://open-keychain.com/guides/how-to-print-a-name-keychain/) — prepare a print.
+- [Articulated vs standard keychain](https://open-keychain.com/guides/articulated-vs-standard-keychain/) — compare templates.
+- [Printable plant label guide](https://open-keychain.com/guides/printable-plant-label-guide/) — make a plant label.
 
-Geometry generation and STL/3MF export run locally in the browser. The project does not claim
-physical-printer validation for every printer or material. The API server is optional and is not
-required for the local-first customizer workflow.
+## Optional
+
+- [Source code](https://github.com/capynq/open-keychain) — the open-source repository.
+- [MIT license](https://github.com/capynq/open-keychain/blob/main/LICENSE) — project license.
+- [WebMCP implementation](https://github.com/capynq/open-keychain/blob/main/docs/webmcp.md) — native tool integration and security boundaries.
