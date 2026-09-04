@@ -7,6 +7,14 @@ export type HostedUser = {
   name: string;
   email: string;
 };
+export type SellerPreset = {
+  id: string;
+  name: string;
+  params: Record<string, unknown>;
+  print_profile_id: string;
+  created_at: string;
+  updated_at: string;
+};
 export type HostedProject = {
   id: string;
   name: string;
@@ -124,4 +132,31 @@ export const saveProject = (
 
 export const deleteProject = async (projectId: string): Promise<void> => {
   await apiRequest(`/api/projects/${encodeURIComponent(projectId)}`, { method: 'DELETE' });
+};
+
+export const listPresets = async (): Promise<SellerPreset[]> => {
+  return (
+    await apiRequest<{
+      presets: SellerPreset[];
+    }>('/api/presets')
+  ).presets;
+};
+
+export const savePreset = (
+  name: string,
+  params: Record<string, unknown>,
+  printProfileId: string,
+): Promise<{
+  preset: SellerPreset;
+}> => {
+  return apiRequest<{
+    preset: SellerPreset;
+  }>('/api/presets', {
+    method: 'POST',
+    body: JSON.stringify({ name, params, printProfileId }),
+  });
+};
+
+export const deletePreset = async (presetId: string): Promise<void> => {
+  await apiRequest(`/api/presets/${encodeURIComponent(presetId)}`, { method: 'DELETE' });
 };

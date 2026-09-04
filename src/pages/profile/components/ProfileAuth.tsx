@@ -1,4 +1,4 @@
-import type { FormEventHandler } from 'react';
+import type { SubmitEventHandler } from 'react';
 
 import type { Locale } from '../../../infrastructure/i18n/config';
 
@@ -28,7 +28,7 @@ export const ProfileAuth = ({
   onNameChange: (value: string) => void;
   onEmailChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
-  onSubmit: FormEventHandler<HTMLFormElement>;
+  onSubmit: SubmitEventHandler<HTMLFormElement>;
   onToggleMode: () => void;
 }) => (
   <section className="profile-card profile-auth">

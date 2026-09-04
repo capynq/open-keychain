@@ -13,7 +13,7 @@ export const AccountPopover = ({
 }) => {
   const {
     account,
-    projects,
+    presets,
     authMode,
     authName,
     authEmail,
@@ -25,27 +25,27 @@ export const AccountPopover = ({
     setAuthEmail,
     setAuthPassword,
     submitAuth,
-    saveCurrentProject,
-    loadProject,
+    saveCurrentPreset,
+    loadPreset,
     logOut,
   } = state;
   if (account)
     return (
       <>
-        <strong>{t(locale, 'gallery')}</strong>
+        <strong>{t(locale, 'presetLibrary')}</strong>
         <div className="project-list">
-          {projects.length ? (
-            projects.map((project) => (
-              <button type="button" key={project.id} onClick={() => loadProject(project)}>
-                {project.name}
+          {presets.length ? (
+            presets.map((preset) => (
+              <button type="button" key={preset.id} onClick={() => loadPreset(preset)}>
+                {preset.name}
               </button>
             ))
           ) : (
-            <small>{t(locale, 'galleryEmpty')}</small>
+            <small>{t(locale, 'presetEmpty')}</small>
           )}
         </div>
-        <button type="button" onClick={() => void saveCurrentProject()}>
-          {t(locale, 'saveProject')}
+        <button type="button" onClick={() => void saveCurrentPreset()}>
+          {t(locale, 'savePreset')}
         </button>
         <button type="button" onClick={() => void logOut()}>
           {t(locale, 'signOut')}

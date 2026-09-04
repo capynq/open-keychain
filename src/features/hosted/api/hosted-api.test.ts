@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { currentUser, deleteProject, signOut } from './hosted-api';
+import { currentUser, deletePreset, signOut } from './hosted-api';
 
-describe('hosted API project mutations', () => {
+describe('hosted API preset mutations', () => {
   const originalFetch = globalThis.fetch;
 
   afterEach(() => {
@@ -10,13 +10,13 @@ describe('hosted API project mutations', () => {
     vi.restoreAllMocks();
   });
 
-  it('deletes a project with credentials and accepts the empty success response', async () => {
+  it('deletes a preset with credentials and accepts the empty success response', async () => {
     const fetch = vi.fn(async () => new Response(null, { status: 204 }));
     globalThis.fetch = fetch;
 
-    await expect(deleteProject('project / 1')).resolves.toBeUndefined();
+    await expect(deletePreset('preset / 1')).resolves.toBeUndefined();
 
-    expect(fetch).toHaveBeenCalledWith('/api/projects/project%20%2F%201', {
+    expect(fetch).toHaveBeenCalledWith('/api/presets/preset%20%2F%201', {
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       method: 'DELETE',

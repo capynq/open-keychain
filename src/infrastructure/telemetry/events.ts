@@ -14,7 +14,11 @@ export type AnalyticsEvent =
   | 'customizer_guide_dismissed'
   | 'seo_page_view'
   | 'seo_cta_clicked'
-  | 'seo_language_changed';
+  | 'seo_language_changed'
+  | 'preset_saved'
+  | 'batch_started'
+  | 'batch_completed'
+  | 'batch_failed';
 
 export type AnalyticsProperties = Record<string, string | number | boolean | undefined>;
 
@@ -32,6 +36,7 @@ const SAFE_PROPERTY_KEYS = new Set([
   'page_type',
   'path',
   'preset',
+  'row_count',
   'source',
   'status',
   'step',

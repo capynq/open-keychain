@@ -38,6 +38,11 @@
   align-items: start;
 }
 
+.profile-main-column {
+  display: grid;
+  gap: 18px;
+}
+
 .profile-card,
 .profile-status {
   border: 1px solid #d8d4cb;
@@ -100,7 +105,10 @@
 
 .profile-projects li small,
 .profile-empty,
-.profile-actions p {
+.profile-actions p,
+.profile-batch > p,
+.profile-batch form > p,
+.profile-card-heading small {
   margin: 4px 0 0;
   color: #777c86;
   font-size: 11px;
@@ -157,7 +165,9 @@
 }
 
 .profile-actions input,
-.profile-auth input {
+.profile-auth input,
+.profile-batch textarea,
+.profile-batch select {
   min-height: 38px;
   border: 1px solid #cecbc2;
   border-radius: 8px;
@@ -165,6 +175,53 @@
   background: #fff;
   color: #303545;
   font: inherit;
+}
+
+.profile-batch {
+  display: grid;
+  gap: 14px;
+}
+
+.profile-batch form {
+  display: grid;
+  gap: 11px;
+}
+
+.profile-batch label {
+  display: grid;
+  gap: 5px;
+  color: #555b67;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.profile-batch textarea {
+  min-height: 160px;
+  resize: vertical;
+}
+
+.profile-batch form > button {
+  justify-self: start;
+  border-color: #ef815e;
+  background: #ef815e;
+  color: #fff;
+}
+
+.profile-success {
+  margin: 0;
+  color: #237a52;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.profile-batch-errors {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+  color: #a33e33;
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .profile-actions form > button,

@@ -11,11 +11,68 @@ type ProjectBody = {
   params?: unknown;
   thumbnail?: string;
 };
+type PresetBody = {
+  name?: string;
+  params?: unknown;
+  printProfileId?: string;
+};
 const MAX_PROJECT_BODY_BYTES = 256 * 1024;
 const MAX_PROJECT_NAME_LENGTH = 120;
 const MAX_PROJECT_THUMBNAIL_LENGTH = 192 * 1024;
+const MAX_PRESET_BODY_BYTES = 64 * 1024;
+const MAX_PRESET_NAME_LENGTH = 120;
+const MAX_PRINT_PROFILE_ID_LENGTH = 120;
 const API_RATE_LIMIT_MAX = 120;
 const API_RATE_LIMIT_WINDOW = '1 minute';
+const PRESET_PARAM_KEYS = new Set([
+  'subtitleFontId',
+  'subtitleOffsetXRatio',
+  'subtitleOffsetYRatio',
+  'magnetPocketPreset',
+  'magnetPocketPlacement',
+  'fontId',
+  'templateId',
+  'styleId',
+  'textSizeMm',
+  'fontWeightMm',
+  'baseThicknessMm',
+  'reliefDepthMm',
+  'paddingMm',
+  'edgeInsetMm',
+  'letterSpacingMm',
+  'holeDiameterMm',
+  'connectorWidthMm',
+  'cornerRadiusMm',
+  'stakeLengthMm',
+  'plantAccentEnabled',
+  'nameplateTiltDeg',
+  'nameplateEmbedMm',
+  'jointClearanceMm',
+  'mechanicalGapMm',
+  'maxJointAngleDeg',
+  'minimumWallMm',
+  'bottomClearanceMm',
+  'reliefHaloMm',
+  'ringOffsetMm',
+  'bubbleLobeMm',
+  'tagTailMm',
+  'archCurveMm',
+  'stakeShoulderMm',
+  'jointBossMm',
+  'ribbonTailMm',
+  'ribbonNotchMm',
+  'heartSizeMm',
+  'heartBorderMm',
+  'heartLeftGapMm',
+  'heartRightGapMm',
+  'heartVerticalOffsetMm',
+  'heartInteriorMode',
+  'subtitleTextSizeMm',
+  'subtitleFontWeightMm',
+  'subtitleLetterSpacingMm',
+  'subtitleReliefDepthMm',
+  'subtitleGapMm',
+]);
 
 const isJsonObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -33,6 +90,35 @@ export const projectBodyError = (body: ProjectBody): string | undefined => {
   }
   return undefined;
 };
+const presetParamsAreSafe = (params: Record<string, unknown>): boolean =>
+  params.templateId === 'name-keychain' &&
+  !Object.hasOwn(params, 'text') &&
+  !Object.hasOwn(params, 'subtitle') &&
+  Object.keys(params).every((key) => PRESET_PARAM_KEYS.has(key));
+
+export const presetBodyError = (body: PresetBody, partial = false): string | undefined => {
+  if (!partial && (!body.name?.trim() || !isJsonObject(body.params))) return 'INVALID_PRESET';
+  if (
+    body.name !== undefined &&
+    (!body.name.trim() || body.name.trim().length > MAX_PRESET_NAME_LENGTH)
+  )
+    return body.name.trim() ? 'PRESET_NAME_TOO_LONG' : 'INVALID_PRESET';
+  if (
+    body.printProfileId !== undefined &&
+    (!body.printProfileId.trim() || body.printProfileId.length > MAX_PRINT_PROFILE_ID_LENGTH)
+  )
+    return 'INVALID_PRINT_PROFILE';
+  if (body.params !== undefined) {
+    if (!isJsonObject(body.params) || !presetParamsAreSafe(body.params)) return 'INVALID_PRESET';
+    try {
+      if (Buffer.byteLength(JSON.stringify(body.params), 'utf8') > MAX_PRESET_BODY_BYTES)
+        return 'PRESET_TOO_LARGE';
+    } catch {
+      return 'INVALID_PRESET';
+    }
+  }
+  return undefined;
+};
 const cookieValue = (request: FastifyRequest, name: string): string | undefined => {
   const match = request.headers.cookie?.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
   return match ? decodeURIComponent(match[1]) : undefined;
@@ -47,8 +133,8 @@ const anonymousActor = (request: FastifyRequest, reply: FastifyReply): string =>
   );
   return value;
 };
-const jsonBody = (request: FastifyRequest): ProjectBody => {
-  return (request.body && typeof request.body === 'object' ? request.body : {}) as ProjectBody;
+const jsonBody = <Body>(request: FastifyRequest): Body => {
+  return (request.body && typeof request.body === 'object' ? request.body : {}) as Body;
 };
 const currentUser = async (auth: ReturnType<typeof createAuth>, request: FastifyRequest) => {
   const session = await sessionForRequest(auth, request);
@@ -202,7 +288,7 @@ export const createApp = (pool: pg.Pool, config: ServerConfig): FastifyInstance 
   app.post('/api/projects', async (request, reply) => {
     const user = await currentUser(auth, request);
     if (!user) return reply.status(401).send({ error: 'UNAUTHORIZED' });
-    const body = jsonBody(request);
+    const body = jsonBody<ProjectBody>(request);
     const validationError = projectBodyError(body);
     if (validationError) return reply.status(400).send({ error: validationError });
     const result = await pool.query(
@@ -226,7 +312,7 @@ export const createApp = (pool: pg.Pool, config: ServerConfig): FastifyInstance 
   }>('/api/projects/:id', async (request, reply) => {
     const user = await currentUser(auth, request);
     if (!user) return reply.status(401).send({ error: 'UNAUTHORIZED' });
-    const body = jsonBody(request);
+    const body = jsonBody<ProjectBody>(request);
     if (body.name !== undefined && !body.name.trim())
       return reply.status(400).send({ error: 'INVALID_PROJECT' });
     if (body.name && body.name.trim().length > MAX_PROJECT_NAME_LENGTH)
@@ -274,6 +360,83 @@ export const createApp = (pool: pg.Pool, config: ServerConfig): FastifyInstance 
       user.id,
     ]);
     if (!result.rowCount) return reply.status(404).send({ error: 'PROJECT_NOT_FOUND' });
+    return reply.status(204).send();
+  });
+  app.get('/api/presets', async (request, reply) => {
+    const user = await currentUser(auth, request);
+    if (!user) return reply.status(401).send({ error: 'UNAUTHORIZED' });
+    const result = await pool.query(
+      `SELECT id, name, params, print_profile_id, created_at, updated_at
+       FROM seller_presets WHERE user_id = $1 ORDER BY updated_at DESC`,
+      [user.id],
+    );
+    return { presets: result.rows };
+  });
+  app.post('/api/presets', async (request, reply) => {
+    const user = await currentUser(auth, request);
+    if (!user) return reply.status(401).send({ error: 'UNAUTHORIZED' });
+    const body = jsonBody<PresetBody>(request);
+    const validationError = presetBodyError(body);
+    if (validationError) return reply.status(400).send({ error: validationError });
+    const result = await pool.query(
+      `INSERT INTO seller_presets(id, user_id, name, params, print_profile_id)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, name, params, print_profile_id, created_at, updated_at`,
+      [
+        randomUUID(),
+        user.id,
+        body.name!.trim().slice(0, MAX_PRESET_NAME_LENGTH),
+        JSON.stringify(body.params),
+        body.printProfileId?.trim() || 'fdm-standard-0.4',
+      ],
+    );
+    return reply.status(201).send({ preset: result.rows[0] });
+  });
+  app.patch<{
+    Params: {
+      id: string;
+    };
+  }>('/api/presets/:id', async (request, reply) => {
+    const user = await currentUser(auth, request);
+    if (!user) return reply.status(401).send({ error: 'UNAUTHORIZED' });
+    const body = jsonBody<PresetBody>(request);
+    const validationError = presetBodyError(body, true);
+    if (
+      validationError ||
+      (body.name === undefined && body.params === undefined && body.printProfileId === undefined)
+    )
+      return reply.status(400).send({ error: validationError ?? 'INVALID_PRESET' });
+    const result = await pool.query(
+      `UPDATE seller_presets SET
+        name = COALESCE($1, name),
+        params = COALESCE($2, params),
+        print_profile_id = COALESCE($3, print_profile_id),
+        updated_at = NOW()
+       WHERE id = $4 AND user_id = $5
+       RETURNING id, name, params, print_profile_id, created_at, updated_at`,
+      [
+        body.name?.trim().slice(0, MAX_PRESET_NAME_LENGTH) ?? null,
+        body.params ? JSON.stringify(body.params) : null,
+        body.printProfileId?.trim() ?? null,
+        request.params.id,
+        user.id,
+      ],
+    );
+    if (!result.rowCount) return reply.status(404).send({ error: 'PRESET_NOT_FOUND' });
+    return { preset: result.rows[0] };
+  });
+  app.delete<{
+    Params: {
+      id: string;
+    };
+  }>('/api/presets/:id', async (request, reply) => {
+    const user = await currentUser(auth, request);
+    if (!user) return reply.status(401).send({ error: 'UNAUTHORIZED' });
+    const result = await pool.query('DELETE FROM seller_presets WHERE id = $1 AND user_id = $2', [
+      request.params.id,
+      user.id,
+    ]);
+    if (!result.rowCount) return reply.status(404).send({ error: 'PRESET_NOT_FOUND' });
     return reply.status(204).send();
   });
   return app;

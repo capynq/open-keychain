@@ -84,7 +84,7 @@ The customizer exports printable STL and 3MF files. Review the downloaded model 
 
 ## Privacy and future hosting
 
-The browser workflow keeps generation and export on the device running the browser. The optional SEO analytics is consent-gated and sends only coarse page metadata; it never sends names, search strings, generated geometry, or exported files. This repository contains no active payment flow, price list, or hosted workspace offering. A future hosted workspace is only a concept for saved projects, seller presets, and repeat-order/batch tools.
+The browser workflow keeps generation and export on the device running the browser. The optional SEO analytics is consent-gated and sends only coarse page metadata; it never sends names, search strings, generated geometry, or exported files. There is no active payment flow or public price list. The feature-flagged hosted workspace stores reusable seller presets only; CSV names, generated geometry, and batch ZIPs stay in the seller's browser.
 
 ## Development
 

@@ -1,27 +1,35 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type SubmitEvent } from 'react';
 
-import type { KeychainParams } from '../../../domain/keychain/model/types';
+import type { KeychainParams } from '@/entities/keychain/model/types';
+
+import { useAnalytics } from '@/infrastructure/telemetry/useTelemetry';
+
 import type { Locale } from '../../../infrastructure/i18n/config';
 
-import { FONT_CATALOG } from '../../../domain/keychain/fonts/catalog';
-import { isLocalFontId } from '../../../domain/keychain/fonts/local-provider';
-import { t } from '../../../infrastructure/i18n/utils';
 import {
   currentUser,
-  listProjects,
-  saveProject,
+  deletePreset,
+  listPresets,
+  savePreset as createPreset,
   signIn,
   signOut,
   signUp,
-  type HostedProject,
   type HostedUser,
+  type SellerPreset,
 } from '../api/hosted-api';
-import { HOSTED_PROJECT_SCHEMA_VERSION } from '../api/hosted-api';
 import { hostedMode } from '../config';
+import {
+  DEFAULT_PRESET_PRINT_PROFILE_ID,
+  paramsForPresetOrder,
+  presetParamsForStorage,
+  type SellerPresetParams,
+} from '../model/seller-preset';
 
 export type HostedAccountState = {
   account: HostedUser | undefined;
-  projects: HostedProject[];
+  presets: SellerPreset[];
+  loading: boolean;
+  loadError: string | undefined;
   accountOpen: boolean;
   setAccountOpen: (open: boolean) => void;
   authMode: 'sign-in' | 'sign-up';
@@ -34,19 +42,29 @@ export type HostedAccountState = {
   setAuthPassword: (password: string) => void;
   authBusy: boolean;
   authError: string | undefined;
-  submitAuth: (event: FormEvent<HTMLFormElement>) => Promise<void>;
-  saveCurrentProject: () => Promise<void>;
-  loadProject: (project: HostedProject) => void;
+  saveBusy: boolean;
+  saveError: string | undefined;
+  deletingId: string | undefined;
+  deleteError: string | undefined;
+  refresh: () => Promise<void>;
+  submitAuth: (event: SubmitEvent<HTMLFormElement>) => Promise<void>;
+  savePreset: (name: string, params?: KeychainParams) => Promise<boolean>;
+  saveCurrentPreset: () => Promise<void>;
+  loadPreset: (preset: SellerPreset) => void;
+  removePreset: (preset: SellerPreset) => Promise<void>;
   logOut: () => Promise<void>;
 };
 
 export const useHostedAccount = (
   params: KeychainParams,
-  onLoadProject: (params: KeychainParams) => void,
+  onLoadPreset: (params: KeychainParams) => void,
   locale: Locale = 'en',
 ): HostedAccountState => {
+  void locale;
   const [account, setAccount] = useState<HostedUser>();
-  const [projects, setProjects] = useState<HostedProject[]>([]);
+  const [presets, setPresets] = useState<SellerPreset[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string>();
   const [accountOpen, setAccountOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'sign-in' | 'sign-up'>('sign-in');
   const [authName, setAuthName] = useState('');
@@ -54,20 +72,38 @@ export const useHostedAccount = (
   const [authPassword, setAuthPassword] = useState('');
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState<string>();
+  const [saveBusy, setSaveBusy] = useState(false);
+  const [saveError, setSaveError] = useState<string>();
+  const [deletingId, setDeletingId] = useState<string>();
+  const [deleteError, setDeleteError] = useState<string>();
+  const { track } = useAnalytics();
 
-  useEffect(() => {
-    if (!hostedMode) return;
-    void currentUser().then((user) => {
+  const refresh = useCallback(async (): Promise<void> => {
+    if (!hostedMode) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setLoadError(undefined);
+    try {
+      const user = await currentUser();
+
       setAccount(user);
-
-      if (user)
-        void listProjects()
-          .then(setProjects)
-          .catch(() => setProjects([]));
-    });
+      setPresets(user ? await listPresets() : []);
+    } catch {
+      setLoadError('We could not load your workspace. Try again.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const submitAuth = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+  useEffect(() => {
+    const timer = window.setTimeout(() => void refresh(), 0);
+
+    return () => window.clearTimeout(timer);
+  }, [refresh]);
+
+  const submitAuth = async (event: SubmitEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     setAuthBusy(true);
     setAuthError(undefined);
@@ -78,7 +114,7 @@ export const useHostedAccount = (
           : await signIn(authEmail, authPassword);
 
       setAccount(response.user);
-      setProjects(await listProjects());
+      setPresets(await listPresets());
       setAuthPassword('');
     } catch (cause) {
       setAuthError(cause instanceof Error ? cause.message : 'Authentication failed.');
@@ -87,46 +123,64 @@ export const useHostedAccount = (
     }
   };
 
-  const saveCurrentProject = async (): Promise<void> => {
-    if (!account) return;
-    const name = window.prompt('Project name', params.text || 'Untitled keychain')?.trim();
-    if (!name) return;
+  const savePreset = async (name: string, currentParams = params): Promise<boolean> => {
+    if (!account || !name.trim()) return false;
+    setSaveBusy(true);
+    setSaveError(undefined);
     try {
-      const hostedParams = {
-        ...params,
-        fontId: isLocalFontId(params.fontId) ? FONT_CATALOG[0].id : params.fontId,
-      } as unknown as Record<string, unknown>;
-      const response = await saveProject(name, hostedParams);
+      const response = await createPreset(
+        name.trim(),
+        presetParamsForStorage(currentParams),
+        DEFAULT_PRESET_PRINT_PROFILE_ID,
+      );
 
-      setProjects((current) => [
-        response.project,
-        ...current.filter((project) => project.id !== response.project.id),
-      ]);
+      setPresets((items) => [response.preset, ...items]);
+      track('preset_saved', { template: 'name-keychain' });
+      return true;
     } catch (cause) {
-      setAuthError(cause instanceof Error ? cause.message : 'Project could not be saved.');
-      setAccountOpen(true);
+      setSaveError(cause instanceof Error ? cause.message : 'Preset could not be saved.');
+      return false;
+    } finally {
+      setSaveBusy(false);
     }
   };
 
-  const loadProject = (project: HostedProject): void => {
-    if (project.schema_version !== HOSTED_PROJECT_SCHEMA_VERSION) {
-      setAuthError(t(locale, 'projectOutdated'));
-      setAccountOpen(true);
-      return;
-    }
-    onLoadProject(project.params as KeychainParams);
+  const saveCurrentPreset = async (): Promise<void> => {
+    const name = window.prompt('Preset name', 'PLA contour')?.trim();
+
+    if (name) await savePreset(name);
+  };
+
+  const loadPreset = (preset: SellerPreset): void => {
+    onLoadPreset(paramsForPresetOrder(preset.params as SellerPresetParams, params.text));
     setAccountOpen(false);
+  };
+
+  const removePreset = async (preset: SellerPreset): Promise<void> => {
+    if (!window.confirm(`Delete “${preset.name}”? This cannot be undone.`)) return;
+    setDeletingId(preset.id);
+    setDeleteError(undefined);
+    try {
+      await deletePreset(preset.id);
+      setPresets((items) => items.filter((item) => item.id !== preset.id));
+    } catch (cause) {
+      setDeleteError(cause instanceof Error ? cause.message : 'Preset could not be deleted.');
+    } finally {
+      setDeletingId(undefined);
+    }
   };
 
   const logOut = async (): Promise<void> => {
     await signOut();
     setAccount(undefined);
-    setProjects([]);
+    setPresets([]);
   };
 
   return {
     account,
-    projects,
+    presets,
+    loading,
+    loadError,
     accountOpen,
     setAccountOpen,
     authMode,
@@ -139,9 +193,16 @@ export const useHostedAccount = (
     setAuthPassword,
     authBusy,
     authError,
+    saveBusy,
+    saveError,
+    deletingId,
+    deleteError,
+    refresh,
     submitAuth,
-    saveCurrentProject,
-    loadProject,
+    savePreset,
+    saveCurrentPreset,
+    loadPreset,
+    removePreset,
     logOut,
   };
 };

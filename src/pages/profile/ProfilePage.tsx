@@ -1,16 +1,17 @@
+import { useState, type SubmitEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 
-import type { KeychainParams } from '@/entities/keychain/model/types';
-
 import { AppHeader } from '@/app/components/AppHeader/AppHeader';
+import { DEFAULT_PARAMS, type KeychainParams } from '@/entities/keychain/model/types';
+import { useHostedAccount } from '@/features/hosted/hooks/useHostedAccount';
 
 import type { Locale } from '../../infrastructure/i18n/config';
 
 import { t } from '../../infrastructure/i18n/utils';
 import { ProfileAuth } from './components/ProfileAuth';
-import { ProfileProjects } from './components/ProfileProjects';
-import { ProfileSaveCard } from './components/ProfileSaveCard';
-import { useProfileSession } from './hooks/useProfileSession';
+import { ProfileBatch } from './components/ProfileBatch';
+import { ProfilePresets } from './components/ProfilePresets';
+import { ProfilePresetSaveCard } from './components/ProfilePresetSaveCard';
 import './ProfilePage.module.css';
 import '../../app/styles/profile.css';
 
@@ -25,9 +26,21 @@ export const ProfilePage = ({
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [presetName, setPresetName] = useState('');
   const currentParams = (location.state as ProfileLocationState)?.currentParams;
-  const session = useProfileSession(locale, currentParams);
-  const canSaveCurrent = Boolean(session.account && currentParams);
+  const workspace = useHostedAccount(
+    currentParams ?? DEFAULT_PARAMS,
+    (params) => navigate('/create', { state: { projectParams: params } }),
+    locale,
+  );
+  const canSaveCurrent = Boolean(workspace.account && currentParams);
+
+  const saveCurrentPreset = async (event: SubmitEvent<HTMLFormElement>): Promise<void> => {
+    event.preventDefault();
+    if (!currentParams) return;
+
+    if (await workspace.savePreset(presetName, currentParams)) setPresetName('');
+  };
 
   return (
     <div className="profile-shell">
@@ -35,63 +48,63 @@ export const ProfilePage = ({
       <main className="profile-page" aria-label={t(locale, 'profile')}>
         <section className="profile-intro">
           <p className="eyebrow">{t(locale, 'brandName')}</p>
-          <h1>{t(locale, 'profileTitle')}</h1>
+          <h1>{t(locale, 'workspaceTitle')}</h1>
           <p>
-            {session.account
-              ? t(locale, 'profileSignedIn', { email: session.account.email })
-              : t(locale, 'profileSignedOut')}
+            {workspace.account
+              ? t(locale, 'workspaceSignedIn', { email: workspace.account.email })
+              : t(locale, 'workspaceSignedOut')}
           </p>
         </section>
-        {session.loading ? (
+        {workspace.loading ? (
           <p className="profile-status" role="status">
-            {t(locale, 'profileLoading')}
+            {t(locale, 'workspaceLoading')}
           </p>
-        ) : session.loadError ? (
+        ) : workspace.loadError ? (
           <section className="profile-status" role="alert">
-            <p>{session.loadError}</p>
-            <button type="button" onClick={() => void session.refresh()}>
-              {t(locale, 'profileRetry')}
+            <p>{workspace.loadError}</p>
+            <button type="button" onClick={() => void workspace.refresh()}>
+              {t(locale, 'workspaceRetry')}
             </button>
           </section>
-        ) : session.account ? (
+        ) : workspace.account ? (
           <div className="profile-grid">
-            <ProfileProjects
-              locale={locale}
-              projects={session.projects}
-              deleteError={session.deleteError}
-              deletingId={session.deletingId}
-              onOpen={(project) =>
-                navigate('/create', { state: { projectParams: project.params } })
-              }
-              onDelete={(project) => void session.removeProject(project)}
-            />
-            <ProfileSaveCard
+            <div className="profile-main-column">
+              <ProfilePresets
+                locale={locale}
+                presets={workspace.presets}
+                deleteError={workspace.deleteError}
+                deletingId={workspace.deletingId}
+                onUse={workspace.loadPreset}
+                onDelete={(preset) => void workspace.removePreset(preset)}
+              />
+              <ProfileBatch locale={locale} presets={workspace.presets} />
+            </div>
+            <ProfilePresetSaveCard
               locale={locale}
               canSaveCurrent={canSaveCurrent}
-              projectName={session.projectName}
-              defaultProjectName={session.defaultProjectName}
-              saveBusy={session.saveBusy}
-              saveError={session.saveError}
-              onProjectNameChange={session.setProjectName}
-              onSave={session.saveCurrent}
-              onSignOut={() => void session.logOut()}
+              presetName={presetName}
+              saveBusy={workspace.saveBusy}
+              saveError={workspace.saveError}
+              onPresetNameChange={setPresetName}
+              onSave={saveCurrentPreset}
+              onSignOut={() => void workspace.logOut()}
             />
           </div>
         ) : (
           <ProfileAuth
             locale={locale}
-            authMode={session.authMode}
-            name={session.name}
-            email={session.email}
-            password={session.password}
-            authBusy={session.authBusy}
-            authError={session.authError}
-            onNameChange={session.setName}
-            onEmailChange={session.setEmail}
-            onPasswordChange={session.setPassword}
-            onSubmit={session.submitAuth}
+            authMode={workspace.authMode}
+            name={workspace.authName}
+            email={workspace.authEmail}
+            password={workspace.authPassword}
+            authBusy={workspace.authBusy}
+            authError={workspace.authError}
+            onNameChange={workspace.setAuthName}
+            onEmailChange={workspace.setAuthEmail}
+            onPasswordChange={workspace.setAuthPassword}
+            onSubmit={workspace.submitAuth}
             onToggleMode={() =>
-              session.setAuthMode(session.authMode === 'sign-in' ? 'sign-up' : 'sign-in')
+              workspace.setAuthMode(workspace.authMode === 'sign-in' ? 'sign-up' : 'sign-in')
             }
           />
         )}

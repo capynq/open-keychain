@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { createApp, projectBodyError } from './app';
+import { createApp, presetBodyError, projectBodyError } from './app';
 import type { ServerConfig } from './config';
 const config: ServerConfig = {
   port: 3000,
@@ -41,5 +41,32 @@ describe('hosted API', () => {
     expect(projectBodyError({ name: 'ALEX', params: { text: 'x'.repeat(256 * 1024) } })).toBe(
       'PROJECT_TOO_LARGE',
     );
+  });
+
+  it('accepts only name-keychain presets without customer text', () => {
+    expect(
+      presetBodyError({
+        name: 'PLA contour',
+        params: { templateId: 'name-keychain', styleId: 'contour' },
+      }),
+    ).toBeUndefined();
+    expect(
+      presetBodyError({
+        name: 'Customer ALEX',
+        params: { templateId: 'name-keychain', text: 'ALEX' },
+      }),
+    ).toBe('INVALID_PRESET');
+    expect(
+      presetBodyError({
+        name: 'Other template',
+        params: { templateId: 'nameplate' },
+      }),
+    ).toBe('INVALID_PRESET');
+    expect(
+      presetBodyError({
+        name: 'Hidden customer data',
+        params: { templateId: 'name-keychain', customerName: 'ALEX' },
+      }),
+    ).toBe('INVALID_PRESET');
   });
 });
