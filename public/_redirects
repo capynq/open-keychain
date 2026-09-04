@@ -1,2 +1,4 @@
 /privacy.html /privacy 301
+# Keep hosted authentication same-origin in the browser.
+/api/* https://api.open-keychain.com/api/:splat 200
 /* /index.html 200

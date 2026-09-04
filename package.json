@@ -28,6 +28,7 @@
     "test:full": "vitest run",
     "test:fast": "vitest run --exclude src/domain/keychain/build/keychain-builder.test.ts",
     "test:e2e": "playwright test",
+    "test:e2e:hosted": "playwright test --config playwright.hosted.config.ts",
     "test:e2e:smoke": "PLAYWRIGHT_SMOKE=true playwright test e2e/smoke.spec.ts --project=desktop --project=mobile --workers=2",
     "test:e2e:performance": "PLAYWRIGHT_PERFORMANCE=true playwright test e2e/performance.spec.ts --workers=1",
     "capture:ui": "pnpm build && playwright test --config playwright.capture.config.ts",
@@ -38,6 +39,7 @@
     "validation:fixtures": "node --import tsx scripts/generate-validation-fixtures.ts",
     "validate:slicer": "node --import tsx scripts/validate-slicer.ts",
     "server": "tsx server/index.ts",
+    "server:start": "tsx server/index.ts",
     "server:typecheck": "node scripts/run-tsc.mjs -p tsconfig.node.json --pretty false",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
@@ -66,7 +68,8 @@
     "react-dom": "19.2.8",
     "react-i18next": "^17.0.11",
     "react-router": "^8.3.0",
-    "three": "0.185.1"
+    "three": "0.185.1",
+    "tsx": "4.23.12"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.2",
@@ -92,7 +95,6 @@
     "lint-staged": "^17.3.0",
     "prettier": "3.9.6",
     "sharp": "^0.35.3",
-    "tsx": "4.23.12",
     "typescript": "npm:@typescript/typescript6@6.0.2",
     "typescript-eslint": "8.67.0",
     "vite": "8.2.1",

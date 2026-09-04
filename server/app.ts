@@ -175,7 +175,14 @@ const userPlan = async (pool: pg.Pool, userId: string): Promise<PlanId> => {
   return result.rows[0]?.plan_id === 'maker' ? 'maker' : 'free';
 };
 export const createApp = (pool: pg.Pool, config: ServerConfig): FastifyInstance => {
-  const app = Fastify({ logger: true, bodyLimit: MAX_PROJECT_BODY_BYTES });
+  // The API is published only on the host loopback interface. Nginx reaches it
+  // through Docker's port-forwarding bridge, so the proxy source address is
+  // not stable in the container. The loopback-only bind is the trust boundary.
+  const app = Fastify({
+    logger: true,
+    bodyLimit: MAX_PROJECT_BODY_BYTES,
+    trustProxy: true,
+  });
   app.register(rateLimit, {
     global: true,
     max: API_RATE_LIMIT_MAX,
