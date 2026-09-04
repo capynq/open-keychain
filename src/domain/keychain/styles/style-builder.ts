@@ -54,6 +54,13 @@ export type StyleInput = {
   ribbonTailMm?: number;
   ribbonNotchMm?: number;
   subtitle?: CrossSection;
+  heartSizeMm?: number;
+  heartBorderMm?: number;
+  heartLeftGapMm?: number;
+  heartRightGapMm?: number;
+  heartVerticalOffsetMm?: number;
+  heartInteriorMode?: 'relief' | 'through-cut';
+  heartLeftPresent?: boolean;
   magnetPocketPreset?: '6x2' | '8x2' | '10x3' | '12x3' | '15x3';
   magnetPocketPlacement?: 'center' | 'upper' | 'lower' | 'left' | 'right';
 };
@@ -66,6 +73,8 @@ export type StyleBuild = {
     depthMm: number;
   }>;
   rearRecesses?: Array<{ section: CrossSection; depthMm: number }>;
+  /** Sections that must be removed through the full base thickness. */
+  throughCuts?: CrossSection[];
   magnetPocket?: {
     preset: '6x2' | '8x2' | '10x3' | '12x3' | '15x3';
     placement: 'center' | 'upper' | 'lower' | 'left' | 'right';
@@ -375,6 +384,139 @@ const finishMagnetStyle = (
     },
   };
 };
+
+const heartPolygon = (size: number, center: Vec2): Vec2[] => {
+  // The classic implicit heart, sampled densely enough that the lobes remain
+  // smooth after manifold tessellation. Keep this at 128 points: it is also a
+  // useful, deterministic complexity bound for exports.
+  const points: Vec2[] = [];
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (let index = 0; index < 128; index += 1) {
+    const angle = (index / 128) * Math.PI * 2;
+    const sin = Math.sin(angle);
+    const cos = Math.cos(angle);
+    const x = 16 * sin ** 3;
+    const y = 13 * cos - 5 * Math.cos(2 * angle) - 2 * Math.cos(3 * angle) - Math.cos(4 * angle);
+    points.push([x, y]);
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y);
+    maxY = Math.max(maxY, y);
+  }
+  const scaleX = (size * 0.9) / (maxX - minX);
+  const scaleY = size / (maxY - minY);
+  const midX = (minX + maxX) / 2;
+  const midY = (minY + maxY) / 2;
+  return points.map(([x, y]) => [(x - midX) * scaleX + center[0], (y - midY) * scaleY + center[1]]);
+};
+
+/** Build a horizontal text / heart / text composition. */
+const heartSplitStyle = (wasm: GeometryWasm, input: StyleInput): StyleBuild => {
+  const textBounds = sectionBounds(input.text);
+  const leftWidth = textBounds.max[0] - textBounds.min[0];
+  const rightBounds = input.subtitle ? sectionBounds(input.subtitle) : textBounds;
+  const rightWidth = rightBounds.max[0] - rightBounds.min[0];
+  const size = Math.max(12000, Math.min(32000, (input.heartSizeMm ?? 22) * 1000));
+  const border = Math.max(1200, Math.min(size * 0.22, (input.heartBorderMm ?? 1.6) * 1000));
+  const leftGap = (input.heartLeftGapMm ?? -1.5) * 1000;
+  const rightGap = (input.heartRightGapMm ?? -1.5) * 1000;
+  const centerY = (input.heartVerticalOffsetMm ?? 1.5) * 1000;
+  const heartCenterX = 0;
+  const leftCenterX = -size / 2 - leftGap - leftWidth / 2;
+  const rightCenterX = size / 2 + rightGap + rightWidth / 2;
+  const left = input.text.translate([
+    leftCenterX - (textBounds.min[0] + textBounds.max[0]) / 2,
+    -centerY,
+  ]);
+  const right = input.subtitle?.translate([
+    rightCenterX - (rightBounds.min[0] + rightBounds.max[0]) / 2,
+    -centerY,
+  ]);
+  const outer = wasm.CrossSection.ofPolygons(
+    [heartPolygon(size, [heartCenterX, centerY])],
+    'EvenOdd',
+  );
+  const inner = wasm.CrossSection.ofPolygons(
+    [heartPolygon(Math.max(3000, size - border * 2), [heartCenterX, centerY])],
+    'EvenOdd',
+  );
+  const throughCut =
+    input.heartInteriorMode === 'through-cut'
+      ? wasm.CrossSection.ofPolygons(
+          [heartPolygon(Math.max(3000, size - border * 2), [heartCenterX, centerY])],
+          'EvenOdd',
+        )
+      : undefined;
+  const heartRing = outer.subtract(inner);
+  const heartFoundation = outer.translate([0, 0]);
+  outer.delete();
+  inner.delete();
+  const leftSupport =
+    input.heartLeftPresent === false
+      ? undefined
+      : left.offset(effectiveMargin(input), 'Round', 2, 64);
+  const rightSupport = right?.offset(effectiveMargin(input), 'Round', 2, 64);
+  const backingParts: CrossSection[] = [heartFoundation];
+  if (leftSupport) backingParts.unshift(leftSupport);
+  if (rightSupport) backingParts.push(rightSupport);
+  // A narrow rounded bridge makes positive gaps printable while preserving
+  // the visual separation between each word and the heart ring.
+  const heartBounds = sectionBounds(heartRing);
+  if (left && leftSupport)
+    backingParts.push(
+      capsule(
+        wasm,
+        [heartBounds.min[0], centerY],
+        [leftSupport.bounds().max[0], centerY],
+        Math.max(1200, border * 0.45),
+      ),
+    );
+  if (right && rightSupport)
+    backingParts.push(
+      capsule(
+        wasm,
+        [heartBounds.max[0], centerY],
+        [rightSupport.bounds().min[0], centerY],
+        Math.max(1200, border * 0.45),
+      ),
+    );
+  const backing = union(wasm, backingParts).simplify(20);
+  const reliefHeart = heartRing.translate([0, 0]);
+  // Negative gaps can bring a word into the heart interior. Preserve that
+  // lettering by removing its support envelope from the through-cut.
+  let safeThroughCut = throughCut;
+  if (throughCut) {
+    const envelopes = leftSupport ? [leftSupport] : [];
+    if (right) envelopes.push(right.offset(effectiveMargin(input), 'Round', 2, 64));
+    const protectedCut = union(wasm, envelopes);
+    safeThroughCut = throughCut.subtract(protectedCut);
+    throughCut.delete();
+    protectedCut.delete();
+    envelopes.forEach((envelope) => envelope.delete());
+  }
+  const reliefParts = [
+    ...(input.heartLeftPresent === false ? [] : [left]),
+    ...(input.heartInteriorMode === 'relief' ? [reliefHeart] : []),
+  ];
+  if (right) reliefParts.push(right);
+  const relief = union(wasm, reliefParts).simplify(20);
+  left.delete();
+  // The right word is already laid out and included in both sections above;
+  // do not let the generic finisher add a second, below-name subtitle support.
+  const heartInput = { ...input, subtitle: undefined };
+  const finished =
+    input.templateId === 'magnet'
+      ? finishMagnetStyle(wasm, backing, relief, heartInput, 'right')
+      : finishStyle(wasm, backing, relief, heartInput, 'right');
+  return {
+    ...finished,
+    subtitle: undefined,
+    throughCuts: safeThroughCut ? [safeThroughCut] : undefined,
+  };
+};
 export const buildStyle = (wasm: GeometryWasm, styleId: StyleId, input: StyleInput): StyleBuild => {
   const textInset = effectiveMargin(input);
   const textWidth = input.textBounds.max[0] - input.textBounds.min[0];
@@ -390,6 +532,7 @@ export const buildStyle = (wasm: GeometryWasm, styleId: StyleId, input: StyleInp
     const result = finishMagnetStyle(wasm, plate, relief, input, 'left');
     return { ...result, subtitle: input.subtitle };
   }
+  if (styleId === 'heart-split') return heartSplitStyle(wasm, input);
   if (styleId === 'ribbon') {
     const tail = Math.max(6, input.ribbonTailMm ?? 12) * 1000;
     const notch = Math.min(tail * 0.8, Math.max(1, input.ribbonNotchMm ?? 4) * 1000);
@@ -513,4 +656,9 @@ export const STYLE_CATALOG: Array<{
   { id: 'bubble', name: 'Bubble', description: 'An organic, connected silhouette.' },
   { id: 'arch', name: 'Arch', description: 'A gently curved nameplate.' },
   { id: 'ribbon', name: 'Ribbon', description: 'Symmetric tails with restrained folded accents.' },
+  {
+    id: 'heart-split',
+    name: 'Heart',
+    description: 'A paired heart silhouette with a clean center split.',
+  },
 ];

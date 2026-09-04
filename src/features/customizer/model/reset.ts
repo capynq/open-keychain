@@ -31,6 +31,12 @@ const SHAPE_DEFAULTS = {
   jointBossMm: DEFAULT_PARAMS.jointBossMm,
   ribbonTailMm: DEFAULT_PARAMS.ribbonTailMm,
   ribbonNotchMm: DEFAULT_PARAMS.ribbonNotchMm,
+  heartSizeMm: DEFAULT_PARAMS.heartSizeMm,
+  heartBorderMm: DEFAULT_PARAMS.heartBorderMm,
+  heartLeftGapMm: DEFAULT_PARAMS.heartLeftGapMm,
+  heartRightGapMm: DEFAULT_PARAMS.heartRightGapMm,
+  heartVerticalOffsetMm: DEFAULT_PARAMS.heartVerticalOffsetMm,
+  heartInteriorMode: DEFAULT_PARAMS.heartInteriorMode,
 } satisfies Partial<KeychainParams>;
 const FONT_DEFAULTS = {
   textSizeMm: DEFAULT_PARAMS.textSizeMm,
@@ -75,6 +81,12 @@ export const resetParamsForSection = (
       archCurveMm: DEFAULT_PARAMS.archCurveMm,
       ribbonTailMm: DEFAULT_PARAMS.ribbonTailMm,
       ribbonNotchMm: DEFAULT_PARAMS.ribbonNotchMm,
+      heartSizeMm: DEFAULT_PARAMS.heartSizeMm,
+      heartBorderMm: DEFAULT_PARAMS.heartBorderMm,
+      heartLeftGapMm: DEFAULT_PARAMS.heartLeftGapMm,
+      heartRightGapMm: DEFAULT_PARAMS.heartRightGapMm,
+      heartVerticalOffsetMm: DEFAULT_PARAMS.heartVerticalOffsetMm,
+      heartInteriorMode: DEFAULT_PARAMS.heartInteriorMode,
     };
   if (section === 'font')
     return {

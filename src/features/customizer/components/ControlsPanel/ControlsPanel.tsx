@@ -9,7 +9,11 @@ import {
   type FontCategory,
 } from '@/domain/keychain/fonts/catalog';
 import { PARAMETER_REGISTRY, type ShapeParameter } from '@/domain/keychain/model/parameters';
-import { MAGNET_POCKET_PRESETS, type KeychainParams } from '@/domain/keychain/model/types';
+import {
+  MAGNET_POCKET_PRESETS,
+  type HeartInteriorMode,
+  type KeychainParams,
+} from '@/domain/keychain/model/types';
 import { TEMPLATE_CATALOG } from '@/domain/keychain/templates/template-builder';
 import { type useCustomizerParams } from '@/features/customizer/hooks/useCustomizerParams';
 import {
@@ -88,8 +92,10 @@ export const ControlsPanel = ({
   const fontsPerPage = 12;
   const activeBrowserState = fontBrowserState[fontSource];
   const hasSubtitle =
+    params.styleId !== 'heart-split' &&
     TEMPLATE_CATALOG.find((template) => template.id === params.templateId)?.supportsSubtitle ===
-    true;
+      true;
+  const isHeartSplit = params.styleId === 'heart-split';
   const hasSubtitleText = params.subtitle.trim().length > 0;
   const activeFontTarget: FontTarget = hasSubtitle && hasSubtitleText ? fontTarget : 'primary';
   const activeTargetText = activeFontTarget === 'secondary' ? params.subtitle : params.text;
@@ -418,34 +424,51 @@ export const ControlsPanel = ({
         data-testid="name-settings"
       >
         <div className="section-heading">
-          <h2>{t(locale, 'name')}</h2>
-          <ResetIconButton label={t(locale, 'resetName')} onClick={() => resetSection('name')} />
+          <h2>{t(locale, isHeartSplit ? 'heartSplitName' : 'name')}</h2>
+          <ResetIconButton
+            label={t(locale, isHeartSplit ? 'resetHeartSplitName' : 'resetName')}
+            onClick={() => resetSection('name')}
+          />
         </div>
-        <label className="text-input" data-guide-target="name">
-          <span className="sr-only">{t(locale, 'nameInput')}</span>
+        <label
+          className="text-input"
+          data-guide-target="name"
+          data-testid={isHeartSplit ? 'heart-left-input' : undefined}
+        >
+          <span className="sr-only">
+            {t(locale, isHeartSplit ? 'heartLeftInput' : 'nameInput')}
+          </span>
           <input
-            aria-label={t(locale, 'nameInput')}
+            aria-label={t(locale, isHeartSplit ? 'heartLeftInput' : 'nameInput')}
             value={params.text}
             maxLength={24}
             onChange={(event) => {
               updateText(event.target.value);
             }}
-            placeholder={t(locale, 'namePlaceholder')}
+            placeholder={t(locale, isHeartSplit ? 'heartSplitNamePlaceholder' : 'namePlaceholder')}
           />
         </label>
-        {hasSubtitle && (
-          <label className="text-input subtitle-input-control" data-testid="subtitle-input">
-            <span className="sr-only">{t(locale, 'subtitleInput')}</span>
+        {(hasSubtitle || isHeartSplit) && (
+          <label
+            className="text-input subtitle-input-control"
+            data-testid={isHeartSplit ? 'heart-right-input' : 'subtitle-input'}
+          >
+            <span className="sr-only">
+              {t(locale, isHeartSplit ? 'heartRightInput' : 'subtitleInput')}
+            </span>
             <input
               className="subtitle-input"
-              aria-label={t(locale, 'subtitleInput')}
+              aria-label={t(locale, isHeartSplit ? 'heartRightInput' : 'subtitleInput')}
               value={params.subtitle}
               maxLength={24}
               onChange={(event) => {
                 if (!event.target.value.trim()) setFontTarget('primary');
                 updateSubtitle(event.target.value);
               }}
-              placeholder={t(locale, 'subtitlePlaceholder')}
+              placeholder={t(
+                locale,
+                isHeartSplit ? 'heartRightPlaceholder' : 'subtitlePlaceholder',
+              )}
             />
           </label>
         )}
@@ -503,6 +526,7 @@ export const ControlsPanel = ({
               />
             ))}
           </DesignCardRail>
+          {isHeartSplit && <p className="control-helper">{t(locale, 'heartSplitHelper')}</p>}
         </section>
       )}
       {params.templateId === 'magnet' && (
@@ -927,6 +951,25 @@ export const ControlsPanel = ({
           update={update}
           renderParameter={renderParameter}
         />
+        {isHeartSplit && (
+          <div className="control-subsection heart-settings" data-testid="heart-settings">
+            <h3>{t(locale, 'heartSettings')}</h3>
+            <label className="select-control">
+              <span>{t(locale, 'heartInterior')}</span>
+              <select
+                aria-label={t(locale, 'heartInterior')}
+                value={params.heartInteriorMode}
+                onChange={(event) =>
+                  update('heartInteriorMode', event.target.value as HeartInteriorMode)
+                }
+              >
+                <option value="relief">{t(locale, 'heartInteriorRelief')}</option>
+                <option value="through-cut">{t(locale, 'heartInteriorThroughCut')}</option>
+              </select>
+              <span className="control-helper">{t(locale, 'heartInteriorHelper')}</span>
+            </label>
+          </div>
+        )}
       </section>
       <button
         type="button"

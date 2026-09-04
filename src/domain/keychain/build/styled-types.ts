@@ -10,6 +10,7 @@ export type StandardStyledGeometry = {
   backing: CrossSection;
   recesses: Array<{ section: CrossSection; depthMm: number }>;
   rearRecesses: Array<{ section: CrossSection; depthMm: number }>;
+  throughCuts?: CrossSection[];
   magnetPocket?: MagnetPocketMetadata;
   reliefDepthMm?: number;
   widthMm: number;

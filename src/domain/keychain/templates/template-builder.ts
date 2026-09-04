@@ -37,6 +37,7 @@ export type TemplateDefinition = {
 };
 const ALL_STYLE_IDS: readonly StyleId[] = ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'];
 const RIBBON_STYLES: readonly StyleId[] = [...ALL_STYLE_IDS, 'ribbon'];
+const NAME_KEYCHAIN_STYLES: readonly StyleId[] = [...RIBBON_STYLES, 'heart-split'];
 export type ArticulatedPart = {
   body: Solid;
   cap: Solid;
@@ -87,7 +88,7 @@ export const TEMPLATE_CATALOG: readonly TemplateDefinition[] = [
     description: 'A backing contour that follows the name.',
     supportsKeyring: true,
     supportsSubtitle: true,
-    styles: RIBBON_STYLES,
+    styles: NAME_KEYCHAIN_STYLES,
   },
   {
     id: 'articulated-name',

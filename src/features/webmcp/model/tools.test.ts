@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { DEFAULT_PARAMS } from '@/domain/keychain/model/types';
+import { STYLE_CATALOG } from '@/domain/keychain/styles/style-builder';
+import { TEMPLATE_CATALOG } from '@/domain/keychain/templates/template-builder';
 
-import { createWebMcpTools } from './tools';
+import { createWebMcpTools, WEBMCP_STYLE_IDS, WEBMCP_TEMPLATE_IDS } from './tools';
 
 const state = {
   template: 'Name keychain',
@@ -83,5 +85,9 @@ describe('WebMCP customizer tools', () => {
       type: 'string',
       maxLength: 24,
     });
+    expect(customize.inputSchema.properties.template?.enum).toEqual(WEBMCP_TEMPLATE_IDS);
+    expect(customize.inputSchema.properties.style?.enum).toEqual(WEBMCP_STYLE_IDS);
+    expect(WEBMCP_TEMPLATE_IDS).toEqual(TEMPLATE_CATALOG.map(({ id }) => id));
+    expect(WEBMCP_STYLE_IDS).toEqual(STYLE_CATALOG.map(({ id }) => id));
   });
 });

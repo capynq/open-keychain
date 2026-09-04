@@ -17,6 +17,7 @@ export const STYLE_BUILDERS: Readonly<Record<StyleId, StyleBuilder>> = {
   bubble: (wasm, input) => buildStyle(wasm, 'bubble', input),
   arch: (wasm, input) => buildStyle(wasm, 'arch', input),
   ribbon: (wasm, input) => buildStyle(wasm, 'ribbon', input),
+  'heart-split': (wasm, input) => buildStyle(wasm, 'heart-split', input),
 };
 
 export const buildRegisteredStyle = (

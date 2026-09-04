@@ -16,6 +16,14 @@ WebMCP-capable browser can expose the registered tools.
 
 Open [`/create`](https://open-keychain.com/create) to create a design before invoking a tool.
 
+The customizer publishes two tools:
+
+- `get-keychain-state` reports the active text, subtitle, template/style IDs, font, preview status,
+  printability, dimensions, and any validation error. It is read-only.
+- `customize-keychain` requires 1–24 characters of main text and optionally accepts a subtitle,
+  template, or style. Template and style values are limited to the IDs currently published by
+  the customizer catalogs; omitted fields remain unchanged.
+
 ## Browser support
 
 This is native progressive enhancement with no polyfill. Chrome 149 currently requires the

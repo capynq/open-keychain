@@ -146,36 +146,6 @@ test('customizes a name, uses every icon camera preset, and downloads STL', asyn
   expect((await download).suggestedFilename()).toMatch(/^keychain-oliver-capsule\.stl$/);
 });
 
-test('rotates past both poles with the full-sphere preview camera', async ({ page }, testInfo) => {
-  await page.goto('/create');
-  await expect(page.locator('.viewer-surface canvas')).toBeVisible();
-  await page.getByRole('button', { name: 'Top view' }).click();
-
-  const viewer = page.locator('.viewer');
-  const surface = page.locator('.viewer-surface');
-  const canvas = surface.locator('canvas');
-  const bounds = await canvas.boundingBox();
-  expect(bounds).toBeTruthy();
-
-  await page.mouse.move(bounds!.x + bounds!.width * 0.5, bounds!.y + bounds!.height * 0.84);
-  await page.mouse.down();
-  await page.mouse.move(bounds!.x + bounds!.width * 0.5, bounds!.y + bounds!.height * 0.16, {
-    steps: 12,
-  });
-  await page.waitForTimeout(100);
-  const beforePole = await canvas.screenshot();
-  await page.mouse.move(bounds!.x + bounds!.width * 0.5, bounds!.y - bounds!.height * 0.2, {
-    steps: 12,
-  });
-  await page.waitForTimeout(100);
-  const pastPole = await canvas.screenshot();
-  await page.mouse.up();
-
-  await expect(viewer).toHaveAttribute('data-view', 'custom');
-  await expect(canvas).toBeVisible();
-  if (testInfo.project.name === 'desktop') expect(pastPole.equals(beforePole)).toBe(false);
-});
-
 test('treats adjusted NIKITA Bubble geometry as ready and keeps width warnings exportable', async ({
   page,
 }) => {
@@ -392,6 +362,44 @@ test('keeps subtitle fields full-width, spaced, and keyboard-visible', async ({ 
   await input.focus();
   await expect(input).toBeFocused();
   await expect(input).toHaveCSS('outline-style', 'solid');
+});
+test('renders Heart with localized left and right words in one horizontal composition', async ({
+  page,
+}) => {
+  await page.goto('/create');
+  await page.getByRole('button', { name: 'Heart' }).click();
+  const left = page.getByTestId('heart-left-input').locator('input');
+  const right = page.getByTestId('heart-right-input').locator('input');
+  await left.fill('I');
+  await right.fill('KYIV');
+  await expect(left).toHaveValue('I');
+  await expect(right).toHaveValue('KYIV');
+  await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10000 });
+  await expect(page.locator('.viewer')).toBeVisible();
+});
+test('keeps Heart inputs aligned and exposes through-cut readiness', async ({ page }) => {
+  await page.goto('/create');
+  await page.getByTestId('style-card-heart-split').click();
+  const left = page.getByTestId('heart-left-input').locator('input');
+  const right = page.getByTestId('heart-right-input').locator('input');
+  await left.fill('I');
+  await right.fill('KYIV');
+  const leftBox = await left.boundingBox();
+  const rightBox = await right.boundingBox();
+  expect(leftBox).not.toBeNull();
+  expect(rightBox).not.toBeNull();
+  expect(Math.abs((leftBox?.x ?? 0) - (rightBox?.x ?? 0))).toBeLessThan(4);
+  await expect(page.getByTestId('subtitle-settings')).toHaveCount(0);
+  await page.getByLabel('Center treatment').selectOption('through-cut');
+  await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10000 });
+  await left.fill('');
+  await right.fill('');
+  await expect(page.locator('.status-pill')).toHaveText(
+    /Needs attention|Error|Enter at least one word/,
+    {
+      timeout: 10000,
+    },
+  );
 });
 test('shows only template-relevant shape controls', async ({ page }) => {
   await page.goto('/create');

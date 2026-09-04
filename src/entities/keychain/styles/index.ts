@@ -7,3 +7,4 @@ export { buildSoftTagStyle } from './soft-tag';
 export { buildBubbleStyle } from './bubble';
 export { buildArchStyle } from './arch';
 export { buildRibbonStyle } from './ribbon';
+export { buildHeartSplitStyle } from './heart-split';

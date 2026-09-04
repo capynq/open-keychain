@@ -126,4 +126,61 @@ describe('design document codec', () => {
       params: { fontId: DEFAULT_PARAMS.fontId },
     });
   });
+
+  it('falls back independently when only the subtitle font is not portable', () => {
+    const encoded = encodeDesignDocument({
+      version: 5,
+      params: { ...DEFAULT_PARAMS, subtitle: 'MAKER', subtitleFontId: 'local-font' },
+    });
+
+    expect(decodeDesignDocument(encoded)).toMatchObject({
+      fontFallback: true,
+      params: { fontId: DEFAULT_PARAMS.fontId, subtitleFontId: DEFAULT_PARAMS.subtitleFontId },
+    });
+  });
+
+  it('round-trips every compact parameter key in the v5 payload', () => {
+    const params = normalizeParams({
+      ...DEFAULT_PARAMS,
+      text: 'MIRA',
+      subtitle: 'LAB',
+      subtitleFontId: 'caveat',
+      subtitleOffsetXRatio: 0.25,
+      subtitleOffsetYRatio: -0.25,
+      magnetPocketPreset: '12x3',
+      magnetPocketPlacement: 'upper',
+      fontId: 'caveat',
+      templateId: 'magnet',
+      styleId: 'plain',
+      textSizeMm: 18,
+      fontWeightMm: 0.8,
+      baseThicknessMm: 4.6,
+      reliefDepthMm: 1.1,
+      paddingMm: 3,
+      edgeInsetMm: 1,
+      letterSpacingMm: 1.2,
+      holeDiameterMm: 6,
+      connectorWidthMm: 2,
+      cornerRadiusMm: 5,
+      stakeLengthMm: 55,
+      plantAccentEnabled: false,
+      nameplateTiltDeg: 8,
+      nameplateEmbedMm: 0.5,
+      reliefHaloMm: 0.5,
+      ringOffsetMm: 1,
+      bubbleLobeMm: 1,
+      tagTailMm: 2,
+      archCurveMm: 2,
+      ribbonTailMm: 14,
+      ribbonNotchMm: 5,
+      subtitleTextSizeMm: 7,
+      subtitleFontWeightMm: 0.4,
+      subtitleLetterSpacingMm: 0.7,
+      subtitleReliefDepthMm: 0.9,
+      subtitleGapMm: 2,
+    });
+    const encoded = encodeDesignDocument({ version: 5, params });
+
+    expect(decodeDesignDocument(encoded)?.params).toEqual(params);
+  });
 });

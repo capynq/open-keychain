@@ -10,5 +10,7 @@
   "bubble.description": "Organic shape with bubbles",
   "arch.description": "Shape with an arched top",
   "ribbon": "Ribbon",
-  "ribbon.description": "Symmetric tails with restrained fold accents"
+  "ribbon.description": "Symmetric tails with restrained fold accents",
+  "heart-split": "Heart",
+  "heart-split.description": "A paired heart silhouette with a clean center split"
 }

@@ -39,7 +39,12 @@ export type ShapeParameter =
   | 'stakeShoulderMm'
   | 'jointBossMm'
   | 'ribbonTailMm'
-  | 'ribbonNotchMm';
+  | 'ribbonNotchMm'
+  | 'heartSizeMm'
+  | 'heartBorderMm'
+  | 'heartLeftGapMm'
+  | 'heartRightGapMm'
+  | 'heartVerticalOffsetMm';
 export type CustomizerParameter = ShapeParameter | 'plantAccentEnabled';
 export const PARAMETER_RANGES = {
   textSizeMm: { min: 12, max: 30, step: 0.5, unit: 'mm' },
@@ -67,6 +72,11 @@ export const PARAMETER_RANGES = {
   jointBossMm: { min: 0, max: 3, step: 0.1, unit: 'mm' },
   ribbonTailMm: { min: 6, max: 24, step: 0.5, unit: 'mm' },
   ribbonNotchMm: { min: 1, max: 10, step: 0.5, unit: 'mm' },
+  heartSizeMm: { min: 12, max: 32, step: 0.5, unit: 'mm' },
+  heartBorderMm: { min: 1.2, max: 4, step: 0.1, unit: 'mm' },
+  heartLeftGapMm: { min: -6, max: 12, step: 0.1, unit: 'mm' },
+  heartRightGapMm: { min: -6, max: 12, step: 0.1, unit: 'mm' },
+  heartVerticalOffsetMm: { min: -10, max: 10, step: 0.5, unit: 'mm' },
 } satisfies Record<ShapeParameter, ParameterRange>;
 export const PARAMETER_DEFINITIONS: Record<ShapeParameter, ParameterDefinition> =
   Object.fromEntries(
@@ -101,6 +111,11 @@ export const PARAMETER_DEFINITIONS: Record<ShapeParameter, ParameterDefinition> 
             jointBossMm: 'jointBoss',
             ribbonTailMm: 'ribbonTail',
             ribbonNotchMm: 'ribbonNotch',
+            heartSizeMm: 'heartSize',
+            heartBorderMm: 'heartBorder',
+            heartLeftGapMm: 'heartLeftGap',
+            heartRightGapMm: 'heartRightGap',
+            heartVerticalOffsetMm: 'heartVerticalOffset',
           } satisfies Record<ShapeParameter, string>
         )[parameter],
         dependencies:
@@ -110,9 +125,11 @@ export const PARAMETER_DEFINITIONS: Record<ShapeParameter, ParameterDefinition> 
               ? (['baseThicknessMm'] as const)
               : parameter === 'jointBossMm'
                 ? (['connectorWidthMm', 'jointClearanceMm'] as const)
-                : parameter === 'cornerRadiusMm'
-                  ? (['textSizeMm', 'paddingMm', 'nameplateEmbedMm', 'nameplateTiltDeg'] as const)
-                  : ([] as const),
+                : parameter === 'heartBorderMm'
+                  ? (['heartSizeMm'] as const)
+                  : parameter === 'cornerRadiusMm'
+                    ? (['textSizeMm', 'paddingMm', 'nameplateEmbedMm', 'nameplateTiltDeg'] as const)
+                    : ([] as const),
         randomization: 'uniform' as const,
         defaultValue: DEFAULT_PARAMS[parameter],
         applicable: (params: Pick<KeychainParams, 'templateId' | 'styleId'>) =>
@@ -172,6 +189,16 @@ export const PARAMETER_GROUPS = [
     ] as const,
   },
   {
+    key: 'heart',
+    parameters: [
+      'heartSizeMm',
+      'heartBorderMm',
+      'heartLeftGapMm',
+      'heartRightGapMm',
+      'heartVerticalOffsetMm',
+    ] as const,
+  },
+  {
     key: 'mechanics',
     parameters: [
       'connectorWidthMm',
@@ -203,6 +230,11 @@ export const TEMPLATE_PARAMETER_KEYS: Record<TemplateId, readonly ShapeParameter
     'archCurveMm',
     'ribbonTailMm',
     'ribbonNotchMm',
+    'heartSizeMm',
+    'heartBorderMm',
+    'heartLeftGapMm',
+    'heartRightGapMm',
+    'heartVerticalOffsetMm',
   ],
   'articulated-name': [
     ...COMMON_PARAMETERS,
@@ -302,6 +334,16 @@ export const hasActiveParameter = (
     styleParameter[parameter as ShapeParameter] !== params.styleId
   )
     return false;
+  if (
+    [
+      'heartSizeMm',
+      'heartBorderMm',
+      'heartLeftGapMm',
+      'heartRightGapMm',
+      'heartVerticalOffsetMm',
+    ].includes(parameter as string)
+  )
+    return params.templateId === 'name-keychain' && params.styleId === 'heart-split';
   return !(
     parameter === 'cornerRadiusMm' &&
     params.templateId === 'plant-label' &&
@@ -331,6 +373,10 @@ export const parameterRange = (
   if (parameter === 'jointBossMm') {
     const range = PARAMETER_RANGES.jointBossMm;
     return { ...range, max: Math.min(range.max, Math.max(0, params.connectorWidthMm * 0.75)) };
+  }
+  if (parameter === 'heartBorderMm') {
+    const range = PARAMETER_RANGES.heartBorderMm;
+    return { ...range, max: Math.max(range.min, Math.min(range.max, params.heartSizeMm * 0.2)) };
   }
   if (parameter === 'baseThicknessMm' && params.templateId === 'articulated-name')
     return { ...PARAMETER_RANGES.baseThicknessMm, min: 3.4 };

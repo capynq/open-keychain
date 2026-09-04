@@ -15,6 +15,7 @@ export const STYLE_PREVIEW_ASSETS: Partial<Record<TemplateId, Partial<Record<Sty
     'soft-tag': '/showcase/styles/name-keychain-soft-tag.png',
     bubble: '/showcase/styles/name-keychain-bubble.png',
     arch: '/showcase/styles/name-keychain-arch.png',
+    'heart-split': '/showcase/styles/name-keychain-heart-split.png',
   },
   'plant-label': {
     contour: '/showcase/styles/plant-label-contour.png',

@@ -117,6 +117,12 @@ const stylePreviews = [
     file: 'name-keychain-arch',
   },
   {
+    template: 'Name keychain',
+    templateFile: 'name-keychain',
+    style: 'Heart',
+    file: 'name-keychain-heart-split',
+  },
+  {
     template: 'Plant label',
     templateFile: 'plant-label',
     style: 'Contour',
@@ -236,6 +242,11 @@ for (const style of stylePreviews) {
     await expect(styleButton).toHaveAttribute('aria-pressed', 'true');
     if (styleWasSelected) await waitForReadyGeometry(page);
     else await waitForRegeneration(page, previousStyleGeneration);
+    if (style.file === 'name-keychain-heart-split') {
+      await page.getByTestId('heart-left-input').locator('input').fill('I');
+      await page.getByTestId('heart-right-input').locator('input').fill('KYIV');
+      await waitForReadyGeometry(page);
+    }
     await prepareForCapture(page);
     await assertVisibleModel(page);
     const viewer = page.locator('.viewer-wrap');

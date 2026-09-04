@@ -23,6 +23,12 @@ export type WebMcpState = {
   dimensions: { widthMm: number; heightMm: number; thicknessMm: number } | undefined;
 };
 
+// Keep the public WebMCP schema in lockstep with the product catalogs. These are
+// intentionally materialized arrays because JSON schema enum values are runtime
+// data, while the catalogs remain the source of truth for supported IDs.
+export const WEBMCP_TEMPLATE_IDS = TEMPLATE_CATALOG.map(({ id }) => id);
+export const WEBMCP_STYLE_IDS = STYLE_CATALOG.map(({ id }) => id);
+
 const assertText = (value: string, label: string, allowEmpty = false): string => {
   const trimmed = value.normalize('NFC').trim().replace(/\s+/g, ' ');
   if ((!allowEmpty && !trimmed) || [...trimmed].length > 24)
@@ -68,12 +74,12 @@ export const createWebMcpTools = (customizer: WebMcpCustomizer, state: WebMcpSta
         subtitle: { type: 'string', maxLength: 24, description: 'Subtitle, up to 24 characters.' },
         template: {
           type: 'string',
-          enum: ['name-keychain', 'articulated-name', 'nameplate', 'plant-label', 'magnet'],
+          enum: WEBMCP_TEMPLATE_IDS,
           description: 'Template identifier for the keychain shape.',
         },
         style: {
           type: 'string',
-          enum: ['plain', 'contour', 'capsule', 'soft-tag', 'bubble', 'arch', 'ribbon'],
+          enum: WEBMCP_STYLE_IDS,
           description: 'Compatible backing style identifier.',
         },
       },

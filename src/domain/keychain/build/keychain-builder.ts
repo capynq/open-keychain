@@ -160,6 +160,7 @@ const releaseStyledGeometry = (geometry: StyledGeometry): void => {
     ...(geometry.subtitle ? [geometry.subtitle] : []),
     ...geometry.recesses.map((item) => item.section),
     ...geometry.rearRecesses.map((item) => item.section),
+    ...(geometry.throughCuts ?? []),
   ]);
 };
 const finalizeArticulated = (
@@ -254,16 +255,25 @@ export const buildKeychain = async (
       message:
         'Base thickness was adjusted to 4.4 mm so the 3.2 mm rear magnet pocket retains a 1.2 mm roof.',
     });
-  if (!params.text)
-    return invalidResult(issues, 'empty-text', 'Enter a name to create your keychain.');
-  if ([...params.text].length > 24)
+  if (!params.text && !(params.styleId === 'heart-split' && params.subtitle))
+    return invalidResult(
+      issues,
+      params.styleId === 'heart-split' ? 'heart-empty' : 'empty-text',
+      'Enter at least one word to create your keychain.',
+    );
+  const leftText =
+    params.text || (params.styleId === 'heart-split' ? params.subtitle : params.subtitle);
+  const contentText = `${params.text}${params.styleId === 'heart-split' ? params.subtitle : ''}`;
+  if ([...contentText].length > 24)
     return invalidResult(issues, 'text-too-long', 'Shorten the name to 24 characters or fewer.');
   const definition = fontOverride ?? fontDefinition(params.fontId);
   const subtitleDefinition =
-    subtitleFontOverride ?? fontDefinition(params.subtitleFontId ?? params.fontId);
+    params.styleId === 'heart-split'
+      ? definition
+      : (subtitleFontOverride ?? fontDefinition(params.subtitleFontId ?? params.fontId));
   if (
     params.templateId === 'articulated-name' &&
-    !fontSupportsArticulatedName(definition, params.text)
+    !fontSupportsArticulatedName(definition, leftText)
   )
     return invalidResult(
       issues,
@@ -291,7 +301,7 @@ export const buildKeychain = async (
       );
     }
   }
-  const missing = hasRequiredGlyphs(font, params.text);
+  const missing = hasRequiredGlyphs(font, leftText);
   if (missing)
     return invalidResult(
       issues,
@@ -312,15 +322,18 @@ export const buildKeychain = async (
     );
   const textLayout =
     params.templateId === 'articulated-name'
-      ? layoutText(font, params.text, params.textSizeMm, 0, true)
+      ? layoutText(font, leftText, params.textSizeMm, 0, true)
       : {
-          outline: flattenText(font, params.text, params.textSizeMm, params.letterSpacingMm),
+          outline: flattenText(font, leftText, params.textSizeMm, params.letterSpacingMm),
           glyphs: [],
           advances: [],
           kerning: [],
         };
   const outline = textLayout.outline;
-  if (!outline.polygons.length || outline.width <= 0 || outline.height <= 0)
+  if (
+    (!outline.polygons.length || outline.width <= 0 || outline.height <= 0) &&
+    !(params.styleId === 'heart-split' && params.subtitle)
+  )
     return invalidResult(issues, 'empty-outline', 'This name does not produce a usable outline.');
   const articulatedGlyphs =
     params.templateId === 'articulated-name' ? textLayout.glyphs : undefined;
@@ -335,7 +348,7 @@ export const buildKeychain = async (
     );
   const keyring = keyringMetrics(params.holeDiameterMm);
   const articulatedOutlineExpansionMm = articulatedGlyphDilationMm(params.templateId, definition);
-  const effectiveWeightMm = effectiveFontWeightMm(definition, params.text, params.fontWeightMm);
+  const effectiveWeightMm = effectiveFontWeightMm(definition, leftText, params.fontWeightMm);
   const minimumFittedTextHeightMm = definition.minimumFittedTextHeightMm;
   const buildStyledGeometry = (scale: number): StyledGeometry => {
     const rawText = wasm.CrossSection.ofPolygons(scalePolygons(outline.polygons, scale), 'EvenOdd');
@@ -354,15 +367,22 @@ export const buildKeychain = async (
       const subtitleOutline = flattenText(
         subtitleFont,
         params.subtitle,
-        params.subtitleTextSizeMm ?? Math.max(4, params.textSizeMm * 0.32),
-        params.subtitleLetterSpacingMm ?? 0,
+        params.styleId === 'heart-split'
+          ? params.textSizeMm
+          : (params.subtitleTextSizeMm ?? Math.max(4, params.textSizeMm * 0.32)),
+        params.styleId === 'heart-split'
+          ? params.letterSpacingMm
+          : (params.subtitleLetterSpacingMm ?? 0),
       );
       if (subtitleOutline.polygons.length) {
         subtitle = wasm.CrossSection.ofPolygons(
           scalePolygons(subtitleOutline.polygons, scale),
           'EvenOdd',
         );
-        const subtitleWeight = params.subtitleFontWeightMm ?? 0;
+        const subtitleWeight =
+          params.styleId === 'heart-split'
+            ? params.fontWeightMm
+            : (params.subtitleFontWeightMm ?? 0);
         if (subtitleWeight > 0) {
           const weighted = subtitle.offset(subtitleWeight * MANIFOLD_SCALE, 'Round', 2, 64);
           subtitle.delete();
@@ -376,15 +396,21 @@ export const buildKeychain = async (
         const joinBiasMm =
           params.styleId === 'contour' || params.styleId === 'arch' ? subtitleSizeRatio * 1.65 : 0;
         const effectiveSubtitleGapMm = Math.max(-0.15, requestedSubtitleGapMm - joinBiasMm);
-        const positionedSubtitle = subtitle.translate([
-          (rawBounds.min[0] + rawBounds.max[0] - subtitleBounds.max[0] - subtitleBounds.min[0]) /
-            2 +
-            (params.subtitleOffsetXRatio ?? 0) * (rawBounds.max[0] - rawBounds.min[0]),
-          rawBounds.min[1] -
-            subtitleBounds.max[1] -
-            effectiveSubtitleGapMm * MANIFOLD_SCALE +
-            (params.subtitleOffsetYRatio ?? 0) * (rawBounds.max[1] - rawBounds.min[1]),
-        ]);
+        const positionedSubtitle =
+          params.styleId === 'heart-split'
+            ? subtitle.translate([0, 0])
+            : subtitle.translate([
+                (rawBounds.min[0] +
+                  rawBounds.max[0] -
+                  subtitleBounds.max[0] -
+                  subtitleBounds.min[0]) /
+                  2 +
+                  (params.subtitleOffsetXRatio ?? 0) * (rawBounds.max[0] - rawBounds.min[0]),
+                rawBounds.min[1] -
+                  subtitleBounds.max[1] -
+                  effectiveSubtitleGapMm * MANIFOLD_SCALE +
+                  (params.subtitleOffsetYRatio ?? 0) * (rawBounds.max[1] - rawBounds.min[1]),
+              ]);
         subtitle.delete();
         subtitle = positionedSubtitle;
       }
@@ -401,7 +427,7 @@ export const buildKeychain = async (
           ] as [number, number],
         }
       : textBounds;
-    if (subtitle) {
+    if (subtitle && params.styleId !== 'heart-split') {
       const centerX = (layoutBounds.min[0] + layoutBounds.max[0]) / 2;
       const centerY = (layoutBounds.min[1] + layoutBounds.max[1]) / 2;
       const shift: [number, number] = [-centerX, -centerY];
@@ -465,6 +491,13 @@ export const buildKeychain = async (
       ribbonNotchMm: params.ribbonNotchMm,
       magnetPocketPreset: params.magnetPocketPreset,
       magnetPocketPlacement: params.magnetPocketPlacement,
+      heartSizeMm: params.heartSizeMm,
+      heartBorderMm: params.heartBorderMm,
+      heartLeftGapMm: params.heartLeftGapMm,
+      heartRightGapMm: params.heartRightGapMm,
+      heartVerticalOffsetMm: params.heartVerticalOffsetMm,
+      heartInteriorMode: params.heartInteriorMode,
+      heartLeftPresent: params.styleId !== 'heart-split' || Boolean(params.text),
       subtitle,
       constraints: geometryConstraintsFor(params),
       printProfile: printProfileFor(geometryConstraintsFor(params)),
@@ -481,6 +514,7 @@ export const buildKeychain = async (
       backing: style.backing,
       recesses: style.recesses ?? [],
       rearRecesses: style.rearRecesses ?? [],
+      throughCuts: style.throughCuts ?? [],
       magnetPocket: style.magnetPocket,
       reliefDepthMm: style.reliefDepthMm,
       widthMm: (bounds.max[0] - bounds.min[0]) / MANIFOLD_SCALE,
@@ -617,6 +651,13 @@ export const buildKeychain = async (
     cutSolid.delete();
     base = nextBase;
   }
+  for (const section of styled.throughCuts ?? []) {
+    const cutSolid = section.extrude(baseThickness);
+    const nextBase = base.subtract(cutSolid);
+    base.delete();
+    cutSolid.delete();
+    base = nextBase;
+  }
   const effectiveReliefDepthMm = styled.reliefDepthMm ?? params.reliefDepthMm;
   const relief = textSection
     .extrude(Math.round((effectiveReliefDepthMm + 0.15) * MANIFOLD_SCALE))
@@ -637,7 +678,7 @@ export const buildKeychain = async (
   const components = model.decompose();
   const connected = components.length === 1;
   deleteAll(components);
-  const printable =
+  let printable =
     model.status() === 'NoError' &&
     styled.magnetPocket?.safe !== false &&
     reliefContained &&
@@ -651,6 +692,18 @@ export const buildKeychain = async (
       message:
         'The selected style keeps some letters as separate printable parts; no automatic connections were added.',
     });
+  if (
+    !connected &&
+    params.styleId === 'heart-split' &&
+    params.heartInteriorMode === 'through-cut'
+  ) {
+    issues.push({
+      severity: 'error',
+      code: 'heart-cut-unsafe',
+      message: 'The through-cut heart split is disconnected from its printable supports.',
+    });
+    printable = false;
+  }
   if (model.numTri() > 12000)
     issues.push({
       severity: 'warning',

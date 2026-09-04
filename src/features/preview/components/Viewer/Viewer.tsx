@@ -1,7 +1,7 @@
 import { ZoomIn, ZoomOut } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { ArcballControls } from 'three/addons/controls/ArcballControls.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
 
@@ -27,10 +27,9 @@ type ViewerProps = {
   surfacePreset?: SurfacePresetId;
   locale?: Locale;
 };
-type ArcballControlsWithTarget = ArcballControls & { target: THREE.Vector3 };
 type ViewerState = {
   camera: THREE.PerspectiveCamera;
-  controls: ArcballControlsWithTarget;
+  controls: OrbitControls;
   group: THREE.Group;
   scene: THREE.Scene;
   floor: THREE.Mesh;
@@ -84,12 +83,6 @@ const makeMesh = (
   object.receiveShadow = true;
   return object;
 };
-const shapeCenter = (state: ViewerState, result: GeometryResult): THREE.Vector3 => {
-  const center = new THREE.Vector3(...result.dimensions.centerMm);
-
-  center.z += state.displayOffsetZ;
-  return center;
-};
 const fitViewer = (
   state: ViewerState,
   result: GeometryResult,
@@ -97,7 +90,9 @@ const fitViewer = (
   resetZoom = true,
 ): void => {
   if (resetZoom) state.zoomScale = DEFAULT_ZOOM_SCALE;
-  const center = shapeCenter(state, result);
+  const center = new THREE.Vector3(...result.dimensions.centerMm);
+
+  center.z += state.displayOffsetZ;
   const bounds = modelBounds(
     result.dimensions.widthMm,
     result.dimensions.heightMm,
@@ -113,8 +108,7 @@ const fitViewer = (
 
   applyCameraPose(state.camera, pose);
   state.controls.target.copy(pose.target);
-  state.camera.up.copy(pose.up);
-  state.controls.setCamera(state.camera);
+  state.controls.cursor.copy(pose.target);
   state.controls.update();
 };
 const syncPlatform = (state: ViewerState, result: GeometryResult | undefined): void => {
@@ -218,32 +212,32 @@ export const Viewer = ({
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.BasicShadowMap;
     host.prepend(renderer.domElement);
-    const controls = new ArcballControls(
-      camera,
-      renderer.domElement,
-      scene,
-    ) as ArcballControlsWithTarget;
+    const controls = new OrbitControls(camera, renderer.domElement);
 
-    controls.setGizmosVisible(false);
-    controls.rotateSpeed = 2;
-    controls.wMax = 8;
-    controls.dampingFactor = 18;
-    controls.enableAnimations = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.12;
+    controls.rotateSpeed = 0.68;
     controls.enablePan = false;
     controls.enableZoom = false;
     controls.enableRotate = true;
-    controls.enableFocus = false;
-    for (const mouse of [0, 1, 2] as const) {
-      controls.setMouseAction('ROTATE', mouse);
-      controls.setMouseAction('ROTATE', mouse, 'CTRL');
-      controls.setMouseAction('ROTATE', mouse, 'SHIFT');
-    }
+    controls.cursor.set(0, 0, 0);
+    controls.minTargetRadius = 0;
+    controls.maxTargetRadius = 0;
+    controls.touches.ONE = THREE.TOUCH.ROTATE;
+    controls.touches.TWO = THREE.TOUCH.ROTATE;
+    controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+    controls.mouseButtons.MIDDLE = THREE.MOUSE.ROTATE;
+    controls.mouseButtons.RIGHT = THREE.MOUSE.ROTATE;
     controls.addEventListener('start', () => {
       activeViewRef.current = 'custom';
       setActiveView('custom');
       const current = resultRef.current;
       if (current && stateRef.current) {
-        stateRef.current.controls.target.copy(shapeCenter(stateRef.current, current));
+        const target = new THREE.Vector3(...current.dimensions.centerMm);
+
+        target.z += stateRef.current.displayOffsetZ;
+        stateRef.current.controls.target.copy(target);
+        stateRef.current.controls.cursor.copy(target);
       }
     });
     const group = new THREE.Group();
@@ -326,11 +320,7 @@ export const Viewer = ({
     const invalidate = () => {
       if (frame === 0) frame = requestAnimationFrame(render);
     };
-    const handleControlsChange = () => {
-      const current = resultRef.current;
-      if (current) controls.target.copy(shapeCenter(viewerState, current));
-      invalidate();
-    };
+    const handleControlsChange = () => invalidate();
 
     controls.addEventListener('change', handleControlsChange);
     viewerState.invalidate = invalidate;

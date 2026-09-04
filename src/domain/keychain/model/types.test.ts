@@ -39,6 +39,13 @@ describe('keychain parameters', () => {
       normalizeParams({ ...DEFAULT_PARAMS, templateId: 'plant-label', styleId: 'ribbon' })
         .ribbonTailMm,
     ).toBe(0);
+    expect(
+      normalizeParams({ ...DEFAULT_PARAMS, templateId: 'plant-label', styleId: 'heart-split' })
+        .styleId,
+    ).toBe('contour');
+    expect(
+      normalizeParams({ ...DEFAULT_PARAMS, templateId: 'magnet', styleId: 'heart-split' }).styleId,
+    ).toBe('plain');
   });
   it('clears Magnet-only hardware fields outside the Magnet template', () => {
     const normalized = normalizeParams({

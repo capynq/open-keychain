@@ -477,6 +477,18 @@ describe('finished keychain geometry', () => {
         expect([...exportMesh!.positions].every(Number.isFinite)).toBe(true);
       }
   }, 90000);
+  it('builds the heart-split backing as two printable halves', async () => {
+    const { result } = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      templateId: 'name-keychain',
+      styleId: 'heart-split',
+      text: 'LOVE',
+    });
+    expect(result.printable, JSON.stringify(result.issues)).toBe(true);
+    expect(result.dimensions.widthMm).toBeGreaterThan(36);
+    expect(result.dimensions.heightMm).toBeGreaterThan(20);
+    expect(result.issues.some((issue) => issue.severity === 'error')).toBe(false);
+  }, 30000);
   it('changes the mesh for every exposed shape control at its safe limits', async () => {
     type ControlCase = {
       label: string;

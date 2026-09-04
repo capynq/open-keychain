@@ -1,10 +1,12 @@
 import type { FontDefinition } from '../fonts/catalog';
 
-export type StyleId = 'plain' | 'contour' | 'capsule' | 'soft-tag' | 'bubble' | 'arch' | 'ribbon';
+export type StyleId =
+  'plain' | 'contour' | 'capsule' | 'soft-tag' | 'bubble' | 'arch' | 'ribbon' | 'heart-split';
 export type TemplateId =
   'name-keychain' | 'articulated-name' | 'nameplate' | 'plant-label' | 'magnet';
 export type MagnetPocketPreset = '6x2' | '8x2' | '10x3' | '12x3' | '15x3';
 export type MagnetPocketPlacement = 'center' | 'upper' | 'lower' | 'left' | 'right';
+export type HeartInteriorMode = 'relief' | 'through-cut';
 export type MagnetPocketPresetMetadata = {
   id: MagnetPocketPreset;
   diameterMm: number;
@@ -61,6 +63,12 @@ export type KeychainParams = {
   jointBossMm: number;
   ribbonTailMm: number;
   ribbonNotchMm: number;
+  heartSizeMm: number;
+  heartBorderMm: number;
+  heartLeftGapMm: number;
+  heartRightGapMm: number;
+  heartVerticalOffsetMm: number;
+  heartInteriorMode: HeartInteriorMode;
   subtitleTextSizeMm?: number;
   subtitleFontWeightMm?: number;
   subtitleLetterSpacingMm?: number;
@@ -349,6 +357,12 @@ export const DEFAULT_PARAMS: KeychainParams = {
   jointBossMm: 0,
   ribbonTailMm: 12,
   ribbonNotchMm: 4,
+  heartSizeMm: 22,
+  heartBorderMm: 1.6,
+  heartLeftGapMm: -1.5,
+  heartRightGapMm: -1.5,
+  heartVerticalOffsetMm: 1.5,
+  heartInteriorMode: 'relief',
   subtitleTextSizeMm: 6,
   subtitleFontWeightMm: 0,
   subtitleLetterSpacingMm: 0.5,
@@ -366,16 +380,20 @@ export const normalizeParams = (params: KeychainParams): NormalizedParams => {
     ...params,
     text,
     styleId:
-      params.templateId === 'magnet' &&
-      !['plain', 'contour', 'capsule', 'soft-tag', 'bubble', 'arch', 'ribbon'].includes(
-        params.styleId,
-      )
-        ? 'plain'
-        : params.styleId === 'ribbon' &&
-            params.templateId !== 'name-keychain' &&
-            params.templateId !== 'magnet'
-          ? 'contour'
-          : params.styleId,
+      params.styleId === 'heart-split' && params.templateId !== 'name-keychain'
+        ? params.templateId === 'magnet'
+          ? 'plain'
+          : 'contour'
+        : params.templateId === 'magnet' &&
+            !['plain', 'contour', 'capsule', 'soft-tag', 'bubble', 'arch', 'ribbon'].includes(
+              params.styleId,
+            )
+          ? 'plain'
+          : params.styleId === 'ribbon' &&
+              params.templateId !== 'name-keychain' &&
+              params.templateId !== 'magnet'
+            ? 'contour'
+            : params.styleId,
     subtitle:
       params.templateId !== 'articulated-name'
         ? (params.subtitle ?? '').normalize('NFC').trim().replace(/\s+/g, ' ')
@@ -465,6 +483,32 @@ export const normalizeParams = (params: KeychainParams): NormalizedParams => {
       (params.templateId === 'name-keychain' || params.templateId === 'magnet')
         ? clamp(params.ribbonNotchMm ?? 4, 1, 10)
         : 0,
+    heartSizeMm:
+      params.templateId === 'name-keychain' && params.styleId === 'heart-split'
+        ? clamp(params.heartSizeMm ?? 22, 12, 32)
+        : 22,
+    heartBorderMm:
+      params.templateId === 'name-keychain' && params.styleId === 'heart-split'
+        ? clamp(params.heartBorderMm ?? 1.6, 1.2, Math.min(4, (params.heartSizeMm ?? 22) * 0.2))
+        : 1.6,
+    heartLeftGapMm:
+      params.templateId === 'name-keychain' && params.styleId === 'heart-split'
+        ? clamp(params.heartLeftGapMm ?? -1.5, -6, 12)
+        : -1.5,
+    heartRightGapMm:
+      params.templateId === 'name-keychain' && params.styleId === 'heart-split'
+        ? clamp(params.heartRightGapMm ?? -1.5, -6, 12)
+        : -1.5,
+    heartVerticalOffsetMm:
+      params.templateId === 'name-keychain' && params.styleId === 'heart-split'
+        ? clamp(params.heartVerticalOffsetMm ?? 1.5, -10, 10)
+        : 1.5,
+    heartInteriorMode:
+      params.templateId === 'name-keychain' &&
+      params.styleId === 'heart-split' &&
+      (params.heartInteriorMode === 'through-cut' || params.heartInteriorMode === 'relief')
+        ? params.heartInteriorMode
+        : 'relief',
     subtitleTextSizeMm: clamp(params.subtitleTextSizeMm ?? 6, 4, 12),
     subtitleFontWeightMm: clamp(params.subtitleFontWeightMm ?? 0, 0, 1.5),
     subtitleLetterSpacingMm: clamp(params.subtitleLetterSpacingMm ?? 0.5, 0, 4),

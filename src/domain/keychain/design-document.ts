@@ -66,6 +66,12 @@ const COMPACT_PARAM_KEYS: Record<keyof KeychainParams, string> = {
   subtitleLetterSpacingMm: 'aj',
   subtitleReliefDepthMm: 'ak',
   subtitleGapMm: 'al',
+  heartSizeMm: 'am',
+  heartBorderMm: 'an',
+  heartLeftGapMm: 'ao',
+  heartRightGapMm: 'ap',
+  heartVerticalOffsetMm: 'aq',
+  heartInteriorMode: 'ar',
 };
 const COMPACT_TO_PARAM = Object.fromEntries(
   Object.entries(COMPACT_PARAM_KEYS).map(([key, compact]) => [compact, key]),
@@ -77,7 +83,19 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const isValidParams = (value: unknown): value is KeychainParams => {
   if (!isRecord(value) || PARAM_KEYS.some((key) => !(key in value))) return false;
-  if (typeof value.text !== 'string' || value.text.trim().length === 0 || value.text.length > 200)
+  const allowsEmptyText = value.styleId === 'heart-split' && value.templateId === 'name-keychain';
+  if (
+    allowsEmptyText &&
+    typeof value.text === 'string' &&
+    !value.text.trim() &&
+    !(typeof value.subtitle === 'string' && value.subtitle.trim())
+  )
+    return false;
+  if (
+    typeof value.text !== 'string' ||
+    (!allowsEmptyText && value.text.trim().length === 0) ||
+    value.text.length > 200
+  )
     return false;
   if (typeof value.fontId !== 'string' || value.fontId.length > 200) return false;
   if (!TEMPLATE_CATALOG.some((item) => item.id === value.templateId)) return false;
@@ -99,6 +117,7 @@ const isValidParams = (value: unknown): value is KeychainParams => {
         : key === 'magnetPocketPlacement'
           ? ['center', 'upper', 'lower', 'left', 'right'].includes(field as string)
           : typeof field === 'string';
+    if (key === 'heartInteriorMode') return field === 'relief' || field === 'through-cut';
     if (key === 'plantAccentEnabled') return typeof field === 'boolean';
     if (key === 'subtitleOffsetXRatio' || key === 'subtitleOffsetYRatio')
       return typeof field === 'number' && Number.isFinite(field) && field >= -1 && field <= 1;
