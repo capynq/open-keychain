@@ -26,7 +26,8 @@ must use the Compose service hostname `open-keychain-postgres`.
 Add an `A`/`AAAA` record for `api.open-keychain.com` to the server, install the example Nginx host,
 and obtain its certificate with the existing certificate automation. Nginx forwards `Host`,
 `X-Forwarded-For`, and `X-Forwarded-Proto`, and disables caching for all `/api/` responses. The
-Fastify app trusts only loopback Nginx proxy addresses. Keep the Netlify rewrite unchanged:
+Fastify app trusts the forwarded chain because the API port is bound to host loopback; Nginx
+overwrites `X-Forwarded-For` with the real client address. Keep the Netlify rewrite unchanged:
 
 ```
 /api/* https://api.open-keychain.com/api/:splat 200
@@ -41,6 +42,12 @@ For an interactive, rerunnable bootstrap that creates the protected environment 
 installs/tests Nginx and starts Compose, run `sudo deploy/hetzner/setup.sh`. It prompts before
 replacing existing files and keeps timestamped backups. Set `OPEN_KEYCHAIN_ENV_FILE` and
 `OPEN_KEYCHAIN_NGINX_AVAILABLE` when using non-standard paths.
+
+When issuance is needed, the script validates DNS and automates Let’s Encrypt webroot issuance with a
+required renewal email. It does not activate the HTTPS site until the certificate is valid and matches
+the hostname and key; Certbot-managed certificates must also pass a renewal dry run. A valid
+certificate managed outside Certbot is preserved without requiring Certbot, with an explicit renewal
+warning. DNS and firewall changes remain manual.
 
 From the repository checkout on the server:
 
