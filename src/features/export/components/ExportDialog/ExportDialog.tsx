@@ -12,7 +12,7 @@ import { t } from '../../../../infrastructure/i18n/utils';
 import { ExportChoices } from './ExportChoices';
 import { ExportPreflight } from './ExportPreflight';
 import { ExportStatus } from './ExportStatus';
-import './ExportDialog.module.css';
+import './ExportDialog.css';
 
 export const ExportDialog = ({
   locale,
@@ -22,6 +22,8 @@ export const ExportDialog = ({
   effectiveAppearance,
   onClose,
   onExportSuccess,
+  disconnectedExportAcknowledged,
+  onDisconnectedExportAcknowledged,
 }: {
   locale: Locale;
   open: boolean;
@@ -30,6 +32,8 @@ export const ExportDialog = ({
   effectiveAppearance?: PrintAppearance;
   onClose: () => void;
   onExportSuccess?: () => void;
+  disconnectedExportAcknowledged: boolean;
+  onDisconnectedExportAcknowledged: (acknowledged: boolean) => void;
 }) => {
   const wasOpen = useRef(false);
   const reportedSuccess = useRef(false);
@@ -69,7 +73,6 @@ export const ExportDialog = ({
       >
         <div className="export-modal-heading">
           <div>
-            <p className="eyebrow">{t(locale, 'export')}</p>
             <h2 id="export-title">{t(locale, 'exportTitle')}</h2>
           </div>
           <IconButton
@@ -77,6 +80,7 @@ export const ExportDialog = ({
             className="modal-close"
             icon={X}
             label={t(locale, 'close')}
+            motion="scale"
             onClick={onClose}
             autoFocus={!exportState.downloading}
             disabled={exportState.downloading}
@@ -88,6 +92,18 @@ export const ExportDialog = ({
           preflight={preflight}
           effectiveAppearance={effectiveAppearance}
         />
+        {preflight.issues.some(
+          (issue) => issue.code === 'disconnected' && issue.severity === 'error',
+        ) && (
+          <label className="export-separate-confirmation">
+            <input
+              type="checkbox"
+              checked={disconnectedExportAcknowledged}
+              onChange={(event) => onDisconnectedExportAcknowledged(event.target.checked)}
+            />
+            <span>{t(locale, 'exportSeparatePartsAcknowledge')}</span>
+          </label>
+        )}
         <ExportStatus
           locale={locale}
           exportState={exportState}

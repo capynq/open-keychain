@@ -23,8 +23,12 @@ export const ExportPreflight = ({
           : 'printCheckReady';
 
   return (
-    <details className="export-preflight" open={preflight.status === 'blocked'}>
+    <details
+      className={`export-preflight export-preflight--${preflight.status}`}
+      open={preflight.status === 'blocked'}
+    >
       <summary>
+        <span className="export-preflight-marker" aria-hidden="true" />
         <span>{t(locale, 'exportChecks')}</span>
         <strong>{t(locale, statusLabelKey)}</strong>
       </summary>

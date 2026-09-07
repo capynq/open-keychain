@@ -36,6 +36,7 @@ export const ExportStatus = ({
           action="close-export-success"
           icon={X}
           label={t(locale, 'close')}
+          motion="scale"
           onClick={onClose}
         />
       </div>
@@ -47,6 +48,7 @@ export const ExportStatus = ({
           action="retry-export"
           icon={RefreshCw}
           label={t(locale, 'retry')}
+          motion="rotate"
           onClick={() => void exportState.retry()}
         />
       </div>

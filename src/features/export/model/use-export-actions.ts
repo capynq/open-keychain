@@ -38,6 +38,7 @@ export const useExportActions = ({
   subtitleFontDefinition,
   appearanceOverrides,
   exportAllowed = true,
+  allowDisconnected = false,
 }: {
   geometry: ExportSource;
   params: KeychainParams;
@@ -45,7 +46,15 @@ export const useExportActions = ({
   subtitleFontDefinition?: FontDefinition;
   appearanceOverrides?: PrintAppearanceOverrides;
   exportAllowed?: boolean;
+  allowDisconnected?: boolean;
 }): ExportActionsState => {
+  const disconnectedOnly = Boolean(
+    geometry.result &&
+    geometry.result.issues.some((issue) => issue.severity === 'error') &&
+    geometry.result.issues
+      .filter((issue) => issue.severity === 'error')
+      .every((issue) => issue.code === 'disconnected'),
+  );
   const [downloading, setDownloading] = useState(false);
   const [status, setStatus] = useState<ExportActionsState['status']>('idle');
   const [error, setError] = useState<string>();
@@ -61,8 +70,7 @@ export const useExportActions = ({
     mode: ThreeMfMode = 'separate-colors',
     requestedAppearanceOverrides: PrintAppearanceOverrides | undefined = appearanceOverrides,
   ): Promise<void> => {
-    if (!exportAllowed || !geometry.result?.printable || geometry.current === false || downloading)
-      return;
+    if (!exportAllowed || geometry.current === false || downloading) return;
     lastRequest.current = { format, mode, appearanceOverrides: requestedAppearanceOverrides };
     setDownloading(true);
     setStatus('exporting');
@@ -78,6 +86,7 @@ export const useExportActions = ({
         fontDefinition,
         requestedAppearanceOverrides,
         subtitleFontDefinition,
+        allowDisconnected,
       );
       if (!file) throw new Error('The file could not be created.');
       const url = URL.createObjectURL(new Blob([file.data], { type: file.mimeType }));
@@ -112,7 +121,11 @@ export const useExportActions = ({
 
   return {
     downloading,
-    printable: Boolean(exportAllowed && geometry.result?.printable && geometry.current !== false),
+    printable: Boolean(
+      exportAllowed &&
+      geometry.current !== false &&
+      (geometry.result?.printable || (allowDisconnected && disconnectedOnly)),
+    ),
     status,
     error,
     download,

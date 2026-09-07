@@ -29,6 +29,7 @@ export const buildPreflightReport = (
   appearance: PrintAppearance | undefined = result?.appearance,
   busy = false,
   error?: string,
+  allowDisconnected = false,
 ): PreflightReport => {
   if (busy || error || !result) {
     return {
@@ -41,15 +42,18 @@ export const buildPreflightReport = (
       issues: error ? [{ severity: 'error', code: 'generation-error', message: error }] : [],
     };
   }
-  const hasErrors = result.issues.some((issue) => issue.severity === 'error');
+  const blockingIssues = result.issues.filter((issue) => issue.severity === 'error');
+  const disconnectedOnly =
+    blockingIssues.length > 0 && blockingIssues.every((issue) => issue.code === 'disconnected');
+  const hasErrors = blockingIssues.length > 0 && !(allowDisconnected && disconnectedOnly);
   const hasWarnings = result.issues.some((issue) => issue.severity === 'warning');
+  const printable = (result.printable || (allowDisconnected && disconnectedOnly)) && !hasErrors;
 
   const constraints: GeometryConstraints | undefined = result.constraints;
 
   return {
-    status:
-      !result.printable || hasErrors ? 'blocked' : hasWarnings ? 'ready-with-warnings' : 'ready',
-    printable: result.printable && !hasErrors,
+    status: !printable ? 'blocked' : hasWarnings ? 'ready-with-warnings' : 'ready',
+    printable,
     dimensions: result.dimensions,
     profile:
       result.printProfile ?? (constraints ? printProfileFor(constraints) : DEFAULT_PRINT_PROFILE),
