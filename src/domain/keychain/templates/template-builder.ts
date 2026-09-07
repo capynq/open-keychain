@@ -677,7 +677,9 @@ const plantLabelStyle = (wasm: GeometryWasm, input: StyleInput, styleId: StyleId
   const textHeight = input.textBounds.max[1] - input.textBounds.min[1];
   const border = effectiveMargin(input) + Math.max(0, input.reliefHaloMm ?? 0) * MANIFOLD_SCALE;
   const foundationWidth = Math.max(34000, textWidth + border * 2 + 7000);
-  const foundationHeight = Math.max(5000, Math.min(8000, textHeight * 0.26));
+  // The board is the structural backing for the whole inscription. A narrow
+  // rail left dots, accents, and tall glyph strokes as loose solids above it.
+  const foundationHeight = Math.max(14000, textHeight + border * 2);
   const radius = Math.max(
     1200,
     Math.min(input.cornerRadius ?? 4000, Math.min(foundationWidth, foundationHeight) / 2 - 500),
@@ -719,7 +721,7 @@ const plantLabelStyle = (wasm: GeometryWasm, input: StyleInput, styleId: StyleId
     ],
     'EvenOdd',
   );
-  const textOffsetY = foundationBottom + 1000 - input.textBounds.min[1];
+  const textOffsetY = -(input.textBounds.min[1] + input.textBounds.max[1]) / 2;
   const labelText = input.text.translate([0, textOffsetY]);
   const labelFootprint = input.text.translate([0, textOffsetY]);
   const labelSubtitle = input.subtitle?.translate([0, textOffsetY]);

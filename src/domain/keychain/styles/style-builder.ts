@@ -303,6 +303,34 @@ const plateStyle = (wasm: GeometryWasm, input: StyleInput, radius: number): Cros
  */
 export const effectiveMargin = (input: StyleInput): number =>
   Math.max(600, input.padding + Math.max(0, input.textInset ?? 0) - BASELINE_MARGIN);
+
+const sectionIsConnected = (section: CrossSection): boolean => {
+  const components = section.decompose();
+  try {
+    return components.length === 1;
+  } finally {
+    components.forEach((component) => component.delete());
+  }
+};
+
+/** Close only small outline gaps that would otherwise become accidental loose prints. */
+const closeSmallSectionGaps = (section: CrossSection, maximumRadius = 2200): CrossSection => {
+  if (sectionIsConnected(section)) return section;
+  for (const radius of [600, 1000, 1500, 2200, 3000, 4500]) {
+    if (radius > maximumRadius) break;
+    const expanded = section.offset(radius, 'Round', 2, 32);
+    const closed = expanded.offset(-radius, 'Round', 2, 32);
+    expanded.delete();
+    if (!sectionIsConnected(closed)) {
+      closed.delete();
+      continue;
+    }
+    section.delete();
+    return closed;
+  }
+  return section;
+};
+
 export const finishStyle = (
   wasm: GeometryWasm,
   backing: CrossSection,
@@ -314,6 +342,7 @@ export const finishStyle = (
     depthMm: number;
   }>,
   attachKeyring = true,
+  preserveSeparateParts = false,
 ): StyleBuild => {
   const textInset = effectiveMargin(input);
   const reliefHalo = Math.max(0, input.reliefHaloMm ?? 0) * 1000;
@@ -322,10 +351,18 @@ export const finishStyle = (
   const subtitleSupport = input.subtitle
     ? input.subtitle.offset(supportOffset, 'Round', 2, 64)
     : undefined;
-  const joined = union(
+  const joinedRaw = union(
     wasm,
     subtitleSupport ? [backing, support, subtitleSupport] : [backing, support],
   );
+  // Heart Split intentionally represents two pieces; its explicit print-mode
+  // policy must not be erased by the accidental-gap repair used elsewhere.
+  const joined = preserveSeparateParts
+    ? joinedRaw
+    : closeSmallSectionGaps(
+        joinedRaw,
+        input.letterSpacing && input.letterSpacing > 2.4 ? 2200 : 4500,
+      );
   const combined = joined.simplify(20);
   backing.delete();
   support.delete();
@@ -454,11 +491,13 @@ const heartSplitStyle = (wasm: GeometryWasm, input: StyleInput): StyleBuild => {
   const heartFoundation = outer.translate([0, 0]);
   outer.delete();
   inner.delete();
-  const leftSupport =
+  let leftSupport =
     input.heartLeftPresent === false
       ? undefined
       : left.offset(effectiveMargin(input), 'Round', 2, 64);
-  const rightSupport = right?.offset(effectiveMargin(input), 'Round', 2, 64);
+  if (leftSupport) leftSupport = closeSmallSectionGaps(leftSupport);
+  let rightSupport = right?.offset(effectiveMargin(input), 'Round', 2, 64);
+  if (rightSupport) rightSupport = closeSmallSectionGaps(rightSupport);
   const backingParts: CrossSection[] = [heartFoundation];
   if (leftSupport) backingParts.unshift(leftSupport);
   if (rightSupport) backingParts.push(rightSupport);
@@ -510,7 +549,7 @@ const heartSplitStyle = (wasm: GeometryWasm, input: StyleInput): StyleBuild => {
   const finished =
     input.templateId === 'magnet'
       ? finishMagnetStyle(wasm, backing, relief, heartInput, 'right')
-      : finishStyle(wasm, backing, relief, heartInput, 'right');
+      : finishStyle(wasm, backing, relief, heartInput, 'right', undefined, true, true);
   return {
     ...finished,
     subtitle: undefined,
@@ -613,24 +652,52 @@ export const buildStyle = (wasm: GeometryWasm, styleId: StyleId, input: StyleInp
   if (styleId === 'bubble') {
     const backing = input.text.offset(textInset, 'Round', 2, 64);
     const bounds = sectionBounds(backing);
-    const bubbles = [
-      wasm.CrossSection.circle(
-        Math.max(3000, input.padding + 500 + Math.max(0, input.bubbleLobeMm ?? 0) * 1000),
-        64,
-      ).translate([bounds.min[0] + 1000, bounds.min[1] + 1000]),
-      wasm.CrossSection.circle(
-        Math.max(3000, input.padding + 500 + Math.max(0, input.bubbleLobeMm ?? 0) * 1000),
-        64,
-      ).translate([bounds.max[0] - 1000, bounds.max[1] - 1000]),
+    const height = bounds.max[1] - bounds.min[1];
+    const radius = Math.max(
+      3000,
+      input.padding + 500 + Math.max(0, input.bubbleLobeMm ?? 0) * 1000,
+    );
+    const lobePositions: Array<[[number, number], [number, number]]> = [
+      [
+        [bounds.min[0] + 1000, bounds.min[1] + 1000],
+        [bounds.min[0] + height * 0.34, bounds.max[1] - height * 0.3],
+      ],
+      [
+        [bounds.max[0] - 1000, bounds.max[1] - 1000],
+        [bounds.max[0] - height * 0.22, bounds.min[1] + height * 0.25],
+      ],
     ];
-    const joined = union(wasm, [backing, ...bubbles]);
-    const decorated = joined.simplify(20);
-    joined.delete();
+    const isConnected = (section: CrossSection): boolean => {
+      const components = section.decompose();
+      try {
+        return components.length === 1;
+      } finally {
+        components.forEach((component) => component.delete());
+      }
+    };
+    // A lobe must touch the carrier. Do not turn an ornamental bubble into an
+    // unannounced loose print, especially for narrow or angular glyphs.
+    let decorated = backing;
+    for (const positions of lobePositions) {
+      for (const position of positions) {
+        const bubble = wasm.CrossSection.circle(radius, 64).translate(position);
+        const candidate = union(wasm, [decorated, bubble]);
+        bubble.delete();
+        if (!isConnected(candidate)) {
+          candidate.delete();
+          continue;
+        }
+        if (decorated !== backing) decorated.delete();
+        decorated = candidate;
+        break;
+      }
+    }
+    const simplified = decorated.simplify(20);
+    if (decorated !== backing) decorated.delete();
     backing.delete();
-    bubbles.forEach((bubble: CrossSection) => bubble.delete());
     return input.templateId === 'magnet'
-      ? finishMagnetStyle(wasm, decorated, input.text, input, 'left')
-      : finishStyle(wasm, decorated, input.text, input, 'left');
+      ? finishMagnetStyle(wasm, simplified, input.text, input, 'left')
+      : finishStyle(wasm, simplified, input.text, input, 'left');
   }
   if (styleId === 'arch') {
     const relief = archWarp(input.text, input.textBounds, input.archCurveMm);

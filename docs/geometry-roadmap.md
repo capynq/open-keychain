@@ -1,8 +1,34 @@
 # Geometry roadmap and release gates
 
 This document records the geometry contracts that the customizer, export pipeline, and
-validation matrix share. The current release keeps the four templates and five styles;
+validation matrix share. The catalog currently contains five templates and 21 supported
+template/style combinations;
 new designs must pass the same gates before they receive a public route or SEO page.
+
+## Geometry modernization implementation status
+
+The current implementation introduces a version 6 document with content, layout,
+silhouette, finish, hardware, and manufacturing sections. The kernel still compiles
+these sections to its parameter interface; this is not yet a fully incremental feature
+dependency graph. Older version 5 share payloads are not supported by the new codec.
+
+Implemented foundations include corrected glyph-pair positioning, content-sensitive
+font caching, real backing/text edge finishing, accurate disconnected-solid counts,
+explicit separate-parts intent, named mesh roles, and generation timings. Rounded and
+chamfered edges are geometry changes, not shading effects. The edge cross-section in
+the controls is a schematic, not a measured section of the generated mesh.
+
+Seller batch work adds optional subtitles, format selection, exception review,
+cancellation, and a customer-text-free recipe. The labor estimate is based on user
+inputs: it is an opportunity estimate, not measured savings or a pricing promise.
+Local editing and exports remain free; no billing or outreach is introduced.
+
+Not yet release-complete: editable artwork/feature UI, SVG import, full complex-script
+shaping, a single outline-margin control replacing overlapping padding/inset behavior,
+articulated swept-motion collision checks, and manufacturing checks for arbitrary
+constructive geometry. Experimental feature nodes must not be presented as having
+passed those checks. Physical print validation and seller willingness-to-pay pilots
+remain separate evidence gates.
 
 ## Baseline print profile
 

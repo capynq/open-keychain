@@ -1,186 +1,130 @@
 import { describe, expect, it } from 'vitest';
 
 import { decodeDesignDocument, encodeDesignDocument } from './design-document';
+import { createDesignDocument, designParams, DESIGN_SECTIONS } from './model/design-schema';
 import { DEFAULT_PARAMS, normalizeParams } from './model/types';
 
-describe('design document codec', () => {
-  it('round-trips unicode params and appearance', () => {
-    const encoded = encodeDesignDocument({
-      version: 5,
-      params: { ...DEFAULT_PARAMS, text: 'Привіт 🌿' },
-      appearanceOverrides: { version: 1, base: '#123456', relief: '#ABCDEF' },
-    });
-    expect(encoded).toMatch(/^v5\.[A-Za-z0-9_-]+$/);
-    expect(decodeDesignDocument(encoded)).toMatchObject({
-      version: 5,
-      params: { text: 'Привіт 🌿' },
-      appearanceOverrides: { base: '#123456', relief: '#ABCDEF' },
-    });
+const payload = (value: unknown): string =>
+  `v6.${btoa(JSON.stringify(value)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')}`;
+
+describe('structured design document codec', () => {
+  it('assigns every persisted parameter to exactly one semantic section', () => {
+    const keys = Object.values(DESIGN_SECTIONS).flat();
+    expect([...keys].sort()).toEqual(Object.keys(DEFAULT_PARAMS).sort());
+    expect(new Set(keys).size).toBe(keys.length);
   });
 
-  it('uses a compact, explicitly versioned payload', () => {
-    const encoded = encodeDesignDocument({ version: 5, params: DEFAULT_PARAMS });
-    expect(encoded.startsWith('v5.')).toBe(true);
-    expect(encoded.length).toBeLessThan(
-      btoa(JSON.stringify({ version: 2, params: DEFAULT_PARAMS })).length,
-    );
-  });
-  it('round-trips magnet hardware and pocket placement', () => {
-    const encoded = encodeDesignDocument({
-      version: 5,
-      params: {
-        ...DEFAULT_PARAMS,
-        templateId: 'magnet',
-        baseThicknessMm: 4.4,
-        magnetPocketPreset: '12x3',
-        magnetPocketPlacement: 'upper',
-      },
-    });
-    expect(decodeDesignDocument(encoded)?.params).toMatchObject({
-      magnetPocketPreset: '12x3',
-      magnetPocketPlacement: 'upper',
-    });
-  });
-  it.each(['articulated-name', 'nameplate', 'plant-label', 'magnet'] as const)(
-    'encodes normalized %s template parameters',
-    (templateId) => {
-      const params = normalizeParams({ ...DEFAULT_PARAMS, templateId });
-      const encoded = encodeDesignDocument({ version: 5, params });
-
-      expect(decodeDesignDocument(encoded)?.params.templateId).toBe(templateId);
-    },
-  );
-  it('round-trips independent subtitle font and placement controls', () => {
-    const encoded = encodeDesignDocument({
-      version: 5,
-      params: {
-        ...DEFAULT_PARAMS,
-        subtitle: 'ROLE',
-        subtitleFontId: 'caveat',
-        subtitleTextSizeMm: 9,
-        subtitleReliefDepthMm: 1.2,
-        subtitleOffsetXRatio: 0.5,
-        subtitleOffsetYRatio: -0.25,
-      },
-    });
-    expect(decodeDesignDocument(encoded)?.params).toMatchObject({
+  it('round-trips Unicode, independent typography, layout, finishes, and appearance', () => {
+    const params = normalizeParams({
+      ...DEFAULT_PARAMS,
+      text: 'Привіт 🌿',
+      subtitle: 'MAKER',
       subtitleFontId: 'caveat',
       subtitleTextSizeMm: 9,
+      subtitleFontWeightMm: 0.4,
+      subtitleLetterSpacingMm: 1.2,
+      subtitleGapMm: 2,
       subtitleReliefDepthMm: 1.2,
       subtitleOffsetXRatio: 0.5,
       subtitleOffsetYRatio: -0.25,
+      edgeFinish: 'round',
+      topEdgeMm: 0.4,
+      textEdgeMm: 0.2,
     });
-  });
-  it('rejects invalid magnet preset and placement values', () => {
-    expect(() =>
-      encodeDesignDocument({
-        version: 5,
-        params: { ...DEFAULT_PARAMS, magnetPocketPreset: '7x2' as never },
-      }),
-    ).toThrow();
-    expect(() =>
-      encodeDesignDocument({
-        version: 5,
-        params: { ...DEFAULT_PARAMS, magnetPocketPlacement: 'diagonal' as never },
-      }),
-    ).toThrow();
+    const appearance = { version: 1 as const, base: '#123456', relief: '#ABCDEF' };
+    const encoded = encodeDesignDocument(createDesignDocument(params, appearance));
+    const decoded = decodeDesignDocument(encoded);
+    expect(encoded).toMatch(/^v6\.[A-Za-z0-9_-]+$/);
+    expect(decoded && designParams(decoded)).toEqual(params);
+    expect(decoded?.appearanceOverrides).toEqual(appearance);
+    expect(decoded?.content.text).toBe(params.text);
+    expect(decoded?.finish.topEdgeMm).toBe(0.4);
   });
 
-  it('rejects unversioned and unsupported payloads', () => {
-    const legacy = btoa(
-      JSON.stringify({ version: 1, params: { ...DEFAULT_PARAMS, text: 'Legacy' } }),
-    )
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/g, '');
-    expect(decodeDesignDocument(legacy)).toBeUndefined();
-    expect(decodeDesignDocument(`v1.${legacy}`)).toBeUndefined();
-    expect(decodeDesignDocument(`v2.${legacy}`)).toBeUndefined();
+  it('omits defaults from the wire payload', () => {
+    expect(encodeDesignDocument(createDesignDocument(DEFAULT_PARAMS)).length).toBeLessThan(30);
   });
 
-  it.each(['', 'not-base64', 'eyJ2ZXJzaW9uIjoyfQ', 'A'.repeat(24_001)])(
-    'rejects malformed payload %s',
-    (value) => expect(decodeDesignDocument(value)).toBeUndefined(),
+  it.each(['name-keychain', 'articulated-name', 'nameplate', 'plant-label', 'magnet'] as const)(
+    'round-trips normalized %s parameters',
+    (templateId) => {
+      const params = normalizeParams({ ...DEFAULT_PARAMS, templateId });
+      const decoded = decodeDesignDocument(encodeDesignDocument(createDesignDocument(params)));
+      expect(decoded && designParams(decoded)).toEqual(params);
+    },
   );
 
-  it('rejects out-of-range and invalid colors', () => {
-    expect(() =>
-      encodeDesignDocument({ version: 5, params: { ...DEFAULT_PARAMS, textSizeMm: 31 } }),
-    ).toThrow();
-    expect(() =>
-      encodeDesignDocument({
-        version: 5,
-        params: DEFAULT_PARAMS,
-        appearanceOverrides: { version: 1, base: 'red' as `#${string}` },
-      }),
-    ).toThrow();
-  });
-
-  it('falls back to a bundled font for sharing', () => {
-    const encoded = encodeDesignDocument({
-      version: 5,
-      params: { ...DEFAULT_PARAMS, fontId: 'google-custom-font' },
-    });
-    expect(decodeDesignDocument(encoded)).toMatchObject({
-      fontFallback: true,
-      params: { fontId: DEFAULT_PARAMS.fontId },
-    });
-  });
-
-  it('falls back independently when only the subtitle font is not portable', () => {
-    const encoded = encodeDesignDocument({
-      version: 5,
-      params: { ...DEFAULT_PARAMS, subtitle: 'MAKER', subtitleFontId: 'local-font' },
-    });
-
-    expect(decodeDesignDocument(encoded)).toMatchObject({
-      fontFallback: true,
-      params: { fontId: DEFAULT_PARAMS.fontId, subtitleFontId: DEFAULT_PARAMS.subtitleFontId },
-    });
-  });
-
-  it('round-trips every compact parameter key in the v5 payload', () => {
+  it('round-trips hardware and shaped silhouette parameters', () => {
     const params = normalizeParams({
       ...DEFAULT_PARAMS,
-      text: 'MIRA',
-      subtitle: 'LAB',
-      subtitleFontId: 'caveat',
-      subtitleOffsetXRatio: 0.25,
-      subtitleOffsetYRatio: -0.25,
+      templateId: 'magnet',
+      styleId: 'ribbon',
       magnetPocketPreset: '12x3',
       magnetPocketPlacement: 'upper',
-      fontId: 'caveat',
-      templateId: 'magnet',
-      styleId: 'plain',
-      textSizeMm: 18,
-      fontWeightMm: 0.8,
       baseThicknessMm: 4.6,
-      reliefDepthMm: 1.1,
-      paddingMm: 3,
-      edgeInsetMm: 1,
-      letterSpacingMm: 1.2,
-      holeDiameterMm: 6,
-      connectorWidthMm: 2,
-      cornerRadiusMm: 5,
-      stakeLengthMm: 55,
-      plantAccentEnabled: false,
-      nameplateTiltDeg: 8,
-      nameplateEmbedMm: 0.5,
-      reliefHaloMm: 0.5,
-      ringOffsetMm: 1,
-      bubbleLobeMm: 1,
-      tagTailMm: 2,
-      archCurveMm: 2,
       ribbonTailMm: 14,
       ribbonNotchMm: 5,
-      subtitleTextSizeMm: 7,
-      subtitleFontWeightMm: 0.4,
-      subtitleLetterSpacingMm: 0.7,
-      subtitleReliefDepthMm: 0.9,
-      subtitleGapMm: 2,
+      cornerRadiusMm: 5,
+      paddingMm: 3,
+      edgeInsetMm: 1,
     });
-    const encoded = encodeDesignDocument({ version: 5, params });
+    const decoded = decodeDesignDocument(encodeDesignDocument(createDesignDocument(params)));
+    expect(decoded && designParams(decoded)).toEqual(params);
+  });
 
-    expect(decodeDesignDocument(encoded)?.params).toEqual(params);
+  it('falls back independently for fonts that cannot travel in a shared link', () => {
+    const decoded = decodeDesignDocument(
+      encodeDesignDocument(
+        createDesignDocument({
+          ...DEFAULT_PARAMS,
+          subtitle: 'MAKER',
+          subtitleFontId: 'local-font',
+        }),
+      ),
+    );
+    expect(decoded?.fontFallback).toBe(true);
+    expect(decoded?.content.fontId).toBe(DEFAULT_PARAMS.fontId);
+    expect(decoded?.content.subtitleFontId).toBe(DEFAULT_PARAMS.subtitleFontId);
+  });
+
+  it.each(['', 'not-base64', 'v1.e30', 'v2.e30', 'v5.e30', 'A'.repeat(24_001)])(
+    'rejects malformed and obsolete payloads: %s',
+    (value) => {
+      expect(decodeDesignDocument(value)).toBeUndefined();
+    },
+  );
+
+  it('rejects unknown fields and fields placed in the wrong section', () => {
+    expect(decodeDesignDocument(payload({ content: { bogus: 1 } }))).toBeUndefined();
+    expect(decodeDesignDocument(payload({ finish: { t: 'MIRA' } }))).toBeUndefined();
+    expect(decodeDesignDocument(payload({ p: { t: 'MIRA' } }))).toBeUndefined();
+    expect(decodeDesignDocument(payload({ content: [] }))).toBeUndefined();
+  });
+
+  it.each([
+    { textSizeMm: 31 },
+    { magnetPocketPreset: '7x2' as never },
+    { magnetPocketPlacement: 'diagonal' as never },
+    { edgeFinish: 'soft' as never },
+    { topEdgeMm: -1 },
+    { textEdgeMm: 2 },
+  ])('rejects invalid parameters %j', (change) => {
+    expect(() =>
+      encodeDesignDocument(createDesignDocument({ ...DEFAULT_PARAMS, ...change })),
+    ).toThrow();
+  });
+
+  it('rejects invalid appearance metadata', () => {
+    expect(() =>
+      encodeDesignDocument(createDesignDocument(DEFAULT_PARAMS, { version: 1, base: 'red' })),
+    ).toThrow();
+    expect(decodeDesignDocument(payload({ a: { b: '#12345Z' } }))).toBeUndefined();
+  });
+
+  it('ignores the removed separate-parts field in legacy v6 compact payloads', () => {
+    const decoded = decodeDesignDocument(payload({ manufacturing: { sp: true } }));
+    expect(decoded).toBeDefined();
+    expect(designParams(decoded!)).toEqual(normalizeParams(DEFAULT_PARAMS));
+    expect(JSON.stringify(decoded)).not.toContain('separateParts');
   });
 });

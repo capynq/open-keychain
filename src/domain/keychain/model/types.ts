@@ -1,4 +1,7 @@
 import type { FontDefinition } from '../fonts/catalog';
+import type { ModelFeature } from './model-feature';
+
+import { normalizeEdgeFinish } from './edge-finish';
 
 export type StyleId =
   'plain' | 'contour' | 'capsule' | 'soft-tag' | 'bubble' | 'arch' | 'ribbon' | 'heart-split';
@@ -7,6 +10,7 @@ export type TemplateId =
 export type MagnetPocketPreset = '6x2' | '8x2' | '10x3' | '12x3' | '15x3';
 export type MagnetPocketPlacement = 'center' | 'upper' | 'lower' | 'left' | 'right';
 export type HeartInteriorMode = 'relief' | 'through-cut';
+export type EdgeFinish = 'sharp' | 'chamfer' | 'round';
 export type MagnetPocketPresetMetadata = {
   id: MagnetPocketPreset;
   diameterMm: number;
@@ -74,6 +78,11 @@ export type KeychainParams = {
   subtitleLetterSpacingMm?: number;
   subtitleReliefDepthMm?: number;
   subtitleGapMm?: number;
+  edgeFinish?: EdgeFinish;
+  topEdgeMm?: number;
+  bottomEdgeMm?: number;
+  textEdgeMm?: number;
+  modelFeatures?: ModelFeature[];
 };
 export const MAGNET_SUBTITLE_MAX_LENGTH = 24;
 export const DEFAULT_MAGNET_POCKET_PRESET: MagnetPocketPreset = '10x3';
@@ -215,6 +224,29 @@ export type GeometryResult = {
   baseShading?: 'creased' | 'flat';
   solidCount?: number;
   magnetPocket?: MagnetPocketMetadata;
+  parts?: GeometryPart[];
+  validation?: GeometryChecks;
+  timings?: Record<string, number>;
+  edgeFinish?: EdgeFinishQuality;
+};
+export type EdgeFinishQuality = {
+  style: EdgeFinish;
+  topMm: number;
+  bottomMm: number;
+  textMm: number;
+  quality: 'verified' | 'degraded' | 'unverified';
+};
+export type GeometryPart = {
+  id: string;
+  name: string;
+  role: 'base' | 'relief';
+  mesh: MeshBuffer;
+};
+export type GeometryChecks = {
+  mesh: 'passed' | 'failed';
+  connectivity: 'connected' | 'separate-parts' | 'assembly';
+  manufacturing: 'software-checked' | 'unverified';
+  physical: 'unverified';
 };
 export type MagnetPocketMetadata = {
   preset: MagnetPocketPreset;
@@ -230,18 +262,75 @@ export type GeometryValidation = Omit<GeometryResult, 'generationId'>;
 
 /** Reject malformed worker payloads before they can reach rendering or export. */
 export const validateGeometryResult = (result: GeometryResult): boolean => {
-  const meshValid = (mesh: MeshBuffer): boolean =>
-    mesh.positions instanceof Float32Array &&
-    mesh.indices instanceof Uint32Array &&
-    mesh.positions.length % 3 === 0 &&
-    [...mesh.positions].every(Number.isFinite) &&
-    [...mesh.indices].every(Number.isFinite) &&
-    [...mesh.indices].every((index) => index < mesh.positions.length / 3);
-  const dimensionsValid = Object.values(result.dimensions).every((value) =>
-    Array.isArray(value)
-      ? value.length === 3 && value.every(Number.isFinite)
-      : Number.isFinite(value),
-  );
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null;
+  const meshValid = (mesh: unknown): boolean => {
+    if (!isRecord(mesh)) return false;
+    const positions = mesh.positions;
+    const indices = mesh.indices;
+    return (
+      positions instanceof Float32Array &&
+      indices instanceof Uint32Array &&
+      positions.length % 3 === 0 &&
+      indices.length % 3 === 0 &&
+      positions.every(Number.isFinite) &&
+      indices.every((index) => index < positions.length / 3)
+    );
+  };
+  if (!isRecord(result)) return false;
+  const dimensionsValid =
+    isRecord(result.dimensions) &&
+    Object.values(result.dimensions).every((value) =>
+      Array.isArray(value)
+        ? value.length === 3 && value.every(Number.isFinite)
+        : Number.isFinite(value),
+    );
+  const edgeFinishValid = (finish: unknown): boolean => {
+    if (!isRecord(finish)) return false;
+    const style = finish.style;
+    const topMm = finish.topMm;
+    const bottomMm = finish.bottomMm;
+    const textMm = finish.textMm;
+    const quality = finish.quality;
+    return (
+      typeof style === 'string' &&
+      ['sharp', 'chamfer', 'round'].includes(style) &&
+      typeof topMm === 'number' &&
+      typeof bottomMm === 'number' &&
+      typeof textMm === 'number' &&
+      Number.isFinite(topMm) &&
+      Number.isFinite(bottomMm) &&
+      Number.isFinite(textMm) &&
+      topMm >= 0 &&
+      topMm <= 2 &&
+      bottomMm >= 0 &&
+      bottomMm <= 2 &&
+      textMm >= 0 &&
+      textMm <= 2 &&
+      [topMm, bottomMm, textMm].every(
+        (value) => Math.abs(value / 0.2 - Math.round(value / 0.2)) < 1e-6,
+      ) &&
+      (style !== 'sharp' || (topMm === 0 && bottomMm === 0 && textMm === 0)) &&
+      typeof quality === 'string' &&
+      ['verified', 'degraded', 'unverified'].includes(quality)
+    );
+  };
+  const magnetPocketValid = (pocket: unknown): boolean => {
+    if (!isRecord(pocket) || !Array.isArray(pocket.centerMm)) return false;
+    const centerMm = pocket.centerMm;
+    return (
+      typeof pocket.preset === 'string' &&
+      ['6x2', '8x2', '10x3', '12x3', '15x3'].includes(pocket.preset) &&
+      typeof pocket.placement === 'string' &&
+      ['center', 'upper', 'lower', 'left', 'right'].includes(pocket.placement) &&
+      Number.isFinite(pocket.diameterMm) &&
+      Number.isFinite(pocket.depthMm) &&
+      centerMm.length === 2 &&
+      centerMm.every((value) => typeof value === 'number' && Number.isFinite(value)) &&
+      typeof pocket.adjusted === 'boolean' &&
+      typeof pocket.safe === 'boolean'
+    );
+  };
   return (
     Number.isInteger(result.generationId) &&
     meshValid(result.baseMesh) &&
@@ -250,21 +339,15 @@ export const validateGeometryResult = (result: GeometryResult): boolean => {
     Array.isArray(result.issues) &&
     result.issues.every(
       (issue) =>
+        isRecord(issue) &&
         (issue.severity === 'warning' || issue.severity === 'error') &&
         typeof issue.code === 'string' &&
         typeof issue.message === 'string',
     ) &&
     typeof result.printable === 'boolean' &&
     !!result.appearance &&
-    (!result.magnetPocket ||
-      (['6x2', '8x2', '10x3', '12x3', '15x3'].includes(result.magnetPocket.preset) &&
-        ['center', 'upper', 'lower', 'left', 'right'].includes(result.magnetPocket.placement) &&
-        Number.isFinite(result.magnetPocket.diameterMm) &&
-        Number.isFinite(result.magnetPocket.depthMm) &&
-        result.magnetPocket.centerMm.length === 2 &&
-        result.magnetPocket.centerMm.every(Number.isFinite) &&
-        typeof result.magnetPocket.adjusted === 'boolean' &&
-        typeof result.magnetPocket.safe === 'boolean'))
+    (!result.magnetPocket || magnetPocketValid(result.magnetPocket)) &&
+    (!result.edgeFinish || edgeFinishValid(result.edgeFinish))
   );
 };
 export type WorkerRequest =
@@ -294,6 +377,8 @@ export type WorkerRequest =
       appearanceOverrides?: PrintAppearanceOverrides;
       fontDefinition?: FontDefinition;
       subtitleFontDefinition?: FontDefinition;
+      /** Explicit, export-only acknowledgement for disconnected solids. */
+      allowDisconnected?: boolean;
     };
 export type WorkerResponse =
   | {
@@ -368,6 +453,11 @@ export const DEFAULT_PARAMS: KeychainParams = {
   subtitleLetterSpacingMm: 0.5,
   subtitleReliefDepthMm: 0.8,
   subtitleGapMm: 1.5,
+  edgeFinish: 'sharp',
+  topEdgeMm: 0,
+  bottomEdgeMm: 0,
+  textEdgeMm: 0,
+  modelFeatures: [],
 };
 export const normalizeParams = (params: KeychainParams): NormalizedParams => {
   const text = params.text.normalize('NFC').trim().replace(/\s+/g, ' ');
@@ -377,8 +467,16 @@ export const normalizeParams = (params: KeychainParams): NormalizedParams => {
     params.templateId === 'magnet' ? 5 : 4,
   );
   const normalized: NormalizedParams = {
+    // Legacy callers may still provide the removed v6 export toggle; it is ignored
+    // by the typed model and never copied into the canonical design document.
     ...params,
     text,
+    edgeFinish: ['sharp', 'chamfer', 'round'].includes(params.edgeFinish ?? '')
+      ? params.edgeFinish
+      : 'sharp',
+    topEdgeMm: clamp(Number.isFinite(params.topEdgeMm) ? params.topEdgeMm! : 0, 0, 2),
+    bottomEdgeMm: clamp(Number.isFinite(params.bottomEdgeMm) ? params.bottomEdgeMm! : 0, 0, 2),
+    textEdgeMm: clamp(Number.isFinite(params.textEdgeMm) ? params.textEdgeMm! : 0, 0, 1),
     styleId:
       params.styleId === 'heart-split' && params.templateId !== 'name-keychain'
         ? params.templateId === 'magnet'
@@ -571,6 +669,11 @@ export const normalizeParams = (params: KeychainParams): NormalizedParams => {
     normalized.edgeInsetMm = normalized.paddingMm;
     normalized.letterSpacingMm = 0;
   }
+  const finish = normalizeEdgeFinish(normalized);
+  normalized.edgeFinish = finish.style;
+  normalized.topEdgeMm = finish.topMm;
+  normalized.bottomEdgeMm = finish.bottomMm;
+  normalized.textEdgeMm = finish.textMm;
   return normalized;
 };
 export const clamp = (value: number, min: number, max: number): number => {

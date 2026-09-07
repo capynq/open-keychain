@@ -19,9 +19,22 @@ import {
   sanitizeFilename,
   applyPrintAppearanceOverrides,
   DEFAULT_PRINT_APPEARANCE,
+  validateGeometryResult,
   type KeychainParams,
 } from './types';
 describe('keychain parameters', () => {
+  it('rejects malformed geometry metadata without throwing', () => {
+    expect(() => validateGeometryResult({} as never)).not.toThrow();
+    expect(validateGeometryResult({} as never)).toBe(false);
+    expect(
+      validateGeometryResult({
+        generationId: 1,
+        baseMesh: {},
+        reliefMesh: {},
+        dimensions: undefined,
+      } as never),
+    ).toBe(false);
+  });
   it('keeps Magnet roof and normalizes subtitle/ribbon scope', () => {
     const plaque = normalizeParams({
       ...DEFAULT_PARAMS,
@@ -149,6 +162,7 @@ describe('keychain parameters', () => {
     expect(templateParameterKeys('articulated-name')).not.toContain('letterSpacingMm');
     expect(templateParameterKeys('articulated-name')).not.toContain('paddingMm');
     expect(templateParameterKeys('nameplate')).toContain('cornerRadiusMm');
+    expect(templateParameterKeys('nameplate')).toContain('letterSpacingMm');
     expect(templateParameterKeys('nameplate')).toContain('nameplateTiltDeg');
     expect(templateParameterKeys('nameplate')).toContain('nameplateEmbedMm');
     expect(templateParameterKeys('nameplate')).not.toContain('holeDiameterMm');
@@ -187,6 +201,24 @@ describe('keychain parameters', () => {
       hasActiveParameter(
         { ...DEFAULT_PARAMS, templateId: 'magnet', styleId: 'plain' },
         'ribbonTailMm',
+      ),
+    ).toBe(false);
+    expect(
+      hasActiveParameter(
+        { ...DEFAULT_PARAMS, templateId: 'magnet', styleId: 'contour' },
+        'cornerRadiusMm',
+      ),
+    ).toBe(false);
+    expect(
+      hasActiveParameter(
+        { ...DEFAULT_PARAMS, templateId: 'magnet', styleId: 'ribbon' },
+        'cornerRadiusMm',
+      ),
+    ).toBe(true);
+    expect(
+      hasActiveParameter(
+        { ...DEFAULT_PARAMS, templateId: 'name-keychain', styleId: 'contour' },
+        'heartSizeMm',
       ),
     ).toBe(false);
   });
@@ -261,6 +293,7 @@ describe('keychain parameters', () => {
       'baseThicknessMm',
       'reliefDepthMm',
       'edgeInsetMm',
+      'letterSpacingMm',
       'cornerRadiusMm',
       'nameplateTiltDeg',
       'nameplateEmbedMm',

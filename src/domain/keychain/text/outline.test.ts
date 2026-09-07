@@ -78,4 +78,31 @@ describe('font coordinate normalization', () => {
     expect(layout.advances[1]).toBeCloseTo(2.4, 3);
     expect(layout.bounds).toEqual(layout.outline.bounds);
   });
+  it('places the kerned contour at the pair-adjusted cursor', () => {
+    const glyph = {
+      advanceWidth: 600,
+      getPath: (offset: number) => ({
+        commands: [
+          { type: 'M' as const, x: offset, y: 0 },
+          { type: 'L' as const, x: offset, y: -500 },
+          { type: 'L' as const, x: offset + 40, y: -500 },
+          { type: 'L' as const, x: offset + 40, y: 0 },
+          { type: 'Z' as const },
+        ],
+      }),
+    };
+    const font = {
+      charToGlyph: () => glyph,
+      charToGlyphIndex: () => 1,
+      getKerningValue: () => -100,
+      unitsPerEm: 1000,
+    };
+    const outline = flattenText(font, 'AB', 20);
+    const bounds = outline.polygons.map((polygon) => ({
+      min: Math.min(...polygon.map(([x]) => x)),
+      max: Math.max(...polygon.map(([x]) => x)),
+    }));
+    expect(bounds[0]).toEqual({ min: -1.8, max: -0.2 });
+    expect(bounds[1]).toEqual({ min: 0.2, max: 1.8 });
+  });
 });

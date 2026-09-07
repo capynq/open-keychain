@@ -221,9 +221,10 @@ export const flattenText = (
   let advanceCursor = 0;
   let previous: opentype.Glyph | undefined;
   for (const glyph of fontGlyphs) {
-    paths.push(glyph.getPath(advanceCursor, 0, 100));
     const kerning = previous ? font.getKerningValue(previous, glyph) : 0;
-    advanceCursor += ((glyph.advanceWidth + kerning) / font.unitsPerEm) * 100;
+    advanceCursor += (kerning / font.unitsPerEm) * 100;
+    paths.push(glyph.getPath(advanceCursor, 0, 100));
+    advanceCursor += (glyph.advanceWidth / font.unitsPerEm) * 100;
     previous = glyph;
   }
   const pathPoints = paths.flatMap((path) =>

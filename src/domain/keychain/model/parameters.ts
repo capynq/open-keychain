@@ -1,4 +1,4 @@
-import { DEFAULT_PARAMS, type KeychainParams, type StyleId, type TemplateId } from './types';
+import { DEFAULT_PARAMS, type KeychainParams, type TemplateId } from './types';
 export type ParameterRange = {
   min: number;
   max: number;
@@ -141,6 +141,22 @@ export const PARAMETER_DEFINITIONS: Record<ShapeParameter, ParameterDefinition> 
           !(parameter === 'ribbonNotchMm' && params.styleId !== 'ribbon') &&
           !(
             parameter === 'cornerRadiusMm' &&
+            params.templateId === 'magnet' &&
+            params.styleId !== 'plain' &&
+            params.styleId !== 'ribbon'
+          ) &&
+          !(
+            [
+              'heartSizeMm',
+              'heartBorderMm',
+              'heartLeftGapMm',
+              'heartRightGapMm',
+              'heartVerticalOffsetMm',
+            ].includes(parameter) &&
+            (params.templateId !== 'name-keychain' || params.styleId !== 'heart-split')
+          ) &&
+          !(
+            parameter === 'cornerRadiusMm' &&
             params.templateId === 'plant-label' &&
             params.styleId === 'capsule'
           ),
@@ -252,6 +268,7 @@ export const TEMPLATE_PARAMETER_KEYS: Record<TemplateId, readonly ShapeParameter
     ...STANDARD_TEXT_PARAMETERS,
     ...RELIEF_PARAMETERS,
     'paddingMm',
+    'letterSpacingMm',
     'nameplateTiltDeg',
     'nameplateEmbedMm',
     'cornerRadiusMm',
@@ -319,36 +336,12 @@ export const hasActiveParameter = (
   params: KeychainParams,
   parameter: CustomizerParameter,
 ): boolean => {
-  if (!hasTemplateParameter(params.templateId, parameter)) return false;
   if (parameter === 'plantAccentEnabled')
-    return ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'].includes(params.styleId);
-  const styleParameter: Partial<Record<ShapeParameter, StyleId>> = {
-    bubbleLobeMm: 'bubble',
-    tagTailMm: 'soft-tag',
-    archCurveMm: 'arch',
-    ribbonTailMm: 'ribbon',
-    ribbonNotchMm: 'ribbon',
-  };
-  if (
-    styleParameter[parameter as ShapeParameter] &&
-    styleParameter[parameter as ShapeParameter] !== params.styleId
-  )
-    return false;
-  if (
-    [
-      'heartSizeMm',
-      'heartBorderMm',
-      'heartLeftGapMm',
-      'heartRightGapMm',
-      'heartVerticalOffsetMm',
-    ].includes(parameter as string)
-  )
-    return params.templateId === 'name-keychain' && params.styleId === 'heart-split';
-  return !(
-    parameter === 'cornerRadiusMm' &&
-    params.templateId === 'plant-label' &&
-    params.styleId === 'capsule'
-  );
+    return (
+      hasTemplateParameter(params.templateId, parameter) &&
+      ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'].includes(params.styleId)
+    );
+  return PARAMETER_DEFINITIONS[parameter].applicable(params);
 };
 
 const roundedDown = (value: number, step: number): number => Math.floor(value / step) * step;

@@ -8,6 +8,7 @@ import {
   finiteBounds,
   validateMesh,
 } from '../../../infrastructure/geometry/manifold-utils';
+import { extrudeFinished } from '../build/edge-finish';
 import {
   DEFAULT_PRINT_APPEARANCE,
   geometryConstraintsFor,
@@ -27,6 +28,9 @@ export const buildNameplate = (
   issues: ValidationIssue[],
   includeExport: boolean,
 ): { result: GeometryResult; exportMesh?: MeshBuffer } => {
+  const started = performance.now();
+  let attempts = 0;
+  let maximumSlices = 1;
   const reliefSource = styled.subtitle ? styled.relief.add(styled.subtitle) : styled.relief;
   const baseThickness = Math.round(params.baseThicknessMm * MANIFOLD_SCALE);
   const embedDepth = Math.min(
@@ -34,7 +38,28 @@ export const buildNameplate = (
     Math.max(200, baseThickness - 300),
   );
   const visibleDepth = Math.round(params.reliefDepthMm * MANIFOLD_SCALE);
-  const plate = styled.backing.extrude(baseThickness);
+  let plate: Manifold;
+  try {
+    plate = extrudeFinished(wasm, styled.backing, baseThickness, {
+      style: params.edgeFinish ?? 'sharp',
+      topMm: params.edgeFinish === 'sharp' ? 0 : (params.topEdgeMm ?? 0),
+      bottomMm: params.edgeFinish === 'sharp' ? 0 : (params.bottomEdgeMm ?? 0),
+    });
+  } catch (error) {
+    deleteGeometry([
+      ...new Set([
+        reliefSource,
+        styled.backing,
+        styled.relief,
+        ...(styled.subtitle ? [styled.subtitle] : []),
+        ...styled.recesses.map((item) => item.section),
+        ...styled.rearRecesses.map((item) => item.section),
+        ...(styled.throughCuts ?? []),
+        styled.rawText,
+      ]),
+    ]);
+    throw error;
+  }
   const textBounds = reliefSource.bounds();
   const pivotX = (textBounds.min[0] + textBounds.max[0]) / 2;
   const pivotY = textBounds.min[1];
@@ -67,9 +92,13 @@ export const buildNameplate = (
     capDepth: number,
   ): Manifold => {
     const depth = rootDepth + capDepth;
-    const raw = source.extrude(depth, 12);
-    const centered = raw.translate([-pivotX, -pivotY, 0]);
     const angle = (params.nameplateTiltDeg * Math.PI) / 180;
+    // The warp is quadratic in z. Bound its chord error to 0.02 mm rather
+    // than subdividing every inscription into thirteen vertical intervals.
+    const slices = Math.max(1, Math.ceil(Math.sqrt((depth * Math.abs(Math.sin(angle / 2))) / 40)));
+    maximumSlices = Math.max(maximumSlices, slices);
+    const raw = source.extrude(depth, slices - 1);
+    const centered = raw.translate([-pivotX, -pivotY, 0]);
     const cosine = Math.cos(angle);
     const sine = Math.sin(angle);
     const stretched = centered.warpBatch((vertices: Float64Array, count: number) => {
@@ -89,6 +118,7 @@ export const buildNameplate = (
     return placed;
   };
   for (let attempt = 0; attempt < 13; attempt += 1) {
+    attempts = attempt + 1;
     const rootDepth = embedDepth + embeddingSafety + attempt * embeddingStep;
     const candidateMain = createStretchedRelief(styled.relief, rootDepth, visibleDepth);
     const candidateSubtitle = styled.subtitle
@@ -220,9 +250,21 @@ export const buildNameplate = (
     issues,
     printable,
     appearance: DEFAULT_PRINT_APPEARANCE,
+    edgeFinish: {
+      style: params.edgeFinish ?? 'sharp',
+      topMm: params.topEdgeMm ?? 0,
+      bottomMm: params.bottomEdgeMm ?? 0,
+      textMm: 0,
+      quality: 'verified',
+    },
     constraints: geometryConstraintsFor(params),
     printProfile: printProfileFor(geometryConstraintsFor(params)),
     solidCount: 1,
+    timings: {
+      nameplateMs: performance.now() - started,
+      nameplateAttempts: attempts,
+      nameplateSlices: maximumSlices,
+    },
   };
   deleteGeometry([
     ...new Set([

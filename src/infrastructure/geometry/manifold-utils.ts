@@ -43,7 +43,14 @@ export const disposeGeometry = (items: readonly DisposableGeometry[]): void => {
 };
 
 export const validateMesh = (mesh: MeshBuffer): boolean => {
-  return [...mesh.positions].every(Number.isFinite) && [...mesh.indices].every(Number.isFinite);
+  return (
+    mesh.positions instanceof Float32Array &&
+    mesh.indices instanceof Uint32Array &&
+    mesh.positions.length % 3 === 0 &&
+    mesh.indices.length % 3 === 0 &&
+    mesh.positions.every(Number.isFinite) &&
+    mesh.indices.every((index) => index < mesh.positions.length / 3)
+  );
 };
 
 export const finiteBounds = (bounds: {

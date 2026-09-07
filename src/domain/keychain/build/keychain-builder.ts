@@ -1,7 +1,11 @@
 import Module from 'manifold-3d';
 import * as opentype from 'opentype.js';
 
-import type { CrossSection, GeometryWasm } from '../../../infrastructure/geometry/manifold-types';
+import type {
+  CrossSection,
+  GeometryWasm,
+  Manifold,
+} from '../../../infrastructure/geometry/manifold-types';
 import type { StandardStyledGeometry } from './styled-types';
 
 import {
@@ -45,6 +49,8 @@ import {
 } from '../templates/template-builder';
 import { flattenText, hasRequiredGlyphs, layoutText, type GlyphOutline } from '../text/outline';
 import { validateArticulatedBuild } from './articulated-validation';
+import { extrudeFinished } from './edge-finish';
+import { applyFeatureGraph } from './feature-graph';
 const MAX_WIDTH_MM = 120;
 const MIN_TEXT_HEIGHT_MM = 12;
 const WIDTH_FIT_ITERATIONS = 6;
@@ -72,9 +78,13 @@ const parseFont = (buffer: ArrayBuffer): opentype.Font => {
   return parse(buffer);
 };
 const fontCache = new Map<string, Promise<opentype.Font>>();
-const loadFont = (definition: FontDefinition): Promise<opentype.Font> => {
-  const localSignature =
-    definition.source === 'local' ? `\u0000${definition.dataRevision ?? ''}` : '';
+const loadFont = async (definition: FontDefinition): Promise<opentype.Font> => {
+  const contentIdentity = definition.data
+    ? Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', definition.data)), (byte) =>
+        byte.toString(16).padStart(2, '0'),
+      ).join('')
+    : '';
+  const localSignature = `\u0000${definition.dataRevision ?? ''}\u0000${contentIdentity}`;
   const cacheKey = `${definition.id}\u0000${definition.file}${localSignature}`;
   const cached = fontCache.get(cacheKey);
   if (cached) return cached;
@@ -92,6 +102,7 @@ const loadFont = (definition: FontDefinition): Promise<opentype.Font> => {
       throw error;
     });
   fontCache.set(cacheKey, request);
+  if (fontCache.size > 16) fontCache.delete(fontCache.keys().next().value!);
   return request;
 };
 type Wasm = GeometryWasm;
@@ -219,6 +230,7 @@ const finalizeArticulated = (
     issues,
     printable: valid && finiteBounds(bounds) && validateMesh(baseMesh) && validateMesh(reliefMesh),
     appearance: ARTICULATED_PRINT_APPEARANCE,
+    edgeFinish: { style: 'sharp', topMm: 0, bottomMm: 0, textMm: 0, quality: 'verified' },
     constraints: geometryConstraintsFor(params),
     printProfile: printProfileFor(geometryConstraintsFor(params)),
     solidCount: build.parts.length * 2 - 1,
@@ -229,7 +241,7 @@ const finalizeArticulated = (
   return { result, exportMesh };
 };
 /** Build validated printable geometry, fitting finished backing dimensions before tessellation. */
-export const buildKeychain = async (
+const buildKeychainGeometry = async (
   wasm: Wasm,
   input: KeychainParams,
   includeExport = false,
@@ -289,10 +301,7 @@ export const buildKeychain = async (
   let subtitleFont: opentype.Font | undefined;
   if (params.subtitle && params.templateId !== 'articulated-name') {
     try {
-      subtitleFont =
-        subtitleDefinition.id === definition.id && subtitleDefinition.file === definition.file
-          ? font
-          : await loadFont(subtitleDefinition);
+      subtitleFont = await loadFont(subtitleDefinition);
     } catch {
       return invalidResult(
         issues,
@@ -622,7 +631,18 @@ export const buildKeychain = async (
         'The raised text extends beyond its foundation. Choose another style or adjust the name.',
     });
   const baseThickness = Math.round(params.baseThicknessMm * MANIFOLD_SCALE);
-  let base = styleBase.extrude(baseThickness);
+  const finishStyle = params.edgeFinish ?? 'sharp';
+  let base: Manifold;
+  try {
+    base = extrudeFinished(wasm, styleBase, baseThickness, {
+      style: finishStyle,
+      topMm: finishStyle === 'sharp' ? 0 : (params.topEdgeMm ?? 0),
+      bottomMm: finishStyle === 'sharp' ? 0 : (params.bottomEdgeMm ?? 0),
+    });
+  } catch (error) {
+    releaseStyledGeometry(styled);
+    throw error;
+  }
   const maxRecessDepth = Math.max(0, baseThickness - 600);
   const recessDepth = styled.recesses.length
     ? Math.min(
@@ -659,16 +679,49 @@ export const buildKeychain = async (
     base = nextBase;
   }
   const effectiveReliefDepthMm = styled.reliefDepthMm ?? params.reliefDepthMm;
-  const relief = textSection
-    .extrude(Math.round((effectiveReliefDepthMm + 0.15) * MANIFOLD_SCALE))
-    .translate([0, 0, baseThickness - Math.max(recessDepth, 0) - 150]);
-  const subtitleRelief = subtitleSection
-    ? subtitleSection
-        .extrude(
-          Math.round((params.subtitleReliefDepthMm ?? effectiveReliefDepthMm) * MANIFOLD_SCALE),
+  let reliefSource: Manifold;
+  try {
+    reliefSource = extrudeFinished(
+      wasm,
+      textSection,
+      Math.round((effectiveReliefDepthMm + 0.15) * MANIFOLD_SCALE),
+      {
+        style: finishStyle,
+        topMm: finishStyle === 'sharp' ? 0 : (params.textEdgeMm ?? 0),
+        bottomMm: 0,
+      },
+    );
+  } catch (error) {
+    base.delete();
+    releaseStyledGeometry(styled);
+    throw error;
+  }
+  const relief = reliefSource.translate([0, 0, baseThickness - Math.max(recessDepth, 0) - 150]);
+  reliefSource.delete();
+  let subtitleSource: Manifold | undefined;
+  try {
+    subtitleSource = subtitleSection
+      ? extrudeFinished(
+          wasm,
+          subtitleSection,
+          Math.round(
+            ((params.subtitleReliefDepthMm ?? effectiveReliefDepthMm) + 0.15) * MANIFOLD_SCALE,
+          ),
+          {
+            style: finishStyle,
+            topMm: finishStyle === 'sharp' ? 0 : (params.textEdgeMm ?? 0),
+            bottomMm: 0,
+          },
         )
-        .translate([0, 0, baseThickness - 150])
-    : undefined;
+      : undefined;
+  } catch (error) {
+    base.delete();
+    relief.delete();
+    releaseStyledGeometry(styled);
+    throw error;
+  }
+  const subtitleRelief = subtitleSource?.translate([0, 0, baseThickness - 150]);
+  subtitleSource?.delete();
   const reliefCombined = subtitleRelief ? relief.add(subtitleRelief) : relief;
   const model = base.add(reliefCombined);
   const bounds = model.boundingBox();
@@ -676,6 +729,7 @@ export const buildKeychain = async (
   const reliefMesh = asMesh(reliefCombined);
   const exportMesh = includeExport ? asMesh(model) : undefined;
   const components = model.decompose();
+  const solidCount = components.length;
   const connected = components.length === 1;
   deleteAll(components);
   let printable =
@@ -685,13 +739,16 @@ export const buildKeychain = async (
     finiteBounds(bounds) &&
     validateMesh(baseMesh) &&
     validateMesh(reliefMesh);
+  const intentionalAssembly = params.styleId === 'heart-split';
   if (!connected)
     issues.push({
-      severity: 'warning',
+      severity: intentionalAssembly ? 'warning' : 'error',
       code: 'disconnected',
-      message:
-        'The selected style keeps some letters as separate printable parts; no automatic connections were added.',
+      message: intentionalAssembly
+        ? 'Heart Split is a multi-part assembly. Keep its parts together in the selected print job.'
+        : 'The selected style keeps some letters as separate printable parts; no automatic connections were added.',
     });
+  if (!connected && !intentionalAssembly) printable = false;
   if (
     !connected &&
     params.styleId === 'heart-split' &&
@@ -733,11 +790,24 @@ export const buildKeychain = async (
     issues,
     printable,
     appearance: DEFAULT_PRINT_APPEARANCE,
+    edgeFinish: {
+      style: finishStyle,
+      topMm: params.topEdgeMm ?? 0,
+      bottomMm: params.bottomEdgeMm ?? 0,
+      textMm: params.textEdgeMm ?? 0,
+      quality:
+        (input.edgeFinish ?? 'sharp') !== finishStyle ||
+        (input.topEdgeMm ?? 0) !== (params.topEdgeMm ?? 0) ||
+        (input.bottomEdgeMm ?? 0) !== (params.bottomEdgeMm ?? 0) ||
+        (input.textEdgeMm ?? 0) !== (params.textEdgeMm ?? 0)
+          ? 'degraded'
+          : 'verified',
+    },
     constraints: geometryConstraintsFor(params),
     printProfile: printProfileFor(geometryConstraintsFor(params)),
     magnetPocket: styled.magnetPocket,
     baseShading: params.templateId === 'plant-label' ? 'flat' : 'creased',
-    solidCount: 1,
+    solidCount,
   };
   deleteAll([
     model,
@@ -752,6 +822,39 @@ export const buildKeychain = async (
     ...rearRecesses.map((item) => item.section),
   ]);
   return { result, exportMesh };
+};
+
+/** The same evaluated geometry and checks are used by previews, batches, and exports. */
+export const buildKeychain = async (
+  ...args: Parameters<typeof buildKeychainGeometry>
+): ReturnType<typeof buildKeychainGeometry> => {
+  const started = performance.now();
+  let built = await buildKeychainGeometry(...args);
+  if (args[1].modelFeatures?.length)
+    built = applyFeatureGraph(args[0], built.result, args[1], args[2] ?? false);
+  const result = built.result;
+  result.parts = [
+    { id: 'base', name: result.appearance.base.name, role: 'base', mesh: result.baseMesh },
+    { id: 'relief', name: result.appearance.relief.name, role: 'relief', mesh: result.reliefMesh },
+  ];
+  result.validation = {
+    mesh:
+      validateMesh(result.baseMesh) &&
+      validateMesh(result.reliefMesh) &&
+      result.baseMesh.indices.length + result.reliefMesh.indices.length > 0
+        ? 'passed'
+        : 'failed',
+    connectivity:
+      args[1].templateId === 'articulated-name' || args[1].styleId === 'heart-split'
+        ? 'assembly'
+        : (result.solidCount ?? 0) > 1
+          ? 'separate-parts'
+          : 'connected',
+    manufacturing: args[1].modelFeatures?.length ? 'unverified' : 'software-checked',
+    physical: 'unverified',
+  };
+  result.timings = { ...result.timings, generationMs: performance.now() - started };
+  return built;
 };
 const invalidResult = (
   issues: ValidationIssue[],
