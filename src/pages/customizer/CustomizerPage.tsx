@@ -128,6 +128,7 @@ export const CustomizerPage = ({
             : undefined,
           state.geometry.busy || state.geometry.current === false,
           state.geometry.error,
+          state.disconnectedExportAcknowledged,
         )}
         effectiveAppearance={
           state.geometry.result &&
@@ -141,6 +142,8 @@ export const CustomizerPage = ({
             : undefined
         }
         onClose={() => state.setExportOpen(false)}
+        disconnectedExportAcknowledged={state.disconnectedExportAcknowledged}
+        onDisconnectedExportAcknowledged={state.setDisconnectedExportAcknowledged}
       />
     </main>
   );

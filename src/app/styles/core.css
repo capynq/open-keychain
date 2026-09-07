@@ -130,16 +130,31 @@
     background-color 0.12s ease,
     color 0.12s ease,
     box-shadow 0.12s ease,
-    transform 0.12s ease;
+    transform 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.icon-button:hover {
+.icon-button:hover:not(:disabled) {
   border-color: #ef815e;
   background: #fff7ef;
   color: #9a3d31;
+  box-shadow: 0 4px 12px #3035451c;
+  transform: translateY(-1px);
+}
+
+.icon-button[data-icon-motion='nudge']:hover:not(:disabled) > svg {
+  transform: scale(1.06);
+}
+
+.icon-button[data-icon-motion='rotate']:hover:not(:disabled) > svg {
+  transform: rotate(14deg) scale(1.03);
+}
+
+.icon-button[data-icon-motion='scale']:hover:not(:disabled) > svg {
+  transform: scale(1.08);
 }
 
 .icon-button > svg {
+  transform-origin: center;
   transition: transform 0.12s ease;
 }
 
@@ -177,21 +192,25 @@
   background: #fffdf8;
 }
 
-.icon-button.export-header-button:hover {
+.icon-button.export-header-button:hover:not(:disabled) {
   background: #d96547;
 }
 
-.icon-button.export-header-button:hover,
+.icon-button.export-header-button:hover:not(:disabled),
 .icon-button.export-header-button:focus-visible {
   color: #fff7ef;
 }
 
-.icon-button[data-icon-action='randomize']:active:not(:disabled) svg {
-  transform: rotate(18deg);
+.icon-button[data-icon-motion='nudge']:active:not(:disabled) > svg {
+  transform: translateX(1px) scale(0.94);
 }
 
-.icon-button[data-icon-action='reset']:active:not(:disabled) svg {
-  transform: rotate(-35deg);
+.icon-button[data-icon-motion='rotate']:active:not(:disabled) > svg {
+  transform: rotate(-28deg) scale(0.94);
+}
+
+.icon-button[data-icon-motion='scale']:active:not(:disabled) > svg {
+  transform: scale(0.9);
 }
 
 .account-menu {
@@ -372,8 +391,19 @@
     transform: none;
   }
 
+  .icon-button:hover:not(:disabled) {
+    transform: none;
+    box-shadow: none;
+  }
+
   .icon-button[data-icon-action='randomize']:active:not(:disabled) svg,
-  .icon-button[data-icon-action='reset']:active:not(:disabled) svg {
+  .icon-button[data-icon-action='reset']:active:not(:disabled) svg,
+  .icon-button[data-icon-motion='nudge']:hover:not(:disabled) > svg,
+  .icon-button[data-icon-motion='rotate']:hover:not(:disabled) > svg,
+  .icon-button[data-icon-motion='scale']:hover:not(:disabled) > svg,
+  .icon-button[data-icon-motion='nudge']:active:not(:disabled) > svg,
+  .icon-button[data-icon-motion='rotate']:active:not(:disabled) > svg,
+  .icon-button[data-icon-motion='scale']:active:not(:disabled) > svg {
     transform: none;
   }
 }

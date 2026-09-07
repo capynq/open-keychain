@@ -1,4 +1,4 @@
-import './RangeControl.module.css';
+import './RangeControl.css';
 
 export const RangeControl = ({
   label,

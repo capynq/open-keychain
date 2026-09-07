@@ -11,7 +11,9 @@ import type { Locale } from '../../../../infrastructure/i18n/config';
 import { t } from '../../../../infrastructure/i18n/utils';
 import {
   applyCameraPose,
-  cameraPose,
+  fittedCameraPose,
+  MIN_CAMERA_DISTANCE_SCALE,
+  MIN_CAMERA_NEAR,
   modelBounds,
   viewDefinition,
   VIEW_DEFINITIONS,
@@ -41,7 +43,7 @@ type ViewerState = {
   invalidate?: () => void;
 };
 const DEFAULT_ZOOM_SCALE = 0.65;
-const MIN_ZOOM_SCALE = 0.42;
+const MIN_ZOOM_SCALE = MIN_CAMERA_DISTANCE_SCALE;
 const ZOOM_IN_FACTOR = 0.72;
 const MAX_ZOOM_SCALE = 3.2;
 const SURFACE_SIZE = 1800;
@@ -88,6 +90,7 @@ const fitViewer = (
   result: GeometryResult,
   selected: ViewId | 'custom',
   resetZoom = true,
+  onZoomScaleChange?: (scale: number) => void,
 ): void => {
   if (resetZoom) state.zoomScale = DEFAULT_ZOOM_SCALE;
   const center = new THREE.Vector3(...result.dimensions.centerMm);
@@ -101,10 +104,14 @@ const fitViewer = (
   );
   const direction =
     selected === 'custom'
-      ? state.camera.position.clone().sub(center).normalize()
+      ? state.camera.position.clone().sub(state.controls.target).normalize()
       : viewDefinition(selected).direction;
   const up = selected === 'custom' ? state.camera.up : viewDefinition(selected).up;
-  const pose = cameraPose(state.camera, bounds, direction, up, state.zoomScale);
+  const fitted = fittedCameraPose(state.camera, bounds, direction, up, state.zoomScale);
+  const pose = fitted.pose;
+
+  state.zoomScale = fitted.scale;
+  onZoomScaleChange?.(state.zoomScale);
 
   applyCameraPose(state.camera, pose);
   state.controls.target.copy(pose.target);
@@ -142,6 +149,7 @@ export const Viewer = ({
   const activeViewRef = useRef<ViewId | 'custom'>('home');
 
   const [activeView, setActiveView] = useState<ViewId | 'custom'>('home');
+  const [zoomScale, setZoomScale] = useState(DEFAULT_ZOOM_SCALE);
   const [previewCapability, setPreviewCapability] = useState<'available' | 'unavailable'>(
     'available',
   );
@@ -156,7 +164,7 @@ export const Viewer = ({
       if (!state || !result) return;
       activeViewRef.current = id;
       setActiveView(id);
-      fitViewer(state, result, id);
+      fitViewer(state, result, id, true, setZoomScale);
       state.invalidate?.();
     },
     [result],
@@ -172,6 +180,7 @@ export const Viewer = ({
       MAX_ZOOM_SCALE,
     );
     fitViewer(state, current, activeViewRef.current, false);
+    setZoomScale(state.zoomScale);
     state.invalidate?.();
     setActiveView(activeViewRef.current);
   }, []);
@@ -182,7 +191,7 @@ export const Viewer = ({
     const scene = new THREE.Scene();
 
     scene.background = new THREE.Color('#eee8df');
-    const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 1000);
+    const camera = new THREE.PerspectiveCamera(36, 1, MIN_CAMERA_NEAR, 1000);
     let renderer: THREE.WebGLRenderer;
     try {
       renderer = new THREE.WebGLRenderer({
@@ -293,7 +302,7 @@ export const Viewer = ({
       grid,
       platform,
       key,
-      zoomScale: 1,
+      zoomScale: DEFAULT_ZOOM_SCALE,
       displayOffsetZ: 0,
     };
     const resize = () => {
@@ -305,7 +314,7 @@ export const Viewer = ({
       camera.aspect = width / Math.max(height, 1);
       camera.updateProjectionMatrix();
       const current = resultRef.current;
-      if (current) fitViewer(viewerState, current, activeViewRef.current, false);
+      if (current) fitViewer(viewerState, current, activeViewRef.current, false, setZoomScale);
       invalidate();
     };
     const resizeObserver = new ResizeObserver(resize);
@@ -377,7 +386,7 @@ export const Viewer = ({
     state.key.shadow.camera.near = 0.1;
     state.key.shadow.camera.far = Math.max(300, maxDimension * 4);
     state.key.shadow.camera.updateProjectionMatrix();
-    fitViewer(state, result, selected);
+    fitViewer(state, result, selected, false, setZoomScale);
     state.invalidate?.();
   }, [result]);
 
@@ -407,6 +416,7 @@ export const Viewer = ({
         metalness: number;
         grid: boolean;
         platform: boolean;
+        floor: boolean;
         platformColor: string;
       }
     > = {
@@ -416,6 +426,7 @@ export const Viewer = ({
         metalness: 0,
         grid: false,
         platform: false,
+        floor: false,
         platformColor: '#a87850',
       },
       graph: {
@@ -424,6 +435,7 @@ export const Viewer = ({
         metalness: 0,
         grid: true,
         platform: false,
+        floor: false,
         platformColor: '#a87850',
       },
       dark: {
@@ -432,6 +444,7 @@ export const Viewer = ({
         metalness: 0.05,
         grid: false,
         platform: false,
+        floor: false,
         platformColor: '#555b65',
       },
       wood: {
@@ -440,6 +453,7 @@ export const Viewer = ({
         metalness: 0,
         grid: true,
         platform: true,
+        floor: true,
         platformColor: '#9a6746',
       },
       metal: {
@@ -448,6 +462,7 @@ export const Viewer = ({
         metalness: 0.32,
         grid: true,
         platform: true,
+        floor: true,
         platformColor: '#6e7781',
       },
     };
@@ -458,6 +473,7 @@ export const Viewer = ({
     floorMaterial.roughness = preset.roughness;
     floorMaterial.metalness = preset.metalness;
     state.grid.visible = preset.grid;
+    state.floor.visible = preset.floor;
     state.platform.visible = preset.platform;
     const platformMaterial = state.platform.material as THREE.MeshStandardMaterial;
 
@@ -474,7 +490,7 @@ export const Viewer = ({
       state.floor.position.set(center.x, center.y, preset.platform ? -3.72 : -0.08);
       state.grid.position.set(center.x, center.y, preset.platform ? -3.7 : -0.06);
       syncPlatform(state, current);
-      fitViewer(state, current, activeViewRef.current, false);
+      fitViewer(state, current, activeViewRef.current, false, setZoomScale);
     }
     state.invalidate?.();
   }, [surfacePreset]);
@@ -483,6 +499,7 @@ export const Viewer = ({
       className={`${styles.root} viewer`}
       aria-label="Interactive 3D preview"
       data-view={activeView}
+      data-zoom-scale={zoomScale.toFixed(3)}
       data-surface={surfacePreset}
       data-render-mode="on-demand"
       data-preview-capability={previewCapability}

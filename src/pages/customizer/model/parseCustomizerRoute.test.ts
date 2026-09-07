@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { createDesignDocument } from '@/domain/keychain/model/design-schema';
 import { encodeDesignDocument } from '@/entities/keychain/design-document';
 import { fontDefinition, fontSupportsArticulatedName } from '@/entities/keychain/fonts/catalog';
 import { DEFAULT_PARAMS } from '@/entities/keychain/model/types';
@@ -26,8 +27,8 @@ describe('parseCustomizerRoute', () => {
     ).toBe(true);
   });
 
-  it('prefers a shared v5 document over template and project state', () => {
-    const design = encodeDesignDocument({ version: 5, params: DEFAULT_PARAMS });
+  it('prefers a shared v6 document over template and project state', () => {
+    const design = encodeDesignDocument(createDesignDocument(DEFAULT_PARAMS));
     const route = parseCustomizerRoute(`?template=magnet&design=${design}`, {
       projectParams: { templateId: 'plant-label' },
     });

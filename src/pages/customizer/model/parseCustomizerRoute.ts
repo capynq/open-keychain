@@ -4,6 +4,7 @@ import type {
   TemplateId,
 } from '@/entities/keychain/model/types';
 
+import { designParams } from '@/domain/keychain/model/design-schema';
 import { decodeDesignDocument } from '@/entities/keychain/design-document';
 import {
   articulatedFallbackFont,
@@ -48,7 +49,7 @@ export const parseCustomizerRoute = (search: string, state: unknown): Customizer
     ? (requestedTemplate as TemplateId)
     : undefined;
   const rawInitialParams: KeychainParams | undefined =
-    sharedDocument?.params ??
+    (sharedDocument ? designParams(sharedDocument) : undefined) ??
     (projectParams
       ? ({ ...DEFAULT_PARAMS, ...projectParams } as KeychainParams)
       : templateId

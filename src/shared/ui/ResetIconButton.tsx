@@ -14,6 +14,7 @@ export const ResetIconButton = ({ label, onClick }: ResetIconButtonProps) => (
     className={`${styles.root} reset-icon-button`}
     icon={RotateCcw}
     label={label}
+    motion="rotate"
     onClick={onClick}
   />
 );

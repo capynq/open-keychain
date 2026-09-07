@@ -4,7 +4,11 @@ import { describe, expect, it } from 'vitest';
 import {
   applyCameraPose,
   cameraPose,
+  fittedCameraPose,
+  MIN_CAMERA_DISTANCE_SCALE,
+  MIN_CAMERA_NEAR,
   modelBounds,
+  poseContainsBounds,
   viewDefinition,
   VIEW_DEFINITIONS,
 } from './views';
@@ -37,8 +41,42 @@ describe('viewer camera views', () => {
       fitted.position.distanceTo(fitted.target),
     );
   });
+  it('allows close inspection while keeping the replacement model framed', () => {
+    const view = viewDefinition('home');
+    const fitted = fittedCameraPose(
+      camera,
+      bounds,
+      view.direction,
+      view.up,
+      MIN_CAMERA_DISTANCE_SCALE,
+    );
+    expect(fitted.scale).toBeGreaterThanOrEqual(MIN_CAMERA_DISTANCE_SCALE);
+    expect(fitted.pose.near).toBeGreaterThanOrEqual(MIN_CAMERA_NEAR);
+    expect(fitted.pose.far).toBeGreaterThan(fitted.pose.near);
+  });
+  it('keeps the orbit direction independent of a changed model center', () => {
+    const viewDirection = new THREE.Vector3(0.42, -0.7, 0.55).normalize();
+    const nextBounds = modelBounds(130, 28, 5, new THREE.Vector3(19, -8, 3));
+    const fitted = fittedCameraPose(
+      camera,
+      nextBounds,
+      viewDirection,
+      new THREE.Vector3(0, 1, 0),
+      0.65,
+    );
+    expect(
+      fitted.pose.position.clone().sub(fitted.pose.target).normalize().dot(viewDirection),
+    ).toBeCloseTo(1, 5);
+  });
   it('provides a distinct SVG icon identifier for every preset', () => {
     expect(new Set(VIEW_DEFINITIONS.map((view) => view.icon)).size).toBe(VIEW_DEFINITIONS.length);
+  });
+  it('backs off a zoomed-in camera when a replacement model is substantially larger', () => {
+    const view = viewDefinition('home');
+    const largeBounds = modelBounds(900, 220, 30, center);
+    const fitted = fittedCameraPose(camera, largeBounds, view.direction, view.up, 1.8);
+    expect(fitted.scale).toBeGreaterThanOrEqual(1.8);
+    expect(poseContainsBounds(camera, fitted.pose, largeBounds)).toBe(true);
   });
   it('keeps every corner inside the frustum across arbitrary gesture orientations', () => {
     const corners = [

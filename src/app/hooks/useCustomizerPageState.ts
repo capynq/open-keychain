@@ -26,6 +26,9 @@ export const useCustomizerPageState = (
 ) => {
   const [surfacePreset, setSurfacePreset] = useState<SurfacePresetId>('matte');
   const [exportOpen, setExportOpen] = useState(false);
+  const [disconnectedAcknowledgedSignature, setDisconnectedAcknowledgedSignature] = useState<
+    string | undefined
+  >(undefined);
   const [appearanceOverrides, setAppearanceOverrides] = useReducer(
     (current: PrintAppearanceOverrides, next: SetStateAction<PrintAppearanceOverrides>) =>
       typeof next === 'function' ? next(current) : next,
@@ -35,6 +38,16 @@ export const useCustomizerPageState = (
   const [randomizeFailure, setRandomizeFailure] = useState(false);
   const { track } = useAnalytics();
   const customizer = useCustomizerParams(initialParams);
+  const geometryInputSignature = JSON.stringify([
+    customizer.params,
+    customizer.selectedFont.id,
+    customizer.selectedSubtitleFont.id,
+  ]);
+  const disconnectedExportAcknowledged =
+    disconnectedAcknowledgedSignature === geometryInputSignature;
+  const setDisconnectedExportAcknowledged = (acknowledged: boolean): void => {
+    setDisconnectedAcknowledgedSignature(acknowledged ? geometryInputSignature : undefined);
+  };
   const geometry = useGeometryGeneration(
     customizer.params,
     customizer.selectedFont,
@@ -54,11 +67,22 @@ export const useCustomizerPageState = (
     },
     locale,
   );
+  const disconnectedOnly = Boolean(
+    geometry.result &&
+    geometry.result.issues.some((issue) => issue.severity === 'error') &&
+    geometry.result.issues
+      .filter((issue) => issue.severity === 'error')
+      .every((issue) => issue.code === 'disconnected'),
+  );
   const canExport =
     !randomizing &&
     !geometry.busy &&
     !geometry.error &&
-    Boolean(geometry.result?.printable && geometry.current !== false);
+    Boolean(
+      geometry.result &&
+      geometry.current !== false &&
+      (geometry.result.printable || disconnectedOnly),
+    );
   const exportState = useExportActions({
     geometry,
     params: customizer.params,
@@ -66,6 +90,7 @@ export const useCustomizerPageState = (
     subtitleFontDefinition: customizer.selectedSubtitleFont,
     appearanceOverrides,
     exportAllowed: canExport,
+    allowDisconnected: disconnectedExportAcknowledged,
   });
   const openExport = (): void => {
     if (canExport) setExportOpen(true);
@@ -85,6 +110,7 @@ export const useCustomizerPageState = (
 
     customizer.setParams(normalizeParams({ ...DEFAULT_PARAMS, ...initialParams }));
     setAppearanceOverrides(initialAppearanceOverrides ?? { version: 1 });
+    setDisconnectedAcknowledgedSignature(undefined);
   }, [customizer, initialAppearanceOverrides, initialParams, routeInputKey]);
 
   const activeStyle = customizer.availableStyles.find(
@@ -179,6 +205,8 @@ export const useCustomizerPageState = (
     setSurfacePreset,
     exportOpen,
     setExportOpen,
+    disconnectedExportAcknowledged,
+    setDisconnectedExportAcknowledged,
     canExport,
     openExport,
     appearanceOverrides,

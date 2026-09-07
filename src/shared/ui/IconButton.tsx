@@ -11,6 +11,7 @@ export type IconButtonProps = Omit<
   busy?: boolean;
   icon: LucideIcon;
   label: string;
+  motion?: 'none' | 'nudge' | 'rotate' | 'scale';
 };
 
 /** Shared icon action with an accessible label and stable behavior hooks. */
@@ -20,6 +21,7 @@ export const IconButton = ({
   className,
   icon: Icon,
   label,
+  motion = 'none',
   ...buttonProps
 }: IconButtonProps) => (
   <button
@@ -31,6 +33,7 @@ export const IconButton = ({
     title={label}
     data-icon-button="true"
     data-icon-action={action}
+    data-icon-motion={motion}
     data-tooltip={label}
   >
     <Icon aria-hidden="true" focusable="false" size={19} strokeWidth={2} />

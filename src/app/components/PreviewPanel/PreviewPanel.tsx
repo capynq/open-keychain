@@ -63,7 +63,7 @@ export const PreviewPanel = ({
     }
   >
     <div className="preview-heading">
-      <h2 className="eyebrow">{t(locale, 'livePreview')}</h2>
+      <h2 className="preview-title">{t(locale, 'livePreview')}</h2>
       <span className={`status-pill ${status.className}`} role="status" aria-live="polite">
         {status.text}
       </span>

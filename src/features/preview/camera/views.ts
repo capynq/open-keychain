@@ -18,6 +18,9 @@ export type CameraPose = {
 };
 const ORBIT_MARGIN = 1.08;
 const SURFACE_DEPTH_CLEARANCE = 1300;
+export const MIN_CAMERA_DISTANCE_SCALE = 0.22;
+export const MIN_CAMERA_NEAR = 0.01;
+const MAX_CAMERA_DISTANCE_SCALE = 64;
 export const VIEW_DEFINITIONS: readonly ViewDefinition[] = [
   {
     id: 'home',
@@ -131,11 +134,73 @@ export const cameraPose = (
   const orbitDistance = (radius * ORBIT_MARGIN) / Math.sin(narrowFov / 2);
   const distance =
     Math.max(planarDistance + projectedHalfDepth + clearance, orbitDistance) *
-    Math.max(0.35, distanceScale);
+    Math.max(MIN_CAMERA_DISTANCE_SCALE, distanceScale);
   const position = target.clone().addScaledVector(outward, distance);
-  const near = Math.max(0.05, distance - radius - clearance);
+  const near = Math.max(MIN_CAMERA_NEAR, distance - radius - clearance);
   const far = Math.max(near + 1, distance + radius + clearance + SURFACE_DEPTH_CLEARANCE);
   return { position, target, up, near, far };
+};
+
+/** Return whether a pose keeps every model corner inside the perspective frustum. */
+export const poseContainsBounds = (
+  camera: THREE.PerspectiveCamera,
+  pose: CameraPose,
+  bounds: THREE.Box3,
+  margin = 0.96,
+): boolean => {
+  const outward = pose.target.clone().sub(pose.position).normalize();
+  const up = pose.up.clone().normalize();
+  const right = up.clone().cross(outward).normalize();
+  const verticalFov = THREE.MathUtils.degToRad(camera.fov);
+  const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect);
+  const tanVertical = Math.tan(verticalFov / 2) * margin;
+  const tanHorizontal = Math.tan(horizontalFov / 2) * margin;
+
+  return boxCorners(bounds).every((corner) => {
+    const offset = corner.sub(pose.position);
+    const depth = offset.dot(outward);
+    if (depth <= pose.near || depth >= pose.far) return false;
+    return (
+      Math.abs(offset.dot(right)) <= depth * tanHorizontal &&
+      Math.abs(offset.dot(up)) <= depth * tanVertical
+    );
+  });
+};
+
+/** Find the closest scale that still frames the complete model for a given angle. */
+export const fittedCameraPose = (
+  camera: THREE.PerspectiveCamera,
+  bounds: THREE.Box3,
+  direction: THREE.Vector3,
+  preferredUp: THREE.Vector3,
+  requestedScale = 1,
+): { pose: CameraPose; scale: number } => {
+  let scale = Math.max(MIN_CAMERA_DISTANCE_SCALE, requestedScale);
+  let pose = cameraPose(camera, bounds, direction, preferredUp, scale);
+  if (poseContainsBounds(camera, pose, bounds)) return { pose, scale };
+
+  let low = scale;
+  let high = Math.max(1, scale);
+  let highPose = cameraPose(camera, bounds, direction, preferredUp, high);
+  while (!poseContainsBounds(camera, highPose, bounds) && high < MAX_CAMERA_DISTANCE_SCALE) {
+    low = high;
+    high = Math.min(MAX_CAMERA_DISTANCE_SCALE, high * 2);
+    highPose = cameraPose(camera, bounds, direction, preferredUp, high);
+  }
+  if (!poseContainsBounds(camera, highPose, bounds)) return { pose: highPose, scale: high };
+
+  for (let iteration = 0; iteration < 14; iteration += 1) {
+    const midpoint = (low + high) / 2;
+    const candidate = cameraPose(camera, bounds, direction, preferredUp, midpoint);
+    if (poseContainsBounds(camera, candidate, bounds)) {
+      high = midpoint;
+    } else {
+      low = midpoint;
+    }
+  }
+  scale = high;
+  pose = cameraPose(camera, bounds, direction, preferredUp, scale);
+  return { pose, scale };
 };
 export const applyCameraPose = (camera: THREE.PerspectiveCamera, pose: CameraPose): void => {
   camera.position.copy(pose.position);

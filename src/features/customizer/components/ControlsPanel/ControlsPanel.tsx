@@ -32,6 +32,7 @@ import { DesignCardRail } from '../DesignCardRail/DesignCardRail';
 import { DesignSelectCard } from '../DesignSelectCard/DesignSelectCard';
 import { RangeControl } from '../RangeControl/RangeControl';
 import styles from './ControlsPanel.module.css';
+import { GeometryFinishControls } from './GeometryFinishControls';
 import { ParameterGroupList } from './ParameterGroupList';
 import { useControlsScrollState } from './useControlsScrollState';
 
@@ -363,6 +364,7 @@ export const ControlsPanel = ({
           className="font-filter-clear"
           icon={RefreshCw}
           label={t(locale, 'clearFontFilters')}
+          motion="rotate"
           disabled={
             activeBrowserState.category === 'all' &&
             activeBrowserState.search === '' &&
@@ -648,6 +650,7 @@ export const ControlsPanel = ({
                   action="retry-google-fonts"
                   icon={RefreshCw}
                   label={t(locale, 'retry')}
+                  motion="rotate"
                   onClick={() => void customizer.loadGoogleFonts()}
                 />
               </div>
@@ -684,6 +687,7 @@ export const ControlsPanel = ({
                       action="font-page-previous"
                       icon={ChevronLeft}
                       label={t(locale, 'previous')}
+                      motion="none"
                       disabled={currentPage === 1}
                       onClick={() => updateFontBrowserState({ page: activeBrowserState.page - 1 })}
                     />
@@ -692,6 +696,7 @@ export const ControlsPanel = ({
                       action="font-page-next"
                       icon={ChevronRight}
                       label={t(locale, 'next')}
+                      motion="nudge"
                       disabled={currentPage === pageCount}
                       onClick={() => updateFontBrowserState({ page: activeBrowserState.page + 1 })}
                     />
@@ -780,6 +785,7 @@ export const ControlsPanel = ({
                     action="font-page-previous"
                     icon={ChevronLeft}
                     label={t(locale, 'previous')}
+                    motion="none"
                     disabled={currentPage === 1}
                     onClick={() => updateFontBrowserState({ page: activeBrowserState.page - 1 })}
                   />
@@ -788,6 +794,7 @@ export const ControlsPanel = ({
                     action="font-page-next"
                     icon={ChevronRight}
                     label={t(locale, 'next')}
+                    motion="nudge"
                     disabled={currentPage === pageCount}
                     onClick={() => updateFontBrowserState({ page: activeBrowserState.page + 1 })}
                   />
@@ -951,6 +958,7 @@ export const ControlsPanel = ({
           update={update}
           renderParameter={renderParameter}
         />
+        <GeometryFinishControls locale={locale} params={params} update={update} />
         {isHeartSplit && (
           <div className="control-subsection heart-settings" data-testid="heart-settings">
             <h3>{t(locale, 'heartSettings')}</h3>

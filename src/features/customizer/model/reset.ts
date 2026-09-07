@@ -7,6 +7,11 @@ import {
 export type CustomizerResetSection = 'name' | 'subtitle' | 'template' | 'style' | 'font' | 'shape';
 
 const SHAPE_DEFAULTS = {
+  modelFeatures: DEFAULT_PARAMS.modelFeatures,
+  edgeFinish: DEFAULT_PARAMS.edgeFinish,
+  topEdgeMm: DEFAULT_PARAMS.topEdgeMm,
+  bottomEdgeMm: DEFAULT_PARAMS.bottomEdgeMm,
+  textEdgeMm: DEFAULT_PARAMS.textEdgeMm,
   baseThicknessMm: DEFAULT_PARAMS.baseThicknessMm,
   paddingMm: DEFAULT_PARAMS.paddingMm,
   edgeInsetMm: DEFAULT_PARAMS.edgeInsetMm,

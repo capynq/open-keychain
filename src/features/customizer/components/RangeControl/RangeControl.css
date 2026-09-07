@@ -1,11 +1,12 @@
-:global(.range-control) {
+.range-control {
   display: grid;
   width: 100%;
   min-width: 0;
   margin: 0;
   gap: var(--field-label-control-gap);
 }
-:global(.control-label) {
+
+.control-label {
   display: flex;
   justify-content: space-between;
   gap: var(--field-label-value-gap);
@@ -15,22 +16,26 @@
   margin: 0;
   padding: 0;
 }
-:global(.control-label span:last-child) {
+
+.control-label span:last-child {
   color: #8a8d95;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-:global(.range-control input:focus-visible) {
+
+.range-control input:focus-visible {
   border-color: var(--field-focus-ring);
   outline: 2px solid var(--field-focus-ring);
   outline-offset: -2px;
   box-shadow: none;
 }
+
 @media (max-width: 760px) {
-  :global(.range-control) {
+  .range-control {
     min-height: 44px;
   }
-  :global(.control-label) {
+
+  .control-label {
     font-size: 12px;
     line-height: 14px;
   }
