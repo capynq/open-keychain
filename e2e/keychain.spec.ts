@@ -17,6 +17,18 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
+test('keeps semantic icon actions still when reduced motion is requested', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/create');
+
+  for (const motion of ['nudge', 'rotate'] as const) {
+    const button = page.locator(`[data-icon-motion="${motion}"]:not(:disabled)`).first();
+    await expect(button).toBeVisible();
+    await button.hover();
+    await expect(button.locator('svg')).toHaveCSS('transform', 'none');
+  }
+});
+
 for (const flow of [
   {
     locale: 'EN',
@@ -77,6 +89,26 @@ for (const flow of [
       await exportTrigger.press('Space');
     const dialog = page.getByRole('dialog', { name: flow.dialog });
     await expect(dialog).toBeVisible();
+    const backdrop = page.locator('.modal-backdrop');
+    await expect(backdrop).toBeVisible();
+    const modalLayout = await backdrop.evaluate((element) => {
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return {
+        position: style.position,
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+      };
+    });
+    expect(modalLayout.position).toBe('fixed');
+    expect(modalLayout.top).toBe(0);
+    expect(modalLayout.left).toBe(0);
+    expect(modalLayout.width).toBe(modalLayout.viewportWidth);
+    expect(modalLayout.height).toBe(modalLayout.viewportHeight);
 
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
@@ -102,7 +134,7 @@ test('customizes a name, uses every icon camera preset, and downloads STL', asyn
   await page.goto('/create');
   await expect(page.getByRole('link', { name: 'Open Keychain' })).toBeVisible();
   await expect(page.locator('.brand-mark small')).toHaveCount(0);
-  await expect(page.locator('.preview-heading h2')).toHaveText('LIVE PREVIEW');
+  await expect(page.locator('.preview-heading h2')).toHaveText('Live preview');
   await expect(page.getByRole('heading', { name: 'ALEX' })).toHaveCount(0);
   const name = page.getByLabel('Name or text');
   await name.fill('OLIVER');
@@ -144,6 +176,39 @@ test('customizes a name, uses every icon camera preset, and downloads STL', asyn
     .getByRole('button', { name: /STL file/ })
     .click();
   expect((await download).suggestedFilename()).toMatch(/^keychain-oliver-capsule\.stl$/);
+});
+
+test('keeps shared icon glyphs centered while showing tactile hover feedback', async ({ page }) => {
+  await page.goto('/create');
+  await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10000 });
+  const buttons = [
+    page.getByRole('button', { name: 'Export' }),
+    page.getByRole('button', { name: 'Share' }),
+    page.getByRole('button', { name: 'Randomize' }),
+  ];
+
+  for (const button of buttons) {
+    await button.hover();
+    const metrics = await button.evaluate((element) => {
+      const icon = element.querySelector('svg');
+      if (!icon) return undefined;
+      const buttonRect = element.getBoundingClientRect();
+      const iconRect = icon.getBoundingClientRect();
+      return {
+        transform: getComputedStyle(icon).transform,
+        centerOffsetX:
+          iconRect.left + iconRect.width / 2 - (buttonRect.left + buttonRect.width / 2),
+        centerOffsetY:
+          iconRect.top + iconRect.height / 2 - (buttonRect.top + buttonRect.height / 2),
+        shadow: getComputedStyle(element).boxShadow,
+      };
+    });
+    expect(metrics).toBeDefined();
+    expect(metrics?.transform).not.toContain('translate');
+    expect(Math.abs(metrics?.centerOffsetX ?? 99)).toBeLessThan(1);
+    expect(Math.abs(metrics?.centerOffsetY ?? 99)).toBeLessThan(1);
+    expect(metrics?.shadow).not.toBe('none');
+  }
 });
 
 test('treats adjusted NIKITA Bubble geometry as ready and keeps width warnings exportable', async ({
@@ -194,7 +259,7 @@ test('supports bounded zoom, preview surfaces, locales, and configurable 3MF exp
 }) => {
   await page.goto('/create');
   await expect(page.locator('.status-pill')).toHaveText('Ready to print', { timeout: 10000 });
-  await expect(page.getByRole('region', { name: 'MODEL SUMMARY' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Model summary' })).toBeVisible();
   for (let click = 0; click < 8; click += 1)
     await page.getByRole('button', { name: 'Zoom in' }).click();
   await page.getByRole('button', { name: 'Zoom out' }).click();
@@ -400,6 +465,8 @@ test('keeps Heart inputs aligned and exposes through-cut readiness', async ({ pa
       timeout: 10000,
     },
   );
+  await expect(page.locator('.summary-feedback')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Fix this' })).toHaveCount(0);
 });
 test('shows only template-relevant shape controls', async ({ page }) => {
   await page.goto('/create');

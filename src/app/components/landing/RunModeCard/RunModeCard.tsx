@@ -8,7 +8,9 @@ import { type RunOption } from '../content';
 import styles from './RunModeCard.module.css';
 
 export const RunModeCard = ({ locale, option }: { locale: Locale; option: RunOption }) => (
-  <article className={`${styles.root} landing-run-card landing-run-card-${option}`}>
+  <article
+    className={`${styles.root} landing-run-card landing-run-card-${option} ${option !== 'hosted' ? 'landing-run-card-actionable' : ''}`}
+  >
     <p>{t(locale, `landing.run.${option}.eyebrow`)}</p>
     <h3>{t(locale, `landing.run.${option}.title`)}</h3>
     <span>{t(locale, `landing.run.${option}.status`)}</span>

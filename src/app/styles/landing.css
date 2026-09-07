@@ -47,6 +47,9 @@
   font-size: 12px;
   font-weight: 800;
   text-decoration: none;
+  transition:
+    color 160ms ease,
+    opacity 160ms ease;
 }
 
 .landing-nav a:hover,
@@ -71,6 +74,12 @@
   font-size: 12px;
   font-weight: 900;
   text-decoration: none;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
 }
 
 .landing-header-cta {
@@ -85,6 +94,14 @@
 .landing-button-primary:hover,
 .landing-button-primary:focus-visible {
   background: var(--landing-accent-hover);
+  box-shadow: 0 10px 20px #b94d3448;
+  transform: translateY(-1px);
+}
+
+.landing-header-cta:active,
+.landing-button:active {
+  box-shadow: none;
+  transform: translateY(1px);
 }
 
 .landing-header-cta:focus-visible,
@@ -113,12 +130,11 @@
 }
 
 .landing-kicker {
-  margin: 0 0 10px;
-  color: #a84e3b;
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  margin: 0 0 14px;
+  color: #8f4a37;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
 }
 
 .landing-hero h1,
@@ -210,7 +226,7 @@
   color: #a84e3b;
   font-size: 24px;
   font-weight: 900;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.04em;
   line-height: 1;
 }
 
@@ -503,11 +519,10 @@
 }
 
 .landing-step-card {
-  min-height: 190px;
-  padding: 22px;
-  border: 1px solid #dfddd6;
-  border-radius: 14px;
-  background: #fffdf8;
+  min-height: 156px;
+  padding: 14px 0 18px;
+  border-top: 2px solid #d9d5cc;
+  background: transparent;
 }
 
 .landing-step-card h3,
@@ -535,6 +550,9 @@
   font-size: 12px;
   font-weight: 800;
   text-decoration: none;
+  transition:
+    color 160ms ease,
+    transform 160ms ease;
 }
 
 .landing-template-card-action span {
@@ -567,16 +585,32 @@
   min-height: 304px;
   padding: 12px 12px 20px;
   border: 1px solid #dfddd6;
-  border-radius: 14px;
-  background: #fffdf8;
+  border-radius: 8px;
+  background: #fffaf5;
+  box-shadow: 0 5px 14px rgb(45 53 66 / 3%);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
 }
 
-.landing-template-card:nth-child(2n) {
-  background: #f3e6d8;
+.landing-template-card-articulated-name {
+  background: #f4f3ef;
 }
 
-.landing-template-card:nth-child(3n) {
-  background: #e7edf0;
+.landing-template-card-nameplate {
+  background: #f4f6f2;
+}
+
+.landing-template-card-plant-label {
+  background: #f7f3e9;
+}
+
+.landing-template-card:hover,
+.landing-template-card:focus-within {
+  border-color: #c9a698;
+  box-shadow: 0 12px 24px rgb(45 53 66 / 8%);
+  transform: translateY(-2px);
 }
 
 .landing-template-image-wrap {
@@ -618,13 +652,35 @@
   min-height: 325px;
   padding: 24px;
   border: 1px solid #d9d4cb;
-  border-radius: 14px;
+  border-radius: 8px;
   background: #fffdf8;
+}
+
+.landing-run-card-actionable {
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.landing-run-card-actionable:hover,
+.landing-run-card-actionable:focus-within {
+  border-color: #c9a698;
+  box-shadow: 0 12px 24px rgb(45 53 66 / 8%);
+  transform: translateY(-2px);
+}
+
+.landing-run-card-browser {
+  background: #fffaf4;
+}
+
+.landing-run-card-selfHost {
+  background: #f3f5f3;
 }
 
 .landing-run-card-hosted {
   border-color: #c9a698;
-  background: #f5e6de;
+  background: #fffaf4;
 }
 
 .landing-run-card > p {
@@ -632,8 +688,7 @@
   color: #626875;
   font-size: 9px;
   font-weight: 900;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
 }
 
 .landing-run-card h3 {
@@ -679,6 +734,15 @@
   font-size: 12px;
   font-weight: 900;
   text-decoration: none;
+  transition:
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.landing-card-link:hover,
+.landing-card-link:focus-visible {
+  color: var(--landing-accent-hover);
+  transform: translateX(3px);
 }
 
 .landing-trust {
@@ -729,6 +793,12 @@
 
 .landing-footer a {
   color: #505967;
+  transition: color 160ms ease;
+}
+
+.landing-footer a:hover,
+.landing-footer a:focus-visible {
+  color: var(--landing-accent-hover);
 }
 
 @media (max-width: 1000px) {
@@ -870,6 +940,25 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .landing-header-cta,
+  .landing-button,
+  .landing-nav a,
+  .landing-footer a,
+  .landing-template-card,
+  .landing-run-card-actionable,
+  .landing-template-card-action,
+  .landing-card-link {
+    transition: none;
+  }
+
+  .landing-template-card:hover,
+  .landing-run-card-actionable:hover,
+  .landing-header-cta:hover,
+  .landing-button:hover,
+  .landing-card-link:hover {
+    transform: none;
+  }
+
   .configurator-carousel,
   .configurator-carousel:hover,
   .configurator-carousel:active {
