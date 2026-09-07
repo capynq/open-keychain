@@ -7,7 +7,10 @@ import {
 
 export const DEFAULT_PRESET_PRINT_PROFILE_ID = 'fdm-standard-0.4';
 
-export type SellerPresetParams = Omit<KeychainParams, 'text' | 'subtitle'>;
+// Keep artwork out of seller presets even while older model contracts lack the field.
+export type SellerPresetParams = Omit<KeychainParams, 'text' | 'subtitle'> & {
+  modelFeatures?: never;
+};
 
 const bundledFontId = (fontId: string): string =>
   FONT_CATALOG.some((font) => font.id === fontId) ? fontId : FONT_CATALOG[0].id;
@@ -19,6 +22,7 @@ export const presetParamsForStorage = (params: KeychainParams): SellerPresetPara
 
   Reflect.deleteProperty(preset, 'text');
   Reflect.deleteProperty(preset, 'subtitle');
+  Reflect.deleteProperty(preset, 'modelFeatures');
 
   return {
     ...preset,
@@ -29,11 +33,15 @@ export const presetParamsForStorage = (params: KeychainParams): SellerPresetPara
 };
 
 /** Rehydrates a local customer order. Customer text is intentionally never read from the API. */
-export const paramsForPresetOrder = (preset: SellerPresetParams, text: string): KeychainParams =>
+export const paramsForPresetOrder = (
+  preset: SellerPresetParams,
+  text: string,
+  subtitle = '',
+): KeychainParams =>
   normalizeParams({
     ...DEFAULT_PARAMS,
     ...preset,
     templateId: 'name-keychain',
     text,
-    subtitle: '',
+    subtitle,
   });

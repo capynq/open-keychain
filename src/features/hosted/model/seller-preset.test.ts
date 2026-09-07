@@ -6,15 +6,21 @@ import { paramsForPresetOrder, presetParamsForStorage } from './seller-preset';
 
 describe('seller preset privacy boundary', () => {
   it('removes customer text and normalizes unsupported fonts before storage', () => {
-    const preset = presetParamsForStorage({
-      ...DEFAULT_PARAMS,
-      fontId: 'local-private-font',
-      subtitle: 'Birthday',
-      text: 'ALEX',
-    });
+    const preset = presetParamsForStorage(
+      Object.assign(
+        {
+          ...DEFAULT_PARAMS,
+          fontId: 'local-private-font',
+          subtitle: 'Birthday',
+          text: 'ALEX',
+        },
+        { modelFeatures: { artwork: 'private' } },
+      ),
+    );
 
     expect(preset).not.toHaveProperty('text');
     expect(preset).not.toHaveProperty('subtitle');
+    expect(preset).not.toHaveProperty('modelFeatures');
     expect(preset.fontId).toBe('nunito');
     expect(preset.templateId).toBe('name-keychain');
   });

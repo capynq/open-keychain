@@ -47,7 +47,6 @@ export const ProfilePage = ({
       <AppHeader variant="landing" locale={locale} onLocaleChange={onLocaleChange} />
       <main className="profile-page" aria-label={t(locale, 'profile')}>
         <section className="profile-intro">
-          <p className="eyebrow">{t(locale, 'brandName')}</p>
           <h1>{t(locale, 'workspaceTitle')}</h1>
           <p>
             {workspace.account

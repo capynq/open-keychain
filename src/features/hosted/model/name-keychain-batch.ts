@@ -13,6 +13,7 @@ export type BatchOrder = {
   line: number;
   orderId: string;
   text: string;
+  subtitle: string;
   quantity: number;
 };
 
@@ -29,7 +30,26 @@ export type ParsedBatch = {
 type BatchFile = {
   order: BatchOrder;
   data: Uint8Array;
+  extension?: ExportBatchFormat;
 };
+
+export type ExportBatchFormat = 'stl' | '3mf';
+export type BatchRunOptions = {
+  format?: ExportBatchFormat;
+  includeWarnings?: boolean;
+  signal?: AbortSignal;
+};
+
+/** Rejected batches carry the row-level report without creating an empty archive. */
+export class BatchGenerationError extends Error {
+  constructor(
+    message: string,
+    readonly parsed: ParsedBatch,
+  ) {
+    super(message);
+    this.name = 'BatchGenerationError';
+  }
+}
 
 const readCsvRows = (input: string): string[][] => {
   const rows: string[][] = [];
@@ -66,22 +86,24 @@ const readCsvRows = (input: string): string[][] => {
   return rows;
 };
 
-const fileNameForOrder = (orderId: string): string => {
+const fileNameForOrder = (orderId: string, format: ExportBatchFormat = 'stl'): string => {
   const safeId = orderId
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-zA-Z0-9_-]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
-  return `${safeId || 'order'}.stl`;
+  return `${safeId || 'order'}.${format}`;
 };
 
 const csvCell = (value: string | number): string => `"${String(value).replaceAll('"', '""')}"`;
 
 const manifestFor = (orders: BatchOrder[], errors: BatchRowError[], files: BatchFile[]): string => {
   const fileByOrder = new Map(
-    files.map((file) => [file.order.orderId, fileNameForOrder(file.order.orderId)]),
+    files.map((file) => [file.order.orderId, fileNameForOrder(file.order.orderId, file.extension)]),
   );
+  const errorByLine = new Map(errors.map((error) => [error.line, error.reason]));
+  const orderLines = new Set(orders.map((order) => order.line));
   const rows = [
     'order_id,quantity,status,file,error',
     ...orders.map((order) =>
@@ -90,18 +112,20 @@ const manifestFor = (orders: BatchOrder[], errors: BatchRowError[], files: Batch
         csvCell(order.quantity),
         csvCell(fileByOrder.has(order.orderId) ? 'ready' : 'failed'),
         csvCell(fileByOrder.get(order.orderId) ?? ''),
-        csvCell(''),
+        csvCell(errorByLine.get(order.line) ?? ''),
       ].join(','),
     ),
-    ...errors.map((error) =>
-      [
-        csvCell(`line-${error.line}`),
-        csvCell(''),
-        csvCell('invalid'),
-        csvCell(''),
-        csvCell(error.reason),
-      ].join(','),
-    ),
+    ...errors
+      .filter((error) => !orderLines.has(error.line))
+      .map((error) =>
+        [
+          csvCell(`line-${error.line}`),
+          csvCell(''),
+          csvCell('invalid'),
+          csvCell(''),
+          csvCell(error.reason),
+        ].join(','),
+      ),
   ];
 
   return `${rows.join('\n')}\n`;
@@ -127,7 +151,9 @@ export const parseNameKeychainCsv = (input: string): ParsedBatch => {
     const line = index + 2;
     if (!row.some(Boolean)) return;
     const orderId = row[orderIdIndex]?.trim() ?? '';
+    const subtitleIndex = header?.indexOf('subtitle') ?? -1;
     const text = row[textIndex]?.trim() ?? '';
+    const subtitle = subtitleIndex >= 0 ? (row[subtitleIndex]?.trim() ?? '') : '';
     const quantity = Number(row[quantityIndex]);
     if (!orderId || !text) {
       errors.push({ line, reason: 'order_id and text are required.' });
@@ -142,7 +168,7 @@ export const parseNameKeychainCsv = (input: string): ParsedBatch => {
     } else {
       orderIds.add(orderId);
       fileNames.add(fileNameForOrder(orderId));
-      orders.push({ line, orderId, text, quantity });
+      orders.push({ line, orderId, text, subtitle, quantity });
     }
   });
   return { orders, errors };
@@ -152,11 +178,15 @@ export const createNameKeychainArchive = (
   orders: BatchOrder[],
   errors: BatchRowError[],
   files: BatchFile[],
+  recipe: Record<string, unknown> = {},
 ): Uint8Array =>
   zipSync(
     {
-      ...Object.fromEntries(files.map((file) => [fileNameForOrder(file.order.orderId), file.data])),
+      ...Object.fromEntries(
+        files.map((file) => [fileNameForOrder(file.order.orderId, file.extension), file.data]),
+      ),
       'manifest.csv': strToU8(manifestFor(orders, errors, files)),
+      'recipe.json': strToU8(`${JSON.stringify(recipe, null, 2)}\n`),
     },
     { level: 0 },
   );
@@ -165,6 +195,7 @@ export const runNameKeychainBatch = async (
   preset: SellerPreset,
   csv: string,
   onProgress?: (completed: number, total: number) => void,
+  options: BatchRunOptions = {},
 ): Promise<{
   archive: Uint8Array;
   parsed: ParsedBatch;
@@ -172,23 +203,62 @@ export const runNameKeychainBatch = async (
 }> => {
   const parsed = parseNameKeychainCsv(csv);
   if (!parsed.orders.length)
-    throw new Error(parsed.errors[0]?.reason ?? 'Add at least one valid order.');
+    throw new BatchGenerationError(
+      parsed.errors[0]?.reason ?? 'Add at least one valid order.',
+      parsed,
+    );
   const client = new GeometryClient();
   const files: BatchFile[] = [];
   const errors = [...parsed.errors];
+  const format = options.format ?? 'stl';
+  const signal = options.signal;
+  const throwIfAborted = (): void => {
+    if (signal?.aborted) throw new DOMException('Batch generation aborted.', 'AbortError');
+  };
+  const artifactByParams = new Map<string, Uint8Array>();
+  const abortClient = (): void => client.dispose();
+  signal?.addEventListener('abort', abortClient, { once: true });
   try {
     for (const [index, order] of parsed.orders.entries()) {
+      throwIfAborted();
       try {
-        const params = paramsForPresetOrder(preset.params as SellerPresetParams, order.text);
-        const file = await client.export(
-          params,
-          'stl',
-          'separate-colors',
-          fontDefinition(params.fontId),
+        const params = paramsForPresetOrder(
+          preset.params as SellerPresetParams,
+          order.text,
+          order.subtitle,
         );
-
-        files.push({ order, data: new Uint8Array(file.data) });
+        const normalizedKey = JSON.stringify(params);
+        const validation = await client.validate(
+          params,
+          fontDefinition(params.fontId),
+          fontDefinition(params.subtitleFontId),
+        );
+        const hasError = validation.issues.some((issue) => issue.severity === 'error');
+        const hasWarning = validation.issues.some((issue) => issue.severity === 'warning');
+        if (hasError || (hasWarning && !options.includeWarnings)) {
+          throw new Error(
+            validation.issues
+              .filter((issue) => issue.severity === 'error' || !options.includeWarnings)
+              .map((issue) => issue.message)
+              .join('; ') || 'The model is not ready to download.',
+          );
+        }
+        let data = artifactByParams.get(normalizedKey);
+        if (!data) {
+          const file = await client.export(
+            params,
+            format,
+            'separate-colors',
+            fontDefinition(params.fontId),
+            undefined,
+            fontDefinition(params.subtitleFontId),
+          );
+          data = new Uint8Array(file.data);
+          artifactByParams.set(normalizedKey, data);
+        }
+        files.push({ order, data, extension: format });
       } catch (cause) {
+        if (signal?.aborted) throwIfAborted();
         errors.push({
           line: order.line,
           reason: cause instanceof Error ? cause.message : 'The model could not be generated.',
@@ -197,10 +267,28 @@ export const runNameKeychainBatch = async (
       onProgress?.(index + 1, parsed.orders.length);
     }
   } finally {
+    signal?.removeEventListener('abort', abortClient);
     client.dispose();
   }
+  throwIfAborted();
+  if (!files.length)
+    throw new BatchGenerationError(
+      errors[0]?.reason ?? 'No valid printable orders were generated.',
+      { orders: parsed.orders, errors },
+    );
+  const recipe = {
+    presetId: preset.id,
+    presetName: preset.name,
+    format,
+    printProfileId: preset.print_profile_id,
+    params: Object.fromEntries(
+      Object.entries(preset.params).filter(
+        ([key]) => key !== 'text' && key !== 'subtitle' && key !== 'modelFeatures',
+      ),
+    ),
+  };
   return {
-    archive: createNameKeychainArchive(parsed.orders, errors, files),
+    archive: createNameKeychainArchive(parsed.orders, errors, files, recipe),
     parsed: { orders: parsed.orders, errors },
     completed: files.length,
   };

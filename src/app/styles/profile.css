@@ -134,10 +134,54 @@
 }
 
 .profile-card button:hover:not(:disabled),
-.profile-card button:focus-visible,
-.profile-status button:hover,
-.profile-status button:focus-visible {
+.profile-status button:hover:not(:disabled) {
   border-color: #ef815e;
+}
+
+.profile-card button:focus-visible,
+.profile-status button:focus-visible,
+.profile-actions input:focus-visible,
+.profile-auth input:focus-visible,
+.profile-batch input:focus-visible,
+.profile-batch textarea:focus-visible,
+.profile-batch select:focus-visible {
+  outline: 2px solid #9a3d31;
+  outline-offset: 2px;
+}
+
+.profile-card button,
+.profile-status button,
+.profile-card-heading a,
+.profile-primary-link,
+.profile-text-button {
+  transition:
+    border-color 0.14s ease,
+    background-color 0.14s ease,
+    color 0.14s ease,
+    transform 0.14s ease;
+}
+
+.profile-card button:hover:not(:disabled),
+.profile-status button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.profile-card button:active:not(:disabled),
+.profile-status button:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+.profile-card-heading a:hover,
+.profile-primary-link:hover,
+.profile-text-button:hover {
+  color: #9a3d31;
+}
+
+.profile-card-heading a:focus-visible,
+.profile-primary-link:focus-visible,
+.profile-text-button:focus-visible {
+  outline: 2px solid #9a3d31;
+  outline-offset: 3px;
 }
 
 .profile-delete {
@@ -166,6 +210,7 @@
 
 .profile-actions input,
 .profile-auth input,
+.profile-batch input:not([type='checkbox']),
 .profile-batch textarea,
 .profile-batch select {
   min-height: 38px;
@@ -207,6 +252,59 @@
   color: #fff;
 }
 
+.profile-batch-checkbox {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.profile-batch-checkbox input {
+  width: 16px;
+  height: 16px;
+}
+
+.profile-batch-estimate {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  border-top: 1px solid #ebe7df;
+  padding-top: 14px;
+}
+
+.profile-batch-estimate h3,
+.profile-batch-estimate p,
+.profile-batch-estimate output,
+.profile-batch-estimate small {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.profile-batch-estimate output {
+  color: #303545;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.profile-batch-estimate h3 {
+  color: #303545;
+  font-size: 13px;
+}
+
+.profile-batch-estimate label {
+  min-width: 0;
+}
+
+.profile-batch-estimate small {
+  color: #777c86;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+@media (max-width: 560px) {
+  .profile-batch-estimate {
+    grid-template-columns: 1fr;
+  }
+}
+
 .profile-success {
   margin: 0;
   color: #237a52;
@@ -229,16 +327,6 @@
   border-color: #ef815e;
   background: #ef815e;
   color: #fff;
-}
-
-form:tool-form-active,
-form:tool-submit-active {
-  outline: 2px solid #b85c38;
-  outline-offset: 4px;
-}
-
-form:tool-submit-active button[type='submit'] {
-  box-shadow: 0 0 0 3px rgb(184 92 56 / 28%);
 }
 
 .profile-signout {
@@ -280,5 +368,15 @@ form:tool-submit-active button[type='submit'] {
   .profile-projects li {
     align-items: flex-start;
     flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-card button,
+  .profile-status button,
+  .profile-card-heading a,
+  .profile-primary-link,
+  .profile-text-button {
+    transition: none;
   }
 }

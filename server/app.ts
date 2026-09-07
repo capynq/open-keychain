@@ -25,6 +25,11 @@ const MAX_PRINT_PROFILE_ID_LENGTH = 120;
 const API_RATE_LIMIT_MAX = 120;
 const API_RATE_LIMIT_WINDOW = '1 minute';
 const PRESET_PARAM_KEYS = new Set([
+  'edgeFinish',
+  'topEdgeMm',
+  'bottomEdgeMm',
+  'textEdgeMm',
+  'separateParts',
   'subtitleFontId',
   'subtitleOffsetXRatio',
   'subtitleOffsetYRatio',
