@@ -35,7 +35,7 @@ jobs:
             --output /tmp/prusa-slicer.AppImage
           chmod +x /tmp/prusa-slicer.AppImage
           /tmp/prusa-slicer.AppImage --appimage-extract >/dev/null
-          "$PWD/squashfs-root/usr/bin/prusa-slicer" --version
+          "$PWD/squashfs-root/usr/bin/prusa-slicer" --help >/dev/null
           echo "PRUSASLICER_BIN=$PWD/squashfs-root/usr/bin/prusa-slicer" >> "$GITHUB_ENV"
       - run: pnpm install --frozen-lockfile
       - run: pnpm validation:fixtures

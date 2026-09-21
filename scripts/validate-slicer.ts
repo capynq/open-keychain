@@ -31,7 +31,10 @@ try {
   throw new Error(`Fixtures are missing at ${fixtureDir}; run pnpm validation:fixtures first.`);
 }
 
-const version = run(['--version']);
+const version = run(['--help'])
+  .split(/\r?\n/)
+  .find((line) => line.startsWith('PrusaSlicer-'));
+if (!version) throw new Error('PrusaSlicer did not report its version.');
 const manifest = JSON.parse(await fs.readFile(path.join(fixtureDir, 'manifest.json'), 'utf8')) as {
   cases?: Array<{ files?: Record<string, { filename?: string }> }>;
 };
