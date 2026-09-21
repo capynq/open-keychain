@@ -1,5 +1,5 @@
 import type { MeshBuffer } from '../../domain/keychain/model/types';
-import type { CrossSection, DisposableGeometry, Manifold } from './manifold-types';
+import type { CrossSection, DisposableGeometry, GeometryWasm, Manifold } from './manifold-types';
 
 export const MANIFOLD_SCALE = 1000;
 
@@ -13,6 +13,34 @@ export const asMesh = (manifold: Manifold): MeshBuffer => {
     positions[vertex * 3 + 2] = source[2] / MANIFOLD_SCALE;
   }
   return { positions, indices: new Uint32Array(mesh.triVerts) };
+};
+
+/** Rehydrate a serialised mesh for a constructive operation. */
+export const manifoldFromMesh = (wasm: GeometryWasm, mesh: MeshBuffer): Manifold => {
+  if (!validateMesh(mesh)) throw new Error('Cannot construct a solid from an invalid mesh.');
+  const input = new wasm.Mesh({
+    numProp: 3,
+    vertProperties: Float32Array.from(mesh.positions, (value) => value * MANIFOLD_SCALE),
+    triVerts: mesh.indices,
+  });
+  input.merge();
+  return new wasm.Manifold(input);
+};
+
+/**
+ * Keep the relief as its own material while removing its positive-volume overlap
+ * from the base. Their union is the authoritative printable model.
+ */
+export const partitionMaterialSolids = (
+  base: Manifold,
+  relief: Manifold,
+): { base: Manifold; relief: Manifold; model: Manifold } => {
+  const partitionedBase = base.subtract(relief);
+  return {
+    base: partitionedBase,
+    relief,
+    model: partitionedBase.add(relief),
+  };
 };
 
 export const mergeMeshes = (meshes: MeshBuffer[]): MeshBuffer => {

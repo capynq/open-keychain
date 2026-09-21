@@ -10,7 +10,9 @@ import type { GeometryResult, KeychainParams, MeshBuffer } from '../model/types'
 import {
   asMesh,
   finiteBounds,
+  manifoldFromMesh,
   MANIFOLD_SCALE,
+  partitionMaterialSolids,
   validateMesh,
 } from '../../../infrastructure/geometry/manifold-utils';
 import { validateModelFeatures, type ModelFeature } from '../model/model-feature';
@@ -51,14 +53,7 @@ export const applyFeatureGraph = (
     return value;
   };
   const fromMesh = (mesh: MeshBuffer): Manifold => {
-    if (!validateMesh(mesh)) throw new Error('Cannot edit an invalid mesh.');
-    const input = new wasm.Mesh({
-      numProp: 3,
-      vertProperties: Float32Array.from(mesh.positions, (value) => value * MANIFOLD_SCALE),
-      triVerts: mesh.indices,
-    });
-    input.merge();
-    return own(new wasm.Manifold(input));
+    return own(manifoldFromMesh(wasm, mesh));
   };
   const shapeFor = (feature: ModelFeature): Manifold => {
     const [x, y, z] = feature.sizeMm.map((size) => size * MANIFOLD_SCALE);
@@ -153,13 +148,17 @@ export const applyFeatureGraph = (
         relief = own(relief.intersect(tool));
       }
     }
-    let model = own(base.add(relief));
+    const partition = partitionMaterialSolids(base, relief);
+    base = own(partition.base);
+    let model = own(partition.model);
     const initialBounds = model.boundingBox();
     if (finiteBounds(initialBounds) && initialBounds.min[2] !== 0) {
       const offset: [number, number, number] = [0, 0, -initialBounds.min[2]];
-      base = own(base.translate(offset));
+      const translatedBase = own(base.translate(offset));
       relief = own(relief.translate(offset));
-      model = own(base.add(relief));
+      const translatedModel = own(translatedBase.add(relief));
+      base = translatedBase;
+      model = translatedModel;
     }
     const bounds = model.boundingBox();
     const components = model.decompose().map(own);

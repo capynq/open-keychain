@@ -13,7 +13,7 @@ import {
   asMesh,
   disposeGeometry,
   finiteBounds,
-  mergeMeshes,
+  partitionMaterialSolids,
   sectionArea,
   validateMesh,
 } from '../../../infrastructure/geometry/manifold-utils';
@@ -175,6 +175,7 @@ const releaseStyledGeometry = (geometry: StyledGeometry): void => {
   ]);
 };
 const finalizeArticulated = (
+  wasm: Wasm,
   build: ArticulatedBuild,
   rawText: CrossSection,
   scale: number,
@@ -185,17 +186,16 @@ const finalizeArticulated = (
   result: GeometryResult;
   exportMesh?: MeshBuffer;
 } => {
-  const baseMesh = mergeMeshes([
-    ...build.parts.map((part) => asMesh(part.body)),
-    ...build.connectors.map(asMesh),
+  const structural = wasm.Manifold.union([
+    ...build.parts.map((part) => part.body),
+    ...build.connectors,
   ]);
-  const reliefMesh = mergeMeshes(build.parts.map((part) => asMesh(part.cap)));
-  const exportMesh = includeExport
-    ? mergeMeshes([
-        ...build.parts.map((part) => asMesh(part.solid)),
-        ...build.connectors.map(asMesh),
-      ])
-    : undefined;
+  const relief = wasm.Manifold.union(build.parts.map((part) => part.cap));
+  const { base, model } = partitionMaterialSolids(structural, relief);
+  structural.delete();
+  const baseMesh = asMesh(base);
+  const reliefMesh = asMesh(relief);
+  const exportMesh = includeExport ? asMesh(model) : undefined;
   const valid = validateArticulatedBuild(build, params, issues);
   if (params.reliefDepthMm < 0.5)
     issues.push({
@@ -212,7 +212,7 @@ const finalizeArticulated = (
       code: 'dense-mesh',
       message: 'This articulated model exceeds 12,000 triangles and may take longer to slice.',
     });
-  const bounds = build.bounds;
+  const bounds = model.boundingBox();
   const result: GeometryResult = {
     generationId: 0,
     baseMesh,
@@ -237,6 +237,9 @@ const finalizeArticulated = (
   };
   releaseArticulatedBuild(build);
   rawText.delete();
+  base.delete();
+  relief.delete();
+  model.delete();
   void scale;
   return { result, exportMesh };
 };
@@ -591,6 +594,7 @@ const buildKeychainGeometry = async (
   }
   if (styled.kind === 'articulated')
     return finalizeArticulated(
+      wasm,
       styled.build,
       styled.rawText,
       styled.scale,
@@ -723,9 +727,12 @@ const buildKeychainGeometry = async (
   const subtitleRelief = subtitleSource?.translate([0, 0, baseThickness - 150]);
   subtitleSource?.delete();
   const reliefCombined = subtitleRelief ? relief.add(subtitleRelief) : relief;
-  const model = base.add(reliefCombined);
+  const partition = partitionMaterialSolids(base, reliefCombined);
+  base.delete();
+  const partitionedBase = partition.base;
+  const model = partition.model;
   const bounds = model.boundingBox();
-  const baseMesh = asMesh(base);
+  const baseMesh = asMesh(partitionedBase);
   const reliefMesh = asMesh(reliefCombined);
   const exportMesh = includeExport ? asMesh(model) : undefined;
   const components = model.decompose();
@@ -813,7 +820,7 @@ const buildKeychainGeometry = async (
     model,
     reliefCombined,
     ...(subtitleRelief ? [relief] : []),
-    base,
+    partitionedBase,
     styleBase,
     ...new Set([styled.rawText, textSection]),
     ...(subtitleSection ? [subtitleSection] : []),

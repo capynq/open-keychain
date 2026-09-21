@@ -1,9 +1,13 @@
+import { strFromU8, unzipSync } from 'fflate';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { validateMesh } from '@/infrastructure/geometry/manifold-utils';
+import { asMesh, manifoldFromMesh } from '@/infrastructure/geometry/manifold-utils';
 
+import { VALIDATION_FIXTURES } from '../../../../scripts/validation-fixtures';
+import { serializeThreeMf } from '../../../infrastructure/export/three-mf-serializer';
 import { FONT_CATALOG } from '../fonts/catalog';
 import { DEFAULT_PARAMS } from '../model/types';
 import { buildKeychain, createWasm } from './keychain-builder';
@@ -24,6 +28,77 @@ afterAll(() => {
 });
 
 describe('finished geometry contracts', () => {
+  it.each(VALIDATION_FIXTURES)(
+    'partitions the $id fixture into non-overlapping material solids without changing its model',
+    async (fixture) => {
+      const built = await buildKeychain(wasm, { ...DEFAULT_PARAMS, ...fixture.params }, true);
+      expect(built.result.printable, JSON.stringify(built.result.issues)).toBe(true);
+      const base = manifoldFromMesh(wasm, built.result.baseMesh);
+      const relief = manifoldFromMesh(wasm, built.result.reliefMesh);
+      const overlap = base.intersect(relief);
+      const model = base.add(relief);
+      const exportSolid = manifoldFromMesh(wasm, built.exportMesh!);
+      try {
+        // Mesh buffers use Float32 coordinates, so reconstructing their shared
+        // boundary can introduce sub-micron signed noise. It must remain
+        // negligible relative to the printable model rather than a real overlap.
+        expect(Math.abs(overlap.volume()) / Math.abs(model.volume())).toBeLessThan(1e-6);
+        expect(model.boundingBox()).toEqual(exportSolid.boundingBox());
+        expect(validateMesh(asMesh(model))).toBe(true);
+        expect(built.result.validation?.mesh).toBe('passed');
+        expect(built.result.validation?.connectivity).not.toBe('separate-parts');
+      } finally {
+        overlap.delete();
+        exportSolid.delete();
+        model.delete();
+        relief.delete();
+        base.delete();
+      }
+    },
+    30000,
+  );
+
+  it.each(VALIDATION_FIXTURES)(
+    'serializes the $id fixture as one merged object or two named colored material objects',
+    async (fixture) => {
+      const built = await buildKeychain(wasm, { ...DEFAULT_PARAMS, ...fixture.params }, true);
+      const separate = strFromU8(
+        unzipSync(
+          new Uint8Array(
+            serializeThreeMf(
+              built.result.baseMesh,
+              built.result.reliefMesh,
+              built.exportMesh,
+              'separate-colors',
+              built.result.appearance,
+            ),
+          ),
+        )['3D/3dmodel.model'],
+      );
+      const merged = strFromU8(
+        unzipSync(
+          new Uint8Array(
+            serializeThreeMf(
+              built.result.baseMesh,
+              built.result.reliefMesh,
+              built.exportMesh,
+              'merged',
+              built.result.appearance,
+            ),
+          ),
+        )['3D/3dmodel.model'],
+      );
+      expect(separate.match(/<object id=/g)).toHaveLength(2);
+      expect(separate).toContain(`name="${built.result.appearance.base.name}"`);
+      expect(separate).toContain(`name="${built.result.appearance.relief.name}"`);
+      expect(separate).toContain(`displaycolor="${built.result.appearance.base.color}"`);
+      expect(separate).toContain(`displaycolor="${built.result.appearance.relief.color}"`);
+      expect(merged.match(/<object id=/g)).toHaveLength(1);
+      expect(merged).toContain('name="Keychain"');
+    },
+    30000,
+  );
+
   it.each(['name-keychain', 'nameplate'] as const)(
     'canonicalizes oversized edge finishes for %s',
     async (templateId) => {

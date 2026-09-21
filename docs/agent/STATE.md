@@ -5,15 +5,13 @@
 - **Branch:** `main`
 - **HEAD:** `996e6b2` (`style(ui): refine public surfaces and sharing`)
 - **Remote relationship:** `main` and `origin/main` both point to `996e6b2`.
-- **Working tree:** `docs/agent/` is untracked and contains the four coordination files. Those files
-  existed before this UI/UX planning update and were updated in place. There are no staged files or
-  other tracked/untracked changes.
+- **Working tree:** uncommitted slicer-validation work touches the geometry partition, 3MF/fixture
+  contracts, diagnostics, print-validation documentation, and this handoff. No files are staged.
 
 ## Current objective
 
-Unify the Customizer's template/style hierarchy and make every geometry-changing interaction
-transactional so visible controls, preview, persistence, sharing, and export always describe the same
-accepted design.
+Make `3MF · separate colors` a true two-material export: its base and relief volumes meet without
+positive-volume overlap, while the merged preview/STL/3MF model stays unchanged and sliceable.
 
 ## Relevant existing work
 
@@ -28,35 +26,31 @@ accepted design.
 
 ## Recently completed
 
-- `6dead43` added geometry validation and edge-finish foundations.
-- `114e9fc` added Geometry Finish controls and focused preview/finish UX.
-- This documentation run made Customizer coherence and safe candidate updates the active milestone,
-  added complete template/style control ownership, and recorded the safe-reversion decision.
+- Added `partitionMaterialSolids`, which subtracts relief from the base and uses their union as the
+  authoritative model for normal templates, articulated assemblies, Nameplates, and feature edits.
+- Added representative-fixture contract coverage for material-boundary overlap, merged bounds, and
+  separate/merged 3MF object structure. Nameplate relief now intentionally includes its embedded text
+  volume, rather than an overlapping exposed cap.
+- Improved slicer errors with fixture identity and exit-code/signal detail; repair, invalid, manifold,
+  and G-code-path conflicts remain failures. The print-validation documentation now accurately says the
+  smoke check slices STL and 3MF files and is not physical-print proof.
 
 ## Validation state
 
-- A live deployed-browser diagnostic ran on 2026-09-10 with Heart text `I` / `KYIV`. Heart size,
-  border, and left gap produced new geometry generations. Right gap and vertical offset did not
-  regenerate when set to values already active in the design.
-- The same diagnostic reproduced “Needs attention” / “Not manifold” after selecting Chamfered with
-  non-zero top and bottom edge values. The last valid mesh remained while the rejected values stayed
-  selected.
-- `pnpm exec prettier --check docs/agent/PLAN.md docs/agent/STATE.md docs/agent/BACKLOG.md
-docs/agent/DECISIONS.md` passed after the documentation update.
-- `pnpm validate:changed` completed successfully; there are no tracked product-code changes in this
-  documentation-only run.
-- `git diff --check` passed; the untracked coordination files were checked separately for whitespace.
-- No unit, build, geometry-matrix, local Playwright, hosted-E2E, slicer, deployment, or physical-print
-  validation ran during this documentation update.
+- `pnpm validation:fixtures` passed: 10 cases / 30 exports.
+- Focused geometry-contract, feature-graph, serializer, and Nameplate tests passed (30 tests).
+- `pnpm test:fast` passed: 39 files / 223 tests. `pnpm format:check`, focused ESLint, `pnpm typecheck`,
+  `pnpm validate:changed`, `git diff --check`, and `pnpm build` passed.
+- A full `pnpm validate` run reached its full Vitest phase but did not finish within the interactive
+  command window, so it is not recorded as passing.
+- `pnpm validate:slicer` correctly stopped because no local `prusa-slicer` binary or
+  `PRUSASLICER_BIN` is available. No slicer, GitHub workflow, or physical-print proof exists yet.
 
 ## Known failures / blockers
 
-- Heart combined with the reproduced chamfered edge settings can reject generation as non-manifold and
-  leave visible controls inconsistent with the retained preview.
-- There is no focused Heart × edge-finish browser/domain regression or catalog-wide proof that every
-  exposed control produces an observable safe effect.
-- Physical-print evidence remains pending; hosted pilot readiness still requires external DNS, TLS,
-  firewall, proxy, backup/restore, public-health, and isolated hosted-E2E evidence.
+- The local environment lacks the pinned PrusaSlicer binary, so the real slicer smoke result is pending.
+- Manual workflow dispatch must wait for an explicitly approved commit; no commit or remote action is
+  authorized in this run. Physical-print evidence remains pending.
 
 ## Current uncertainty
 
@@ -68,5 +62,5 @@ docs/agent/DECISIONS.md` passed after the documentation update.
 
 ## Exact next action
 
-Add a failing regression for the reproduced Heart/chamfer configuration, then implement the shared
-last-valid candidate transaction and adjacent Heart Style details block as one vertical slice.
+Review the uncommitted slice, obtain explicit authorization to commit it, then manually dispatch the
+PrusaSlicer workflow and retain its 30-export result manifest.

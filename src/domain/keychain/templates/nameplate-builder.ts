@@ -6,6 +6,7 @@ import {
   asMesh,
   disposeGeometry,
   finiteBounds,
+  partitionMaterialSolids,
   validateMesh,
 } from '../../../infrastructure/geometry/manifold-utils';
 import { extrudeFinished } from '../build/edge-finish';
@@ -218,11 +219,13 @@ export const buildNameplate = (
       code: 'dense-mesh',
       message: 'This curved model exceeds 12,000 triangles and may take longer to slice.',
     });
-  const trimmedVisibleText = tiltedText.trimByPlane([0, 0, 1], baseThickness - 100);
-  const visibleText = trimmedVisibleText.simplify(20);
-  trimmedVisibleText.delete();
-  const baseMesh = asMesh(plate);
-  const reliefMesh = asMesh(visibleText);
+  const foundation = wasm.Manifold.union([plate, carrier]);
+  const partition = partitionMaterialSolids(foundation, tiltedText);
+  foundation.delete();
+  model.delete();
+  model = partition.model;
+  const baseMesh = asMesh(partition.base);
+  const reliefMesh = asMesh(tiltedText);
   const exportMesh = includeExport ? asMesh(model) : undefined;
   const printable =
     model.status() === 'NoError' &&
@@ -269,7 +272,7 @@ export const buildNameplate = (
   deleteGeometry([
     ...new Set([
       model,
-      visibleText,
+      partition.base,
       tiltedText,
       carrier,
       plate,

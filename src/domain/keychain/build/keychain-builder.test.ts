@@ -910,7 +910,9 @@ describe('finished keychain geometry', () => {
         (_, index) => result.reliefMesh.positions[index * 3 + 2],
       ),
     );
-    expect(reliefMinZ).toBeGreaterThanOrEqual(baseMaxZ - 0.15);
+    // The material partition retains the complete embedded inscription, not
+    // only its exposed cap, so the colored relief reaches into the foundation.
+    expect(reliefMinZ).toBeLessThan(baseMaxZ - 0.15);
     expect(reliefMaxZ - baseMaxZ).toBeGreaterThan(0.2);
   }, 30000);
   it('keeps every Nameplate text component embedded while the top lift changes', async () => {

@@ -9,7 +9,7 @@ const profilePath = path.resolve('tools/slicer/prusaslicer-minimal-fff.ini');
 const outputDir = path.join(fixtureDir, 'slicer-validation');
 const executable = process.env.PRUSASLICER_BIN || 'prusa-slicer';
 
-const run = (args: string[]): string => {
+const run = (subject: string, args: string[]): string => {
   const result = spawnSync(executable, args, { encoding: 'utf8' });
   if (result.error) {
     if ((result.error as NodeJS.ErrnoException).code === 'ENOENT') {
@@ -19,8 +19,10 @@ const run = (args: string[]): string => {
     }
     throw result.error;
   }
-  if (result.status !== 0)
-    throw new Error(`PrusaSlicer failed (${result.status}): ${result.stderr || result.stdout}`);
+  if (result.status !== 0 || result.signal)
+    throw new Error(
+      `PrusaSlicer failed for ${subject} (${result.signal ? `signal ${result.signal}` : `exit code ${result.status}`}): ${result.stderr || result.stdout}`,
+    );
   return `${result.stdout}${result.stderr}`.trim();
 };
 
@@ -31,7 +33,7 @@ try {
   throw new Error(`Fixtures are missing at ${fixtureDir}; run pnpm validation:fixtures first.`);
 }
 
-const version = run(['--help'])
+const version = run('the --help probe', ['--help'])
   .split(/\r?\n/)
   .find((line) => line.startsWith('PrusaSlicer-'));
 if (!version) throw new Error('PrusaSlicer did not report its version.');
@@ -54,13 +56,20 @@ const results: Array<{ fixture: string; output: string; bytes: number; warnings:
 for (const fixture of files) {
   const input = path.join(fixtureDir, fixture);
   const output = path.join(outputDir, `${fixture.slice(0, -4)}.gcode`);
-  const slicerOutput = run(['--load', profilePath, '--export-gcode', input, '--output', output]);
+  const slicerOutput = run(fixture, [
+    '--load',
+    profilePath,
+    '--export-gcode',
+    input,
+    '--output',
+    output,
+  ]);
   const warnings = slicerOutput
     .split(/\r?\n/)
-    .filter((line) => /warn|repair|invalid|manifold/i.test(line));
-  if (warnings.some((line) => /repair|invalid|manifold/i.test(line)))
+    .filter((line) => /warn|repair|invalid|manifold|g-?code.*(?:conflict|path)/i.test(line));
+  if (warnings.some((line) => /repair|invalid|manifold|g-?code.*(?:conflict|path)/i.test(line)))
     throw new Error(
-      `PrusaSlicer reported a repair/invalid warning for ${fixture}: ${warnings.join(' ')}`,
+      `PrusaSlicer reported a repair, invalid, manifold, or G-code path conflict for ${fixture}: ${warnings.join(' ')}`,
     );
   const stat = await fs.stat(output);
   if (stat.size === 0) throw new Error(`PrusaSlicer produced an empty output for ${fixture}`);

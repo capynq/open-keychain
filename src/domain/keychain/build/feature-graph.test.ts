@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { ModelFeature } from '../model/model-feature';
 
-import { validateMesh } from '../../../infrastructure/geometry/manifold-utils';
+import { manifoldFromMesh, validateMesh } from '../../../infrastructure/geometry/manifold-utils';
 import { DEFAULT_PARAMS, type KeychainParams } from '../model/types';
 import { applyFeatureGraph } from './feature-graph';
 import { buildKeychain, createWasm } from './keychain-builder';
@@ -117,6 +117,18 @@ describe('feature graph', () => {
     expect(validateMesh(output.result.baseMesh)).toBe(true);
     expect(validateMesh(output.result.reliefMesh)).toBe(true);
     expect(validateMesh(output.exportMesh!)).toBe(true);
+    const base = manifoldFromMesh(wasm, output.result.baseMesh);
+    const relief = manifoldFromMesh(wasm, output.result.reliefMesh);
+    const overlap = base.intersect(relief);
+    const model = base.add(relief);
+    try {
+      expect(Math.abs(overlap.volume()) / Math.abs(model.volume())).toBeLessThan(1e-6);
+    } finally {
+      overlap.delete();
+      model.delete();
+      relief.delete();
+      base.delete();
+    }
   });
 
   it.each(['articulated-name', 'nameplate'] as const)(
