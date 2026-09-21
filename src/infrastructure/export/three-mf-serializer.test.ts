@@ -22,6 +22,12 @@ describe('3MF export', () => {
     expect(model.match(/<item objectid=/g)).toHaveLength(1);
     expect(model).toContain('<component objectid="2"/>');
     expect(model).toContain('<component objectid="3"/>');
+    expect(model.indexOf('<object id="2"')).toBeLessThan(
+      model.indexOf('<component objectid="2"/>'),
+    );
+    expect(model.indexOf('<object id="3"')).toBeLessThan(
+      model.indexOf('<component objectid="3"/>'),
+    );
     expect(model).not.toContain('<name>');
     expect(model).not.toContain('surface');
   });

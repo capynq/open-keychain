@@ -51,9 +51,9 @@ const modelXml = (parts: ThreeMfPart[], assembled: boolean): string => {
     )
     .join('');
   const objects = assembled
-    ? `<object id="1" type="model" name="Keychain"><components>${parts
+    ? `${materialObjects}<object id="1" type="model" name="Keychain"><components>${parts
         .map((_, index) => `<component objectid="${index + objectOffset}"/>`)
-        .join('')}</components></object>${materialObjects}`
+        .join('')}</components></object>`
     : materialObjects;
   const materials = parts
     .map(
