@@ -95,14 +95,14 @@ describe('finished geometry contracts', () => {
           ),
         )['3D/3dmodel.model'],
       );
-      expect(separate.match(/<mesh>/g)).toHaveLength(2);
+      expect(separate.match(/<mesh>/g)).toHaveLength(1);
       expect(separate.match(/<item objectid=/g)).toHaveLength(1);
-      expect(separate).toContain('<component objectid="2"/>');
-      expect(separate).toContain('<component objectid="3"/>');
+      expect(separate.match(/<object id=/g)).toHaveLength(1);
       expect(separate).toContain(`name="${built.result.appearance.base.name}"`);
       expect(separate).toContain(`name="${built.result.appearance.relief.name}"`);
       expect(separate).toContain(`displaycolor="${built.result.appearance.base.color}"`);
       expect(separate).toContain(`displaycolor="${built.result.appearance.relief.color}"`);
+      expect(separate).toContain('p1="1" p2="1" p3="1"');
       expect(merged.match(/<object id=/g)).toHaveLength(1);
       expect(merged).toContain('name="Keychain"');
     },

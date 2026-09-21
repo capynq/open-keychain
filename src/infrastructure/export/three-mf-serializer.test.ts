@@ -17,17 +17,11 @@ describe('3MF export', () => {
     expect(model).toContain('displaycolor="#B84838"');
     expect(model).toContain('displaycolor="#FAF4E9"');
     expect(model).toContain('pid="10" pindex="0"');
-    expect(model).toContain('pid="10" pindex="1"');
-    expect(model.match(/<mesh>/g)).toHaveLength(2);
+    expect(model).toContain('pid="10" p1="1" p2="1" p3="1"');
+    expect(model.match(/<mesh>/g)).toHaveLength(1);
     expect(model.match(/<item objectid=/g)).toHaveLength(1);
-    expect(model).toContain('<component objectid="2"/>');
-    expect(model).toContain('<component objectid="3"/>');
-    expect(model.indexOf('<object id="2"')).toBeLessThan(
-      model.indexOf('<component objectid="2"/>'),
-    );
-    expect(model.indexOf('<object id="3"')).toBeLessThan(
-      model.indexOf('<component objectid="3"/>'),
-    );
+    expect(model.match(/<object id=/g)).toHaveLength(1);
+    expect(model).toContain('<triangle v1="3" v2="4" v3="5" pid="10" p1="1" p2="1" p3="1"/>');
     expect(model).not.toContain('<name>');
     expect(model).not.toContain('surface');
   });

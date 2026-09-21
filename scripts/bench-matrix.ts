@@ -121,7 +121,7 @@ const validateThreeMf = (
   const meshes = model.match(/<mesh>/g)?.length ?? 0;
   if (mode === 'merged' && (items !== 1 || objects !== 1 || meshes !== 1))
     return 'invalid-3mf-merged-layout';
-  if (mode === 'separate-colors' && (items !== 1 || objects !== 3 || meshes !== 2))
+  if (mode === 'separate-colors' && (items !== 1 || objects !== 1 || meshes !== 1))
     return 'invalid-3mf-separate-layout';
   return undefined;
 };

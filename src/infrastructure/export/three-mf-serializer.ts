@@ -31,44 +31,39 @@ const escapeXml = (value: string): string => {
       })[character] ?? character,
   );
 };
-const meshXml = (mesh: MeshBuffer): string => {
+const meshXml = (parts: ThreeMfPart[]): string => {
   let vertices = '';
-  for (let index = 0; index < mesh.positions.length; index += 3) {
-    vertices += `<vertex x="${mesh.positions[index].toFixed(6)}" y="${mesh.positions[index + 1].toFixed(6)}" z="${mesh.positions[index + 2].toFixed(6)}"/>`;
+  for (const part of parts) {
+    for (let index = 0; index < part.mesh.positions.length; index += 3) {
+      vertices += `<vertex x="${part.mesh.positions[index].toFixed(6)}" y="${part.mesh.positions[index + 1].toFixed(6)}" z="${part.mesh.positions[index + 2].toFixed(6)}"/>`;
+    }
   }
   let triangles = '';
-  for (let index = 0; index < mesh.indices.length; index += 3) {
-    triangles += `<triangle v1="${mesh.indices[index]}" v2="${mesh.indices[index + 1]}" v3="${mesh.indices[index + 2]}"/>`;
+  let triangleVertexOffset = 0;
+  for (const [partIndex, part] of parts.entries()) {
+    for (let index = 0; index < part.mesh.indices.length; index += 3) {
+      const properties =
+        partIndex === 0 ? '' : ` pid="10" p1="${partIndex}" p2="${partIndex}" p3="${partIndex}"`;
+      triangles += `<triangle v1="${part.mesh.indices[index] + triangleVertexOffset}" v2="${part.mesh.indices[index + 1] + triangleVertexOffset}" v3="${part.mesh.indices[index + 2] + triangleVertexOffset}"${properties}/>`;
+    }
+    triangleVertexOffset += part.mesh.positions.length / 3;
   }
   return `<mesh><vertices>${vertices}</vertices><triangles>${triangles}</triangles></mesh>`;
 };
-const modelXml = (parts: ThreeMfPart[], assembled: boolean): string => {
-  const objectOffset = assembled ? 2 : 1;
-  const materialObjects = parts
-    .map(
-      (part, index) =>
-        `<object id="${index + objectOffset}" type="model" name="${escapeXml(part.name)}" pid="10" pindex="${index}">${meshXml(part.mesh)}</object>`,
-    )
-    .join('');
-  const objects = assembled
-    ? `${materialObjects}<object id="1" type="model" name="Keychain"><components>${parts
-        .map((_, index) => `<component objectid="${index + objectOffset}"/>`)
-        .join('')}</components></object>`
-    : materialObjects;
+const modelXml = (parts: ThreeMfPart[]): string => {
+  const object = `<object id="1" type="model" name="Keychain" pid="10" pindex="0">${meshXml(parts)}</object>`;
   const materials = parts
     .map(
       (part) =>
         `<base name="${escapeXml(part.name)}" displaycolor="${normalizeColor(part.color)}"/>`,
     )
     .join('');
-  const build = assembled
-    ? '<item objectid="1"/>'
-    : parts.map((_, index) => `<item objectid="${index + 1}"/>`).join('');
+  const build = '<item objectid="1"/>';
   return `<?xml version="1.0" encoding="UTF-8"?>
 <model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
   <metadata name="Title">Open Keychain</metadata>
   <metadata name="Description">Printable keychain generated locally in the browser.</metadata>
-  <resources><basematerials id="10">${materials}</basematerials>${objects}</resources>
+  <resources><basematerials id="10">${materials}</basematerials>${object}</resources>
   <build>${build}</build>
 </model>`;
 };
@@ -97,7 +92,7 @@ export const serializeThreeMf = (
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Target="/3D/3dmodel.model" Id="rel-1" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>
 </Relationships>`),
-    '3D/3dmodel.model': strToU8(modelXml(parts, mode === 'separate-colors')),
+    '3D/3dmodel.model': strToU8(modelXml(parts)),
   };
   const zipped = zipSync(files);
   return zipped.buffer.slice(

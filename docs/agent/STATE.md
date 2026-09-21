@@ -3,8 +3,8 @@
 ## Repository state
 
 - **Branch:** `main`
-- **HEAD:** `5366473` (`fix(export): group separate-color 3mf parts`), pushed to `origin/main`.
-- **Working tree:** local follow-up fixes declaration order in separate-color 3MF; no unrelated edits observed.
+- **HEAD:** `69153fd` (`fix(export): order 3MF component declarations`), pushed to `origin/main`.
+- **Working tree:** local follow-up represents separate material regions as per-triangle properties in one mesh; no unrelated edits observed.
 
 ## Current objective
 
@@ -13,19 +13,20 @@ Make the two-material 3MF export load and slice cleanly in pinned PrusaSlicer 2.
 ## Recently completed
 
 - Partitioned base and relief geometry and preserved the canonical combined export mesh/topology.
-- Separate-color 3MF uses one assembly item with two named/colorized mesh components; merged 3MF uses one direct mesh.
+- Separate-color 3MF keeps base and relief as non-overlapping named/colorized regions; merged 3MF uses one direct mesh.
 - Improved fixture-specific slicer diagnostics and documented that automated slicing is not physical-print proof.
-- The initial assembly layout failed to load in PrusaSlicer. Its component references preceded the referenced object declarations. The current follow-up moves component object declarations before the assembly and adds a declaration-order regression.
+- Separate component objects loaded in PrusaSlicer but triggered a G-code path conflict between the two named materials. The current follow-up encodes the regions as per-triangle material assignments in one placed mesh, avoiding a cross-object path conflict while retaining both named colors.
 
 ## Validation state
 
-- On `5366473`, GitHub CI quality and deploy jobs passed; PrusaSlicer failed to load `art-cyrillic-separate.3mf` (exit code 1).
-- The declaration-order serializer and geometry-contract tests passed (32 tests).
-- `pnpm validate:changed` passed.
+- On `69153fd`, GitHub CI quality and deploy jobs passed; PrusaSlicer reported G-code path conflicts for `art-cyrillic-separate.3mf` and exited with `SIGSEGV`.
+- The per-triangle material serializer and geometry-contract tests passed (32 tests), as did typecheck.
 - `pnpm validate` passed: formatting, lint, typecheck, 40 test files / 497 tests, and production build.
-- PrusaSlicer is not installed locally. The corrected serialization still needs the GitHub slicer workflow and its 30-export manifest.
+- `pnpm validation:fixtures` passed: 10 cases / 30 exports.
+- `pnpm bench:matrix` passed: 4,267 cases; 4,264 passed and 3 documented expected-invalid cases, with zero unexpected failures.
+- PrusaSlicer is not installed locally. The one-mesh material representation still needs the GitHub slicer workflow and its result manifest.
 - Physical-print evidence remains pending.
 
 ## Exact next action
 
-Commit and push the declaration-order fix, then verify CI and the PrusaSlicer workflow on that exact commit. Retain the result manifest and confirm there are no repair, invalid, manifold, or G-code-path-conflict errors.
+Commit and push the per-triangle material change, then verify CI and the PrusaSlicer workflow on that exact commit. Retain the result manifest and confirm there are no repair, invalid, manifold, or G-code-path-conflict errors.
