@@ -42,29 +42,20 @@ const meshXml = (mesh: MeshBuffer): string => {
   }
   return `<mesh><vertices>${vertices}</vertices><triangles>${triangles}</triangles></mesh>`;
 };
-const modelXml = (parts: ThreeMfPart[], merged: boolean): string => {
-  const objects = merged
-    ? `<object id="1" type="model" name="Keychain"><components><component objectid="2"/><component objectid="3"/></components></object>${parts
-        .map(
-          (part, index) =>
-            `<object id="${index + 2}" type="model" name="${escapeXml(part.name)}" pid="10" pindex="${index}">${meshXml(part.mesh)}</object>`,
-        )
-        .join('')}`
-    : parts
-        .map(
-          (part, index) =>
-            `<object id="${index + 1}" type="model" name="${escapeXml(part.name)}" pid="10" pindex="${index}">${meshXml(part.mesh)}</object>`,
-        )
-        .join('');
+const modelXml = (parts: ThreeMfPart[]): string => {
+  const objects = parts
+    .map(
+      (part, index) =>
+        `<object id="${index + 1}" type="model" name="${escapeXml(part.name)}" pid="10" pindex="${index}">${meshXml(part.mesh)}</object>`,
+    )
+    .join('');
   const materials = parts
     .map(
       (part) =>
         `<base name="${escapeXml(part.name)}" displaycolor="${normalizeColor(part.color)}"/>`,
     )
     .join('');
-  const build = merged
-    ? '<item objectid="1"/>'
-    : parts.map((_, index) => `<item objectid="${index + 1}"/>`).join('');
+  const build = parts.map((_, index) => `<item objectid="${index + 1}"/>`).join('');
   return `<?xml version="1.0" encoding="UTF-8"?>
 <model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
   <metadata name="Title">Open Keychain</metadata>
@@ -77,16 +68,13 @@ const modelXml = (parts: ThreeMfPart[], merged: boolean): string => {
 export const serializeThreeMf = (
   baseMesh: MeshBuffer,
   reliefMesh: MeshBuffer,
-  _mergedMesh: MeshBuffer | undefined,
+  mergedMesh: MeshBuffer | undefined,
   mode: ThreeMfMode = 'separate-colors',
   appearance: PrintAppearance = DEFAULT_PRINT_APPEARANCE,
 ): ArrayBuffer => {
   const parts: ThreeMfPart[] =
     mode === 'merged'
-      ? [
-          { name: appearance.base.name, mesh: baseMesh, color: appearance.base.color },
-          { name: appearance.relief.name, mesh: reliefMesh, color: appearance.relief.color },
-        ]
+      ? [{ name: 'Keychain', mesh: mergedMesh ?? baseMesh, color: appearance.base.color }]
       : [
           { name: appearance.base.name, mesh: baseMesh, color: appearance.base.color },
           { name: appearance.relief.name, mesh: reliefMesh, color: appearance.relief.color },
@@ -101,7 +89,7 @@ export const serializeThreeMf = (
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Target="/3D/3dmodel.model" Id="rel-1" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>
 </Relationships>`),
-    '3D/3dmodel.model': strToU8(modelXml(parts, mode === 'merged')),
+    '3D/3dmodel.model': strToU8(modelXml(parts)),
   };
   const zipped = zipSync(files);
   return zipped.buffer.slice(

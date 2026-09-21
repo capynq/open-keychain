@@ -21,18 +21,16 @@ describe('3MF export', () => {
     expect(model).not.toContain('<name>');
     expect(model).not.toContain('surface');
   });
-  it('supports merged single-object mode', () => {
+  it('writes the merged mesh as one printable object', () => {
     const files = unzipSync(
       new Uint8Array(serializeThreeMf(triangle, triangle, triangle, 'merged')),
     );
     const model = strFromU8(files['3D/3dmodel.model']);
-    expect(model.match(/<object id=/g)).toHaveLength(3);
+    expect(model.match(/<object id=/g)).toHaveLength(1);
     expect(model.match(/<item objectid=/g)).toHaveLength(1);
-    expect(model).toContain('<object id="1" type="model" name="Keychain"><components>');
-    expect(model).toContain('<component objectid="2"/>');
-    expect(model).toContain('<component objectid="3"/>');
+    expect(model).toContain('<object id="1" type="model" name="Keychain"');
+    expect(model).not.toContain('<components>');
     expect(model).toContain('displaycolor="#B84838"');
-    expect(model).toContain('displaycolor="#FAF4E9"');
     expect(model).toContain('Keychain');
   });
   it('preserves articulated layer names and reference-inspired colours', () => {
