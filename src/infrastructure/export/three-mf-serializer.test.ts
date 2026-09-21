@@ -18,6 +18,10 @@ describe('3MF export', () => {
     expect(model).toContain('displaycolor="#FAF4E9"');
     expect(model).toContain('pid="10" pindex="0"');
     expect(model).toContain('pid="10" pindex="1"');
+    expect(model.match(/<mesh>/g)).toHaveLength(2);
+    expect(model.match(/<item objectid=/g)).toHaveLength(1);
+    expect(model).toContain('<component objectid="2"/>');
+    expect(model).toContain('<component objectid="3"/>');
     expect(model).not.toContain('<name>');
     expect(model).not.toContain('surface');
   });

@@ -110,15 +110,18 @@ const validateThreeMf = (
     !model.includes('<metadata name="Title">Open Keychain</metadata>')
   )
     return 'missing-3mf-title';
-  const expectedColors = [result.appearance.base.color, result.appearance.relief.color].map(
-    (color) => color.toUpperCase(),
-  );
+  const expectedColors =
+    mode === 'merged'
+      ? [result.appearance.base.color]
+      : [result.appearance.base.color, result.appearance.relief.color];
   if (!expectedColors.every((color) => model.includes(`displaycolor="${color}"`)))
     return 'missing-3mf-color';
   const items = model.match(/<item objectid=/g)?.length ?? 0;
   const objects = model.match(/<object id=/g)?.length ?? 0;
-  if (mode === 'merged' && (items !== 1 || objects !== 3)) return 'invalid-3mf-merged-layout';
-  if (mode === 'separate-colors' && (items !== 2 || objects !== 2))
+  const meshes = model.match(/<mesh>/g)?.length ?? 0;
+  if (mode === 'merged' && (items !== 1 || objects !== 1 || meshes !== 1))
+    return 'invalid-3mf-merged-layout';
+  if (mode === 'separate-colors' && (items !== 1 || objects !== 3 || meshes !== 2))
     return 'invalid-3mf-separate-layout';
   return undefined;
 };

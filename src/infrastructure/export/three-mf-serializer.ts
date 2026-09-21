@@ -42,20 +42,28 @@ const meshXml = (mesh: MeshBuffer): string => {
   }
   return `<mesh><vertices>${vertices}</vertices><triangles>${triangles}</triangles></mesh>`;
 };
-const modelXml = (parts: ThreeMfPart[]): string => {
-  const objects = parts
+const modelXml = (parts: ThreeMfPart[], assembled: boolean): string => {
+  const objectOffset = assembled ? 2 : 1;
+  const materialObjects = parts
     .map(
       (part, index) =>
-        `<object id="${index + 1}" type="model" name="${escapeXml(part.name)}" pid="10" pindex="${index}">${meshXml(part.mesh)}</object>`,
+        `<object id="${index + objectOffset}" type="model" name="${escapeXml(part.name)}" pid="10" pindex="${index}">${meshXml(part.mesh)}</object>`,
     )
     .join('');
+  const objects = assembled
+    ? `<object id="1" type="model" name="Keychain"><components>${parts
+        .map((_, index) => `<component objectid="${index + objectOffset}"/>`)
+        .join('')}</components></object>${materialObjects}`
+    : materialObjects;
   const materials = parts
     .map(
       (part) =>
         `<base name="${escapeXml(part.name)}" displaycolor="${normalizeColor(part.color)}"/>`,
     )
     .join('');
-  const build = parts.map((_, index) => `<item objectid="${index + 1}"/>`).join('');
+  const build = assembled
+    ? '<item objectid="1"/>'
+    : parts.map((_, index) => `<item objectid="${index + 1}"/>`).join('');
   return `<?xml version="1.0" encoding="UTF-8"?>
 <model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
   <metadata name="Title">Open Keychain</metadata>
@@ -89,7 +97,7 @@ export const serializeThreeMf = (
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Target="/3D/3dmodel.model" Id="rel-1" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>
 </Relationships>`),
-    '3D/3dmodel.model': strToU8(modelXml(parts)),
+    '3D/3dmodel.model': strToU8(modelXml(parts, mode === 'separate-colors')),
   };
   const zipped = zipSync(files);
   return zipped.buffer.slice(

@@ -3,10 +3,10 @@
 ## Repository state
 
 - **Branch:** `main`
-- **HEAD:** `996e6b2` (`style(ui): refine public surfaces and sharing`)
-- **Remote relationship:** `main` and `origin/main` both point to `996e6b2`.
-- **Working tree:** uncommitted slicer-validation work touches the geometry partition, 3MF/fixture
-  contracts, diagnostics, print-validation documentation, and this handoff. No files are staged.
+- **HEAD:** `a508da9` (`fix(export): partition multi-material geometry`)
+- **Remote relationship:** `main` and `origin/main` both point to `a508da9`.
+- **Working tree:** an uncommitted follow-up changes 3MF separate-color assembly layout, preserves
+  canonical export meshes/topology, and updates the geometry matrix contract. No files are staged.
 
 ## Current objective
 
@@ -31,6 +31,13 @@ positive-volume overlap, while the merged preview/STL/3MF model stays unchanged 
 - Added representative-fixture contract coverage for material-boundary overlap, merged bounds, and
   separate/merged 3MF object structure. Nameplate relief now intentionally includes its embedded text
   volume, rather than an overlapping exposed cap.
+- Follow-up investigation of PrusaSlicer 2.8.1 found that separate-color build items were treated as
+  colliding print objects at their intended shared boundary. Separate-color 3MF now has one placed
+  assembly with two named, colored mesh components; merged 3MF remains one direct mesh.
+- Preserved the original authoritative combined export mesh and assembly topology for articulated,
+  Nameplate, standard, and feature-modified models while subtracting the visible relief region from
+  the base material mesh.
+- Updated the geometry matrix to verify the current direct-mesh and assembled 3MF layouts.
 - Improved slicer errors with fixture identity and exit-code/signal detail; repair, invalid, manifold,
   and G-code-path conflicts remain failures. The print-validation documentation now accurately says the
   smoke check slices STL and 3MF files and is not physical-print proof.
@@ -38,19 +45,22 @@ positive-volume overlap, while the merged preview/STL/3MF model stays unchanged 
 ## Validation state
 
 - `pnpm validation:fixtures` passed: 10 cases / 30 exports.
-- Focused geometry-contract, feature-graph, serializer, and Nameplate tests passed (30 tests).
-- `pnpm test:fast` passed: 39 files / 223 tests. `pnpm format:check`, focused ESLint, `pnpm typecheck`,
-  `pnpm validate:changed`, `git diff --check`, and `pnpm build` passed.
-- A full `pnpm validate` run reached its full Vitest phase but did not finish within the interactive
-  command window, so it is not recorded as passing.
-- `pnpm validate:slicer` correctly stopped because no local `prusa-slicer` binary or
-  `PRUSASLICER_BIN` is available. No slicer, GitHub workflow, or physical-print proof exists yet.
+- Latest focused builder, material-partition, feature-graph, and serializer run passed (315 tests).
+- `pnpm validate` passed: format, lint, typecheck, 40 test files / 497 tests, and production build.
+- `pnpm validate:ci` passed: typecheck, build, format, lint, and 40 test files / 497 tests.
+- `pnpm bench:matrix` passed: 4,267 cases; 4,264 passed and 3 documented expected-invalid cases;
+  zero unexpected failures.
+- `pnpm test:e2e:smoke` passed all 6 desktop/mobile checks after allowing the local preview bind.
+- `pnpm validation:fixtures` passed: 10 cases / 30 exports. `pnpm validate:changed` and
+  `git diff --check` passed.
+- GitHub PrusaSlicer validation for `a508da9` failed on `art-cyrillic-separate.3mf` with a G-code
+  path conflict between the two independent build items, followed by `SIGSEGV`. This follow-up
+  assembly fix has not yet been pushed or sliced. Local PrusaSlicer is unavailable.
 
 ## Known failures / blockers
 
-- The local environment lacks the pinned PrusaSlicer binary, so the real slicer smoke result is pending.
-- Manual workflow dispatch must wait for an explicitly approved commit; no commit or remote action is
-  authorized in this run. Physical-print evidence remains pending.
+- The local environment lacks the pinned PrusaSlicer binary; GitHub workflow validation is needed for
+  the follow-up commit. Physical-print evidence remains pending.
 
 ## Current uncertainty
 
@@ -62,5 +72,5 @@ positive-volume overlap, while the merged preview/STL/3MF model stays unchanged 
 
 ## Exact next action
 
-Review the uncommitted slice, obtain explicit authorization to commit it, then manually dispatch the
-PrusaSlicer workflow and retain its 30-export result manifest.
+Commit and push the reviewed 3MF assembly fix, then rerun the PrusaSlicer and CI workflows and retain
+the 30-export result manifest.

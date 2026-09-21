@@ -148,20 +148,21 @@ export const applyFeatureGraph = (
         relief = own(relief.intersect(tool));
       }
     }
-    const partition = partitionMaterialSolids(base, relief);
+    const model = own(base.add(relief));
+    const partition = partitionMaterialSolids(base, relief, model);
     base = own(partition.base);
-    let model = own(partition.model);
-    const initialBounds = model.boundingBox();
+    let outputModel = model;
+    const initialBounds = outputModel.boundingBox();
     if (finiteBounds(initialBounds) && initialBounds.min[2] !== 0) {
       const offset: [number, number, number] = [0, 0, -initialBounds.min[2]];
       const translatedBase = own(base.translate(offset));
       relief = own(relief.translate(offset));
-      const translatedModel = own(translatedBase.add(relief));
+      const translatedModel = own(outputModel.translate(offset));
       base = translatedBase;
-      model = translatedModel;
+      outputModel = translatedModel;
     }
-    const bounds = model.boundingBox();
-    const components = model.decompose().map(own);
+    const bounds = outputModel.boundingBox();
+    const components = outputModel.decompose().map(own);
     const baseMesh = asMesh(base);
     const reliefMesh = asMesh(relief);
     // Only connectivity is recalculated by this graph. Existing blocking issues are
@@ -184,8 +185,8 @@ export const applyFeatureGraph = (
       });
     const bounded = finiteBounds(bounds);
     if (
-      model.status() !== 'NoError' ||
-      model.isEmpty() ||
+      outputModel.status() !== 'NoError' ||
+      outputModel.isEmpty() ||
       !bounded ||
       !validateMesh(baseMesh) ||
       !validateMesh(reliefMesh)
@@ -232,7 +233,10 @@ export const applyFeatureGraph = (
       solidCount: components.length,
       timings: { ...original.timings, featuresMs: performance.now() - started },
     };
-    return { result, ...(includeExport && result.printable ? { exportMesh: asMesh(model) } : {}) };
+    return {
+      result,
+      ...(includeExport && result.printable ? { exportMesh: asMesh(outputModel) } : {}),
+    };
   } finally {
     for (const object of owned) object.delete();
   }

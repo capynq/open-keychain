@@ -13,6 +13,7 @@ import {
   asMesh,
   disposeGeometry,
   finiteBounds,
+  mergeMeshes,
   partitionMaterialSolids,
   sectionArea,
   validateMesh,
@@ -191,11 +192,17 @@ const finalizeArticulated = (
     ...build.connectors,
   ]);
   const relief = wasm.Manifold.union(build.parts.map((part) => part.cap));
-  const { base, model } = partitionMaterialSolids(structural, relief);
+  const { base, model: partitionModel } = partitionMaterialSolids(structural, relief);
+  const exportMesh = includeExport
+    ? mergeMeshes([
+        ...build.parts.map((part) => asMesh(part.solid)),
+        ...build.connectors.map(asMesh),
+      ])
+    : undefined;
+  const bounds = build.bounds;
   structural.delete();
   const baseMesh = asMesh(base);
   const reliefMesh = asMesh(relief);
-  const exportMesh = includeExport ? asMesh(model) : undefined;
   const valid = validateArticulatedBuild(build, params, issues);
   if (params.reliefDepthMm < 0.5)
     issues.push({
@@ -212,7 +219,6 @@ const finalizeArticulated = (
       code: 'dense-mesh',
       message: 'This articulated model exceeds 12,000 triangles and may take longer to slice.',
     });
-  const bounds = model.boundingBox();
   const result: GeometryResult = {
     generationId: 0,
     baseMesh,
@@ -239,7 +245,7 @@ const finalizeArticulated = (
   rawText.delete();
   base.delete();
   relief.delete();
-  model.delete();
+  partitionModel.delete();
   void scale;
   return { result, exportMesh };
 };
@@ -727,10 +733,10 @@ const buildKeychainGeometry = async (
   const subtitleRelief = subtitleSource?.translate([0, 0, baseThickness - 150]);
   subtitleSource?.delete();
   const reliefCombined = subtitleRelief ? relief.add(subtitleRelief) : relief;
-  const partition = partitionMaterialSolids(base, reliefCombined);
+  const model = base.add(reliefCombined);
+  const partition = partitionMaterialSolids(base, reliefCombined, model);
   base.delete();
   const partitionedBase = partition.base;
-  const model = partition.model;
   const bounds = model.boundingBox();
   const baseMesh = asMesh(partitionedBase);
   const reliefMesh = asMesh(reliefCombined);

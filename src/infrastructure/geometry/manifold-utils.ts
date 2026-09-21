@@ -34,12 +34,13 @@ export const manifoldFromMesh = (wasm: GeometryWasm, mesh: MeshBuffer): Manifold
 export const partitionMaterialSolids = (
   base: Manifold,
   relief: Manifold,
+  model?: Manifold,
 ): { base: Manifold; relief: Manifold; model: Manifold } => {
   const partitionedBase = base.subtract(relief);
   return {
     base: partitionedBase,
     relief,
-    model: partitionedBase.add(relief),
+    model: model ?? partitionedBase.add(relief),
   };
 };
 

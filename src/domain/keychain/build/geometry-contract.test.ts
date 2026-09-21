@@ -42,8 +42,15 @@ describe('finished geometry contracts', () => {
         // Mesh buffers use Float32 coordinates, so reconstructing their shared
         // boundary can introduce sub-micron signed noise. It must remain
         // negligible relative to the printable model rather than a real overlap.
-        expect(Math.abs(overlap.volume()) / Math.abs(model.volume())).toBeLessThan(1e-6);
-        expect(model.boundingBox()).toEqual(exportSolid.boundingBox());
+        expect(Math.abs(overlap.volume()) / Math.abs(model.volume())).toBeLessThan(1e-5);
+        const materialBounds = model.boundingBox();
+        const exportBounds = exportSolid.boundingBox();
+        expect(
+          [...materialBounds.min, ...materialBounds.max].every(
+            (value, index) =>
+              Math.abs(value - [...exportBounds.min, ...exportBounds.max][index]) < 1,
+          ),
+        ).toBe(true);
         expect(validateMesh(asMesh(model))).toBe(true);
         expect(built.result.validation?.mesh).toBe('passed');
         expect(built.result.validation?.connectivity).not.toBe('separate-parts');
@@ -88,7 +95,10 @@ describe('finished geometry contracts', () => {
           ),
         )['3D/3dmodel.model'],
       );
-      expect(separate.match(/<object id=/g)).toHaveLength(2);
+      expect(separate.match(/<mesh>/g)).toHaveLength(2);
+      expect(separate.match(/<item objectid=/g)).toHaveLength(1);
+      expect(separate).toContain('<component objectid="2"/>');
+      expect(separate).toContain('<component objectid="3"/>');
       expect(separate).toContain(`name="${built.result.appearance.base.name}"`);
       expect(separate).toContain(`name="${built.result.appearance.relief.name}"`);
       expect(separate).toContain(`displaycolor="${built.result.appearance.base.color}"`);

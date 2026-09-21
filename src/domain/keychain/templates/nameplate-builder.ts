@@ -219,13 +219,14 @@ export const buildNameplate = (
       code: 'dense-mesh',
       message: 'This curved model exceeds 12,000 triangles and may take longer to slice.',
     });
+  const trimmedVisibleText = tiltedText.trimByPlane([0, 0, 1], baseThickness - 100);
+  const visibleText = trimmedVisibleText.simplify(20);
+  trimmedVisibleText.delete();
   const foundation = wasm.Manifold.union([plate, carrier]);
-  const partition = partitionMaterialSolids(foundation, tiltedText);
+  const partition = partitionMaterialSolids(foundation, visibleText, model);
   foundation.delete();
-  model.delete();
-  model = partition.model;
   const baseMesh = asMesh(partition.base);
-  const reliefMesh = asMesh(tiltedText);
+  const reliefMesh = asMesh(visibleText);
   const exportMesh = includeExport ? asMesh(model) : undefined;
   const printable =
     model.status() === 'NoError' &&
@@ -273,6 +274,7 @@ export const buildNameplate = (
     ...new Set([
       model,
       partition.base,
+      visibleText,
       tiltedText,
       carrier,
       plate,
