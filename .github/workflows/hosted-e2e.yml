@@ -12,6 +12,7 @@ on:
       - 'src/shared/lib/create-path.ts'
       - 'e2e/hosted-*.spec.ts'
       - 'playwright.hosted.config.ts'
+      - 'vite.config.ts'
       - 'package.json'
       - 'pnpm-lock.yaml'
   workflow_dispatch:
