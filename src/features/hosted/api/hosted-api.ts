@@ -68,6 +68,7 @@ export const completeExportIntent = (
     recorded: boolean;
   }>(`/api/usage/export-complete/${encodeURIComponent(token)}`, {
     method: 'POST',
+    body: JSON.stringify({}),
   });
 };
 export const currentUser = async (): Promise<HostedUser | undefined> => {
