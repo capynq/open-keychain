@@ -107,7 +107,10 @@ export const signIn = (
   });
 };
 export const signOut = async (): Promise<void> => {
-  await apiRequest('/api/auth/sign-out', { method: 'POST' });
+  await apiRequest('/api/auth/sign-out', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
 };
 export const listProjects = async (): Promise<HostedProject[]> => {
   return (

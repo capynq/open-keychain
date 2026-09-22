@@ -24,9 +24,17 @@ describe('hosted API preset mutations', () => {
   });
 
   it('accepts Better Auth sign-out responses without a JSON body', async () => {
-    globalThis.fetch = vi.fn(async () => new Response(null, { status: 204 }));
+    const fetch = vi.fn(async () => new Response(null, { status: 204 }));
+    globalThis.fetch = fetch;
 
     await expect(signOut()).resolves.toBeUndefined();
+
+    expect(fetch).toHaveBeenCalledWith('/api/auth/sign-out', {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: '{}',
+    });
   });
 
   it('treats only an unauthorized account lookup as signed out', async () => {
