@@ -21,6 +21,7 @@ Resolve the Dependabot queue after fixing the shared Hosted E2E authentication/e
 - Hosted E2E passed for the fix PR and every package/dependency PR that required it; the hosted auth/export timeout is resolved.
 - PR #35: `pnpm validate` passed with 40 test files / 499 tests and production build; `pnpm bench:matrix` passed 4,267 cases with 4,264 passed, 3 documented expected-invalid, and zero unexpected failures; `pnpm validation:fixtures` passed 10 cases / 30 files; pinned PrusaSlicer workflow run `35710946069` passed.
 - PR #38: `pnpm validate` passed with 40 test files / 499 tests and production build; browser smoke passed all 6 desktop/mobile tests after installing the matching Playwright browser.
+- The transitive `js-yaml` security alert was remediated by updating the lockfile from 4.3.1 to patched 4.3.2; the post-fix `pnpm install --frozen-lockfile` and `pnpm validate` passed.
 - Netlify preview/header/redirect checks passed for all merged PRs. Physical-print evidence remains distinct from automated slicer validation.
 
 ## Exact next action
