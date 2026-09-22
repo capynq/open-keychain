@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { currentUser, deletePreset, signOut } from './hosted-api';
+import {
+  completeExportIntent,
+  currentUser,
+  deletePreset,
+  requestExportIntent,
+  signOut,
+} from './hosted-api';
 
 describe('hosted API preset mutations', () => {
   const originalFetch = globalThis.fetch;
@@ -24,9 +30,53 @@ describe('hosted API preset mutations', () => {
   });
 
   it('accepts Better Auth sign-out responses without a JSON body', async () => {
-    globalThis.fetch = vi.fn(async () => new Response(null, { status: 204 }));
+    const fetch = vi.fn(async () => new Response(null, { status: 204 }));
+    globalThis.fetch = fetch;
 
     await expect(signOut()).resolves.toBeUndefined();
+
+    expect(fetch).toHaveBeenCalledWith('/api/auth/sign-out', {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: '{}',
+    });
+  });
+
+  it('sends an empty JSON object when requesting an export intent', async () => {
+    const fetch = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ token: 'token', expiresAt: '2026-09-22T00:00:00Z' }), {
+          status: 200,
+        }),
+    );
+    globalThis.fetch = fetch;
+
+    await expect(requestExportIntent()).resolves.toEqual({
+      token: 'token',
+      expiresAt: '2026-09-22T00:00:00Z',
+    });
+    expect(fetch).toHaveBeenCalledWith('/api/usage/export-intent', {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: '{}',
+    });
+  });
+
+  it('sends an empty JSON object when completing an export intent', async () => {
+    const fetch = vi.fn(
+      async () => new Response(JSON.stringify({ recorded: true }), { status: 200 }),
+    );
+    globalThis.fetch = fetch;
+
+    await expect(completeExportIntent('token / 1')).resolves.toEqual({ recorded: true });
+    expect(fetch).toHaveBeenCalledWith('/api/usage/export-complete/token%20%2F%201', {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: '{}',
+    });
   });
 
   it('treats only an unauthorized account lookup as signed out', async () => {

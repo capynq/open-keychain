@@ -54,7 +54,10 @@ const apiRequest = async <T>(path: string, init?: RequestInit): Promise<T> => {
   return (await response.json()) as T;
 };
 export const requestExportIntent = (): Promise<ExportIntent> => {
-  return apiRequest<ExportIntent>('/api/usage/export-intent', { method: 'POST' });
+  return apiRequest<ExportIntent>('/api/usage/export-intent', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
 };
 export const completeExportIntent = (
   token: string,
@@ -65,6 +68,7 @@ export const completeExportIntent = (
     recorded: boolean;
   }>(`/api/usage/export-complete/${encodeURIComponent(token)}`, {
     method: 'POST',
+    body: JSON.stringify({}),
   });
 };
 export const currentUser = async (): Promise<HostedUser | undefined> => {
@@ -107,7 +111,10 @@ export const signIn = (
   });
 };
 export const signOut = async (): Promise<void> => {
-  await apiRequest('/api/auth/sign-out', { method: 'POST' });
+  await apiRequest('/api/auth/sign-out', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
 };
 export const listProjects = async (): Promise<HostedProject[]> => {
   return (
