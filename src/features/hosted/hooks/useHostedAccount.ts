@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type SubmitEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type SubmitEvent } from 'react';
 
 import type { KeychainParams } from '@/entities/keychain/model/types';
 
@@ -76,6 +76,7 @@ export const useHostedAccount = (
   const [saveError, setSaveError] = useState<string>();
   const [deletingId, setDeletingId] = useState<string>();
   const [deleteError, setDeleteError] = useState<string>();
+  const authEpoch = useRef(0);
   const { track } = useAnalytics();
 
   const refresh = useCallback(async (): Promise<void> => {
@@ -85,11 +86,15 @@ export const useHostedAccount = (
     }
     setLoading(true);
     setLoadError(undefined);
+    const epoch = authEpoch.current;
     try {
       const user = await currentUser();
+      if (epoch !== authEpoch.current) return;
 
+      const nextPresets = user ? await listPresets() : [];
+      if (epoch !== authEpoch.current) return;
       setAccount(user);
-      setPresets(user ? await listPresets() : []);
+      setPresets(nextPresets);
     } catch {
       setLoadError('We could not load your workspace. Try again.');
     } finally {
@@ -107,14 +112,17 @@ export const useHostedAccount = (
     event.preventDefault();
     setAuthBusy(true);
     setAuthError(undefined);
+    const epoch = ++authEpoch.current;
     try {
       const response =
         authMode === 'sign-up'
           ? await signUp(authName, authEmail, authPassword)
           : await signIn(authEmail, authPassword);
 
+      const nextPresets = await listPresets();
+      if (epoch !== authEpoch.current) return;
       setAccount(response.user);
-      setPresets(await listPresets());
+      setPresets(nextPresets);
       setAuthPassword('');
     } catch (cause) {
       setAuthError(cause instanceof Error ? cause.message : 'Authentication failed.');
@@ -171,6 +179,7 @@ export const useHostedAccount = (
   };
 
   const logOut = async (): Promise<void> => {
+    ++authEpoch.current;
     await signOut();
     setAccount(undefined);
     setPresets([]);
