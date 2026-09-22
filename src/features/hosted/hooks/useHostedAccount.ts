@@ -174,6 +174,7 @@ export const useHostedAccount = (
     await signOut();
     setAccount(undefined);
     setPresets([]);
+    setAuthMode('sign-in');
   };
 
   return {
