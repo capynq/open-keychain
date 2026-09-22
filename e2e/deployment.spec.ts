@@ -27,6 +27,7 @@ test('loads static metadata and privacy page in production', async ({ page }) =>
   const assertNoBrowserErrors = watchBrowserErrors(page);
   await page.goto('/');
   await expect(page.locator('.landing-template-card img')).toHaveCount(4);
+  await page.locator('.landing-template-card').last().scrollIntoViewIfNeeded();
   await Promise.all([
     ...Array.from({ length: 4 }, (_, index) =>
       waitForImageToLoad(page.locator('.landing-template-card img').nth(index)),
@@ -36,9 +37,20 @@ test('loads static metadata and privacy page in production', async ({ page }) =>
   const robots = await page.request.get('/robots.txt');
   expect(robots.ok()).toBe(true);
   expect(await robots.text()).toContain('Sitemap: https://open-keychain.com/sitemap.xml');
-  expect(await robots.text()).toContain('LLMs: https://open-keychain.com/llms.txt');
+  expect(await robots.text()).not.toContain('LLMs:');
   expect((await page.request.get('/sitemap.xml')).ok()).toBe(true);
   expect((await page.request.get('/llms.txt')).ok()).toBe(true);
+  const aiCatalog = await page.request.get('/ai-catalog.json');
+  expect(aiCatalog.ok()).toBe(true);
+  expect(aiCatalog.headers()['content-type']).toContain('application/json');
+  expect(await aiCatalog.json()).toMatchObject({
+    specVersion: '1.0',
+    entries: [
+      {
+        url: 'https://open-keychain.com/create',
+      },
+    ],
+  });
   expect((await page.request.get('/privacy')).ok()).toBe(true);
   assertNoBrowserErrors();
 });

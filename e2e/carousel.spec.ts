@@ -52,6 +52,23 @@ test('provides three stable, fully framed showcase slides', async ({ page }) => 
   assertNoBrowserErrors();
 });
 
+test('uses a named carousel region with localized slide groups', async ({ page }) => {
+  await page.goto('/');
+
+  const region = page.getByRole('region', { name: 'Open Keychain customizer preview' });
+  await expect(region).toHaveAttribute('aria-roledescription', 'carousel');
+  await expect(region.locator('figure')).toHaveCount(1);
+  const slides = region.locator('[data-showcase-slide]');
+  await expect(slides).toHaveCount(3);
+
+  for (const index of [0, 1, 2]) {
+    const slide = slides.nth(index);
+    await expect(slide).toHaveAttribute('role', 'group');
+    await expect(slide).toHaveAttribute('aria-roledescription', 'slide');
+    await expect(slide).toHaveAttribute('aria-label', `Slide ${index + 1} of 3`);
+  }
+});
+
 test('keeps controls single-step, wrapped, and locked while moving', async ({ page }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
   await page.goto('/');

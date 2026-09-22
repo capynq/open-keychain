@@ -10,6 +10,7 @@ import { setLocale } from '../../infrastructure/i18n/utils';
 export const useAppNavigationEffects = (location: Location, locale: Locale): void => {
   useEffect(() => {
     if (location.hash) return;
+    if (window.scrollX === 0 && window.scrollY === 0) return;
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [location.hash, location.pathname, location.search]);
 

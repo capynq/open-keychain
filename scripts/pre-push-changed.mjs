@@ -80,6 +80,7 @@ const isGeometryOrFontFile = (file) => {
     normalized.startsWith('src/infrastructure/geometry/') ||
     normalized.startsWith('public/fonts/') ||
     normalized === 'public/manifold.wasm' ||
+    normalized === 'public/manifold-v1.wasm' ||
     normalized.startsWith('scripts/bench-') ||
     normalized.startsWith('scripts/generate-validation-fixtures') ||
     /\.(ttf|otf|woff2?|eot)$/i.test(normalized)
@@ -88,7 +89,11 @@ const isGeometryOrFontFile = (file) => {
 
 const isHostingFile = (file) => {
   const normalized = file.replaceAll('\\', '/');
-  return normalized === 'netlify.toml' || normalized.startsWith('server/');
+  return (
+    normalized === 'netlify.toml' ||
+    normalized === 'public/_headers' ||
+    normalized.startsWith('server/')
+  );
 };
 
 export const classifyChangedFiles = (files) => {

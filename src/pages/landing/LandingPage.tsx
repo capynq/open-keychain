@@ -11,6 +11,7 @@ import type { Locale } from '../../infrastructure/i18n/config';
 
 import { useAnalytics } from '../../infrastructure/telemetry/useTelemetry';
 import './LandingPage.module.css';
+import '../../app/styles/landing.css';
 
 export const LandingPage = ({
   locale,

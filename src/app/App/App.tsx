@@ -7,7 +7,6 @@ import { type Locale } from '../../infrastructure/i18n/config';
 import { setLocale } from '../../infrastructure/i18n/utils';
 import './App.module.css';
 import '../styles/app.css';
-import '../styles/landing.css';
 import { useAnalytics } from '../../infrastructure/telemetry/useTelemetry';
 import { AnalyticsConsentBanner } from '../components/AnalyticsConsentBanner/AnalyticsConsentBanner';
 import { RouteErrorBoundary } from '../components/RouteErrorBoundary/RouteErrorBoundary';

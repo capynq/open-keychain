@@ -11,6 +11,7 @@ type Slide = {
   id: string;
   kind: 'configurator' | 'photo';
   src?: string;
+  modernAssetName?: string;
   alt: string;
   label: string;
   caption: string;
@@ -28,6 +29,7 @@ const getSlides = (locale: Locale): Slide[] => [
     id: 'print-example-1',
     kind: 'photo',
     src: locale === 'en' ? '/showcase/prints/example_1-en.png' : '/showcase/prints/example_1.png',
+    modernAssetName: locale === 'en' ? 'example_1-en' : 'example_1',
     alt: t(locale, 'landing.printExample1Alt'),
     label: t(locale, 'landing.printExampleLabel'),
     caption: t(locale, 'landing.printExample1Caption'),
@@ -36,6 +38,7 @@ const getSlides = (locale: Locale): Slide[] => [
     id: 'print-example-2',
     kind: 'photo',
     src: locale === 'en' ? '/showcase/prints/example_2-en.png' : '/showcase/prints/example_2.png',
+    modernAssetName: locale === 'en' ? 'example_2-en' : 'example_2',
     alt: t(locale, 'landing.printExample2Alt'),
     label: t(locale, 'landing.printExampleLabel'),
     caption: t(locale, 'landing.printExample2Caption'),
@@ -123,134 +126,187 @@ export const ConfiguratorShowcase = ({ locale }: { locale: Locale }) => {
   };
 
   return (
-    <figure
+    <section
       className={`${styles.root} configurator-showcase`}
       role="region"
       aria-roledescription="carousel"
       aria-label={t(locale, 'landing.previewLabel')}
     >
-      <div
-        className="configurator-carousel"
-        ref={viewportRef}
-        tabIndex={0}
-        data-moving={isMoving ? 'true' : 'false'}
-        onKeyDown={onKeyDown}
-      >
-        <div className="configurator-carousel-track">
-          {slides.map((slide, index) => (
-            <div
-              className="configurator-window configurator-carousel-slide"
-              data-showcase-slide={slide.id}
-              data-showcase-kind={slide.kind}
-              data-active={index === active ? 'true' : 'false'}
-              aria-hidden={index === active ? undefined : true}
-              key={slide.id}
-            >
-              <div className="configurator-window-bar">
-                <span className="configurator-window-dots" aria-hidden="true">
-                  <i />
-                  <i />
-                  <i />
-                </span>
-                <span className="configurator-window-label">
-                  {slide.kind === 'configurator' ? (
-                    <>
-                      <span className="configurator-desktop-label">
-                        {t(locale, 'landing.desktopWorkspace')}
+      <figure>
+        <div
+          className="configurator-carousel"
+          ref={viewportRef}
+          tabIndex={0}
+          data-moving={isMoving ? 'true' : 'false'}
+          onKeyDown={onKeyDown}
+        >
+          <div className="configurator-carousel-track">
+            {slides.map((slide, index) => (
+              <div
+                className="configurator-window configurator-carousel-slide"
+                data-showcase-slide={slide.id}
+                data-showcase-kind={slide.kind}
+                data-active={index === active ? 'true' : 'false'}
+                role="group"
+                aria-roledescription="slide"
+                aria-label={t(locale, 'landing.carouselSlideStatus', {
+                  current: index + 1,
+                  total: slides.length,
+                })}
+                aria-hidden={index === active ? undefined : true}
+                key={slide.id}
+              >
+                <div className="configurator-window-bar">
+                  <span className="configurator-window-dots" aria-hidden="true">
+                    <i />
+                    <i />
+                    <i />
+                  </span>
+                  <span className="configurator-window-label">
+                    {slide.kind === 'configurator' ? (
+                      <>
+                        <span className="configurator-desktop-label">
+                          {t(locale, 'landing.desktopWorkspace')}
+                        </span>
+                        <span className="configurator-mobile-label">
+                          {t(locale, 'landing.mobileWorkspace')}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="configurator-print-label">
+                        {t(locale, 'landing.printExampleLabel')}
                       </span>
-                      <span className="configurator-mobile-label">
-                        {t(locale, 'landing.mobileWorkspace')}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="configurator-print-label">
-                      {t(locale, 'landing.printExampleLabel')}
+                    )}
+                  </span>
+                  {slide.kind === 'configurator' && (
+                    <span className="configurator-window-status">
+                      {t(locale, 'landing.localBadge')}
                     </span>
                   )}
-                </span>
-                {slide.kind === 'configurator' && (
-                  <span className="configurator-window-status">
-                    {t(locale, 'landing.localBadge')}
-                  </span>
-                )}
+                </div>
+                <div
+                  className={`configurator-carousel-media configurator-carousel-media-${slide.kind}`}
+                >
+                  {slide.kind === 'configurator' ? (
+                    <picture>
+                      <source
+                        type="image/avif"
+                        media="(max-width: 760px)"
+                        srcSet="/showcase/v1/create-mobile-390.avif 390w, /showcase/v1/create-mobile-780.avif 780w"
+                        sizes="100vw"
+                      />
+                      <source
+                        type="image/avif"
+                        srcSet="/showcase/v1/create-desktop-720.avif 720w, /showcase/v1/create-desktop-1440.avif 1440w"
+                        sizes="(max-width: 760px) 100vw, 50vw"
+                      />
+                      <source
+                        type="image/webp"
+                        media="(max-width: 760px)"
+                        srcSet="/showcase/v1/create-mobile-390.webp 390w, /showcase/v1/create-mobile-780.webp 780w"
+                        sizes="100vw"
+                      />
+                      <source
+                        type="image/webp"
+                        srcSet="/showcase/v1/create-desktop-720.webp 720w, /showcase/v1/create-desktop-1440.webp 1440w"
+                        sizes="(max-width: 760px) 100vw, 50vw"
+                      />
+                      <source
+                        media="(max-width: 760px)"
+                        srcSet="/showcase/create-mobile.png 1x, /showcase/create-mobile@2x.png 2x"
+                        sizes="100vw"
+                      />
+                      <img
+                        src="/showcase/create-desktop.png"
+                        srcSet="/showcase/create-desktop.png 1x"
+                        sizes="(max-width: 760px) 100vw, 50vw"
+                        alt={slide.alt}
+                        width="1440"
+                        height="900"
+                        fetchPriority="high"
+                        loading="eager"
+                        decoding="async"
+                      />
+                    </picture>
+                  ) : (
+                    <picture>
+                      <source
+                        type="image/avif"
+                        srcSet={`/showcase/v1/prints/${slide.modernAssetName}-627.avif 627w, /showcase/v1/prints/${slide.modernAssetName}-1254.avif 1254w`}
+                        sizes="(max-width: 760px) calc(100vw - 50px), 627px"
+                      />
+                      <source
+                        type="image/webp"
+                        srcSet={`/showcase/v1/prints/${slide.modernAssetName}-627.webp 627w, /showcase/v1/prints/${slide.modernAssetName}-1254.webp 1254w`}
+                        sizes="(max-width: 760px) calc(100vw - 50px), 627px"
+                      />
+                      <img
+                        src={slide.src}
+                        alt={slide.alt}
+                        width="1254"
+                        height="1254"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    </picture>
+                  )}
+                </div>
               </div>
-              <div
-                className={`configurator-carousel-media configurator-carousel-media-${slide.kind}`}
-              >
-                {slide.kind === 'configurator' ? (
-                  <picture>
-                    <source
-                      media="(max-width: 760px)"
-                      srcSet="/showcase/create-mobile.png 1x, /showcase/create-mobile@2x.png 2x"
-                      sizes="100vw"
-                    />
-                    <img
-                      src="/showcase/create-desktop.png"
-                      srcSet="/showcase/create-desktop.png 1x"
-                      sizes="(max-width: 760px) 100vw, 50vw"
-                      alt={slide.alt}
-                      width="1440"
-                      height="900"
-                      fetchPriority="high"
-                      loading="eager"
-                    />
-                  </picture>
-                ) : (
-                  <img src={slide.src} alt={slide.alt} width="1254" height="1254" loading="lazy" />
-                )}
-              </div>
-            </div>
+            ))}
+          </div>
+          <button
+            className="configurator-carousel-arrow configurator-carousel-prev"
+            type="button"
+            data-showcase-control="previous"
+            aria-label={t(locale, 'landing.carouselPrevious')}
+            disabled={!emblaApi || isMoving}
+            onClick={() => navigate((instant) => emblaApi?.scrollPrev(instant))}
+          >
+            ‹
+          </button>
+          <button
+            className="configurator-carousel-arrow configurator-carousel-next"
+            type="button"
+            data-showcase-control="next"
+            aria-label={t(locale, 'landing.carouselNext')}
+            disabled={!emblaApi || isMoving}
+            onClick={() => navigate((instant) => emblaApi?.scrollNext(instant))}
+          >
+            ›
+          </button>
+        </div>
+        <div className="configurator-carousel-status" aria-live="polite">
+          {t(locale, 'landing.carouselSlideStatus', {
+            current: active + 1,
+            total: slides.length,
+          })}
+        </div>
+        <div
+          className="configurator-carousel-dots"
+          role="group"
+          aria-label={t(locale, 'landing.carouselSelect')}
+        >
+          {slides.map((slide, index) => (
+            <button
+              key={slide.id}
+              type="button"
+              data-showcase-control={`slide-${index + 1}`}
+              data-active={active === index ? 'true' : 'false'}
+              aria-label={t(locale, 'landing.carouselSelectSlide', { number: index + 1 })}
+              aria-pressed={active === index}
+              disabled={!emblaApi || isMoving}
+              onClick={() => navigate((instant) => emblaApi?.scrollTo(index, instant))}
+            >
+              <span aria-hidden="true" />
+            </button>
           ))}
         </div>
-        <button
-          className="configurator-carousel-arrow configurator-carousel-prev"
-          type="button"
-          data-showcase-control="previous"
-          aria-label={t(locale, 'landing.carouselPrevious')}
-          disabled={!emblaApi || isMoving}
-          onClick={() => navigate((instant) => emblaApi?.scrollPrev(instant))}
-        >
-          ‹
-        </button>
-        <button
-          className="configurator-carousel-arrow configurator-carousel-next"
-          type="button"
-          data-showcase-control="next"
-          aria-label={t(locale, 'landing.carouselNext')}
-          disabled={!emblaApi || isMoving}
-          onClick={() => navigate((instant) => emblaApi?.scrollNext(instant))}
-        >
-          ›
-        </button>
-      </div>
-      <div className="configurator-carousel-status" aria-live="polite">
-        {t(locale, 'landing.carouselSlideStatus', { current: active + 1, total: slides.length })}
-      </div>
-      <div
-        className="configurator-carousel-dots"
-        role="group"
-        aria-label={t(locale, 'landing.carouselSelect')}
-      >
-        {slides.map((slide, index) => (
-          <button
-            key={slide.id}
-            type="button"
-            data-showcase-control={`slide-${index + 1}`}
-            data-active={active === index ? 'true' : 'false'}
-            aria-label={t(locale, 'landing.carouselSelectSlide', { number: index + 1 })}
-            aria-pressed={active === index}
-            disabled={!emblaApi || isMoving}
-            onClick={() => navigate((instant) => emblaApi?.scrollTo(index, instant))}
-          >
-            <span aria-hidden="true" />
-          </button>
-        ))}
-      </div>
-      <figcaption className="configurator-showcase-caption">
-        <span>{slides[active].label}</span>
-        <span aria-hidden="true">·</span>
-        <span>{slides[active].caption}</span>
-      </figcaption>
-    </figure>
+        <figcaption className="configurator-showcase-caption">
+          <span>{slides[active].label}</span>
+          <span aria-hidden="true">·</span>
+          <span>{slides[active].caption}</span>
+        </figcaption>
+      </figure>
+    </section>
   );
 };

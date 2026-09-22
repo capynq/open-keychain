@@ -244,6 +244,7 @@
 }
 
 .configurator-showcase {
+  contain: layout;
   position: relative;
   min-width: 0;
   margin: 0;
@@ -477,6 +478,8 @@
 }
 
 .landing-section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 800px;
   padding: clamp(76px, 10vw, 132px) 0 0;
 }
 
@@ -746,6 +749,8 @@
 }
 
 .landing-trust {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 420px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1px;
@@ -781,6 +786,8 @@
 }
 
 .landing-footer {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 100px;
   display: flex;
   flex-wrap: wrap;
   gap: 12px 24px;

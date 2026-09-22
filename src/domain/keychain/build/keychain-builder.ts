@@ -146,8 +146,8 @@ export const createWasm = async (): Promise<Wasm> => {
   const isWorkerRuntime = typeof self !== 'undefined';
   const wasmPath =
     isBrowserRuntime || isWorkerRuntime
-      ? '/manifold.wasm'
-      : new URL('../../../../public/manifold.wasm', import.meta.url).pathname;
+      ? '/manifold-v1.wasm'
+      : new URL('../../../../public/manifold-v1.wasm', import.meta.url).pathname;
   const wasm = await Module({ locateFile: () => wasmPath });
   wasm.setup();
   return wasm;

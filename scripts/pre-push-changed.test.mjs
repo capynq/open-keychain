@@ -68,6 +68,15 @@ describe('classifyChangedFiles', () => {
     expect(result.needsGeometryBenchmark).toBe(false);
   });
 
+  it('selects geometry, browser, and hosting checks for versioned static artifacts', () => {
+    const result = classifyChangedFiles(['public/manifold-v1.wasm', 'public/_headers']);
+
+    expect(result.needsCoreValidation).toBe(true);
+    expect(result.needsBrowserValidation).toBe(true);
+    expect(result.needsGeometryBenchmark).toBe(true);
+    expect(result.needsHostingValidation).toBe(true);
+  });
+
   it('collects changed files from every pushed ref and includes deletions', () => {
     const calls = [];
     const files = collectChangedFiles(

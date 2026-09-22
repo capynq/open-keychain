@@ -1,0 +1,24 @@
+{
+  "specVersion": "1.0",
+  "host": {
+    "displayName": "Open Keychain 3D",
+    "documentationUrl": "https://github.com/capynq/open-keychain/blob/main/docs/webmcp.md",
+    "logoUrl": "https://open-keychain.com/brand/open-keychain-og.png"
+  },
+  "entries": [
+    {
+      "identifier": "urn:air:open-keychain:browser:webmcp-customizer",
+      "displayName": "Open Keychain browser customizer",
+      "type": "text/html",
+      "url": "https://open-keychain.com/create",
+      "description": "A browser-local WebMCP customizer for printable 3D keychains.",
+      "tags": ["3D printing", "keychain", "WebMCP", "browser-local"],
+      "capabilities": ["get-keychain-state", "customize-keychain"],
+      "representativeQueries": [
+        "Customize a printable 3D keychain in the browser",
+        "Create a keychain design with Open Keychain"
+      ],
+      "version": "1.0.0"
+    }
+  ]
+}

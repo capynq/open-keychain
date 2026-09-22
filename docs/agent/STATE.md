@@ -3,27 +3,29 @@
 ## Repository state
 
 - **Branch:** `main`
-- **HEAD:** `7d8aa79` (`chore(deps-dev): bump the npm-development group across 1 directory with 14 updates`), pushed to `origin/main`.
-- **Working tree:** dependency resolution is complete; this documentation update is the only pending local change.
+- **HEAD:** `e268530` (`fix(deps): remediate js-yaml security alert`)
+- **Working tree:** Uncommitted PageSpeed landing work is present; it has not been staged or committed.
 
 ## Current objective
 
-Resolve the Dependabot queue after fixing the shared Hosted E2E authentication/export setup.
+Remediate the supplied PageSpeed SEO, accessibility, and landing-performance findings without changing public routes, PNG/social-image compatibility, or carousel behavior.
 
-## Recently completed
+## Completed in the working tree
 
-- PR #39 merged the Hosted E2E fix: same-origin Vite `/api` proxy for server and preview, workflow path coverage, explicit empty JSON bodies for auth/export POSTs, logout auth-mode reset, and stale-auth response guards. Code-owner review was bypassed with the user's approval.
-- PR #37 (GitHub Actions), #33 (Vitest), #35 (grouped production dependencies), and #38 (grouped development dependencies) merged after fresh green quality, Hosted E2E, and Netlify checks. Code-owner review was bypassed with the user's approval.
-- PR #30 was closed as superseded by #35 (Fastify update). PR #34 was closed as superseded by #38 (Sharp update). `gh pr list --state open` is empty.
+- Added `/ai-catalog.json`, removed the unsupported `LLMs:` robots directive, and retained `/llms.txt` discovery through HTML and HTTP `describedby` links.
+- Added catalog, font, versioned showcase, and versioned Manifold WASM headers; the geometry loader now uses `/manifold-v1.wasm` while the legacy file remains available.
+- Moved the carousel landmark to a named section, kept native figure semantics, and added localized slide group labels.
+- Lazy-loaded landing CSS away from customizer/profile routes, avoided redundant at-top navigation scrolling, added below-fold containment, and added AVIF/WebP picture sources with legacy PNG fallbacks.
+- Added the reproducible `pnpm assets:landing` Sharp generator and checked in `showcase/v1` derivatives.
 
-## Validation state
+## Validation actually run
 
-- Hosted E2E passed for the fix PR and every package/dependency PR that required it; the hosted auth/export timeout is resolved.
-- PR #35: `pnpm validate` passed with 40 test files / 499 tests and production build; `pnpm bench:matrix` passed 4,267 cases with 4,264 passed, 3 documented expected-invalid, and zero unexpected failures; `pnpm validation:fixtures` passed 10 cases / 30 files; pinned PrusaSlicer workflow run `35710946069` passed.
-- PR #38: `pnpm validate` passed with 40 test files / 499 tests and production build; browser smoke passed all 6 desktop/mobile tests after installing the matching Playwright browser.
-- The transitive `js-yaml` security alert was remediated by updating the lockfile from 4.3.1 to patched 4.3.2; the post-fix `pnpm install --frozen-lockfile` and `pnpm validate` passed.
-- Netlify preview/header/redirect checks passed for all merged PRs. Physical-print evidence remains distinct from automated slicer validation.
+- `pnpm validate` passed: formatting, lint, type-checking, 41 unit files / 504 tests, and production build.
+- `pnpm validate:changed -- …` passed for the changed source/static files.
+- Carousel and route Playwright coverage passed across desktop, mobile, and mobile-2x (78 tests).
+- Deployment/static-resource coverage passed across all three projects (12 tests); smoke coverage passed (9 tests); gated performance coverage passed (9 tests).
+- A local Chromium trace of the landing load recorded 1,222 events, including 10 `Layout` and 12 `UpdateLayoutTree` events. These residual browser/framework events were not used to justify speculative carousel changes.
 
 ## Exact next action
 
-Continue the active Customizer-coherence milestone. Preserve the distinction between automated slicer validation and physical-print proof.
+Review the uncommitted PageSpeed diff and, only with explicit approval, stage and commit the coherent change.

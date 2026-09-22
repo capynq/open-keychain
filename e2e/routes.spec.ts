@@ -94,6 +94,7 @@ test('loads all reviewed landing visuals at the active responsive breakpoint', a
 
   await page.goto('/');
   await expect(page.locator('.landing-template-card img')).toHaveCount(4);
+  await page.locator('.landing-template-card').last().scrollIntoViewIfNeeded();
   await Promise.all([
     ...Array.from({ length: 4 }, (_, index) =>
       waitForImageToLoad(page.locator('.landing-template-card img').nth(index)),
@@ -107,14 +108,14 @@ test('loads all reviewed landing visuals at the active responsive breakpoint', a
     }),
   );
 
-  expect(images.every((image) => image.src.includes('/showcase/templates/'))).toBe(true);
+  expect(images.every((image) => image.src.includes('/showcase/v1/templates/'))).toBe(true);
   expect(images.every((image) => image.width > 0 && image.height > 0)).toBe(true);
   const expectedHeroAsset =
     testInfo.project.name === 'mobile-2x'
-      ? 'create-mobile@2x.png'
+      ? 'create-mobile-780'
       : testInfo.project.name === 'mobile'
-        ? 'create-mobile.png'
-        : 'create-desktop.png';
+        ? 'create-mobile-390'
+        : 'create-desktop-720';
   await expect
     .poll(
       () =>
@@ -145,8 +146,8 @@ test('loads all reviewed landing visuals at the active responsive breakpoint', a
     testInfo.project.name === 'mobile-2x'
       ? { width: 390, height: 844 }
       : testInfo.project.name === 'mobile'
-        ? { width: 780, height: 1688 }
-        : { width: 2880, height: 1800 };
+        ? { width: 390, height: 844 }
+        : { width: 720, height: 450 };
   expect(heroImageState.width).toBe(expectedHeroDimensions.width);
   expect(heroImageState.height).toBe(expectedHeroDimensions.height);
   expect(heroImageState.width).toBeGreaterThan(heroImageState.renderedWidth);
@@ -157,9 +158,9 @@ test('loads all reviewed landing visuals at the active responsive breakpoint', a
     'sizes',
     '(max-width: 760px) 100vw, 50vw',
   );
-  await expect(page.locator('.configurator-window source')).toHaveAttribute(
+  await expect(page.locator('.configurator-window source').first()).toHaveAttribute(
     'srcset',
-    /create-mobile\.png 1x, \/showcase\/create-mobile@2x\.png 2x/,
+    /create-mobile-390\.avif 390w, \/showcase\/v1\/create-mobile-780\.avif 780w/,
   );
   assertNoBrowserErrors();
 });
@@ -172,14 +173,9 @@ test('uses the density-appropriate mobile customizer capture on a mobile landing
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await expect(page.locator('.landing-template-card img')).toHaveCount(4);
-  await Promise.all([
-    ...Array.from({ length: 4 }, (_, index) =>
-      waitForImageToLoad(page.locator('.landing-template-card img').nth(index)),
-    ),
-    waitForImageToLoad(page.locator(activeHeroImageSelector)),
-  ]);
+  await waitForImageToLoad(page.locator(activeHeroImageSelector));
   const expectedHeroAsset =
-    testInfo.project.name === 'mobile-2x' ? 'create-mobile@2x.png' : 'create-mobile.png';
+    testInfo.project.name === 'mobile-2x' ? 'create-mobile-780' : 'create-mobile-390';
   await expect
     .poll(
       () =>
@@ -207,7 +203,7 @@ test('uses the density-appropriate mobile customizer capture on a mobile landing
   const expectedMobileIntrinsicDimensions =
     testInfo.project.name === 'mobile-2x'
       ? { width: 390, height: 844 }
-      : { width: 780, height: 1688 };
+      : { width: 390, height: 844 };
   expect(imageState.width).toBe(expectedMobileIntrinsicDimensions.width);
   expect(imageState.height).toBe(expectedMobileIntrinsicDimensions.height);
   expect(imageState.width).toBeGreaterThan(imageState.renderedWidth);
@@ -215,9 +211,9 @@ test('uses the density-appropriate mobile customizer capture on a mobile landing
   expect(
     await page.locator(activeHeroImageSelector).evaluate((element) => {
       const image = element as HTMLImageElement;
-      return image.currentSrc.endsWith('/showcase/create-mobile.png');
+      return image.currentSrc.includes('/showcase/v1/create-mobile-');
     }),
-  ).toBe(testInfo.project.name !== 'mobile-2x');
+  ).toBe(true);
   assertNoBrowserErrors();
 });
 

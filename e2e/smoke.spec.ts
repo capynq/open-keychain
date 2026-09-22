@@ -19,6 +19,7 @@ test('loads the landing hero, reviewed visuals, and carousel without layout erro
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await expect(page.locator('[data-showcase-slide]')).toHaveCount(3);
   await expect(page.locator('.landing-template-card img')).toHaveCount(4);
+  await page.locator('.landing-template-card').last().scrollIntoViewIfNeeded();
   await Promise.all([
     ...Array.from({ length: 4 }, (_, index) =>
       waitForImageToLoad(page.locator('.landing-template-card img').nth(index)),

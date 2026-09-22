@@ -10,6 +10,7 @@ export const RUN_ITEMS = [0, 1, 2] as const;
 export type TemplateShowcase = {
   id: TemplateId;
   assetPath: string;
+  modernAssetName: string;
   titleKey: string;
   bodyKey: string;
   altKey: string;
@@ -22,6 +23,7 @@ export const TEMPLATE_SHOWCASE: readonly TemplateShowcase[] = [
   {
     id: 'name-keychain',
     assetPath: '/showcase/templates/name-keychain.png',
+    modernAssetName: 'name-keychain',
     titleKey: 'landing.products.keychain.title',
     bodyKey: 'landing.products.keychain.body',
     altKey: 'landing.templatePreviewAlt.nameKeychain',
@@ -29,6 +31,7 @@ export const TEMPLATE_SHOWCASE: readonly TemplateShowcase[] = [
   {
     id: 'articulated-name',
     assetPath: '/showcase/templates/articulated-name.png',
+    modernAssetName: 'articulated-name',
     titleKey: 'landing.products.articulated.title',
     bodyKey: 'landing.products.articulated.body',
     altKey: 'landing.templatePreviewAlt.articulatedName',
@@ -36,6 +39,7 @@ export const TEMPLATE_SHOWCASE: readonly TemplateShowcase[] = [
   {
     id: 'nameplate',
     assetPath: '/showcase/templates/nameplate.png',
+    modernAssetName: 'nameplate',
     titleKey: 'landing.products.nameplate.title',
     bodyKey: 'landing.products.nameplate.body',
     altKey: 'landing.templatePreviewAlt.nameplate',
@@ -43,6 +47,7 @@ export const TEMPLATE_SHOWCASE: readonly TemplateShowcase[] = [
   {
     id: 'plant-label',
     assetPath: '/showcase/templates/plant-label.png',
+    modernAssetName: 'plant-label',
     titleKey: 'landing.products.plantLabel.title',
     bodyKey: 'landing.products.plantLabel.body',
     altKey: 'landing.templatePreviewAlt.plantLabel',
