@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { currentUser, deletePreset, signOut } from './hosted-api';
+import { currentUser, deletePreset, requestExportIntent, signOut } from './hosted-api';
 
 describe('hosted API preset mutations', () => {
   const originalFetch = globalThis.fetch;
@@ -30,6 +30,27 @@ describe('hosted API preset mutations', () => {
     await expect(signOut()).resolves.toBeUndefined();
 
     expect(fetch).toHaveBeenCalledWith('/api/auth/sign-out', {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: '{}',
+    });
+  });
+
+  it('sends an empty JSON object when requesting an export intent', async () => {
+    const fetch = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ token: 'token', expiresAt: '2026-09-22T00:00:00Z' }), {
+          status: 200,
+        }),
+    );
+    globalThis.fetch = fetch;
+
+    await expect(requestExportIntent()).resolves.toEqual({
+      token: 'token',
+      expiresAt: '2026-09-22T00:00:00Z',
+    });
+    expect(fetch).toHaveBeenCalledWith('/api/usage/export-intent', {
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       method: 'POST',

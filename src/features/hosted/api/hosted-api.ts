@@ -54,7 +54,10 @@ const apiRequest = async <T>(path: string, init?: RequestInit): Promise<T> => {
   return (await response.json()) as T;
 };
 export const requestExportIntent = (): Promise<ExportIntent> => {
-  return apiRequest<ExportIntent>('/api/usage/export-intent', { method: 'POST' });
+  return apiRequest<ExportIntent>('/api/usage/export-intent', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
 };
 export const completeExportIntent = (
   token: string,
