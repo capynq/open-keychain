@@ -142,25 +142,21 @@ test('loads all reviewed landing visuals at the active responsive breakpoint', a
     };
   });
   expect(heroImageState.complete).toBe(true);
-  const expectedHeroDimensions =
-    testInfo.project.name === 'mobile-2x'
-      ? { width: 390, height: 844 }
-      : testInfo.project.name === 'mobile'
-        ? { width: 390, height: 844 }
-        : { width: 720, height: 450 };
-  expect(heroImageState.width).toBe(expectedHeroDimensions.width);
-  expect(heroImageState.height).toBe(expectedHeroDimensions.height);
   expect(heroImageState.width).toBeGreaterThan(heroImageState.renderedWidth);
   expect(heroImageState.height).toBeGreaterThan(heroImageState.renderedHeight);
   await expect(page.locator(activeHeroImageSelector)).toHaveAttribute('fetchpriority', 'high');
   await expect(page.locator(activeHeroImageSelector)).toHaveAttribute('loading', 'eager');
   await expect(page.locator(activeHeroImageSelector)).toHaveAttribute(
     'sizes',
-    '(max-width: 760px) 100vw, 50vw',
+    '(max-width: 760px) calc(100vw - 50px), 50vw',
   );
   await expect(page.locator('.configurator-window source').first()).toHaveAttribute(
     'srcset',
-    /create-mobile-390\.avif 390w, \/showcase\/v1\/create-mobile-780\.avif 780w/,
+    /create-mobile-780\.avif 780w/,
+  );
+  await expect(page.locator('.configurator-window source').nth(1)).toHaveAttribute(
+    'srcset',
+    /create-mobile-390\.avif 390w, \/showcase\/v1\/create-mobile-490\.avif 490w/,
   );
   assertNoBrowserErrors();
 });
@@ -200,12 +196,6 @@ test('uses the density-appropriate mobile customizer capture on a mobile landing
       renderedHeight: image.clientHeight,
     };
   });
-  const expectedMobileIntrinsicDimensions =
-    testInfo.project.name === 'mobile-2x'
-      ? { width: 390, height: 844 }
-      : { width: 390, height: 844 };
-  expect(imageState.width).toBe(expectedMobileIntrinsicDimensions.width);
-  expect(imageState.height).toBe(expectedMobileIntrinsicDimensions.height);
   expect(imageState.width).toBeGreaterThan(imageState.renderedWidth);
   expect(imageState.height).toBeGreaterThan(imageState.renderedHeight);
   expect(

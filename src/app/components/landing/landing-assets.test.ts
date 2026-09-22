@@ -10,6 +10,8 @@ const assets = [
   ['showcase/v1/create-desktop-720.avif', 'avif', 720],
   ['showcase/v1/create-desktop-1440.webp', 'webp', 1440],
   ['showcase/v1/create-mobile-390.avif', 'avif', 390],
+  ['showcase/v1/create-mobile-490.avif', 'avif', 490],
+  ['showcase/v1/create-mobile-490.webp', 'webp', 490],
   ['showcase/v1/create-mobile-780.webp', 'webp', 780],
   ['showcase/v1/templates/name-keychain-320.avif', 'avif', 320],
   ['showcase/v1/templates/name-keychain-640.webp', 'webp', 640],

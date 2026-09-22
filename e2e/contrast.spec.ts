@@ -84,13 +84,16 @@ test('keeps landing and consent text at WCAG AA contrast', async ({ page }) => {
     };
 
     return selectors.flatMap((selector) => {
-      const element = document.querySelector(selector);
-      if (!element) return [];
-      const styles = getComputedStyle(element);
-      const background = backgroundFor(element);
-      return [
-        { selector, foreground: styles.color, background, ratio: ratio(styles.color, background) },
-      ];
+      return [...document.querySelectorAll(selector)].map((element) => {
+        const styles = getComputedStyle(element);
+        const background = backgroundFor(element);
+        return {
+          selector,
+          foreground: styles.color,
+          background,
+          ratio: ratio(styles.color, background),
+        };
+      });
     });
   }, landingTextSelectors);
 
@@ -99,6 +102,30 @@ test('keeps landing and consent text at WCAG AA contrast', async ({ page }) => {
       entry.ratio,
       `${entry.selector}: ${entry.foreground} on ${entry.background}`,
     ).toBeGreaterThanOrEqual(4.5);
+  }
+});
+
+test('keeps landing footer links large enough to activate on touch screens', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name === 'desktop',
+    'Touch-target sizing is covered by mobile projects',
+  );
+  await page.goto('/');
+  await page.locator('.landing-footer a').last().scrollIntoViewIfNeeded();
+
+  const links = await page.locator('.landing-footer a').evaluateAll((elements) =>
+    elements.map((element) => {
+      const rect = element.getBoundingClientRect();
+      return { width: rect.width, height: rect.height };
+    }),
+  );
+
+  expect(links.length).toBeGreaterThan(0);
+  for (const link of links) {
+    expect(link.width).toBeGreaterThanOrEqual(24);
+    expect(link.height).toBeGreaterThanOrEqual(24);
   }
 });
 

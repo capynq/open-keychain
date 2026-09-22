@@ -81,10 +81,14 @@ describe('llms.txt contract', () => {
     expect(headersText).toContain(
       'Link: </llms.txt>; rel="describedby"; type="text/markdown", </ai-catalog.json>; rel="ai-catalog"; type="application/json"',
     );
+    expect(headersText).toContain(
+      '/\n  Link: </llms.txt>; rel="describedby"; type="text/markdown", </ai-catalog.json>; rel="ai-catalog"; type="application/json", </showcase/v1/create-mobile-490.avif>; rel="preload"; as="image"; type="image/avif"; media="(max-width: 760px) and (max-resolution: 1.99dppx)", </showcase/v1/create-mobile-780.avif>; rel="preload"; as="image"; type="image/avif"; media="(max-width: 760px) and (min-resolution: 2dppx)", </showcase/v1/create-desktop-720.avif>; rel="preload"; as="image"; type="image/avif"; media="(min-width: 761px)"',
+    );
     expect(headersText).toContain('/fonts/*\n  Cache-Control: public, max-age=31536000, immutable');
     expect(headersText).toContain(
       '/showcase/v1/*\n  Cache-Control: public, max-age=31536000, immutable',
     );
+    expect(headersText.indexOf('/showcase/*')).toBeLessThan(headersText.indexOf('/showcase/v1/*'));
     expect(headersText).toContain(
       '/manifold-v1.wasm\n  Content-Type: application/wasm\n  Cache-Control: public, max-age=31536000, immutable',
     );

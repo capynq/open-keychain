@@ -9,7 +9,12 @@ on the active design in the open browser tab and do not replace the normal human
 The public discovery surfaces are:
 
 - [`/llms.txt`](https://open-keychain.com/llms.txt) — the human- and model-readable site overview.
+- [`/ai-catalog.json`](https://open-keychain.com/ai-catalog.json) — the ARD manifest for the browser-local customizer.
 - The HTML `describedby` link and equivalent HTTP `Link` header.
+
+The catalog entry intentionally uses `text/html` and points to `/create`: this capability is an
+interactive browser page, not a hosted MCP server or remote agent card. Lighthouse may report a
+low-severity media-type advisory for that accurate description.
 
 The `Permissions-Policy` response header explicitly allows `tools` for the site origin, so a
 WebMCP-capable browser can expose the registered tools.

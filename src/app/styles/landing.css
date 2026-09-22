@@ -675,15 +675,18 @@
 
 .landing-run-card-browser {
   background: #fffaf4;
+  color: #1f2430;
 }
 
 .landing-run-card-selfHost {
   background: #f3f5f3;
+  color: #1f2430;
 }
 
 .landing-run-card-hosted {
   border-color: #c9a698;
   background: #fffaf4;
+  color: #1f2430;
 }
 
 .landing-run-card > p {
@@ -709,7 +712,7 @@
   gap: 8px;
   margin: 22px 0;
   padding: 0;
-  color: #606775;
+  color: #4f5866;
   font-size: 12px;
   line-height: 1.35;
   list-style: none;
@@ -799,6 +802,9 @@
 }
 
 .landing-footer a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
   color: #505967;
   transition: color 160ms ease;
 }

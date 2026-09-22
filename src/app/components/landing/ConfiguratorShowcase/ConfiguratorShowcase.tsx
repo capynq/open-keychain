@@ -191,9 +191,15 @@ export const ConfiguratorShowcase = ({ locale }: { locale: Locale }) => {
                     <picture>
                       <source
                         type="image/avif"
+                        media="(max-width: 760px) and (min-resolution: 2dppx)"
+                        srcSet="/showcase/v1/create-mobile-780.avif 780w"
+                        sizes="calc(100vw - 50px)"
+                      />
+                      <source
+                        type="image/avif"
                         media="(max-width: 760px)"
-                        srcSet="/showcase/v1/create-mobile-390.avif 390w, /showcase/v1/create-mobile-780.avif 780w"
-                        sizes="100vw"
+                        srcSet="/showcase/v1/create-mobile-390.avif 390w, /showcase/v1/create-mobile-490.avif 490w"
+                        sizes="calc(100vw - 50px)"
                       />
                       <source
                         type="image/avif"
@@ -202,9 +208,15 @@ export const ConfiguratorShowcase = ({ locale }: { locale: Locale }) => {
                       />
                       <source
                         type="image/webp"
+                        media="(max-width: 760px) and (min-resolution: 2dppx)"
+                        srcSet="/showcase/v1/create-mobile-780.webp 780w"
+                        sizes="calc(100vw - 50px)"
+                      />
+                      <source
+                        type="image/webp"
                         media="(max-width: 760px)"
-                        srcSet="/showcase/v1/create-mobile-390.webp 390w, /showcase/v1/create-mobile-780.webp 780w"
-                        sizes="100vw"
+                        srcSet="/showcase/v1/create-mobile-390.webp 390w, /showcase/v1/create-mobile-490.webp 490w"
+                        sizes="calc(100vw - 50px)"
                       />
                       <source
                         type="image/webp"
@@ -214,12 +226,12 @@ export const ConfiguratorShowcase = ({ locale }: { locale: Locale }) => {
                       <source
                         media="(max-width: 760px)"
                         srcSet="/showcase/create-mobile.png 1x, /showcase/create-mobile@2x.png 2x"
-                        sizes="100vw"
+                        sizes="calc(100vw - 50px)"
                       />
                       <img
                         src="/showcase/create-desktop.png"
                         srcSet="/showcase/create-desktop.png 1x"
-                        sizes="(max-width: 760px) 100vw, 50vw"
+                        sizes="(max-width: 760px) calc(100vw - 50px), 50vw"
                         alt={slide.alt}
                         width="1440"
                         height="900"

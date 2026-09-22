@@ -14,7 +14,9 @@ test('reaches the first ready customizer preview within the startup budget', asy
   expect(elapsedMs, `first ready preview took ${elapsedMs.toFixed(0)} ms`).toBeLessThan(budget);
 });
 
-test('selects modern landing images while preserving lazy PNG fallbacks', async ({ page }) => {
+test('selects modern landing images while preserving lazy PNG fallbacks', async ({
+  page,
+}, testInfo) => {
   const requests: string[] = [];
   page.on('request', (request) => requests.push(request.url()));
 
@@ -27,6 +29,15 @@ test('selects modern landing images while preserving lazy PNG fallbacks', async 
   await expect
     .poll(() => hero.evaluate((element) => (element as HTMLImageElement).currentSrc))
     .toContain('/showcase/v1/');
+  const expectedHeroAsset =
+    testInfo.project.name === 'mobile-2x'
+      ? 'create-mobile-780'
+      : testInfo.project.name === 'mobile'
+        ? 'create-mobile-390'
+        : 'create-desktop-720';
+  await expect
+    .poll(() => hero.evaluate((element) => (element as HTMLImageElement).currentSrc))
+    .toContain(expectedHeroAsset);
 
   const templateImages = page.locator('.landing-template-card img');
   await expect(templateImages).toHaveCount(4);
@@ -39,6 +50,15 @@ test('selects modern landing images while preserving lazy PNG fallbacks', async 
   await expect(page.locator('[data-showcase-kind="photo"] img').first()).toHaveAttribute(
     'decoding',
     'async',
+  );
+  await expect(hero).toHaveAttribute('sizes', '(max-width: 760px) calc(100vw - 50px), 50vw');
+  await expect(page.locator('.configurator-window source').first()).toHaveAttribute(
+    'media',
+    '(max-width: 760px) and (min-resolution: 2dppx)',
+  );
+  await expect(page.locator('.configurator-window source').nth(1)).toHaveAttribute(
+    'srcset',
+    /create-mobile-390\.avif 390w, \/showcase\/v1\/create-mobile-490\.avif 490w/,
   );
   expect(requests.some((url) => url.endsWith('/showcase/create-desktop.png'))).toBe(false);
 });

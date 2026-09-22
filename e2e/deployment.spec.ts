@@ -51,6 +51,13 @@ test('loads static metadata and privacy page in production', async ({ page }) =>
       },
     ],
   });
+  const rootHeaders = (await page.request.get('/')).headers();
+  expect(rootHeaders.link).toContain('rel="preload"');
+  const versionedAsset = await page.request.get('/showcase/v1/create-mobile-490.avif');
+  expect(versionedAsset.headers()['cache-control']).toContain('max-age=31536000');
+  expect(versionedAsset.headers()['cache-control']).toContain('immutable');
+  const legacyAsset = await page.request.get('/showcase/create-mobile.png');
+  expect(legacyAsset.headers()['cache-control']).toContain('max-age=86400');
   expect((await page.request.get('/privacy')).ok()).toBe(true);
   assertNoBrowserErrors();
 });

@@ -16,7 +16,7 @@ const assets = [
   {
     input: 'showcase/create-mobile.png',
     output: 'showcase/v1/create-mobile',
-    widths: [390, 780],
+    widths: [390, 490, 780],
   },
   ...['name-keychain', 'articulated-name', 'nameplate', 'plant-label'].map((name) => ({
     input: `showcase/templates/${name}.png`,
