@@ -43,8 +43,9 @@ export const waitForLocalFonts = async (page: Page): Promise<void> => {
 };
 
 export const waitForReadyGeometry = async (page: Page): Promise<void> => {
-  await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 30_000 });
-  await expect(page.locator('.viewer-surface canvas')).toBeVisible();
+  const liveCustomizer = page.locator('main[aria-label="Customizer"]:not(.customizer-boot-frame)');
+  await expect(liveCustomizer.locator('.status-pill')).toHaveText(/Ready/, { timeout: 30_000 });
+  await expect(liveCustomizer.locator('.viewer-surface canvas')).toBeVisible();
   await page.evaluate(
     () =>
       new Promise<void>((resolve) => {
