@@ -17,12 +17,14 @@ export const PreviewSummary = ({
   status,
   exportOpen,
   modelInfo,
+  neutral = false,
 }: {
   locale: Locale;
   geometry: { result: GeometryResult | undefined };
   status: PreviewStatus;
   exportOpen: boolean;
   modelInfo: PreviewModelInfo;
+  neutral?: boolean;
 }) => {
   const result = geometry.result;
   const dimensions = result?.dimensions;
@@ -47,22 +49,24 @@ export const PreviewSummary = ({
           <strong>{result?.solidCount ?? '-'}</strong>
         </div>
       </div>
-      <div className="summary-tags">
-        <span>
-          <small>{t(locale, 'modelTemplate')}</small>
-          {modelInfo.template}
-        </span>
-        {modelInfo.style && (
+      {!neutral && (
+        <div className="summary-tags">
           <span>
-            <small>{t(locale, 'modelStyle')}</small>
-            {modelInfo.style}
+            <small>{t(locale, 'modelTemplate')}</small>
+            {modelInfo.template}
           </span>
-        )}
-        <span>
-          <small>{t(locale, 'modelFont')}</small>
-          {modelInfo.font}
-        </span>
-      </div>
+          {modelInfo.style && (
+            <span>
+              <small>{t(locale, 'modelStyle')}</small>
+              {modelInfo.style}
+            </span>
+          )}
+          <span>
+            <small>{t(locale, 'modelFont')}</small>
+            {modelInfo.font}
+          </span>
+        </div>
+      )}
       {status.feedback && !exportOpen && (
         <p
           className="summary-feedback"

@@ -1,43 +1,32 @@
-import type { ComponentType } from 'react';
-
+import { Suspense, useLayoutEffect, type ReactNode } from 'react';
 import { Navigate, Route, Routes, type Location } from 'react-router';
 
 import { resolveSeoRoute } from '@/features/seo';
 import { SeoPage } from '@/pages/seo/SeoPage';
-import { createRetryableLazy } from '@/shared/ui/RetryableLazy';
 
 import { hostedMode } from '../../features/hosted/config';
 import { type Locale } from '../../infrastructure/i18n/config';
+import { RouteLoading, type RouteLoadingVariant } from '../components/RouteLoading/RouteLoading';
 import { CREATE_ROUTE, LANDING_ROUTE, PROFILE_ROUTE } from '../routes';
+import {
+  CustomizerPage,
+  LandingPage,
+  PrivacyPage,
+  ProfilePage,
+  SeoNotFoundPage,
+} from '../routing/routeModules';
 
-type AppPageProps = { locale: Locale; onLocaleChange: (locale: Locale) => void };
-type SeoPageProps = { locale: Locale; onLocaleChange?: (locale: Locale) => void };
+const RouteCommitted = ({ children }: { children: ReactNode }) => {
+  useLayoutEffect(() => {
+    const root = document.getElementById('root');
 
-const LandingPage = createRetryableLazy<AppPageProps>(() =>
-  import('@/pages/landing/LandingPage').then(({ LandingPage: page }) => ({
-    default: page as ComponentType<AppPageProps>,
-  })),
-);
-const CustomizerPage = createRetryableLazy<AppPageProps>(() =>
-  import('@/pages/customizer/CustomizerPage').then(({ CustomizerPage: page }) => ({
-    default: page as ComponentType<AppPageProps>,
-  })),
-);
-const ProfilePage = createRetryableLazy<AppPageProps>(() =>
-  import('@/pages/profile/ProfilePage').then(({ ProfilePage: page }) => ({
-    default: page as ComponentType<AppPageProps>,
-  })),
-);
-const PrivacyPage = createRetryableLazy<SeoPageProps>(() =>
-  import('@/pages/seo/PrivacyPage').then(({ PrivacyPage: page }) => ({
-    default: page as ComponentType<SeoPageProps>,
-  })),
-);
-const SeoNotFoundPage = createRetryableLazy<{ locale?: Locale }>(() =>
-  import('@/pages/seo/SeoNotFoundPage').then(({ SeoNotFoundPage: page }) => ({
-    default: page as ComponentType<{ locale?: Locale }>,
-  })),
-);
+    root?.removeAttribute('inert');
+    root?.setAttribute('data-app-ready', 'true');
+    document.documentElement.setAttribute('data-app-ready', 'true');
+  }, []);
+
+  return children;
+};
 
 export type AppRoutesProps = {
   location: Location;
@@ -55,75 +44,92 @@ export const AppRoutes = ({
   onLocaleChange,
   onSeoCtaClick,
   onSeoLocaleChange,
-}: AppRoutesProps) => (
-  <Routes>
-    <Route
-      path={LANDING_ROUTE}
-      element={
-        <LandingPage
-          resetKey={`${location.pathname}${location.search}${location.hash}`}
-          locale={displayLocale}
-          onLocaleChange={onLocaleChange}
-        />
-      }
-    />
-    <Route
-      path={CREATE_ROUTE}
-      element={
-        <CustomizerPage
-          resetKey={`${location.pathname}${location.search}${location.hash}`}
-          locale={displayLocale}
-          onLocaleChange={onLocaleChange}
-        />
-      }
-    />
-    <Route
-      path={PROFILE_ROUTE}
-      element={
-        hostedMode ? (
-          <ProfilePage
-            resetKey={`${location.pathname}${location.search}${location.hash}`}
-            locale={displayLocale}
-            onLocaleChange={onLocaleChange}
-          />
-        ) : (
-          <Navigate to={LANDING_ROUTE} replace />
-        )
-      }
-    />
-    <Route
-      path="*"
-      element={(() => {
-        const seoRoute = resolveSeoRoute(location.pathname);
+}: AppRoutesProps) => {
+  const seoRoute = resolveSeoRoute(location.pathname);
+  const loadingVariant: RouteLoadingVariant =
+    normalizedPath === LANDING_ROUTE
+      ? 'landing'
+      : normalizedPath === PROFILE_ROUTE
+        ? 'profile'
+        : normalizedPath === '/privacy' || seoRoute
+          ? 'reference'
+          : 'not-found';
+  const suspenseFallback =
+    normalizedPath === CREATE_ROUTE ? null : (
+      <RouteLoading variant={loadingVariant} locale={displayLocale} />
+    );
 
-        if (normalizedPath === '/privacy') {
-          return (
-            <PrivacyPage
-              resetKey={`${location.pathname}${location.search}${location.hash}`}
-              locale={displayLocale}
-              onLocaleChange={onSeoLocaleChange}
-            />
-          );
-        }
-
-        return seoRoute ? (
-          <SeoPage
-            route={
-              seoRoute.kind === 'home' && seoRoute.path === '/'
-                ? { ...seoRoute, locale: displayLocale }
-                : seoRoute
+  return (
+    <Suspense fallback={suspenseFallback}>
+      <RouteCommitted>
+        <Routes>
+          <Route
+            path={LANDING_ROUTE}
+            element={
+              <LandingPage
+                resetKey={`${location.pathname}${location.search}${location.hash}`}
+                locale={displayLocale}
+                onLocaleChange={onLocaleChange}
+              />
             }
-            onCtaClick={onSeoCtaClick}
-            onLocaleChange={onSeoLocaleChange}
-            resetKey={`${location.pathname}${location.search}${location.hash}`}
           />
-        ) : (
-          <SeoNotFoundPage
-            resetKey={`${location.pathname}${location.search}${location.hash}`}
-            locale={displayLocale}
+          <Route
+            path={CREATE_ROUTE}
+            element={
+              <CustomizerPage
+                resetKey={`${location.pathname}${location.search}${location.hash}`}
+                locale={displayLocale}
+                onLocaleChange={onLocaleChange}
+              />
+            }
           />
-        );
-      })()}
-    />
-  </Routes>
-);
+          <Route
+            path={PROFILE_ROUTE}
+            element={
+              hostedMode ? (
+                <ProfilePage
+                  resetKey={`${location.pathname}${location.search}${location.hash}`}
+                  locale={displayLocale}
+                  onLocaleChange={onLocaleChange}
+                />
+              ) : (
+                <Navigate to={LANDING_ROUTE} replace />
+              )
+            }
+          />
+          <Route
+            path="*"
+            element={(() => {
+              const page =
+                normalizedPath === '/privacy' ? (
+                  <PrivacyPage
+                    resetKey={`${location.pathname}${location.search}${location.hash}`}
+                    locale={displayLocale}
+                    onLocaleChange={onSeoLocaleChange}
+                  />
+                ) : seoRoute ? (
+                  <SeoPage
+                    route={
+                      seoRoute.kind === 'home' && seoRoute.path === '/'
+                        ? { ...seoRoute, locale: displayLocale }
+                        : seoRoute
+                    }
+                    onCtaClick={onSeoCtaClick}
+                    onLocaleChange={onSeoLocaleChange}
+                    resetKey={`${location.pathname}${location.search}${location.hash}`}
+                  />
+                ) : (
+                  <SeoNotFoundPage
+                    resetKey={`${location.pathname}${location.search}${location.hash}`}
+                    locale={displayLocale}
+                  />
+                );
+
+              return page;
+            })()}
+          />
+        </Routes>
+      </RouteCommitted>
+    </Suspense>
+  );
+};

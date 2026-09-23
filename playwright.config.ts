@@ -8,10 +8,10 @@ const deploymentRun = process.env.PLAYWRIGHT_DEPLOYMENT === 'true';
 export default defineConfig({
   testDir: './e2e',
   testIgnore: smokeRun
-    ? /(deployment|capture)\.spec\.ts/
+    ? /(deployment|capture|dev-boot)\.spec\.ts/
     : deploymentRun
-      ? /(capture|smoke)\.spec\.ts/
-      : /(deployment|capture|smoke)\.spec\.ts/,
+      ? /(capture|smoke|dev-boot)\.spec\.ts/
+      : /(deployment|capture|smoke|dev-boot)\.spec\.ts/,
   timeout: 30_000,
   use: {
     baseURL: externalBaseUrl ?? 'http://127.0.0.1:4173',

@@ -1,7 +1,7 @@
 import { useLocation } from 'react-router';
 
-import { AppHeader } from '@/app/components/AppHeader/AppHeader';
 import { CustomizerFooter } from '@/app/components/CustomizerFooter/CustomizerFooter';
+import { CustomizerNavigationHeader } from '@/app/components/CustomizerNavigationHeader/CustomizerNavigationHeader';
 import { CustomizerWorkspace } from '@/app/components/CustomizerWorkspace/CustomizerWorkspace';
 import { Toast, type ToastVariant } from '@/app/components/Toast/Toast';
 import { useCustomizerPageState } from '@/app/hooks/useCustomizerPageState';
@@ -44,8 +44,7 @@ export const CustomizerPage = ({
 
   return (
     <main className="app-shell" aria-label="Customizer">
-      <AppHeader
-        variant="customizer"
+      <CustomizerNavigationHeader
         locale={locale}
         onLocaleChange={onLocaleChange}
         exportOpen={state.exportOpen}

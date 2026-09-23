@@ -1,4 +1,4 @@
-import { Suspense, useState } from 'react';
+import { startTransition, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 
 import { detectInitialLocale, resolveAppSeoUrl, resolveDisplayLocale } from '@/features/seo';
@@ -10,9 +10,9 @@ import '../styles/app.css';
 import { useAnalytics } from '../../infrastructure/telemetry/useTelemetry';
 import { AnalyticsConsentBanner } from '../components/AnalyticsConsentBanner/AnalyticsConsentBanner';
 import { RouteErrorBoundary } from '../components/RouteErrorBoundary/RouteErrorBoundary';
-import { RouteLoading } from '../components/RouteLoading/RouteLoading';
 import { useAppAnalytics } from '../hooks/useAppAnalytics';
 import { useAppNavigationEffects } from '../hooks/useAppNavigationEffects';
+import { useRoutePreload } from '../hooks/useRoutePreload';
 import { CREATE_ROUTE, PROFILE_ROUTE } from '../routes';
 import { AppSeoHead, useAppSeo } from '../seo/useAppSeo';
 import { AppRoutes } from './AppRoutes';
@@ -50,6 +50,7 @@ const App = () => {
     : normalizedPath;
 
   useAppNavigationEffects(location, locale);
+  useRoutePreload();
 
   const displayLocale = resolveDisplayLocale(location, locale);
 
@@ -82,7 +83,7 @@ const App = () => {
           ? `?template=${appSeo.template}&lang=${nextLocale}`
           : `?lang=${nextLocale}`;
 
-        navigate(`/create${query}`, { replace: true });
+        startTransition(() => navigate(`/create${query}`, { replace: true }));
       }
     }
     setActiveLocale(nextLocale);
@@ -110,16 +111,14 @@ const App = () => {
         locale={displayLocale}
         resetKey={`${location.pathname}${location.search}${location.hash}`}
       >
-        <Suspense fallback={<RouteLoading locale={displayLocale} />}>
-          <AppRoutes
-            location={location}
-            normalizedPath={normalizedPath}
-            displayLocale={displayLocale}
-            onLocaleChange={onLocaleChange}
-            onSeoCtaClick={onSeoCtaClick}
-            onSeoLocaleChange={onSeoLocaleChange}
-          />
-        </Suspense>
+        <AppRoutes
+          location={location}
+          normalizedPath={normalizedPath}
+          displayLocale={displayLocale}
+          onLocaleChange={onLocaleChange}
+          onSeoCtaClick={onSeoCtaClick}
+          onSeoLocaleChange={onSeoLocaleChange}
+        />
       </RouteErrorBoundary>
       <AnalyticsConsentBanner locale={displayLocale} />
     </>

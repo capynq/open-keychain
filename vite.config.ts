@@ -1,9 +1,11 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
+import { customizerBootPlugin } from './scripts/customizer-boot-plugin.ts';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), customizerBootPlugin()],
+  cacheDir: process.env.OPEN_KEYCHAIN_VITE_CACHE_DIR,
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -23,6 +25,7 @@ export default defineConfig({
     format: 'es',
   },
   server: {
+    strictPort: true,
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:3100',
@@ -44,6 +47,12 @@ export default defineConfig({
     sourcemap: false,
     chunkSizeWarningLimit: 550,
     rolldownOptions: {
+      input: {
+        app: fileURLToPath(new URL('./index.html', import.meta.url)),
+        customizerBootStyles: fileURLToPath(
+          new URL('./src/app/boot/customizer-boot-styles.ts', import.meta.url),
+        ),
+      },
       output: {
         codeSplitting: {
           groups: [

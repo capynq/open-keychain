@@ -69,6 +69,260 @@ test('exposes a working customizer entry point for every landing template card',
   assertNoBrowserErrors();
 });
 
+test('renders the real Customizer frame before React and hands off without a layout jump', async ({
+  page,
+}) => {
+  const path = '/create?template=nameplate&lang=ru';
+  let releaseAppEntry: (() => void) | undefined;
+  const appEntryHeld = new Promise<void>((resolve) => {
+    releaseAppEntry = resolve;
+  });
+  await page.route('**/assets/app-*.js', async (route) => {
+    await appEntryHeld;
+    await route.continue();
+  });
+  await page.goto(path, { waitUntil: 'commit' });
+  await page.evaluate(async () => {
+    await Promise.all(
+      [...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')].map((link) =>
+        link.sheet
+          ? Promise.resolve()
+          : new Promise<void>((resolve) => {
+              link.addEventListener('load', () => resolve(), { once: true });
+              link.addEventListener('error', () => resolve(), { once: true });
+            }),
+      ),
+    );
+    await document.fonts.ready;
+  });
+  await expect(page.locator('head link[data-customizer-boot-style]')).toHaveCount(4);
+
+  const selectors = [
+    'header.customizer-topbar',
+    'aside.controls-panel',
+    '[data-testid="name-settings"]',
+    '[data-testid="template-settings"]',
+    '.preview-panel',
+    '.preview-heading',
+    '.viewer-wrap',
+    '.preview-summary',
+  ];
+  const readBoxes = async (root: '#boot-customizer' | '#root') =>
+    page.evaluate(
+      ({ boxSelectors, selectorRoot }) => {
+        const boxes = Object.fromEntries(
+          boxSelectors.map((selector) => {
+            const element = document.querySelector(`${selectorRoot} ${selector}`);
+            if (!element) throw new Error(`Missing layout parity selector: ${selector}`);
+            const { x, y, width, height } = element.getBoundingClientRect();
+            return [selector, { x, y, width, height }];
+          }),
+        );
+        return boxes;
+      },
+      { boxSelectors: selectors, selectorRoot: root },
+    );
+  const readVisibleFontCards = async (root: '#boot-customizer' | '#root') =>
+    page.evaluate((selectorRoot) => {
+      const panel = document.querySelector(`${selectorRoot} .controls-panel`);
+      if (!panel) throw new Error(`Missing controls panel in ${selectorRoot}`);
+      const bounds = panel.getBoundingClientRect();
+      const visibleTop = Math.max(bounds.top, 0);
+      const visibleBottom = Math.min(bounds.bottom, window.innerHeight);
+      return [...panel.querySelectorAll<HTMLElement>('.font-card')]
+        .map((card) => {
+          const { x, y, width, height, top, bottom } = card.getBoundingClientRect();
+          return {
+            name: card.textContent?.trim(),
+            selected: card.getAttribute('aria-pressed'),
+            x,
+            y,
+            width,
+            height,
+            top,
+            bottom,
+          };
+        })
+        .filter((card) => card.top < visibleBottom && card.bottom > visibleTop);
+    }, root);
+
+  await expect(page.locator('#boot-customizer')).toHaveAttribute('aria-hidden', 'true');
+  await expect(page.locator('#boot-customizer header.customizer-topbar')).toBeVisible();
+  await expect(
+    page.locator('#boot-customizer [data-testid="template-card-nameplate"]'),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#root')).not.toHaveAttribute('data-app-ready', 'true');
+  const bootBoxes = await readBoxes('#boot-customizer');
+  const bootFontCards = await readVisibleFontCards('#boot-customizer');
+
+  releaseAppEntry?.();
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
+  await waitForLocalFonts(page);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+  await expect(
+    page.locator('#root .template-grid [data-testid="template-card-nameplate"]'),
+  ).toHaveAttribute('aria-pressed', 'true');
+  const liveBoxes = await readBoxes('#root');
+  const liveFontCards = await readVisibleFontCards('#root');
+  expect(bootFontCards).toEqual(liveFontCards);
+  for (const selector of selectors) {
+    const bootBox = bootBoxes[selector as keyof typeof bootBoxes];
+    const liveBox = liveBoxes[selector as keyof typeof liveBoxes];
+    expect(Math.abs(bootBox.x - liveBox.x), `${selector} x`).toBeLessThanOrEqual(1);
+    if (selector !== 'aside.controls-panel') {
+      expect(Math.abs(bootBox.y - liveBox.y), `${selector} y`).toBeLessThanOrEqual(1);
+    }
+    expect(Math.abs(bootBox.width - liveBox.width), `${selector} width`).toBeLessThanOrEqual(1);
+    if (selector !== 'aside.controls-panel') {
+      expect(Math.abs(bootBox.height - liveBox.height), `${selector} height`).toBeLessThanOrEqual(
+        1,
+      );
+    }
+  }
+});
+
+test('selects known boot URL variants and stays neutral for restored designs', async ({ page }) => {
+  await page.route('**/assets/app-*.js', (route) => route.abort());
+  const variants = [
+    { query: '?template=name-keychain&lang=en', locale: 'en', selected: 'name-keychain' },
+    { query: '?template=articulated-name&lang=ru', locale: 'ru', selected: 'articulated-name' },
+    { query: '?template=magnet&lang=uk', locale: 'uk', selected: 'magnet' },
+    { query: '?template=nameplate&lang=ru', locale: 'ru', selected: 'nameplate' },
+    { query: '?template=plant-label&lang=uk', locale: 'uk', selected: 'plant-label' },
+    { query: '?template=invalid&lang=en', locale: 'en', selected: 'name-keychain' },
+    { query: '?design=shared-state&lang=en', locale: 'en', selected: null },
+  ] as const;
+
+  for (const variant of variants) {
+    await page.goto(`/create${variant.query}`);
+    await expect(page.locator('html')).toHaveAttribute('lang', variant.locale);
+    await expect(page.locator('#boot-customizer')).toHaveAttribute('aria-hidden', 'true');
+    await expect(page.locator('#boot-customizer .customizer-topbar')).toBeVisible();
+    if (variant.selected) {
+      await expect(
+        page.locator(`#boot-customizer [data-testid="template-card-${variant.selected}"]`),
+      ).toHaveAttribute('aria-pressed', 'true');
+      if (variant.selected === 'name-keychain') {
+        await expect(
+          page.locator('#boot-customizer [data-testid="style-card-contour"]'),
+        ).toHaveAttribute('aria-pressed', 'true');
+      }
+    } else {
+      await expect(
+        page.locator('#boot-customizer .template-grid [aria-pressed="true"]'),
+      ).toHaveCount(0);
+      await expect(page.locator('#boot-customizer .preview-summary')).not.toContainText(
+        /keychain|nameplate|label|магнит|табличк/i,
+      );
+      await expect(
+        page.locator('#boot-customizer .font-browser [aria-pressed="true"]'),
+      ).toHaveCount(0);
+    }
+  }
+});
+
+test('preserves visible Font cards in the taller desktop first viewport', async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop');
+  await page.setViewportSize({ width: 1440, height: 1080 });
+  const path = '/create?template=nameplate&lang=en';
+  let releaseAppEntry: (() => void) | undefined;
+  const appEntryHeld = new Promise<void>((resolve) => {
+    releaseAppEntry = resolve;
+  });
+  await page.route('**/assets/app-*.js', async (route) => {
+    await appEntryHeld;
+    await route.continue();
+  });
+  await page.goto(path, { waitUntil: 'commit' });
+  await expect(page.locator('#boot-customizer aside.controls-panel')).toBeVisible();
+  const readVisibleFontCards = async (root: '#boot-customizer' | '#root') =>
+    page.evaluate((selectorRoot) => {
+      const panel = document.querySelector(`${selectorRoot} .controls-panel`);
+      if (!panel) throw new Error(`Missing controls panel in ${selectorRoot}`);
+      const bounds = panel.getBoundingClientRect();
+      const visibleTop = Math.max(bounds.top, 0);
+      const visibleBottom = Math.min(bounds.bottom, window.innerHeight);
+      return [...panel.querySelectorAll<HTMLElement>('.font-card')]
+        .map((card) => {
+          const { x, y, width, height, top, bottom } = card.getBoundingClientRect();
+          return { text: card.textContent?.trim(), x, y, width, height, top, bottom };
+        })
+        .filter((card) => card.top < visibleBottom && card.bottom > visibleTop);
+    }, root);
+  const bootCards = await readVisibleFontCards('#boot-customizer');
+  await expect(
+    bootCards.length,
+    'all six boot-frame Font cards should reach the taller viewport',
+  ).toBe(6);
+  releaseAppEntry?.();
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
+  await expect(await readVisibleFontCards('#root')).toEqual(bootCards);
+});
+
+test('keeps root overlays inert until the cold Customizer route commits', async ({ page }) => {
+  let releaseChunk: (() => void) | undefined;
+  const chunkHeld = new Promise<void>((resolve) => {
+    releaseChunk = resolve;
+  });
+  await page.route('**/assets/CustomizerPage-*.js', async (route) => {
+    await chunkHeld;
+    await route.continue();
+  });
+
+  await page.goto('/create?lang=en');
+  await expect(page.locator('#boot-customizer .customizer-topbar')).toBeVisible();
+  await expect(page.locator('#root .analytics-consent-accept')).toBeVisible();
+  await expect(page.locator('#root')).toHaveAttribute('inert', '');
+  await page.keyboard.press('Tab');
+  expect(await page.evaluate(() => Boolean(document.activeElement?.closest('#root')))).toBe(false);
+
+  releaseChunk?.();
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
+  await expect(page.locator('#root')).not.toHaveAttribute('inert', '');
+  await page.locator('#root .analytics-consent-accept').focus();
+  await expect(page.locator('#root .analytics-consent-accept')).toBeFocused();
+});
+
+test('un-inerts root and hides the boot shell after a Customizer chunk error', async ({ page }) => {
+  await page.route('**/assets/CustomizerPage-*.js', (route) => route.abort());
+  await page.goto('/create?lang=en');
+  await expect(page.locator('#root .route-load-error')).toBeVisible();
+  await expect(page.locator('#root')).not.toHaveAttribute('inert', '');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
+  await expect(page.locator('#boot-shell')).toBeHidden();
+});
+
+test('keeps the current route visible while the next route chunk is pending', async ({ page }) => {
+  let releaseChunk: (() => void) | undefined;
+  let chunkRequested = false;
+  const chunkHeld = new Promise<void>((resolve) => {
+    releaseChunk = resolve;
+  });
+  await page.route('**/assets/CustomizerPage-*.js', async (route) => {
+    chunkRequested = true;
+    await chunkHeld;
+    await route.continue();
+  });
+
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Start designing' }).first().click();
+  await expect.poll(() => chunkRequested).toBe(true);
+  await expect(page).toHaveURL('/create?lang=en');
+  await expect(page.locator('#root .landing-button-primary')).toBeVisible();
+  await expect(page.locator('#root [data-route-skeleton]')).toHaveCount(0);
+
+  releaseChunk?.();
+  await expect(page.getByRole('main', { name: 'Customizer' })).toBeVisible();
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
+});
+
 test('keeps source navigation in footers, not headers', async ({ page }) => {
   await page.goto('/');
   await expect(

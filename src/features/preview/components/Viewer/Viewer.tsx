@@ -28,6 +28,8 @@ type ViewerProps = {
   appearance?: PrintAppearance;
   surfacePreset?: SurfacePresetId;
   locale?: Locale;
+  onRendered?: (generationId: number) => void;
+  onUnavailable?: () => void;
 };
 type ViewerState = {
   camera: THREE.PerspectiveCamera;
@@ -139,12 +141,17 @@ export const Viewer = ({
   appearance = result?.appearance,
   surfacePreset = 'matte',
   locale = 'en',
+  onRendered,
+  onUnavailable,
 }: ViewerProps) => {
   const hostRef = useRef<HTMLDivElement>(null);
 
   const stateRef = useRef<ViewerState | undefined>(undefined);
 
   const resultRef = useRef<GeometryResult | undefined>(result);
+  const renderedGenerationRef = useRef<number | undefined>(undefined);
+  const onRenderedRef = useRef(onRendered);
+  const onUnavailableRef = useRef(onUnavailable);
 
   const activeViewRef = useRef<ViewId | 'custom'>('home');
 
@@ -157,6 +164,14 @@ export const Viewer = ({
   useEffect(() => {
     resultRef.current = result;
   }, [result]);
+
+  useEffect(() => {
+    onRenderedRef.current = onRendered;
+  }, [onRendered]);
+
+  useEffect(() => {
+    onUnavailableRef.current = onUnavailable;
+  }, [onUnavailable]);
 
   const setView = useCallback(
     (id: ViewId) => {
@@ -200,13 +215,17 @@ export const Viewer = ({
         powerPreference: 'high-performance',
       });
     } catch {
-      queueMicrotask(() => setPreviewCapability('unavailable'));
+      queueMicrotask(() => {
+        setPreviewCapability('unavailable');
+        onUnavailableRef.current?.();
+      });
       return undefined;
     }
 
     const handleContextLost = (event: Event): void => {
       event.preventDefault();
       setPreviewCapability('unavailable');
+      onUnavailableRef.current?.();
       stateRef.current?.controls.dispose();
       stateRef.current = undefined;
     };
@@ -325,6 +344,12 @@ export const Viewer = ({
       frame = 0;
       controls.update();
       renderer.render(scene, camera);
+      const current = resultRef.current;
+
+      if (current && renderedGenerationRef.current !== current.generationId) {
+        renderedGenerationRef.current = current.generationId;
+        onRenderedRef.current?.(current.generationId);
+      }
     };
     const invalidate = () => {
       if (frame === 0) frame = requestAnimationFrame(render);

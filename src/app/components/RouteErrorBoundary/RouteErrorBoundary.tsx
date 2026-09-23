@@ -25,6 +25,11 @@ export class RouteErrorBoundary extends Component<
   }
 
   override componentDidCatch(error: Error, info: ErrorInfo): void {
+    const root = document.getElementById('root');
+
+    root?.removeAttribute('inert');
+    root?.setAttribute('data-app-ready', 'true');
+    document.documentElement.setAttribute('data-app-ready', 'true');
     resetRetryableLazy();
     console.error('Route module failed to load.', error, info);
   }

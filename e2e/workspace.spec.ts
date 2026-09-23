@@ -1,8 +1,6 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
-test('renders a signed-in seller workspace without sending order data to the API', async ({
-  page,
-}) => {
+const mockSellerWorkspace = async (page: Page) => {
   await page.route('**/api/me', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
@@ -26,6 +24,12 @@ test('renders a signed-in seller workspace without sending order data to the API
       }),
     });
   });
+};
+
+test('renders a signed-in seller workspace without sending order data to the API', async ({
+  page,
+}) => {
+  await mockSellerWorkspace(page);
 
   await page.goto('/profile');
 
@@ -35,4 +39,36 @@ test('renders a signed-in seller workspace without sending order data to the API
   await expect(
     page.getByText('CSV names, generated geometry, and the ZIP stay in this browser.'),
   ).toBeVisible();
+});
+
+test('keeps the seller workspace visible while preset navigation loads Customizer', async ({
+  page,
+}) => {
+  test.skip(process.env.PLAYWRIGHT_HOSTED_MODE !== 'true');
+  await mockSellerWorkspace(page);
+
+  let releaseChunk: (() => void) | undefined;
+  let markChunkRequested: (() => void) | undefined;
+  const heldChunk = new Promise<void>((resolve) => {
+    releaseChunk = resolve;
+  });
+  const chunkRequested = new Promise<void>((resolve) => {
+    markChunkRequested = resolve;
+  });
+  await page.route('**/assets/CustomizerPage-*.js', async (route) => {
+    markChunkRequested?.();
+    await heldChunk;
+    await route.continue();
+  });
+
+  await page.goto('/profile?lang=en');
+  await expect(page.getByRole('heading', { name: 'Your seller workspace' })).toBeVisible();
+  await page.getByRole('button', { name: 'Use settings' }).click();
+  await chunkRequested;
+  await expect(page).toHaveURL(/\/create$/);
+  await expect(page.locator('.profile-page')).toBeVisible();
+  await expect(page.locator('[data-route-skeleton="customizer"]')).toHaveCount(0);
+
+  releaseChunk?.();
+  await expect(page.locator('header.customizer-topbar')).toBeVisible();
 });

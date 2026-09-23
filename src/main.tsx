@@ -11,7 +11,7 @@ import '@/app/styles/global.css';
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AnalyticsProvider>
-      <BrowserRouter>
+      <BrowserRouter useTransitions>
         <App />
       </BrowserRouter>
     </AnalyticsProvider>

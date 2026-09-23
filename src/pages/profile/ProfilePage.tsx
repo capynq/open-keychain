@@ -1,4 +1,4 @@
-import { useState, type SubmitEvent } from 'react';
+import { startTransition, useState, type SubmitEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 
 import { AppHeader } from '@/app/components/AppHeader/AppHeader';
@@ -30,7 +30,7 @@ export const ProfilePage = ({
   const currentParams = (location.state as ProfileLocationState)?.currentParams;
   const workspace = useHostedAccount(
     currentParams ?? DEFAULT_PARAMS,
-    (params) => navigate('/create', { state: { projectParams: params } }),
+    (params) => startTransition(() => navigate('/create', { state: { projectParams: params } })),
     locale,
   );
   const canSaveCurrent = Boolean(workspace.account && currentParams);
@@ -44,7 +44,7 @@ export const ProfilePage = ({
 
   return (
     <div className="profile-shell">
-      <AppHeader variant="landing" locale={locale} onLocaleChange={onLocaleChange} />
+      <AppHeader locale={locale} onLocaleChange={onLocaleChange} />
       <main className="profile-page" aria-label={t(locale, 'profile')}>
         <section className="profile-intro">
           <h1>{t(locale, 'workspaceTitle')}</h1>

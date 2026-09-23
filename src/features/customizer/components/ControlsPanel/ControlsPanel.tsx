@@ -55,10 +55,14 @@ export const ControlsPanel = ({
   locale,
   customizer,
   onReset,
+  bootFrame = false,
+  neutralSelection = false,
 }: {
   locale: Locale;
   customizer: ReturnType<typeof useCustomizerParams>;
   onReset: () => void;
+  bootFrame?: boolean;
+  neutralSelection?: boolean;
 }) => {
   const {
     params,
@@ -142,6 +146,9 @@ export const ControlsPanel = ({
   const visibleFonts = shouldPaginate
     ? filteredFonts.slice((currentPage - 1) * fontsPerPage, currentPage * fontsPerPage)
     : filteredFonts;
+  const bootVisibleFonts = FONT_CATEGORY_ORDER.flatMap((category) =>
+    visibleFonts.filter((font) => font.category === category),
+  ).slice(0, 6);
   const updateFontBrowserState = (changes: Partial<FontBrowserState>): void => {
     setFontBrowserState((current) => ({
       ...current,
@@ -274,18 +281,18 @@ export const ControlsPanel = ({
                 <div className="font-card-wrap" key={font.id}>
                   <button
                     type="button"
-                    className={`font-card ${activeTargetFontId === font.id ? 'selected' : ''} ${previewFontId === font.id ? 'previewing' : ''}`}
+                    className={`font-card ${!neutralSelection && activeTargetFontId === font.id ? 'selected' : ''} ${previewFontId === font.id ? 'previewing' : ''}`}
                     data-font-state={
                       loadingFontId === font.id
                         ? 'loading'
-                        : activeTargetFontId === font.id
+                        : !neutralSelection && activeTargetFontId === font.id
                           ? 'selected'
                           : 'idle'
                     }
                     onClick={() => void selectFont(font)}
                     disabled={loadingFontId !== undefined}
                     aria-busy={loadingFontId === font.id}
-                    aria-pressed={activeTargetFontId === font.id}
+                    aria-pressed={!neutralSelection && activeTargetFontId === font.id}
                     aria-label={`${t(locale, 'selectFont')}: ${font.name}`}
                     onMouseEnter={() => {
                       setPreviewFontId(font.id);
@@ -305,7 +312,7 @@ export const ControlsPanel = ({
                     <small>
                       {loadingFontId === font.id
                         ? t(locale, 'fontLoading')
-                        : activeTargetFontId === font.id
+                        : !neutralSelection && activeTargetFontId === font.id
                           ? `${font.name} · ${t(locale, 'fontSelected')}`
                           : font.name}
                     </small>
@@ -495,8 +502,10 @@ export const ControlsPanel = ({
               title={templateName(locale, template.id, template.name)}
               description={templateDescription(locale, template.id, template.description)}
               previewSrc={TEMPLATE_PREVIEW_ASSETS[template.id]}
-              selected={params.templateId === template.id}
-              guideTarget={params.templateId === template.id ? 'shape-control' : undefined}
+              selected={!neutralSelection && params.templateId === template.id}
+              guideTarget={
+                !neutralSelection && params.templateId === template.id ? 'shape-control' : undefined
+              }
               testId={`template-card-${template.id}`}
               onSelect={() => {
                 if (!template.supportsSubtitle) setFontTarget('primary');
@@ -522,7 +531,7 @@ export const ControlsPanel = ({
                 title={styleName(locale, style.id, style.name)}
                 description={styleDescription(locale, style.id, style.description)}
                 previewSrc={stylePreviewAsset(params.templateId, style.id)}
-                selected={params.styleId === style.id}
+                selected={!neutralSelection && params.styleId === style.id}
                 testId={`style-card-${style.id}`}
                 onSelect={() => update('styleId', style.id as KeychainParams['styleId'])}
               />
@@ -531,139 +540,252 @@ export const ControlsPanel = ({
           {isHeartSplit && <p className="control-helper">{t(locale, 'heartSplitHelper')}</p>}
         </section>
       )}
-      {params.templateId === 'magnet' && (
-        <section className="control-section magnet-controls" data-control-group="print">
+      <>
+        {params.templateId === 'magnet' && (
+          <section className="control-section magnet-controls" data-control-group="print">
+            <div className="section-heading">
+              <h2>{t(locale, 'magnetControls')}</h2>
+            </div>
+            <label className="select-control">
+              <span>{t(locale, 'magnetPocketSize')}</span>
+              <select
+                aria-label={t(locale, 'magnetPocketSize')}
+                value={params.magnetPocketPreset}
+                onChange={(event) =>
+                  update(
+                    'magnetPocketPreset',
+                    event.target.value as KeychainParams['magnetPocketPreset'],
+                  )
+                }
+              >
+                {MAGNET_POCKET_PRESETS.map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.id} {t(locale, 'millimeterUnit')}
+                  </option>
+                ))}
+              </select>
+              <small>
+                {(() => {
+                  const preset =
+                    MAGNET_POCKET_PRESETS.find((item) => item.id === params.magnetPocketPreset) ??
+                    MAGNET_POCKET_PRESETS[2];
+                  return t(locale, 'magnetPocketDetails', {
+                    diameter: (preset.diameterMm + 0.4).toFixed(1),
+                    depth: (preset.thicknessMm + 0.2).toFixed(1),
+                  });
+                })()}
+              </small>
+            </label>
+            <label className="select-control">
+              <span>{t(locale, 'magnetPocketPlacement')}</span>
+              <select
+                aria-label={t(locale, 'magnetPocketPlacement')}
+                value={params.magnetPocketPlacement}
+                onChange={(event) =>
+                  update(
+                    'magnetPocketPlacement',
+                    event.target.value as KeychainParams['magnetPocketPlacement'],
+                  )
+                }
+              >
+                {(['center', 'upper', 'lower', 'left', 'right'] as const).map((placement) => (
+                  <option key={placement} value={placement}>
+                    {t(locale, `magnetPlacement${placement[0].toUpperCase()}${placement.slice(1)}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </section>
+        )}
+        <section className="control-section" data-control-group="design" data-testid="font-browser">
           <div className="section-heading">
-            <h2>{t(locale, 'magnetControls')}</h2>
-          </div>
-          <label className="select-control">
-            <span>{t(locale, 'magnetPocketSize')}</span>
-            <select
-              aria-label={t(locale, 'magnetPocketSize')}
-              value={params.magnetPocketPreset}
-              onChange={(event) =>
-                update(
-                  'magnetPocketPreset',
-                  event.target.value as KeychainParams['magnetPocketPreset'],
-                )
-              }
-            >
-              {MAGNET_POCKET_PRESETS.map((preset) => (
-                <option key={preset.id} value={preset.id}>
-                  {preset.id} {t(locale, 'millimeterUnit')}
-                </option>
-              ))}
-            </select>
-            <small>
-              {(() => {
-                const preset =
-                  MAGNET_POCKET_PRESETS.find((item) => item.id === params.magnetPocketPreset) ??
-                  MAGNET_POCKET_PRESETS[2];
-                return t(locale, 'magnetPocketDetails', {
-                  diameter: (preset.diameterMm + 0.4).toFixed(1),
-                  depth: (preset.thicknessMm + 0.2).toFixed(1),
-                });
-              })()}
-            </small>
-          </label>
-          <label className="select-control">
-            <span>{t(locale, 'magnetPocketPlacement')}</span>
-            <select
-              aria-label={t(locale, 'magnetPocketPlacement')}
-              value={params.magnetPocketPlacement}
-              onChange={(event) =>
-                update(
-                  'magnetPocketPlacement',
-                  event.target.value as KeychainParams['magnetPocketPlacement'],
-                )
-              }
-            >
-              {(['center', 'upper', 'lower', 'left', 'right'] as const).map((placement) => (
-                <option key={placement} value={placement}>
-                  {t(locale, `magnetPlacement${placement[0].toUpperCase()}${placement.slice(1)}`)}
-                </option>
-              ))}
-            </select>
-          </label>
-        </section>
-      )}
-      <section className="control-section" data-control-group="design" data-testid="font-browser">
-        <div className="section-heading">
-          <h2>
-            {t(locale, 'font')}{' '}
-            <span className="selected-note">
-              {activeFontTarget === 'secondary' ? selectedSubtitleFont.name : selectedFont.name}
-            </span>
-          </h2>
-          <ResetIconButton label={resetActiveFontLabel} onClick={resetActiveFont} />
-        </div>
-        {renderFontTargetSwitch('font-browser-target')}
-        <div className="font-source-tabs" role="tablist" aria-label={t(locale, 'fontSources')}>
-          {(['bundled', 'google', 'local'] as const).map((source, index) => (
-            <button
-              type="button"
-              role="tab"
-              id={`font-tab-${source}`}
-              aria-controls={`font-panel-${source}`}
-              aria-selected={fontSource === source}
-              tabIndex={fontSource === source ? 0 : -1}
-              className={fontSource === source ? 'active' : ''}
-              key={source}
-              onClick={() => activateFontSource(source)}
-              onKeyDown={(event) => {
-                if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-                event.preventDefault();
-                const direction = event.key === 'ArrowLeft' ? -1 : 1;
-                const nextIndex =
-                  event.key === 'Home' ? 0 : event.key === 'End' ? 2 : (index + direction + 3) % 3;
-                const nextSource = (['bundled', 'google', 'local'] as const)[nextIndex];
-                activateFontSource(nextSource);
-                document.getElementById(`font-tab-${nextSource}`)?.focus();
-              }}
-            >
-              {t(
-                locale,
-                source === 'bundled'
-                  ? 'fontSourceLocal'
-                  : source === 'google'
-                    ? 'fontSourceGoogle'
-                    : 'fontSourceImported',
+            <h2>
+              {t(locale, 'font')}{' '}
+              {!neutralSelection && (
+                <span className="selected-note">
+                  {activeFontTarget === 'secondary' ? selectedSubtitleFont.name : selectedFont.name}
+                </span>
               )}
-            </button>
-          ))}
-        </div>
-        <div
-          className="font-panel"
-          id={`font-panel-${fontSource}`}
-          role="tabpanel"
-          aria-labelledby={`font-tab-${fontSource}`}
-        >
-          {fontSource === 'google' ? (
-            customizer.googleLoading ? (
-              <p className="font-provider-state" role="status">
-                {t(locale, 'fontGoogleLoading')}
-              </p>
-            ) : customizer.googleError ? (
-              <div className="font-provider-state" role="status">
-                <p>{t(locale, 'fontGoogleUnavailable')}</p>
-                <IconButton
-                  action="retry-google-fonts"
-                  icon={RefreshCw}
-                  label={t(locale, 'retry')}
-                  motion="rotate"
-                  onClick={() => void customizer.loadGoogleFonts()}
-                />
-              </div>
+            </h2>
+            <ResetIconButton label={resetActiveFontLabel} onClick={resetActiveFont} />
+          </div>
+          {renderFontTargetSwitch('font-browser-target')}
+          <div className="font-source-tabs" role="tablist" aria-label={t(locale, 'fontSources')}>
+            {(['bundled', 'google', 'local'] as const).map((source, index) => (
+              <button
+                type="button"
+                role="tab"
+                id={`font-tab-${source}`}
+                aria-controls={`font-panel-${source}`}
+                aria-selected={fontSource === source}
+                tabIndex={fontSource === source ? 0 : -1}
+                className={fontSource === source ? 'active' : ''}
+                key={source}
+                onClick={() => activateFontSource(source)}
+                onKeyDown={(event) => {
+                  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+                  event.preventDefault();
+                  const direction = event.key === 'ArrowLeft' ? -1 : 1;
+                  const nextIndex =
+                    event.key === 'Home'
+                      ? 0
+                      : event.key === 'End'
+                        ? 2
+                        : (index + direction + 3) % 3;
+                  const nextSource = (['bundled', 'google', 'local'] as const)[nextIndex];
+                  activateFontSource(nextSource);
+                  document.getElementById(`font-tab-${nextSource}`)?.focus();
+                }}
+              >
+                {t(
+                  locale,
+                  source === 'bundled'
+                    ? 'fontSourceLocal'
+                    : source === 'google'
+                      ? 'fontSourceGoogle'
+                      : 'fontSourceImported',
+                )}
+              </button>
+            ))}
+          </div>
+          <div
+            className="font-panel"
+            id={`font-panel-${fontSource}`}
+            role="tabpanel"
+            aria-labelledby={`font-tab-${fontSource}`}
+          >
+            {fontSource === 'google' ? (
+              customizer.googleLoading ? (
+                <p className="font-provider-state" role="status">
+                  {t(locale, 'fontGoogleLoading')}
+                </p>
+              ) : customizer.googleError ? (
+                <div className="font-provider-state" role="status">
+                  <p>{t(locale, 'fontGoogleUnavailable')}</p>
+                  <IconButton
+                    action="retry-google-fonts"
+                    icon={RefreshCw}
+                    label={t(locale, 'retry')}
+                    motion="rotate"
+                    onClick={() => void customizer.loadGoogleFonts()}
+                  />
+                </div>
+              ) : (
+                <>
+                  <label className="font-search">
+                    <span className="sr-only">{t(locale, 'fontSearch')}</span>
+                    <input
+                      type="search"
+                      value={activeBrowserState.search}
+                      onChange={(event) =>
+                        updateFontBrowserState({ search: event.target.value, page: 1 })
+                      }
+                      placeholder={t(locale, 'fontSearchPlaceholder')}
+                      aria-label={t(locale, 'fontSearch')}
+                    />
+                  </label>
+                  {fontFilters}
+                  {params.templateId === 'articulated-name' && (
+                    <p className="font-restriction">{t(locale, 'fontArticulatedRestriction')}</p>
+                  )}
+                  {visibleFonts.length ? (
+                    renderFontGroups(bootFrame ? bootVisibleFonts : visibleFonts)
+                  ) : (
+                    <p className="font-provider-state">
+                      {customizer.googleFonts.length === 0 && !activeBrowserState.search
+                        ? t(locale, 'fontGoogleEmpty')
+                        : t(locale, 'fontNoResults')}
+                    </p>
+                  )}
+                  {pageCount > 1 && (
+                    <nav className="font-pagination" aria-label={t(locale, 'fontPagination')}>
+                      <IconButton
+                        action="font-page-previous"
+                        icon={ChevronLeft}
+                        label={t(locale, 'previous')}
+                        motion="none"
+                        disabled={currentPage === 1}
+                        onClick={() =>
+                          updateFontBrowserState({ page: activeBrowserState.page - 1 })
+                        }
+                      />
+                      <span>{t(locale, 'fontPage', { page: currentPage, pages: pageCount })}</span>
+                      <IconButton
+                        action="font-page-next"
+                        icon={ChevronRight}
+                        label={t(locale, 'next')}
+                        motion="nudge"
+                        disabled={currentPage === pageCount}
+                        onClick={() =>
+                          updateFontBrowserState({ page: activeBrowserState.page + 1 })
+                        }
+                      />
+                    </nav>
+                  )}
+                </>
+              )
             ) : (
               <>
+                {fontSource === 'local' && (
+                  <div className="font-provider-state font-local-provider-state">
+                    <p>{t(locale, 'fontLocalDescription')}</p>
+                    <div className="font-local-actions">
+                      {!fileSystemPickerAvailable && (
+                        <input
+                          type="file"
+                          accept=".ttf,.otf,font/ttf,font/otf"
+                          multiple
+                          onChange={(event) => {
+                            if (event.target.files)
+                              void customizer.importLocalFonts(event.target.files);
+                            event.currentTarget.value = '';
+                          }}
+                        />
+                      )}
+                      {fileSystemPickerAvailable && (
+                        <button type="button" onClick={() => void customizer.pickLocalFonts()}>
+                          {t(locale, 'fontLocalChoose')}
+                        </button>
+                      )}
+                      <details className="font-local-about">
+                        <summary
+                          aria-label={t(locale, 'fontLocalAbout')}
+                          title={t(locale, 'fontLocalAbout')}
+                        >
+                          <Info aria-hidden="true" focusable="false" size={16} strokeWidth={2} />
+                        </summary>
+                        <p>{t(locale, 'fontLocalAboutDescription')}</p>
+                      </details>
+                    </div>
+                    {customizer.localFonts
+                      .filter((record) => record.status === 'unavailable')
+                      .map((record) => (
+                        <p key={record.id} role="status">
+                          {record.name} · {t(locale, 'fontLocalUnavailable')}{' '}
+                          <button
+                            type="button"
+                            onClick={() => void customizer.reconnectLocalFont(record.id)}
+                          >
+                            {t(locale, 'fontLocalReconnect')}
+                          </button>{' '}
+                          <button
+                            type="button"
+                            onClick={() => void customizer.removeLocalFont(record.id)}
+                          >
+                            {t(locale, 'remove')}
+                          </button>
+                        </p>
+                      ))}
+                  </div>
+                )}
                 <label className="font-search">
                   <span className="sr-only">{t(locale, 'fontSearch')}</span>
                   <input
                     type="search"
                     value={activeBrowserState.search}
-                    onChange={(event) =>
-                      updateFontBrowserState({ search: event.target.value, page: 1 })
-                    }
+                    onChange={(event) => {
+                      updateFontBrowserState({ search: event.target.value, page: 1 });
+                    }}
                     placeholder={t(locale, 'fontSearchPlaceholder')}
                     aria-label={t(locale, 'fontSearch')}
                   />
@@ -672,14 +794,10 @@ export const ControlsPanel = ({
                 {params.templateId === 'articulated-name' && (
                   <p className="font-restriction">{t(locale, 'fontArticulatedRestriction')}</p>
                 )}
-                {visibleFonts.length ? (
-                  renderFontGroups(visibleFonts)
+                {visibleFonts.length === 0 ? (
+                  <p className="font-provider-state">{t(locale, 'fontNoResults')}</p>
                 ) : (
-                  <p className="font-provider-state">
-                    {customizer.googleFonts.length === 0 && !activeBrowserState.search
-                      ? t(locale, 'fontGoogleEmpty')
-                      : t(locale, 'fontNoResults')}
-                  </p>
+                  renderFontGroups(bootFrame ? bootVisibleFonts : visibleFonts)
                 )}
                 {pageCount > 1 && (
                   <nav className="font-pagination" aria-label={t(locale, 'fontPagination')}>
@@ -703,293 +821,205 @@ export const ControlsPanel = ({
                   </nav>
                 )}
               </>
-            )
-          ) : (
-            <>
-              {fontSource === 'local' && (
-                <div className="font-provider-state font-local-provider-state">
-                  <p>{t(locale, 'fontLocalDescription')}</p>
-                  <div className="font-local-actions">
-                    {!fileSystemPickerAvailable && (
-                      <input
-                        type="file"
-                        accept=".ttf,.otf,font/ttf,font/otf"
-                        multiple
-                        onChange={(event) => {
-                          if (event.target.files)
-                            void customizer.importLocalFonts(event.target.files);
-                          event.currentTarget.value = '';
-                        }}
-                      />
-                    )}
-                    {fileSystemPickerAvailable && (
-                      <button type="button" onClick={() => void customizer.pickLocalFonts()}>
-                        {t(locale, 'fontLocalChoose')}
-                      </button>
-                    )}
-                    <details className="font-local-about">
-                      <summary
-                        aria-label={t(locale, 'fontLocalAbout')}
-                        title={t(locale, 'fontLocalAbout')}
-                      >
-                        <Info aria-hidden="true" focusable="false" size={16} strokeWidth={2} />
-                      </summary>
-                      <p>{t(locale, 'fontLocalAboutDescription')}</p>
-                    </details>
-                  </div>
-                  {customizer.localFonts
-                    .filter((record) => record.status === 'unavailable')
-                    .map((record) => (
-                      <p key={record.id} role="status">
-                        {record.name} · {t(locale, 'fontLocalUnavailable')}{' '}
-                        <button
-                          type="button"
-                          onClick={() => void customizer.reconnectLocalFont(record.id)}
-                        >
-                          {t(locale, 'fontLocalReconnect')}
-                        </button>{' '}
-                        <button
-                          type="button"
-                          onClick={() => void customizer.removeLocalFont(record.id)}
-                        >
-                          {t(locale, 'remove')}
-                        </button>
-                      </p>
-                    ))}
-                </div>
-              )}
-              <label className="font-search">
-                <span className="sr-only">{t(locale, 'fontSearch')}</span>
-                <input
-                  type="search"
-                  value={activeBrowserState.search}
-                  onChange={(event) => {
-                    updateFontBrowserState({ search: event.target.value, page: 1 });
-                  }}
-                  placeholder={t(locale, 'fontSearchPlaceholder')}
-                  aria-label={t(locale, 'fontSearch')}
-                />
-              </label>
-              {fontFilters}
-              {params.templateId === 'articulated-name' && (
-                <p className="font-restriction">{t(locale, 'fontArticulatedRestriction')}</p>
-              )}
-              {visibleFonts.length === 0 ? (
-                <p className="font-provider-state">{t(locale, 'fontNoResults')}</p>
-              ) : (
-                renderFontGroups(visibleFonts)
-              )}
-              {pageCount > 1 && (
-                <nav className="font-pagination" aria-label={t(locale, 'fontPagination')}>
-                  <IconButton
-                    action="font-page-previous"
-                    icon={ChevronLeft}
-                    label={t(locale, 'previous')}
-                    motion="none"
-                    disabled={currentPage === 1}
-                    onClick={() => updateFontBrowserState({ page: activeBrowserState.page - 1 })}
-                  />
-                  <span>{t(locale, 'fontPage', { page: currentPage, pages: pageCount })}</span>
-                  <IconButton
-                    action="font-page-next"
-                    icon={ChevronRight}
-                    label={t(locale, 'next')}
-                    motion="nudge"
-                    disabled={currentPage === pageCount}
-                    onClick={() => updateFontBrowserState({ page: activeBrowserState.page + 1 })}
-                  />
-                </nav>
-              )}
-            </>
-          )}
-        </div>
-        <footer className="font-attribution">
-          <span>
-            {t(
-              locale,
-              fontSource === 'google'
-                ? 'fontSourceGoogle'
-                : fontSource === 'local'
-                  ? 'fontSourceImported'
-                  : 'fontSourceLocal',
-            )}
-          </span>
-          {fontSource === 'google' ? (
-            <a href="https://fonts.google.com" target="_blank" rel="noreferrer">
-              {t(locale, 'fontGoogleAttribution')} ↗
-            </a>
-          ) : (
-            <span>{t(locale, 'fontSourceLocal')}</span>
-          )}
-        </footer>
-        {fontNotice && (
-          <p className="font-notice" aria-live="polite">
-            {t(
-              locale,
-              fontNotice.articulated
-                ? 'fontArticulatedFallback'
-                : fontNotice.target === 'subtitle'
-                  ? 'fontSubtitleFallback'
-                  : 'fontFallback',
-              {
-                font: fontNotice.font,
-                replacement: fontNotice.replacement,
-              },
-            )}
-          </p>
-        )}
-        {fontLoadError && (
-          <p className="font-notice" role="alert">
-            {t(locale, 'fontRuntimeLoadFailed')}
-          </p>
-        )}
-      </section>
-      <section
-        className="control-section shape-settings"
-        data-control-group="print"
-        data-testid="shape-settings"
-      >
-        <div className="section-heading">
-          <h2>{t(locale, 'shape')}</h2>
-          <ResetIconButton label={t(locale, 'resetShape')} onClick={() => resetSection('shape')} />
-        </div>
-        <div className="control-subsection shape-font-settings" data-testid="font-settings">
-          <div className="section-heading">
-            <h3>{t(locale, 'fontSettings')}</h3>
-            {activeFontTarget === 'primary' && (
-              <ResetIconButton label={resetActiveFontLabel} onClick={resetActiveFont} />
             )}
           </div>
-          {renderFontTargetSwitch('shape-font-target')}
-          {activeFontTarget === 'primary' && (
-            <div className="range-grid">
-              {renderParameter('textSizeMm')}
-              {renderParameter('fontWeightMm')}
-              {renderParameter('letterSpacingMm')}
-              {renderParameter('reliefDepthMm')}
-            </div>
+          {!bootFrame && (
+            <footer className="font-attribution">
+              <span>
+                {t(
+                  locale,
+                  fontSource === 'google'
+                    ? 'fontSourceGoogle'
+                    : fontSource === 'local'
+                      ? 'fontSourceImported'
+                      : 'fontSourceLocal',
+                )}
+              </span>
+              {fontSource === 'google' ? (
+                <a href="https://fonts.google.com" target="_blank" rel="noreferrer">
+                  {t(locale, 'fontGoogleAttribution')} ↗
+                </a>
+              ) : (
+                <span>{t(locale, 'fontSourceLocal')}</span>
+              )}
+            </footer>
           )}
-          {hasSubtitle && hasSubtitleText && (
-            <div className="subtitle-controls" data-testid="subtitle-settings">
+          {fontNotice && (
+            <p className="font-notice" aria-live="polite">
+              {t(
+                locale,
+                fontNotice.articulated
+                  ? 'fontArticulatedFallback'
+                  : fontNotice.target === 'subtitle'
+                    ? 'fontSubtitleFallback'
+                    : 'fontFallback',
+                {
+                  font: fontNotice.font,
+                  replacement: fontNotice.replacement,
+                },
+              )}
+            </p>
+          )}
+          {fontLoadError && (
+            <p className="font-notice" role="alert">
+              {t(locale, 'fontRuntimeLoadFailed')}
+            </p>
+          )}
+        </section>
+        {!bootFrame && (
+          <>
+            <section
+              className="control-section shape-settings"
+              data-control-group="print"
+              data-testid="shape-settings"
+            >
               <div className="section-heading">
-                <h4>{t(locale, 'subtitle')}</h4>
+                <h2>{t(locale, 'shape')}</h2>
                 <ResetIconButton
-                  label={t(locale, 'resetSubtitle')}
-                  onClick={() => {
-                    setFontTarget('primary');
-                    resetSection('subtitle');
-                  }}
+                  label={t(locale, 'resetShape')}
+                  onClick={() => resetSection('shape')}
                 />
               </div>
-              {activeFontTarget === 'secondary' && hasSubtitleText && (
-                <>
-                  <RangeControl
-                    label={t(locale, 'subtitleSize')}
-                    value={params.subtitleTextSizeMm ?? 6}
-                    min={4}
-                    max={12}
-                    step={0.5}
-                    unit="mm"
-                    onChange={(value) => update('subtitleTextSizeMm', value)}
-                  />
-                  <RangeControl
-                    label={t(locale, 'subtitleWeight')}
-                    value={params.subtitleFontWeightMm ?? 0}
-                    min={0}
-                    max={1.5}
-                    step={0.1}
-                    unit="mm"
-                    onChange={(value) => update('subtitleFontWeightMm', value)}
-                  />
-                  <RangeControl
-                    label={t(locale, 'subtitleSpacing')}
-                    value={params.subtitleLetterSpacingMm ?? 0.5}
-                    min={0}
-                    max={4}
-                    step={0.1}
-                    unit="mm"
-                    onChange={(value) => update('subtitleLetterSpacingMm', value)}
-                  />
-                  <RangeControl
-                    label={t(locale, 'subtitleDepth')}
-                    value={params.subtitleReliefDepthMm ?? 0.8}
-                    min={0.4}
-                    max={1.5}
-                    step={0.1}
-                    unit="mm"
-                    onChange={(value) => update('subtitleReliefDepthMm', value)}
-                  />
-                  <RangeControl
-                    label={t(locale, 'subtitleGap')}
-                    value={params.subtitleGapMm ?? 1.5}
-                    min={1.5}
-                    max={8}
-                    step={0.1}
-                    unit="mm"
-                    onChange={(value) => update('subtitleGapMm', value)}
-                  />
-                  <RangeControl
-                    label={t(locale, 'subtitleOffsetX')}
-                    value={params.subtitleOffsetXRatio * 100}
-                    min={-100}
-                    max={100}
-                    step={5}
-                    unit="%"
-                    onChange={(value) => update('subtitleOffsetXRatio', value / 100)}
-                  />
-                  <RangeControl
-                    label={t(locale, 'subtitleOffsetY')}
-                    value={params.subtitleOffsetYRatio * 100}
-                    min={-100}
-                    max={100}
-                    step={5}
-                    unit="%"
-                    onChange={(value) => update('subtitleOffsetYRatio', value / 100)}
-                  />
-                </>
+              <div className="control-subsection shape-font-settings" data-testid="font-settings">
+                <div className="section-heading">
+                  <h3>{t(locale, 'fontSettings')}</h3>
+                  {activeFontTarget === 'primary' && (
+                    <ResetIconButton label={resetActiveFontLabel} onClick={resetActiveFont} />
+                  )}
+                </div>
+                {renderFontTargetSwitch('shape-font-target')}
+                {activeFontTarget === 'primary' && (
+                  <div className="range-grid">
+                    {renderParameter('textSizeMm')}
+                    {renderParameter('fontWeightMm')}
+                    {renderParameter('letterSpacingMm')}
+                    {renderParameter('reliefDepthMm')}
+                  </div>
+                )}
+                {hasSubtitle && hasSubtitleText && (
+                  <div className="subtitle-controls" data-testid="subtitle-settings">
+                    <div className="section-heading">
+                      <h4>{t(locale, 'subtitle')}</h4>
+                      <ResetIconButton
+                        label={t(locale, 'resetSubtitle')}
+                        onClick={() => {
+                          setFontTarget('primary');
+                          resetSection('subtitle');
+                        }}
+                      />
+                    </div>
+                    {activeFontTarget === 'secondary' && hasSubtitleText && (
+                      <>
+                        <RangeControl
+                          label={t(locale, 'subtitleSize')}
+                          value={params.subtitleTextSizeMm ?? 6}
+                          min={4}
+                          max={12}
+                          step={0.5}
+                          unit="mm"
+                          onChange={(value) => update('subtitleTextSizeMm', value)}
+                        />
+                        <RangeControl
+                          label={t(locale, 'subtitleWeight')}
+                          value={params.subtitleFontWeightMm ?? 0}
+                          min={0}
+                          max={1.5}
+                          step={0.1}
+                          unit="mm"
+                          onChange={(value) => update('subtitleFontWeightMm', value)}
+                        />
+                        <RangeControl
+                          label={t(locale, 'subtitleSpacing')}
+                          value={params.subtitleLetterSpacingMm ?? 0.5}
+                          min={0}
+                          max={4}
+                          step={0.1}
+                          unit="mm"
+                          onChange={(value) => update('subtitleLetterSpacingMm', value)}
+                        />
+                        <RangeControl
+                          label={t(locale, 'subtitleDepth')}
+                          value={params.subtitleReliefDepthMm ?? 0.8}
+                          min={0.4}
+                          max={1.5}
+                          step={0.1}
+                          unit="mm"
+                          onChange={(value) => update('subtitleReliefDepthMm', value)}
+                        />
+                        <RangeControl
+                          label={t(locale, 'subtitleGap')}
+                          value={params.subtitleGapMm ?? 1.5}
+                          min={1.5}
+                          max={8}
+                          step={0.1}
+                          unit="mm"
+                          onChange={(value) => update('subtitleGapMm', value)}
+                        />
+                        <RangeControl
+                          label={t(locale, 'subtitleOffsetX')}
+                          value={params.subtitleOffsetXRatio * 100}
+                          min={-100}
+                          max={100}
+                          step={5}
+                          unit="%"
+                          onChange={(value) => update('subtitleOffsetXRatio', value / 100)}
+                        />
+                        <RangeControl
+                          label={t(locale, 'subtitleOffsetY')}
+                          value={params.subtitleOffsetYRatio * 100}
+                          min={-100}
+                          max={100}
+                          step={5}
+                          unit="%"
+                          onChange={(value) => update('subtitleOffsetYRatio', value / 100)}
+                        />
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+              <ParameterGroupList
+                locale={locale}
+                params={params}
+                showsParameter={showsParameter}
+                update={update}
+                renderParameter={renderParameter}
+              />
+              <GeometryFinishControls locale={locale} params={params} update={update} />
+              {isHeartSplit && (
+                <div className="control-subsection heart-settings" data-testid="heart-settings">
+                  <h3>{t(locale, 'heartSettings')}</h3>
+                  <label className="select-control">
+                    <span>{t(locale, 'heartInterior')}</span>
+                    <select
+                      aria-label={t(locale, 'heartInterior')}
+                      value={params.heartInteriorMode}
+                      onChange={(event) =>
+                        update('heartInteriorMode', event.target.value as HeartInteriorMode)
+                      }
+                    >
+                      <option value="relief">{t(locale, 'heartInteriorRelief')}</option>
+                      <option value="through-cut">{t(locale, 'heartInteriorThroughCut')}</option>
+                    </select>
+                    <span className="control-helper">{t(locale, 'heartInteriorHelper')}</span>
+                  </label>
+                </div>
               )}
-            </div>
-          )}
-        </div>
-        <ParameterGroupList
-          locale={locale}
-          params={params}
-          showsParameter={showsParameter}
-          update={update}
-          renderParameter={renderParameter}
-        />
-        <GeometryFinishControls locale={locale} params={params} update={update} />
-        {isHeartSplit && (
-          <div className="control-subsection heart-settings" data-testid="heart-settings">
-            <h3>{t(locale, 'heartSettings')}</h3>
-            <label className="select-control">
-              <span>{t(locale, 'heartInterior')}</span>
-              <select
-                aria-label={t(locale, 'heartInterior')}
-                value={params.heartInteriorMode}
-                onChange={(event) =>
-                  update('heartInteriorMode', event.target.value as HeartInteriorMode)
-                }
-              >
-                <option value="relief">{t(locale, 'heartInteriorRelief')}</option>
-                <option value="through-cut">{t(locale, 'heartInteriorThroughCut')}</option>
-              </select>
-              <span className="control-helper">{t(locale, 'heartInteriorHelper')}</span>
-            </label>
-          </div>
+            </section>
+            <button
+              type="button"
+              className="reset-settings"
+              onClick={() => {
+                setFontTarget('primary');
+                onReset();
+              }}
+            >
+              {t(locale, 'resetSettings')}
+            </button>
+            <div className="controls-scroll-spacer" aria-hidden="true" />
+          </>
         )}
-      </section>
-      <button
-        type="button"
-        className="reset-settings"
-        onClick={() => {
-          setFontTarget('primary');
-          onReset();
-        }}
-      >
-        {t(locale, 'resetSettings')}
-      </button>
-      <div className="controls-scroll-spacer" aria-hidden="true" />
+      </>
     </aside>
   );
 };

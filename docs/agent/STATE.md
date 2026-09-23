@@ -2,34 +2,30 @@
 
 ## Repository state
 
-- **Branch:** `main`
-- **HEAD:** Latest PageSpeed optimization commit (`perf(landing): optimize mobile PageSpeed findings`)
-- **Working tree:** Clean; the follow-up PageSpeed optimization is committed and ready for deployment.
+- **Branch/HEAD:** `main` at `8900710`; no commit, staging, or push was authorized.
+- **Working tree:** Customizer first-paint and boot-recovery work remains uncommitted. Preserve all existing changes.
 
-## Current objective
+## Current objective and result
 
-Remediate the supplied PageSpeed SEO, accessibility, and landing-performance findings without changing public routes, PNG/social-image compatibility, or carousel behavior.
+Replace the indefinite generic loading shell with useful first-paint content and a recoverable failure state. The production build emits a route-specific `/create` document with 18 same-source Customizer frames (six initial states across en/ru/uk), while the shared landing document remains free of those frames. The boot frame is inert until React commits; route and lazy-chunk failures release it. An entry/runtime failure or a 12-second stall shows a localized reload action, with a separate no-JavaScript message.
 
-## Completed in the working tree
+Development `/create` and `/create/` also receive the selected frame. The dev-only SSR render is serialized and uses a separate Vite cache. Explicit pre-React CSS links include the lazy Viewer's appearance-control stylesheet; this removed the measured 10px mobile controls-panel shift. Dev-only Playwright tests are excluded from the production Playwright config. The server uses `strictPort` to avoid silently moving from 5173 to 5174.
 
-- Added `/ai-catalog.json`, removed the unsupported `LLMs:` robots directive, and retained `/llms.txt` discovery through HTML and HTTP `describedby` links.
-- Added catalog, font, versioned showcase, and versioned Manifold WASM headers; the geometry loader now uses `/manifold-v1.wasm` while the legacy file remains available.
-- Moved the carousel landmark to a named section, kept native figure semantics, and added localized slide group labels.
-- Lazy-loaded landing CSS away from customizer/profile routes, avoided redundant at-top navigation scrolling, added below-fold containment, and added AVIF/WebP picture sources with legacy PNG fallbacks.
-- Added the reproducible `pnpm assets:landing` Sharp generator and checked in `showcase/v1` derivatives.
-- Added a 490px mobile hero derivative, density-specific mobile `<picture>` sources, and a root-only hero preload.
-- Corrected Netlify header precedence so versioned showcase assets receive immutable one-year caching.
-- Improved run-card text contrast and footer link target sizing; expanded responsive image, contrast, and deployment assertions.
+The earlier first-paint work also added route-preload and retryable lazy-chunk behavior, stable transitions from landing/profile to the Customizer, and focused browser coverage for these paths. The mismatched generic Customizer skeleton CSS was removed.
 
 ## Validation actually run
 
-- `pnpm validate` passed: formatting, lint, type-checking, 41 unit files / 504 tests, and production build.
-- `pnpm validate:changed -- …` passed for the changed source/static files.
-- Carousel and route Playwright coverage passed across desktop, mobile, and mobile-2x (78 tests).
-- Deployment/static-resource coverage passed across all three projects (12 tests); smoke coverage passed (9 tests); gated performance coverage passed (9 tests).
-- A local Chromium trace of the landing load recorded 1,222 events, including 10 `Layout` and 12 `UpdateLayoutTree` events. These residual browser/framework events were not used to justify speculative carousel changes.
-- Follow-up validation: `pnpm validate` passed (41 files / 504 tests and production build); focused desktop/mobile/mobile-2x route, performance, and contrast coverage passed 80 tests with one intentional desktop touch-target skip.
+- `pnpm validate:changed` passed.
+- `pnpm validate` passed (format, lint, typecheck, 41 Vitest files / 504 tests, production build). Vite still reports the existing `manifold-3d` `node:module` browser-externalization warning.
+- Focused production Playwright recovery and route-handoff matrix: 34 passed, 2 expected desktop-only skips across desktop, mobile, and mobile-2x.
+- Isolated dev-boot Playwright suite: 6 passed across desktop and mobile, including held-entry box parity and concurrent cold/repeat requests. The focused suite also passed twice before the final TypeScript-only test-helper correction.
+- Existing local port 5173 returned HTTP 200 for `/create?template=magnet`. A new server start correctly failed because that port was already occupied; the running server was left untouched.
+- `git diff --check` passed after the handoff edit.
+
+## Known unrelated issue
+
+An earlier hosted workspace browser run found a stale `Order CSV` assertion expecting `order_id,text,quantity\n`; the current UI defaults to `order_id,text,quantity,subtitle\n`. This task did not change that assertion.
 
 ## Exact next action
 
-After hosting deploys the latest commit, run the deployment/static-resource checks against the updated site and rerun PageSpeed for desktop and mobile.
+Review the complete uncommitted first-paint diff and, if desired, run the broader browser matrix before requesting commit authorization. Do not commit or push without explicit current-conversation approval.

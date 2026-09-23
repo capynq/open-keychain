@@ -24,7 +24,7 @@ export const LandingPage = ({
 
   return (
     <div className="landing-shell">
-      <AppHeader variant="landing" locale={locale} onLocaleChange={onLocaleChange} />
+      <AppHeader locale={locale} onLocaleChange={onLocaleChange} />
       <main>
         <LandingHero
           locale={locale}

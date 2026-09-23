@@ -1,0 +1,11 @@
+.customizer-boot-frame .workspace {
+  min-height: 0;
+}
+
+.customizer-boot-frame .controls-panel {
+  scrollbar-gutter: stable both-edges;
+}
+
+.customizer-boot-frame .preview-panel {
+  pointer-events: none;
+}
