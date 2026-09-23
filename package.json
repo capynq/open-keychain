@@ -20,7 +20,7 @@
   "scripts": {
     "dev": "vite",
     "build": "pnpm typecheck && pnpm build:artifact",
-    "build:artifact": "vite build",
+    "build:artifact": "pnpm seo:sitemap && vite build",
     "preview": "vite preview",
     "typecheck": "node scripts/run-tsc.mjs -b --pretty false",
     "typecheck:watch": "node scripts/run-tsc.mjs -b --watch --pretty false",
@@ -38,6 +38,8 @@
     "test:geometry:matrix": "node --import tsx scripts/bench-matrix-parent.ts",
     "validation:fixtures": "node --import tsx scripts/generate-validation-fixtures.ts",
     "assets:landing": "node scripts/generate-landing-assets.mjs",
+    "seo:sitemap": "node --import tsx scripts/generate-seo-sitemap.ts",
+    "validate:seo": "pnpm seo:sitemap --check && vitest run src/infrastructure/seo/app-metadata.test.ts src/infrastructure/seo/sitemap.test.ts",
     "validate:slicer": "node --import tsx scripts/validate-slicer.ts",
     "server": "tsx server/index.ts",
     "server:start": "tsx server/index.ts",

@@ -65,6 +65,47 @@
   line-height: 1.65;
 }
 
+.seo-comparison {
+  max-width: 48rem;
+  margin-block: 2.5rem;
+}
+
+.seo-comparison h2 {
+  margin-top: 0;
+}
+
+.seo-comparison table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  color: var(--seo-ink);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.seo-comparison th,
+.seo-comparison td {
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--seo-border);
+  padding: 0.9rem 0.75rem;
+  vertical-align: top;
+}
+
+.seo-comparison th:first-child {
+  width: 24%;
+}
+
+.seo-comparison thead th {
+  color: var(--seo-muted);
+  font-size: 0.83rem;
+  font-weight: 800;
+}
+
+.seo-comparison tbody th {
+  font-weight: 800;
+}
+
 .seo-main p {
   max-width: 48rem;
   line-height: 1.7;
@@ -146,6 +187,38 @@
     background-color 0.16s ease,
     box-shadow 0.16s ease,
     transform 0.16s ease;
+}
+
+.seo-guide-related,
+.seo-template-related {
+  margin-block: 2rem;
+}
+
+.seo-guide-related h2,
+.seo-template-related h2 {
+  margin-top: 0;
+}
+
+.seo-guide-related .seo-feature-list,
+.seo-template-related .seo-feature-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 0.75rem;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.seo-related-link {
+  color: var(--seo-ink);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.seo-related-link:focus-visible {
+  border-radius: 0.15rem;
+  outline: 3px solid var(--seo-accent);
+  outline-offset: 3px;
 }
 
 .seo-cta::after {
@@ -235,6 +308,15 @@
 
   .seo-main > ul {
     grid-template-columns: 1fr;
+  }
+
+  .seo-comparison table {
+    font-size: 0.82rem;
+  }
+
+  .seo-comparison th,
+  .seo-comparison td {
+    padding: 0.7rem 0.4rem;
   }
 }
 

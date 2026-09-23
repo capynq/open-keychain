@@ -23,7 +23,7 @@ export const SEO_GUIDE_CATALOG: readonly SeoGuideDefinition[] = [
     slug: 'stl-vs-3mf',
     key: 'stlVs3mf',
     ogImageSrc: '/showcase/prints/example_1-en.png',
-    lastModified: '2026-08-22',
+    lastModified: '2026-09-23',
   },
   {
     slug: 'how-to-print-a-name-keychain',
@@ -50,7 +50,7 @@ export const SEO_TEMPLATE_CATALOG: readonly SeoTemplateDefinition[] = [
     id: 'name-keychain',
     key: 'nameKeychain',
     previewSrc: '/showcase/templates/name-keychain.png',
-    lastModified: '2026-08-22',
+    lastModified: '2026-09-23',
   },
   {
     id: 'articulated-name',
@@ -62,7 +62,7 @@ export const SEO_TEMPLATE_CATALOG: readonly SeoTemplateDefinition[] = [
     id: 'nameplate',
     key: 'nameplate',
     previewSrc: '/showcase/templates/nameplate.png',
-    lastModified: '2026-08-22',
+    lastModified: '2026-09-23',
   },
   {
     id: 'plant-label',

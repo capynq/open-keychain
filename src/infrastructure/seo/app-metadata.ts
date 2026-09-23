@@ -11,6 +11,10 @@ import {
 } from './catalog';
 import { SEO_GUIDE_COPY, SEO_HUB_COPY } from './guides';
 
+export const SEO_SITE_NAME = 'Open Keychain';
+export const SEO_SITE_ALTERNATE_NAME = 'Open Keychain 3D';
+export const SEO_ORGANIZATION_LOGO = 'https://open-keychain.com/brand/icon-512.png';
+
 export const INDEXABLE_APP_TEMPLATES = [
   'name-keychain',
   'articulated-name',
@@ -202,13 +206,15 @@ export const buildSeoJsonLd = (route: SeoRoute): Record<string, unknown> => {
     {
       '@type': 'Organization',
       '@id': 'https://open-keychain.com/#organization',
-      name: t(route.locale, 'seo.brand'),
+      name: SEO_SITE_NAME,
       url: 'https://open-keychain.com/',
+      logo: SEO_ORGANIZATION_LOGO,
     },
     {
       '@type': 'WebSite',
       '@id': 'https://open-keychain.com/#website',
-      name: t(route.locale, 'seo.brand'),
+      name: SEO_SITE_NAME,
+      alternateName: SEO_SITE_ALTERNATE_NAME,
       url: 'https://open-keychain.com/',
       inLanguage: route.locale,
       publisher: { '@id': 'https://open-keychain.com/#organization' },
@@ -270,11 +276,12 @@ export const buildSeoJsonLd = (route: SeoRoute): Record<string, unknown> => {
       image: `https://open-keychain.com${guide?.ogImageSrc ?? DEFAULT_OG_IMAGE_PATH}`,
       dateModified: guide?.lastModified,
       lastModified: guide?.lastModified,
-      author: { '@type': 'Organization', name: t(route.locale, 'seo.brand') },
+      author: { '@type': 'Organization', name: SEO_SITE_NAME },
       publisher: {
         '@type': 'Organization',
-        name: t(route.locale, 'seo.brand'),
+        name: SEO_SITE_NAME,
         url: 'https://open-keychain.com/',
+        logo: SEO_ORGANIZATION_LOGO,
       },
     });
   }

@@ -3,11 +3,22 @@ import { expect, test } from '@playwright/test';
 import { SEO_PAGE_MANIFEST } from '../src/infrastructure/seo/catalog';
 import { selectLocale } from './helpers';
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('open-keychain.analytics-consent', 'declined');
+  });
+});
+
 test('renders every localized SEO route through the React app', async ({ page }) => {
   for (const entry of SEO_PAGE_MANIFEST) {
     await page.goto(entry.path);
     await expect(page.locator('html')).toHaveAttribute('lang', entry.locale);
+    await expect(page.locator('meta[name="description"]')).not.toHaveAttribute('content', '');
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'index,follow');
+    await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute(
+      'content',
+      'Open Keychain',
+    );
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
       'href',
       `https://open-keychain.com${entry.path}`,
@@ -15,17 +26,110 @@ test('renders every localized SEO route through the React app', async ({ page })
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(1);
     await expect(page.locator('link[rel="alternate"][hreflang="x-default"]')).toHaveCount(1);
+    const graph = JSON.parse(
+      (await page.locator('script[type="application/ld+json"]').textContent()) ?? '{}',
+    )['@graph'] as Array<Record<string, unknown>>;
+    expect(graph.find((item) => item['@type'] === 'WebSite')).toMatchObject({
+      name: 'Open Keychain',
+      alternateName: 'Open Keychain 3D',
+    });
+    expect(graph.find((item) => item['@type'] === 'Organization')).toMatchObject({
+      name: 'Open Keychain',
+      logo: 'https://open-keychain.com/brand/icon-512.png',
+    });
   }
 });
 
-test('renders a localized template page with hydrated navigation', async ({ page }) => {
+test('connects the localized STL and 3MF guide to related pages', async ({ page }, testInfo) => {
+  const localizedRoutes = [
+    {
+      path: '/guides/stl-vs-3mf/',
+      guidePath: '/guides/how-to-print-a-name-keychain/',
+      templatePath: '/templates/name-keychain/',
+    },
+    {
+      path: '/ru/guides/stl-vs-3mf/',
+      guidePath: '/ru/guides/how-to-print-a-name-keychain/',
+      templatePath: '/ru/templates/name-keychain/',
+    },
+    {
+      path: '/uk/guides/stl-vs-3mf/',
+      guidePath: '/uk/guides/how-to-print-a-name-keychain/',
+      templatePath: '/uk/templates/name-keychain/',
+    },
+  ];
+
+  for (const route of localizedRoutes) {
+    await page.goto(route.path);
+    const relatedResources = page.locator('.seo-guide-related');
+    await expect(relatedResources).toBeVisible();
+    await expect(relatedResources.locator(`a[href="${route.guidePath}"]`)).toBeVisible();
+    await expect(relatedResources.locator(`a[href="${route.templatePath}"]`)).toBeVisible();
+    const comparison = page.locator('.seo-comparison');
+    await expect(comparison).toBeVisible();
+    await expect(comparison.locator('tbody tr')).toHaveCount(3);
+    await comparison.screenshot({
+      path: testInfo.outputPath(`seo-comparison-${route.path.replaceAll('/', '-')}.png`),
+      animations: 'disabled',
+    });
+
+    const relatedLinks = relatedResources.getByRole('link');
+    await relatedLinks.first().focus();
+    await page.keyboard.press('Tab');
+    await expect(relatedLinks.nth(1)).toBeFocused();
+    await expect
+      .poll(() => relatedLinks.nth(1).evaluate((link) => getComputedStyle(link).outlineStyle))
+      .toBe('solid');
+
+    const viewport = page.viewportSize();
+    const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(viewport).not.toBeNull();
+    expect(documentWidth).toBeLessThanOrEqual(viewport?.width ?? 0);
+    await relatedResources.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await page.screenshot({
+      path: testInfo.outputPath(`seo-guide-${route.path.replaceAll('/', '-')}.png`),
+      animations: 'disabled',
+    });
+  }
+});
+
+test('renders a localized template page with hydrated navigation', async ({ page }, testInfo) => {
   await page.goto('/uk/templates/name-keychain/');
   await expect(page).toHaveTitle('Open Keychain 3D | Іменний брелок для 3D-друку');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('іменний брелок');
+  await expect(
+    page.locator('.seo-template-related a[href="/uk/guides/how-to-print-a-name-keychain/"]'),
+  ).toBeVisible();
+  await expect(
+    page.locator('.seo-template-related a[href="/uk/guides/stl-vs-3mf/"]'),
+  ).toBeVisible();
+  const relatedResources = page.locator('.seo-template-related');
+  await relatedResources.scrollIntoViewIfNeeded();
+  await relatedResources.screenshot({
+    path: testInfo.outputPath('seo-name-keychain-related-guides.png'),
+    animations: 'disabled',
+  });
   await expect(page.getByRole('link', { name: /Створити брелок/ })).toHaveAttribute(
     'href',
     '/create?template=name-keychain&lang=uk',
   );
+});
+
+test('explains nameplate controls and links to the format guide', async ({ page }, testInfo) => {
+  await page.goto('/ru/templates/nameplate/');
+  await expect(page.getByRole('main')).toContainText('наклон текста, глубину встраивания');
+  const relatedResources = page.locator('.seo-template-related');
+  await expect(relatedResources.locator('a[href="/ru/guides/stl-vs-3mf/"]')).toBeVisible();
+  const viewport = page.viewportSize();
+  const documentWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+  expect(viewport).not.toBeNull();
+  expect(documentWidth).toBeLessThanOrEqual(viewport?.width ?? 0);
+  await relatedResources.scrollIntoViewIfNeeded();
+  await relatedResources.screenshot({
+    path: testInfo.outputPath('seo-nameplate-related-guide.png'),
+    animations: 'disabled',
+  });
 });
 
 test('keeps the localized language when an SEO CTA opens the customizer', async ({ page }) => {

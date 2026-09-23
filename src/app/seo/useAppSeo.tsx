@@ -10,6 +10,9 @@ import {
   resolveSeoRoute,
   seoOgImagePath,
   seoPageMetadata,
+  SEO_ORGANIZATION_LOGO,
+  SEO_SITE_ALTERNATE_NAME,
+  SEO_SITE_NAME,
   SEO_LOCALES,
   SEO_TEMPLATE_CATALOG,
   type SeoRoute,
@@ -47,12 +50,31 @@ const localizedPath = (route: SeoRoute, locale: Locale): string => {
 
 const jsonLdFor = (title: string, description: string, url: string, locale: Locale) => ({
   '@context': 'https://schema.org',
-  '@type': 'WebPage',
-  name: title,
-  description,
-  url,
-  inLanguage: locale,
-  isPartOf: { '@type': 'WebSite', name: 'Open Keychain 3D', url: SITE_URL },
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': `${SITE_URL}/#organization`,
+      name: SEO_SITE_NAME,
+      url: `${SITE_URL}/`,
+      logo: SEO_ORGANIZATION_LOGO,
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE_URL}/#website`,
+      name: SEO_SITE_NAME,
+      alternateName: SEO_SITE_ALTERNATE_NAME,
+      url: `${SITE_URL}/`,
+      publisher: { '@id': `${SITE_URL}/#organization` },
+    },
+    {
+      '@type': 'WebPage',
+      name: title,
+      description,
+      url,
+      inLanguage: locale,
+      isPartOf: { '@id': `${SITE_URL}/#website` },
+    },
+  ],
 });
 
 /** React 19 hoists these head elements and updates them on client-side route transitions. */

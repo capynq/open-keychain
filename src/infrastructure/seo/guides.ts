@@ -6,6 +6,11 @@ export type SeoGuideCopy = {
   heading: string;
   intro: string;
   sections: readonly { heading: string; body: string }[];
+  comparison?: {
+    heading: string;
+    headers: readonly [string, string, string];
+    rows: readonly (readonly [string, string, string])[];
+  };
   faq?: readonly { question: string; answer: string }[];
 };
 
@@ -48,22 +53,55 @@ export const SEO_GUIDE_COPY: Record<SeoLocale, Record<string, SeoGuideCopy>> = {
     stlVs3mf: {
       title: 'Open Keychain 3D | 3MF vs STL files for 3D printing',
       description:
-        'Compare 3MF vs STL files for 3D printing and choose the right export for your slicer workflow.',
+        'Compare Open Keychain STL and 3MF exports, see which color information they keep, and check the model in your slicer before printing.',
       heading: '3MF vs STL files: which export should you use?',
       intro:
-        '3MF vs STL files suit different slicer workflows. Here is a concise comparison for printable name designs.',
+        'Both formats carry printable geometry, but Open Keychain’s exports differ in how they represent colors. Choose by the file your slicer can use and the result you want to prepare.',
+      comparison: {
+        heading: 'Open Keychain exports at a glance',
+        headers: ['Export', 'What it contains', 'Check before printing'],
+        rows: [
+          [
+            'STL',
+            'One combined mesh; no separate color regions.',
+            'Confirm scale and sliced layers.',
+          ],
+          [
+            '3MF · separate colors',
+            'Backing and raised text use separate color regions.',
+            'Check color regions and filament assignments.',
+          ],
+          [
+            '3MF · merged',
+            'Printable parts combined into one mesh.',
+            'Confirm scale and sliced layers.',
+          ],
+        ],
+      },
       sections: [
         {
-          heading: 'Choose STL for broad compatibility',
-          body: 'STL is a simple mesh format supported by virtually every slicer. Use it when you need one printable surface and the widest compatibility.',
+          heading: 'What the STL export contains',
+          body: 'Open Keychain writes a binary STL from one combined mesh. It is a straightforward choice for a single-color print, but this export does not keep separate colors for the backing and raised text.',
         },
         {
-          heading: 'Choose 3MF for richer projects',
-          body: '3MF can keep multiple objects and separate colors together. Use it when your slicer supports 3MF and you want a more complete project file.',
+          heading: 'What the 3MF export contains',
+          body: 'The separate-colors option assigns different color regions to the backing and raised text. The merged option combines the printable parts into one mesh. Open Keychain declares millimeters in its 3MF model; slicers can differ in how they display or use color assignments.',
         },
         {
-          heading: 'Check the sliced preview',
-          body: 'Whichever format you choose, inspect the sliced layers and dimensions before printing.',
+          heading: 'Which format should you choose?',
+          body: 'Choose STL when you want one mesh and do not need the file to carry separate color regions. Choose separate-colors 3MF when your slicer and print setup can use those regions. Choose merged 3MF when you prefer one combined mesh in a 3MF file.',
+        },
+        {
+          heading: 'A 3MF model is not a printer profile',
+          body: 'The Open Keychain 3MF export describes the model and its color regions. It does not choose your printer, filament profile, temperatures, layer height, or support settings. Set those in your slicer for your own machine and material.',
+        },
+        {
+          heading: 'Check the model in your slicer',
+          body: 'After importing either file, confirm the dimensions and bed orientation. For separate-colors 3MF, check how your slicer interprets the color regions and assign filaments if needed. Then inspect the sliced layer preview, including the keyring hole and any thin details, before printing.',
+        },
+        {
+          heading: 'A practical starting point',
+          body: 'For a single-color keychain, start with STL or merged 3MF. For a two-color result, try separate-colors 3MF and verify the assignments in the slicer. If a slicer does not preserve those regions on import, use its own tools to assign colors or export a single-color mesh.',
         },
       ],
     },
@@ -135,22 +173,56 @@ export const SEO_GUIDE_COPY: Record<SeoLocale, Record<string, SeoGuideCopy>> = {
   ru: {
     stlVs3mf: {
       title: 'Open Keychain 3D | STL или 3MF',
-      description: 'Разберитесь, когда использовать STL или 3MF для персонализированной модели.',
+      description:
+        'Сравните экспорт STL и 3MF в Open Keychain: какие цветовые области сохраняются и что проверить в слайсере перед печатью.',
       heading: 'STL или 3MF: какой экспорт выбрать?',
       intro:
-        'Оба формата подходят для печати, но рассчитаны на разные рабочие процессы в слайсере.',
+        'Оба формата содержат геометрию для печати, но экспорт Open Keychain по-разному передаёт цвета. Выбирайте формат с учётом поддержки в слайсере и результата, который хотите получить.',
+      comparison: {
+        heading: 'Экспорт Open Keychain вкратце',
+        headers: ['Экспорт', 'Что содержит файл', 'Что проверить перед печатью'],
+        rows: [
+          [
+            'STL',
+            'Одна объединённая сетка без отдельных цветовых областей.',
+            'Проверьте масштаб и слои после нарезки.',
+          ],
+          [
+            '3MF · отдельные цвета',
+            'Основа и рельефный текст используют отдельные цветовые области.',
+            'Проверьте цветовые области и назначение филаментов.',
+          ],
+          [
+            '3MF · объединённый',
+            'Печатные части объединены в одну сетку.',
+            'Проверьте масштаб и слои после нарезки.',
+          ],
+        ],
+      },
       sections: [
         {
-          heading: 'Выберите STL для совместимости',
-          body: 'STL поддерживает почти любой слайсер. Используйте его для одной печатной поверхности и максимальной совместимости.',
+          heading: 'Что входит в экспорт STL',
+          body: 'Open Keychain создаёт бинарный STL из одной объединённой сетки. Это простой вариант для одноцветной печати, но такой файл не сохраняет отдельные цвета основы и рельефного текста.',
         },
         {
-          heading: 'Выберите 3MF для сложных проектов',
-          body: '3MF может хранить несколько объектов и отдельные цвета. Он удобен, если ваш слайсер поддерживает этот формат.',
+          heading: 'Что входит в экспорт 3MF',
+          body: 'В режиме отдельных цветов основа и рельефный текст получают разные цветовые области. В объединённом режиме печатные части объединяются в одну сетку. В модели 3MF от Open Keychain указаны миллиметры; разные слайсеры могут по-разному показывать и обрабатывать цвета.',
         },
         {
-          heading: 'Проверьте предпросмотр',
-          body: 'В любом формате проверьте слои и размеры в слайсере перед печатью.',
+          heading: 'Какой формат выбрать?',
+          body: 'Выберите STL, если нужна одна сетка и не требуется сохранять отдельные цвета в файле. Выберите 3MF с отдельными цветами, если ваш слайсер и способ печати поддерживают эти области. Объединённый 3MF подойдёт, если нужна одна общая сетка в формате 3MF.',
+        },
+        {
+          heading: '3MF не заменяет профиль принтера',
+          body: 'Экспорт 3MF из Open Keychain описывает модель и её цветовые области. Он не выбирает принтер, профиль пластика, температуру, высоту слоя или настройки поддержек. Укажите их в слайсере с учётом своего принтера и материала.',
+        },
+        {
+          heading: 'Проверьте модель в слайсере',
+          body: 'После импорта проверьте размеры и ориентацию на столе. Для 3MF с отдельными цветами убедитесь, что слайсер правильно прочитал области, и при необходимости назначьте филаменты. Перед печатью просмотрите слои, отверстие для кольца и тонкие детали.',
+        },
+        {
+          heading: 'С чего начать',
+          body: 'Для одноцветного брелока начните с STL или объединённого 3MF. Для двух цветов попробуйте 3MF с отдельными цветами и проверьте назначения в слайсере. Если слайсер не сохраняет области при импорте, назначьте цвета его инструментами или экспортируйте одноцветную сетку.',
         },
       ],
     },
@@ -221,22 +293,56 @@ export const SEO_GUIDE_COPY: Record<SeoLocale, Record<string, SeoGuideCopy>> = {
   uk: {
     stlVs3mf: {
       title: 'Open Keychain 3D | Файли 3MF чи STL для 3D-друку',
-      description: 'Порівняйте файли 3MF і STL для 3D-друку та оберіть формат для свого слайсера.',
+      description:
+        'Порівняйте експорт STL і 3MF в Open Keychain: які кольорові ділянки зберігаються та що перевірити у слайсері перед друком.',
       heading: 'Файли 3MF чи STL: який експорт обрати?',
       intro:
-        'Файли 3MF і STL підходять для різних робочих процесів у слайсері. Ось коротке порівняння для іменних моделей.',
+        'Обидва формати містять геометрію для друку, але експорт Open Keychain по-різному передає кольори. Обирайте формат з огляду на підтримку у слайсері й бажаний результат.',
+      comparison: {
+        heading: 'Експорт Open Keychain коротко',
+        headers: ['Експорт', 'Що містить файл', 'Що перевірити перед друком'],
+        rows: [
+          [
+            'STL',
+            'Одна об’єднана сітка без окремих кольорових ділянок.',
+            'Перевірте масштаб і шари після нарізання.',
+          ],
+          [
+            '3MF · окремі кольори',
+            'Основа й рельєфний текст мають окремі кольорові ділянки.',
+            'Перевірте кольорові ділянки й призначення філаментів.',
+          ],
+          [
+            '3MF · об’єднаний',
+            'Друковані частини об’єднані в одну сітку.',
+            'Перевірте масштаб і шари після нарізання.',
+          ],
+        ],
+      },
       sections: [
         {
-          heading: 'Оберіть STL для сумісності',
-          body: 'STL підтримує майже кожен слайсер. Використовуйте його для однієї поверхні та максимальної сумісності.',
+          heading: 'Що містить експорт STL',
+          body: 'Open Keychain створює бінарний STL з однієї об’єднаної сітки. Це простий варіант для одноколірного друку, але файл не зберігає окремі кольори основи й рельєфного тексту.',
         },
         {
-          heading: 'Оберіть 3MF для складніших проєктів',
-          body: '3MF може зберігати кілька об’єктів і окремі кольори. Він зручний, якщо ваш слайсер підтримує цей формат.',
+          heading: 'Що містить експорт 3MF',
+          body: 'У режимі окремих кольорів основа й рельєфний текст мають різні кольорові ділянки. В об’єднаному режимі друковані частини зливаються в одну сітку. Модель 3MF від Open Keychain вказує міліметри; слайсери можуть по-різному показувати й обробляти кольори.',
         },
         {
-          heading: 'Перевірте перегляд після нарізання',
-          body: 'У будь-якому форматі перевірте шари й розміри в слайсері перед друком.',
+          heading: 'Який формат обрати?',
+          body: 'Оберіть STL, якщо потрібна одна сітка й не потрібно зберігати окремі кольори у файлі. Оберіть 3MF з окремими кольорами, якщо ваш слайсер і спосіб друку підтримують ці ділянки. Об’єднаний 3MF підійде, якщо потрібна одна спільна сітка у форматі 3MF.',
+        },
+        {
+          heading: '3MF не замінює профіль принтера',
+          body: 'Експорт 3MF з Open Keychain описує модель і її кольорові ділянки. Він не вибирає принтер, профіль пластику, температуру, висоту шару чи налаштування підтримок. Задайте їх у слайсері з огляду на свій принтер і матеріал.',
+        },
+        {
+          heading: 'Перевірте модель у слайсері',
+          body: 'Після імпорту перевірте розміри й орієнтацію на столі. Для 3MF з окремими кольорами переконайтеся, що слайсер правильно прочитав ділянки, і за потреби призначте філаменти. Перед друком перегляньте шари, отвір для кільця й тонкі деталі.',
+        },
+        {
+          heading: 'З чого почати',
+          body: 'Для одноколірного брелока почніть зі STL або об’єднаного 3MF. Для двох кольорів спробуйте 3MF з окремими кольорами й перевірте призначення у слайсері. Якщо слайсер не зберігає ділянки під час імпорту, призначте кольори його інструментами або експортуйте одноколірну сітку.',
         },
       ],
     },

@@ -1,6 +1,12 @@
 import { Link } from 'react-router';
 
-import { SEO_TEMPLATE_CATALOG, type SeoRoute } from '@/features/seo';
+import {
+  SEO_GUIDE_CATALOG,
+  SEO_GUIDE_COPY,
+  SEO_TEMPLATE_CATALOG,
+  seoGuidePath,
+  type SeoRoute,
+} from '@/features/seo';
 import { templateCreatePath } from '@/shared/lib/create-path';
 
 import type { Faq, SeoCtaClick, SeoLocaleChange } from './model/types';
@@ -31,6 +37,18 @@ export const SeoTemplatePage = ({
   const prefix = `seo.templates.${templateTranslationKey(template.id)}`;
   const benefits = localizedObjects<string>(locale, `${prefix}.benefits`);
   const faq = localizedObjects<Faq>(locale, `${prefix}.faq`);
+  const relatedGuideSlugs =
+    template.id === 'name-keychain'
+      ? ['how-to-print-a-name-keychain', 'stl-vs-3mf']
+      : template.id === 'nameplate'
+        ? ['stl-vs-3mf']
+        : [];
+
+  const relatedGuides = relatedGuideSlugs.flatMap((slug) => {
+    const guide = SEO_GUIDE_CATALOG.find((item) => item.slug === slug);
+
+    return guide ? [{ guide, path: seoGuidePath(locale, guide) }] : [];
+  });
 
   return (
     <SeoShell>
@@ -64,6 +82,23 @@ export const SeoTemplatePage = ({
         </ul>
         <h2>{t(locale, 'seo.home.faqHeading')}</h2>
         <FaqList items={faq} />
+        {relatedGuides.length > 0 && (
+          <nav
+            className="seo-template-related"
+            aria-label={t(locale, 'seo.navigation.relatedResources')}
+          >
+            <h2>{t(locale, 'seo.navigation.relatedResources')}</h2>
+            <ul className="seo-feature-list">
+              {relatedGuides.map(({ guide, path }) => (
+                <li className="seo-feature-card" key={path}>
+                  <Link className="seo-related-link" to={path}>
+                    {SEO_GUIDE_COPY[locale][guide.key].heading}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
       </main>
       <SeoFooter locale={locale} />
     </SeoShell>

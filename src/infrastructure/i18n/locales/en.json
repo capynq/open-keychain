@@ -538,6 +538,10 @@
           {
             "question": "Can I change the style?",
             "answer": "Yes. Select from the available contour, arch, bubble, capsule, and soft-tag styles in the customizer."
+          },
+          {
+            "question": "Does my name leave my device?",
+            "answer": "No. In the browser workflow, your text and generated geometry stay on your device."
           }
         ]
       },
@@ -567,11 +571,11 @@
         "title": "Open Keychain 3D | Nameplate generator with STL export",
         "description": "Use a nameplate generator for a desk, drawer, shelf, or workspace. Preview your 3D printable nameplate and export STL or 3MF locally.",
         "heading": "Generate a 3D printable nameplate.",
-        "intro": "Create a personalized nameplate for a desk, drawer, shelf, or maker workspace, then preview and export the STL or 3MF.",
+        "intro": "Create a personalized nameplate for a desk, drawer, shelf, or maker workspace. Adjust the text tilt, embed depth, and corner radius before previewing and exporting.",
         "benefits": [
-          "Compact plaque shape",
-          "Readable raised lettering",
-          "Printable thickness checks",
+          "Tilted, embedded lettering",
+          "Adjustable text inset and corner radius",
+          "Compact desk, drawer, or shelf plaque",
           "STL and 3MF export"
         ],
         "faq": [
@@ -582,6 +586,10 @@
           {
             "question": "Can I adjust the text height?",
             "answer": "Yes. Use the text and shape controls to tune the lettering and backing within printable limits."
+          },
+          {
+            "question": "Can I change the text angle and plaque corners?",
+            "answer": "Yes. Adjust the text tilt, embed depth, and corner radius, then check the preview before exporting."
           }
         ]
       },
@@ -612,6 +620,7 @@
       "home": "Open Keychain 3D",
       "templates": "Templates",
       "guides": "Guides",
+      "relatedResources": "Related guides and templates",
       "howItWorks": "How it works",
       "github": "View source",
       "privacy": "Privacy note",

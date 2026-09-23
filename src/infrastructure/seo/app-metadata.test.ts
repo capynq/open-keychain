@@ -1,8 +1,16 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-import { appSeoCanonical, buildSeoJsonLd, resolveAppSeoUrl, seoOgImagePath } from './app-metadata';
-import { resolveSeoRoute } from './catalog';
+import {
+  appSeoCanonical,
+  buildSeoJsonLd,
+  resolveAppSeoUrl,
+  SEO_ORGANIZATION_LOGO,
+  SEO_SITE_ALTERNATE_NAME,
+  SEO_SITE_NAME,
+  seoOgImagePath,
+} from './app-metadata';
+import { SEO_APP_MANIFEST, resolveSeoRoute } from './catalog';
 
 describe('customizer SEO URL resolver', () => {
   it('accepts only localized bare and template URLs', () => {
@@ -26,6 +34,17 @@ describe('customizer SEO URL resolver', () => {
     expect(resolveAppSeoUrl('/create', '?lang=uk&template=nameplate')).toMatchObject({
       indexable: false,
     });
+  });
+
+  it('keeps every sitemap customizer entry canonical and indexable', () => {
+    for (const entry of SEO_APP_MANIFEST) {
+      const url = new URL(entry.path, 'https://open-keychain.com');
+      const resolution = resolveAppSeoUrl(url.pathname, url.search);
+      expect(resolution.indexable).toBe(true);
+      expect(resolution.locale).toBe(entry.locale);
+      expect(resolution.template).toBe(entry.templateId);
+      expect(appSeoCanonical(url.pathname, url.search)).toBe(url.toString());
+    }
   });
 
   it('selects route artwork for social previews', () => {
@@ -62,6 +81,28 @@ describe('customizer SEO URL resolver', () => {
     ]);
   });
 
+  it('keeps Google site and organization identity consistent in every locale', () => {
+    for (const path of ['/', '/ru/', '/uk/']) {
+      const graph = buildSeoJsonLd(resolveSeoRoute(path)!)['@graph'] as Array<
+        Record<string, unknown>
+      >;
+      const organization = graph.find((item) => item['@type'] === 'Organization');
+      const website = graph.find((item) => item['@type'] === 'WebSite');
+
+      expect(organization).toMatchObject({
+        name: SEO_SITE_NAME,
+        url: 'https://open-keychain.com/',
+        logo: SEO_ORGANIZATION_LOGO,
+      });
+      expect(website).toMatchObject({
+        name: SEO_SITE_NAME,
+        alternateName: SEO_SITE_ALTERNATE_NAME,
+        url: 'https://open-keychain.com/',
+        publisher: { '@id': 'https://open-keychain.com/#organization' },
+      });
+    }
+  });
+
   it('uses Article schema for guides without claiming every page is an application', () => {
     const graph = buildSeoJsonLd(resolveSeoRoute('/uk/guides/stl-vs-3mf/')!)['@graph'] as Array<
       Record<string, unknown>
@@ -70,7 +111,7 @@ describe('customizer SEO URL resolver', () => {
     expect(article).toMatchObject({
       headline: expect.any(String),
       image: 'https://open-keychain.com/showcase/prints/example_1-en.png',
-      dateModified: '2026-08-22',
+      dateModified: '2026-09-23',
     });
     expect(graph.some((item) => item['@type'] === 'WebApplication')).toBe(false);
   });

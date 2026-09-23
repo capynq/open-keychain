@@ -2,30 +2,21 @@
 
 ## Repository state
 
-- **Branch/HEAD:** `main` at `8900710`; no commit, staging, or push was authorized.
-- **Working tree:** Customizer first-paint and boot-recovery work remains uncommitted. Preserve all existing changes.
+- **Branch/base HEAD:** `main` at `14238bc`; the SEO changes below are authorized for commit and push in the current conversation.
+- **Working tree:** SEO indexing and content improvements in `src/infrastructure/seo`, `src/pages/seo`, `e2e/seo.spec.ts`, sitemap generation, and SEO documentation. No unrelated changes were present at task start.
 
 ## Current objective and result
 
-Replace the indefinite generic loading shell with useful first-paint content and a recoverable failure state. The production build emits a route-specific `/create` document with 18 same-source Customizer frames (six initial states across en/ru/uk), while the shared landing document remains free of those frames. The boot frame is inert until React commits; route and lazy-chunk failures release it. An entry/runtime failure or a 12-second stall shows a localized reload action, with a separate no-JavaScript message.
-
-Development `/create` and `/create/` also receive the selected frame. The dev-only SSR render is serialized and uses a separate Vite cache. Explicit pre-React CSS links include the lazy Viewer's appearance-control stylesheet; this removed the measured 10px mobile controls-panel shift. Dev-only Playwright tests are excluded from the production Playwright config. The server uses `strictPort` to avoid silently moving from 5173 to 5174.
-
-The earlier first-paint work also added route-preload and retryable lazy-chunk behavior, stable transitions from landing/profile to the Customizer, and focused browser coverage for these paths. The mismatched generic Customizer skeleton CSS was removed.
+Implement a focused search-indexing and organic-search improvement slice: generate the sitemap from the typed SEO route manifest during builds; align Organization, Website, and Open Graph identity on “Open Keychain” with “Open Keychain 3D” as the alternate; improve the STL vs 3MF guide and name-keychain/nameplate content in all three locales; add related internal links; and prepare a human-reviewed maker sharing kit. Added a Search Console review checklist based on the supplied exports.
 
 ## Validation actually run
 
-- `pnpm validate:changed` passed.
-- `pnpm validate` passed (format, lint, typecheck, 41 Vitest files / 504 tests, production build). Vite still reports the existing `manifold-3d` `node:module` browser-externalization warning.
-- Focused production Playwright recovery and route-handoff matrix: 34 passed, 2 expected desktop-only skips across desktop, mobile, and mobile-2x.
-- Isolated dev-boot Playwright suite: 6 passed across desktop and mobile, including held-entry box parity and concurrent cold/repeat requests. The focused suite also passed twice before the final TypeScript-only test-helper correction.
-- Existing local port 5173 returned HTTP 200 for `/create?template=magnet`. A new server start correctly failed because that port was already occupied; the running server was left untouched.
-- `git diff --check` passed after the handoff edit.
-
-## Known unrelated issue
-
-An earlier hosted workspace browser run found a stale `Order CSV` assertion expecting `order_id,text,quantity\n`; the current UI defaults to `order_id,text,quantity,subtitle\n`. This task did not change that assertion.
+- `pnpm seo:sitemap` generated `public/sitemap.xml`; `pnpm validate:seo` passed (2 files, 11 tests).
+- `pnpm typecheck`, `pnpm lint`, and final `pnpm build` passed. Build retains the existing Vite `manifold-3d` `node:module` browser-externalization warning.
+- Production SEO Playwright suite passed: 48 tests across desktop, mobile, and mobile-2x. Comparison and related-resource captures were reviewed at desktop and mobile sizes; no horizontal overflow or clipping was found.
+- Prettier check for changed source, scripts, tests, locale files, package metadata, and docs passed. `pnpm validate:changed` and final `git diff --check` passed.
+- Authenticated Search Console Page indexing, URL Inspection, and 90-day performance data were not available from this repository run; follow `docs/seo.md` after publication.
 
 ## Exact next action
 
-Review the complete uncommitted first-paint diff and, if desired, run the broader browser matrix before requesting commit authorization. Do not commit or push without explicit current-conversation approval.
+After publication, use Search Console to verify sitemap processing, inspect canonical/indexing status for key localized routes, and compare complete 28-day query/page periods. The supplied Page indexing export had counts but no affected URL examples, so inspect the 12 “discovered, currently not indexed” examples live before changing index/noindex directives. No outreach was sent; the sharing kit is for human review.
