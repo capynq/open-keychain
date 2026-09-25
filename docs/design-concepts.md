@@ -30,6 +30,16 @@ changed. Make comes first; precision and manufacturing controls are contextual.
   explain the action, keep the glyph optically centered, and disappear under reduced motion.
 - Keep content and controls responsive at desktop, mobile, and mobile-2x. A preview
   or product visual must show real geometry, never a decorative placeholder.
+- In the Customizer, keep every range input inside one `Adjustments` section. Use
+  compact, unboxed subcategory headings for Typography, Shape, Template details,
+  Style details, and Print; hide empty groups. Keep non-range choices beside the
+  template or style that activates them.
+- Use the Customizer spacing tokens for section padding, subgroup gaps, and field
+  stacks. Keep ordinary spacing in grid/flex `gap` rules instead of sibling margins.
+- Measure candidate-to-render delay by phase before changing preview quality. A
+  temporary pixel-ratio or shadow reduction is appropriate only when browser
+  profiling shows drawing is a meaningful part of the delay; geometry validation
+  and exported mesh quality remain authoritative.
 
 ## Review gate
 

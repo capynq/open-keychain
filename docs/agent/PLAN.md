@@ -11,8 +11,9 @@ candidate must never leave the controls describing a different design from the p
 ### Active — Customizer coherence and safe geometry updates
 
 **Intended outcome:** A user can move from name to template, template details, style, style details,
-refinement, and print settings without hunting through unrelated sections. Template- and
-style-specific controls sit beside the choice that activates them. Manual edits, randomization,
+refinement, and print settings without hunting through unrelated sections. Non-range choices stay
+beside the choice that activates them; all range inputs live in one Adjustments section with
+contextual subcategories. Manual edits, randomization,
 reset, restored designs, and tool-driven changes share one safe candidate-validation contract.
 
 **Important constraints:**
@@ -29,12 +30,13 @@ reset, restored designs, and tool-driven changes share one safe candidate-valida
 
 **Completion criteria:**
 
-- The control sequence is consistently `Name → Template → Template details → Style → Style details
-→ Refine → Print`; sections that do not apply are omitted rather than left empty.
+- Non-range controls follow `Name → Template → Template details → Style → Style details`; all
+  applicable sliders appear exactly once in one Adjustments section, grouped into Typography, Shape,
+  Template details, Style details, and Print subcategories. Empty subcategories are omitted.
 - Each supported template and style has an explicit owner for every dependent control, and no
   active control is stranded in an unrelated generic group.
-- Heart size, border, left/right gaps, vertical offset, and center treatment form one Style details
-  block directly beneath the Heart selection.
+- Heart ranges appear together under the Style details subcategory in Adjustments; the discrete
+  center-treatment choice stays beside the Heart selection.
 - A candidate is committed to controls, persistence/share state, and preview only when its current
   geometry result succeeds. A rejected candidate restores the last valid value and preview together.
 - Rapid interaction is latest-candidate-wins; superseded results and errors cannot replace newer
@@ -65,10 +67,9 @@ selection. The detailed coverage matrix and acceptance signals live in `BACKLOG.
 
 Major workstreams:
 
-- Put template-specific settings directly after Template and style-specific settings directly after
-  Style. Styles without adjustable details retain only their selected card and concise description.
-- Keep common typography and visual refinement after the design choices; keep thickness, relief,
-  edge finish, tolerances, and other manufacturing controls in Print.
+- Keep non-range template and style choices directly after their selector. Put every range control in
+  the unified Adjustments section, categorized by Typography, Shape, Template details, Style details,
+  or Print. Styles without non-range details retain only their selected card and concise description.
 - Standardize cards, field stacks, reset affordances, disclosures, status treatments, spacing, and
   semantic interaction feedback instead of creating per-template UI dialects.
 - Make the responsive ordering preserve the same conceptual sequence even when the controls and

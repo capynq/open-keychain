@@ -83,23 +83,22 @@ tilt/embed/corner radius, magnet pocket placement, and plant-label stake/outline
 
 ### Confirmed — standardize the choice-to-details hierarchy
 
-**Outcome:** Make the left panel read in one stable order:
-`Name → Template → Template details → Style → Style details → Refine → Print`.
+**Outcome:** Keep discrete Template/Style choices beside their selectors and put every range input in
+one Adjustments section with Typography, Shape, Template details, Style details, and Print
+subcategories.
 
-**Evidence:** This was the prior hierarchy. The current `ControlsPanel` places template and style
-details beside their selectors, and the parameter registry assigns each active control to one
-presentation owner. The catalog ownership test and focused desktop browser test cover this structure.
+**Evidence:** Current user direction. `ControlsPanel` now centralizes range inputs, and the parameter
+registry determines which controls are applicable. The focused browser test checks one section and
+contextual subcategories.
 
-**Implementation direction:** Extend canonical template/style/parameter metadata with presentation
-ownership and order. Render a shared companion-details pattern directly beneath its selected card
-rail. Reuse `.control-section`, field stacks, native selects/ranges, reset buttons, disclosures, and
-Workshop status treatments. Do not duplicate applicability in component-local conditionals. A choice
-with no adjustable details shows its selected card and one concise effect description—never an empty
-panel or permanent explanatory wall.
+**Implementation direction:** Keep non-range companion controls beside their selected card rail and
+render range inputs once inside Adjustments. Reuse `.control-section`, field stacks, native controls,
+reset buttons, disclosures, and Workshop status treatments. Hide empty subcategories; keep
+applicability derived from canonical metadata.
 
-**Remaining acceptance:** The ownership matrix and key keyboard/focus/localization checks pass.
-Broaden responsive interaction checks and reset/persistence coverage across every template and style;
-new catalog entries must continue to fail the test if any active parameter lacks exactly one owner.
+**Remaining acceptance:** Run focused grouping, keyboard/focus, localization, responsive capture,
+and reset/persistence checks. New catalog entries must appear in exactly one applicable adjustment
+subcategory.
 
 ### Confirmed — template companion-control coverage
 
@@ -111,9 +110,9 @@ new catalog entries must continue to fail the test if any active parameter lacks
 | Nameplate        | Text tilt, embed depth, and corner radius                                                            | No Style section                                        |
 | Plant label      | Stake length, stake shoulder, and plant accents                                                      | Contour, Capsule, Soft tag, Bubble, Arch                |
 
-**Placement rule:** These controls appear immediately after Template because they describe the chosen
-object or its hardware. Common text size/weight/spacing and general outline refinement remain in
-Refine. Base/relief thickness, edge finish, and manufacturing-specific fine tuning remain in Print.
+**Placement rule:** Non-range choices appear immediately after Template. All template-associated
+ranges appear in Adjustments under Template details. Common text controls use Typography; general
+outline controls use Shape; manufacturing ranges use Print.
 
 **Acceptance:** Switching template updates the companion block as one understandable transition,
 removes irrelevant settings, keeps applicable saved values, normalizes unsupported style choices, and
@@ -121,21 +120,29 @@ does not expose an empty Style heading for Articulated name or Nameplate.
 
 ### Confirmed — style companion-control coverage
 
-| Style    | Adjacent Style details                                                   | Applicability notes                |
-| -------- | ------------------------------------------------------------------------ | ---------------------------------- |
-| Plain    | Corner radius                                                            | Magnet only                        |
-| Contour  | No dedicated range; selected card and concise contour effect             | Name keychain, Magnet, Plant label |
-| Capsule  | No dedicated range; selected card and concise capsule effect             | Name keychain, Magnet, Plant label |
-| Soft tag | Tag tail                                                                 | Name keychain, Magnet, Plant label |
-| Bubble   | Bubble lobe                                                              | Name keychain, Magnet, Plant label |
-| Arch     | Arch curve                                                               | Name keychain, Magnet, Plant label |
-| Ribbon   | Tail and notch; corner radius where the Magnet contract allows it        | Name keychain and Magnet           |
-| Heart    | Size, border, left gap, right gap, vertical offset, and center treatment | Name keychain only                 |
+| Style    | Style-specific ranges in Adjustments                              | Applicability notes                |
+| -------- | ----------------------------------------------------------------- | ---------------------------------- |
+| Plain    | Corner radius                                                     | Magnet only                        |
+| Contour  | No dedicated range; selected card and concise contour effect      | Name keychain, Magnet, Plant label |
+| Capsule  | No dedicated range; selected card and concise capsule effect      | Name keychain, Magnet, Plant label |
+| Soft tag | Tag tail                                                          | Name keychain, Magnet, Plant label |
+| Bubble   | Bubble lobe                                                       | Name keychain, Magnet, Plant label |
+| Arch     | Arch curve                                                        | Name keychain, Magnet, Plant label |
+| Ribbon   | Tail and notch; corner radius where the Magnet contract allows it | Name keychain and Magnet           |
+| Heart    | Size, border, left gap, right gap, and vertical offset            | Name keychain only                 |
 
-**Heart presentation:** Use the same visual rhythm as the Template/Style selector block. Keep all six
-Heart options in one adjacent Style details unit, with related gaps paired where width permits and
-native single-column flow on narrow screens. Preview/status feedback must identify which Heart or edge
-setting is checking, accepted, or rejected. Do not leave center treatment after Geometry Finish.
+**Heart presentation:** Place Heart ranges in Adjustments under Style details and keep the center
+treatment beside the Heart style choice. Use consistent field spacing and native single-column flow
+on narrow screens. Preview/status feedback must identify which Heart or edge setting is checking,
+accepted, or rejected.
+
+**Performance investigation:** A local five-edit Playwright sample measures total input-to-render
+latency plus worker compute, mesh setup, and draw submission. Desktop P50/P95 were 394.9/413.1 ms;
+mobile emulation 399.7/405.5 ms; mobile-2x emulation 390.9/413.4 ms. Worker compute was about 32–39
+ms, mesh setup 1.4–2.7 ms, and draw submission 2.6–3.6 ms in these runs. These same-host emulations
+do not establish real-device GPU performance. Investigate debounce/request scheduling and collect a
+browser performance trace on a lower-end device before experimenting with temporary pixel-ratio or
+shadow changes.
 
 **Acceptance:** Selecting a style reveals only its details, preserves applicable values across safe
 switches, and makes the effect visible without extra instructional paragraphs. Style reset restores

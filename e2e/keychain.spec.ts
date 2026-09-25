@@ -368,7 +368,10 @@ test('supports the Magnet ribbon workflow with subtitle hardware guidance', asyn
   const subtitleInput = page.getByLabel('Subtitle or short message');
   await expect(subtitleInput).toBeVisible();
   await subtitleInput.fill('2026');
-  await page.getByTestId('shape-settings').getByRole('radio', { name: 'Secondary' }).click();
+  await page
+    .getByTestId('typography-adjustments')
+    .getByRole('radio', { name: 'Secondary' })
+    .click();
   await expect(page.getByLabel('Customizer controls').getByText(/10\.4 mm diameter/)).toBeVisible();
   await page.getByRole('button', { name: 'Bottom view' }).click();
   await expect(page.locator('.viewer')).toHaveAttribute('data-view', 'bottom');
@@ -381,7 +384,7 @@ test('keeps subtitle fields full-width, spaced, and keyboard-visible', async ({ 
   await page.goto('/create');
   await expect(page.locator('#boot-shell')).toBeHidden();
   const customizer = page.locator('main[aria-label="Customizer"]:not(.customizer-boot-frame)');
-  const shape = customizer.getByTestId('shape-settings');
+  const shape = customizer.getByTestId('typography-adjustments');
   const subtitleInput = customizer.getByLabel('Subtitle or short message');
   await subtitleInput.fill('ROLE');
   await shape.getByRole('radio', { name: 'Secondary' }).click();
@@ -485,12 +488,24 @@ test('shows only template-relevant shape controls', async ({ page }) => {
   await expect(page.getByLabel('Corner radius')).toBeVisible();
 });
 
-test('keeps template, style, refine, and print choices beside their related settings', async ({
-  page,
-}) => {
+test('keeps range controls in one section with contextual adjustment groups', async ({ page }) => {
   await page.goto('/create');
+  const customizer = page.locator('main[aria-label="Customizer"]:not(.customizer-boot-frame)');
+  const adjustments = customizer.getByTestId('adjustment-settings');
 
-  await page.getByRole('button', { name: 'Magnet' }).click();
+  await expect(adjustments).toBeVisible();
+  await expect(adjustments.getByTestId('typography-adjustments')).toBeVisible();
+  await expect(adjustments.locator('input[type="range"]')).toHaveCount(
+    await customizer.locator('input[type="range"]').count(),
+  );
+  await customizer.getByTestId('subtitle-input').locator('input').fill('Studio');
+  await adjustments.getByTestId('shape-font-target-switch').getByRole('radio').last().click();
+  await expect(adjustments.getByLabel('Subtitle size')).toBeVisible();
+  await expect(adjustments.locator('input[type="range"]')).toHaveCount(
+    await customizer.locator('input[type="range"]').count(),
+  );
+
+  await customizer.getByRole('button', { name: 'Magnet' }).click();
   await expect(page.getByTestId('magnet-controls')).toBeVisible();
   await expect(page.getByLabel('Magnet size')).toBeVisible();
   await expect(page.getByLabel('Pocket placement')).toBeVisible();
@@ -499,30 +514,35 @@ test('keeps template, style, refine, and print choices beside their related sett
       .getByTestId('magnet-controls')
       .locator('xpath=ancestor::*[@data-control-group="template-details"]'),
   ).toContainText('Template details');
-  await expect(page.locator('[data-control-group="style"]:visible').first()).toBeVisible();
-  await expect(page.locator('[data-control-group="refine"]:visible').first()).toBeVisible();
-  await expect(page.locator('[data-control-group="print"]:visible').first()).toBeVisible();
+  await expect(customizer.locator('[data-control-group="style"]:visible').first()).toBeVisible();
+  await expect(customizer.locator('[data-control-group="refine"]:visible').first()).toBeVisible();
+  await expect(customizer.locator('[data-control-group="print"]:visible').first()).toBeVisible();
 
-  await page.getByRole('button', { name: 'Articulated name' }).click();
-  await expect(page.locator('[data-control-group="style"]:visible')).toHaveCount(0);
-  await expect(page.locator('[data-control-group="style-details"]:visible')).toHaveCount(0);
+  await customizer.getByRole('button', { name: 'Articulated name' }).click();
+  await expect(customizer.locator('[data-control-group="style"]:visible')).toHaveCount(0);
+  await expect(customizer.locator('[data-control-group="style-details"]:visible')).toHaveCount(0);
   await expect(page.getByLabel('Joint clearance')).toBeVisible();
+  await expect(adjustments.getByLabel('Keyring hole diameter')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Nameplate' }).click();
-  await expect(page.locator('[data-control-group="style"]:visible')).toHaveCount(0);
-  await expect(page.locator('[data-control-group="style-details"]:visible')).toHaveCount(0);
+  await customizer.getByRole('button', { name: 'Nameplate' }).click();
+  await expect(customizer.locator('[data-control-group="style"]:visible')).toHaveCount(0);
+  await expect(customizer.locator('[data-control-group="style-details"]:visible')).toHaveCount(0);
   await expect(page.getByLabel('Text tilt')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Name keychain' }).click();
-  await page.getByTestId('style-card-heart-split').filter({ visible: true }).first().click();
-  const heartDetails = page.getByTestId('heart-settings').filter({ visible: true }).first();
+  await customizer.getByRole('button', { name: 'Name keychain' }).click();
+  await customizer.getByTestId('style-card-heart-split').click();
+  const heartDetails = customizer.getByTestId('heart-settings');
+  const heartAdjustments = customizer.getByTestId('style-detail-adjustments');
   await expect(heartDetails).toBeVisible();
-  await expect(heartDetails.getByLabel('Heart size')).toBeVisible();
-  await expect(heartDetails.getByLabel('Heart border')).toBeVisible();
-  await expect(heartDetails.getByLabel('Left gap')).toBeVisible();
-  await expect(heartDetails.getByLabel('Right gap')).toBeVisible();
-  await expect(heartDetails.getByLabel('Vertical offset')).toBeVisible();
+  await expect(heartAdjustments.getByLabel('Heart size')).toBeVisible();
+  await expect(heartAdjustments.getByLabel('Heart border')).toBeVisible();
+  await expect(heartAdjustments.getByLabel('Left gap')).toBeVisible();
+  await expect(heartAdjustments.getByLabel('Right gap')).toBeVisible();
+  await expect(heartAdjustments.getByLabel('Vertical offset')).toBeVisible();
   await expect(heartDetails.getByLabel('Center treatment')).toBeVisible();
+  await expect(adjustments.locator('input[type="range"]')).toHaveCount(
+    await customizer.locator('input[type="range"]').count(),
+  );
 });
 
 test('keeps the accepted preview when candidate geometry validation rejects an edge finish', async ({

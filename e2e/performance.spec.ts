@@ -94,4 +94,75 @@ if (process.env.PLAYWRIGHT_PERFORMANCE === 'true') {
 
     expect(idleRafCount, `idle preview scheduled ${idleRafCount} animation frames`).toBeLessThan(8);
   });
+
+  test('records candidate-to-render timing for repeated range edits', async ({
+    page,
+  }, testInfo) => {
+    await page.goto('/create');
+    await waitForReadyGeometry(page);
+
+    const preview = page.locator('.preview-panel[data-model-ready="true"]');
+    const textSize = page
+      .getByTestId('adjustment-settings')
+      .locator('[data-candidate-key="textSizeMm"]');
+    const samples: {
+      inputToRenderedMs: number;
+      workerComputeMs?: number;
+      workerCacheLookupMs?: number;
+      meshSetupMs?: number;
+      drawSubmitMs?: number;
+    }[] = [];
+    let generationId = await preview.getAttribute('data-generation-id');
+
+    await textSize.focus();
+    for (let index = 0; index < 5; index += 1) {
+      const startedAt = await page.evaluate(() => performance.now());
+
+      await textSize.press(index % 2 === 0 ? 'ArrowRight' : 'ArrowLeft');
+      await expect.poll(() => preview.getAttribute('data-generation-id')).not.toBe(generationId);
+      generationId = await preview.getAttribute('data-generation-id');
+      await expect(preview).toHaveAttribute('data-rendered-generation-id', generationId ?? '');
+
+      const sample = await page.evaluate((started) => {
+        const element = document.querySelector('.preview-panel[data-model-ready="true"]');
+        if (!element) throw new Error('Preview panel is missing.');
+        const metric = (name: string): number | undefined => {
+          const value = element.getAttribute(name);
+          return value === null || value === '' ? undefined : Number(value);
+        };
+        return {
+          inputToRenderedMs: performance.now() - started,
+          workerComputeMs: metric('data-geometry-worker-compute-ms'),
+          workerCacheLookupMs: metric('data-geometry-cache-lookup-ms'),
+          meshSetupMs: metric('data-viewer-mesh-setup-ms'),
+          drawSubmitMs: metric('data-viewer-draw-submit-ms'),
+        };
+      }, startedAt);
+
+      samples.push(sample);
+    }
+
+    const sortedTotals = samples.map((sample) => sample.inputToRenderedMs).sort((a, b) => a - b);
+    const percentile = (fraction: number): number =>
+      sortedTotals[
+        Math.min(sortedTotals.length - 1, Math.ceil(fraction * sortedTotals.length) - 1)
+      ];
+
+    await testInfo.attach('customizer-model-change-timings.json', {
+      body: JSON.stringify(
+        {
+          samples,
+          medianInputToRenderedMs: percentile(0.5),
+          p95InputToRenderedMs: percentile(0.95),
+        },
+        null,
+        2,
+      ),
+      contentType: 'application/json',
+    });
+
+    expect(samples).toHaveLength(5);
+    expect(samples.every((sample) => sample.meshSetupMs !== undefined)).toBe(true);
+    expect(samples.every((sample) => sample.drawSubmitMs !== undefined)).toBe(true);
+  });
 }

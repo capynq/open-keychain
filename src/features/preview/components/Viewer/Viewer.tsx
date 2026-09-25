@@ -28,8 +28,12 @@ type ViewerProps = {
   appearance?: PrintAppearance;
   surfacePreset?: SurfacePresetId;
   locale?: Locale;
-  onRendered?: (generationId: number) => void;
+  onRendered?: (generationId: number, timings?: ViewerRenderTimings) => void;
   onUnavailable?: () => void;
+};
+export type ViewerRenderTimings = {
+  meshSetupMs: number;
+  drawSubmitMs: number;
 };
 type ViewerState = {
   camera: THREE.PerspectiveCamera;
@@ -150,6 +154,9 @@ export const Viewer = ({
 
   const resultRef = useRef<GeometryResult | undefined>(result);
   const renderedGenerationRef = useRef<number | undefined>(undefined);
+  const pendingRenderTimingsRef = useRef<{ generationId: number; meshSetupMs: number } | undefined>(
+    undefined,
+  );
   const onRenderedRef = useRef(onRendered);
   const onUnavailableRef = useRef(onUnavailable);
 
@@ -343,12 +350,26 @@ export const Viewer = ({
     const render = () => {
       frame = 0;
       controls.update();
-      renderer.render(scene, camera);
       const current = resultRef.current;
+      const pendingTimings =
+        current && pendingRenderTimingsRef.current?.generationId === current.generationId
+          ? pendingRenderTimingsRef.current
+          : undefined;
+      const drawStartedAt = pendingTimings ? performance.now() : undefined;
+
+      renderer.render(scene, camera);
+      const drawSubmitMs =
+        drawStartedAt === undefined ? undefined : performance.now() - drawStartedAt;
 
       if (current && renderedGenerationRef.current !== current.generationId) {
         renderedGenerationRef.current = current.generationId;
-        onRenderedRef.current?.(current.generationId);
+        onRenderedRef.current?.(
+          current.generationId,
+          pendingTimings && drawSubmitMs !== undefined
+            ? { meshSetupMs: pendingTimings.meshSetupMs, drawSubmitMs }
+            : undefined,
+        );
+        if (pendingTimings) pendingRenderTimingsRef.current = undefined;
       }
     };
     const invalidate = () => {
@@ -384,6 +405,8 @@ export const Viewer = ({
   useEffect(() => {
     const state = stateRef.current;
     if (!state || !result) return;
+    const meshSetupStartedAt = performance.now();
+
     disposeChildren(state.group);
     state.group.add(
       makeMesh(result.baseMesh, result.appearance.base.color, 0.42, result.baseShading === 'flat'),
@@ -412,6 +435,10 @@ export const Viewer = ({
     state.key.shadow.camera.far = Math.max(300, maxDimension * 4);
     state.key.shadow.camera.updateProjectionMatrix();
     fitViewer(state, result, selected, false, setZoomScale);
+    pendingRenderTimingsRef.current = {
+      generationId: result.generationId,
+      meshSetupMs: performance.now() - meshSetupStartedAt,
+    };
     state.invalidate?.();
   }, [result]);
 

@@ -1,26 +1,41 @@
 # Open Keychain decisions
 
-## Design choices and dependent controls form one unit
+## Design choices stay contextual and range controls share one section
 
 **Status:** active
 
-**Decision:** The Customizer follows `Name → Template → Template details → Style → Style details →
-Refine → Print`. Controls that exist because of a template or style appear immediately after that
-selection in a shared companion-details treatment. Inapplicable sections are omitted, and selections
-without adjustable details do not render empty panels.
+**Decision:** Non-range choices that depend on a template or style appear directly after that
+selection. Every range input appears exactly once inside one Adjustments section, grouped under
+Typography, Shape, Template details, Style details, or Print. Empty subcategories are omitted.
 
 **Evidence:** Current user direction; the Template and Style card rails in `ControlsPanel.tsx`; the
 currently separated Magnet, parameter-group, Geometry Finish, and Heart-center sections;
 `docs/design-concepts.md` and `AGENTS.md` progressive Workshop guidance.
 
-**Rationale:** Proximity communicates ownership. A user should not need to infer that a range buried
-under Shape belongs to the Heart style selected much earlier.
+**Rationale:** Proximity communicates ownership for discrete choices, while a single range section
+makes slider discovery consistent without separating the controls by rigid top-level panels.
 
-**Consequences:** Heart size, border, left/right gaps, vertical offset, and center treatment stay
-together under Heart Style details. Template hardware/mechanics stay under Template details. Common
-typography/visual controls stay under Refine and manufacturing controls under Print. Reuse shared
-cards, field stacks, reset actions, disclosures, and statuses instead of creating a local layout for
-each template or style.
+**Consequences:** Heart range controls appear under Style details in Adjustments; its center treatment
+stays beside the Heart choice. Template range controls use Template details in Adjustments, while
+discrete hardware choices stay beside Template. Reuse shared cards, field stacks, reset actions,
+disclosures, and statuses instead of creating a local layout for each template or style.
+
+## Preview performance changes follow phase measurements
+
+**Status:** active
+
+**Decision:** Record candidate-to-render duration and separately measure geometry worker work, main-
+thread mesh setup, and renderer draw submission before changing preview quality. Only test temporary
+pixel-ratio or shadow reductions when profiling shows rasterization is a meaningful share of the
+delay; restore final preview quality after the interaction settles.
+
+**Rationale:** Lowering pixel ratio can reduce GPU work but cannot shorten worker geometry or mesh
+setup time, and may make the editor feel blurry during normal use. Phase timings identify the actual
+cost first.
+
+**Consequences:** Keep diagnostics local and opt-in through the performance suite. Compare desktop,
+mobile emulation, and real lower-end devices before choosing adaptive quality thresholds. Geometry
+validation and exported mesh quality are not reduced.
 
 ## Catalog metadata owns Customizer control applicability and placement
 

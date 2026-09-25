@@ -8,6 +8,7 @@ import type {
 } from '../../../domain/keychain/model/types';
 import type {
   SurfacePresetId,
+  ViewerRenderTimings,
   Viewer as ViewerComponentExport,
 } from '../../../features/preview/components/Viewer/Viewer';
 import type { PreviewStatus } from '../../../features/preview/model/preview-status';
@@ -56,6 +57,9 @@ export const PreviewPanel = ({
   const [Viewer, setViewer] = useState<ViewerComponent | undefined>(undefined);
   const [viewerUnavailable, setViewerUnavailable] = useState(false);
   const [renderedGenerationId, setRenderedGenerationId] = useState<number>();
+  const [renderTimings, setRenderTimings] = useState<
+    (ViewerRenderTimings & { generationId: number }) | undefined
+  >();
 
   useEffect(() => {
     let active = true;
@@ -73,9 +77,13 @@ export const PreviewPanel = ({
     };
   }, []);
 
-  const onViewerRendered = useCallback((generationId: number): void => {
-    setRenderedGenerationId(generationId);
-  }, []);
+  const onViewerRendered = useCallback(
+    (generationId: number, timings?: ViewerRenderTimings): void => {
+      setRenderedGenerationId(generationId);
+      setRenderTimings(timings ? { generationId, ...timings } : undefined);
+    },
+    [],
+  );
   const onViewerUnavailable = useCallback((): void => {
     setViewerUnavailable(true);
   }, []);
@@ -86,6 +94,8 @@ export const PreviewPanel = ({
       geometry.current === false ||
       !Viewer ||
       (geometry.result !== undefined && renderedGenerationId !== geometry.result.generationId));
+  const currentRenderTimings =
+    renderTimings?.generationId === geometry.result?.generationId ? renderTimings : undefined;
   const viewerLoadFailed = viewerUnavailable && !Viewer;
 
   return (
@@ -103,6 +113,11 @@ export const PreviewPanel = ({
               : 'current'
       }
       data-generation-id={geometry.result?.generationId ?? ''}
+      data-rendered-generation-id={renderedGenerationId ?? ''}
+      data-geometry-worker-compute-ms={geometry.result?.timings?.workerComputeMs ?? ''}
+      data-geometry-cache-lookup-ms={geometry.result?.timings?.workerCacheLookupMs ?? ''}
+      data-viewer-mesh-setup-ms={currentRenderTimings?.meshSetupMs ?? ''}
+      data-viewer-draw-submit-ms={currentRenderTimings?.drawSubmitMs ?? ''}
       data-model-ready={
         geometry.result && geometry.result.baseMesh.positions.length > 0 ? 'true' : 'false'
       }

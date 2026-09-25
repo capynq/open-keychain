@@ -223,6 +223,8 @@
   "fontCategoryCalligraphic": "Calligraphic",
   "fontCategoryMarker": "Marker",
   "shape": "Shape",
+  "adjustments": "Adjustments",
+  "typography": "Typography",
   "refine": "Refine",
   "print": "Print",
   "styleDetails": "Style details",

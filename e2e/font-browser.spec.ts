@@ -37,9 +37,10 @@ test('synchronizes primary and secondary font targets with subtitle compatibilit
   page,
 }) => {
   await page.goto('/create');
-  const browser = page.getByTestId('font-browser');
-  const shape = page.getByTestId('shape-settings');
-  const subtitle = page.getByLabel('Subtitle or short message');
+  const customizer = page.locator('main[aria-label="Customizer"]:not(.customizer-boot-frame)');
+  const browser = customizer.getByTestId('font-browser');
+  const shape = customizer.getByTestId('font-settings');
+  const subtitle = customizer.getByLabel('Subtitle or short message');
   await expect(browser.getByRole('radio')).toHaveCount(0);
   await expect(shape.getByRole('radio')).toHaveCount(0);
   await subtitle.fill('ROLE');

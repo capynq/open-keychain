@@ -224,6 +224,8 @@
   "fontCategoryCalligraphic": "Каллиграфические",
   "fontCategoryMarker": "Маркерные",
   "shape": "Форма",
+  "adjustments": "Параметры",
+  "typography": "Типографика",
   "refine": "Настройка",
   "print": "Печать",
   "styleDetails": "Детали стиля",
