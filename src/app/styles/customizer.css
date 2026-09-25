@@ -75,7 +75,7 @@
   --control-space-5: 16px;
   --control-section-gap: var(--control-space-4);
   --control-subsection-gap: var(--control-space-3);
-  --control-section-padding: var(--control-space-4);
+  --control-section-padding: var(--control-space-5);
   --field-control-height: 42px;
   --field-radius: 11px;
   --field-border: #d7c8bd;
@@ -282,16 +282,31 @@ p {
   gap: var(--control-section-gap);
   min-width: 0;
   padding: var(--control-section-padding) 0;
-  border-top: 1px solid #dfddd6;
+}
+
+.control-section-divider {
+  width: 100%;
+  height: 0;
+  margin-block: var(--control-space-3);
+  border: 0;
+  border-top: 1px solid #d8d5cd;
+}
+
+.control-subsection-divider {
+  width: 100%;
+  height: 0;
+  margin-block: var(--control-space-2);
+  border: 0;
+  border-top: 1px solid #e6e2da;
 }
 
 .control-section > h2 {
   margin: 0;
   color: #303545;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 800;
-  letter-spacing: 0.02em;
-  line-height: 16px;
+  letter-spacing: 0.01em;
+  line-height: 20px;
 }
 
 .control-subsection {
@@ -307,15 +322,24 @@ p {
 }
 
 .control-subsection > h3,
+.section-heading h3 {
+  margin: 0;
+  color: #454955;
+  font-size: 14px;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  line-height: 18px;
+}
+
 .control-subsection > h4,
-.section-heading h3,
 .section-heading h4 {
   margin: 0;
   color: #696d78;
-  font-size: 0.72rem;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 700;
   letter-spacing: 0.01em;
-  text-transform: none;
+  line-height: 16px;
 }
 
 .geometry-finish-controls {
@@ -329,7 +353,7 @@ p {
   gap: var(--control-space-3);
 }
 
-.geometry-finish-heading h3,
+.geometry-finish-heading h4,
 .geometry-finish-tune h4 {
   margin: 0;
   color: #4e5260;
@@ -444,9 +468,11 @@ p {
 }
 
 .section-heading h2 {
-  font-size: 12px;
-  line-height: 16px;
-  letter-spacing: 0.02em;
+  color: #303545;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 20px;
+  letter-spacing: 0.01em;
   margin: 0;
 }
 
@@ -1071,13 +1097,14 @@ p {
   content: '+';
 }
 
-.font-group h3 {
+.font-group h4 {
   margin: 0;
-  color: #858791;
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  color: #696d78;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  line-height: 16px;
 }
 
 .font-attribution {
@@ -1302,13 +1329,14 @@ p {
   min-width: 0;
 }
 
-.parameter-group h3 {
+.parameter-group h4 {
   margin: 0;
   color: #696d78;
-  font-size: 0.72rem;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.01em;
   text-transform: none;
+  line-height: 16px;
 }
 
 input[type='range'] {

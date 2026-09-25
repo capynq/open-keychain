@@ -45,7 +45,7 @@ export const ParameterGroupList = ({
       return (
         <div className="parameter-group" data-parameter-group={group.key} key={group.key}>
           {!isHeadingAlreadyShown && (
-            <h3>{t(locale, `parameterGroup${group.key[0].toUpperCase()}${group.key.slice(1)}`)}</h3>
+            <h4>{t(locale, `parameterGroup${group.key[0].toUpperCase()}${group.key.slice(1)}`)}</h4>
           )}
           <div className="range-grid">{controls}</div>
         </div>

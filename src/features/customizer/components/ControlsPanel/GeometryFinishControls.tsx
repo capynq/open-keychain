@@ -99,7 +99,7 @@ export const GeometryFinishControls = ({
       data-testid="geometry-finish-settings"
     >
       <div className="geometry-finish-heading">
-        <h3>{t(locale, 'geometryFinishTitle')}</h3>
+        <h4>{t(locale, 'geometryFinishTitle')}</h4>
         <span>{t(locale, 'geometryEdgeStyle')}</span>
       </div>
       <div

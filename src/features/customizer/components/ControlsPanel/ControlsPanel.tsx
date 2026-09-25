@@ -283,7 +283,7 @@ export const ControlsPanel = ({
             }}
           >
             <summary>
-              <h3>{t(locale, `fontCategory${category.replace(/[^A-Za-z]/g, '')}`)}</h3>
+              <h4>{t(locale, `fontCategory${category.replace(/[^A-Za-z]/g, '')}`)}</h4>
             </summary>
             <div
               className={`font-grid ${params.templateId === 'articulated-name' ? 'articulated-font-grid' : ''}`}
@@ -547,6 +547,18 @@ export const ControlsPanel = ({
   const hasPresentationParameters = (
     group: 'template-details' | 'style-details' | 'refine' | 'print',
   ): boolean => parametersForPresentationGroup(params, group).length > 0;
+  const hasTemplateDetailRanges = hasPresentationParameters('template-details');
+  const hasStyleDetailRanges = hasPresentationParameters('style-details');
+  const hasShapeRanges = hasPresentationParameters('refine');
+  const adjustmentGroups = [
+    { key: 'template-details', visible: hasTemplateDetailRanges },
+    { key: 'style-details', visible: hasStyleDetailRanges },
+    { key: 'shape', visible: hasShapeRanges },
+  ] as const;
+  const hasPreviousVisibleAdjustmentGroup = (key: (typeof adjustmentGroups)[number]['key']) => {
+    const visibleGroups = adjustmentGroups.filter((group) => group.visible);
+    return visibleGroups.findIndex((group) => group.key === key) > 0;
+  };
 
   const renderParameter = (parameter: ShapeParameter) => {
     if (!showsParameter(parameter)) return null;
@@ -641,6 +653,7 @@ export const ControlsPanel = ({
         )}
         {renderCandidateFeedback('name')}
       </section>
+      <hr className="control-section-divider" />
       <section
         className="control-section"
         data-guide-target="shape"
@@ -657,7 +670,12 @@ export const ControlsPanel = ({
             onClick={() => resetSection('template')}
           />
         </div>
-        <DesignCardRail className="template-grid" label={t(locale, 'templateChoices')}>
+        <DesignCardRail
+          className="template-grid"
+          label={t(locale, 'templateChoices')}
+          nextLabel={t(locale, 'scrollToMoreChoices')}
+          previousLabel={t(locale, 'previous')}
+        >
           {TEMPLATE_CATALOG.map((template) => (
             <DesignSelectCard
               key={template.id}
@@ -679,6 +697,7 @@ export const ControlsPanel = ({
         </DesignCardRail>
         {renderCandidateFeedback('template')}
       </section>
+      <hr className="control-section-divider" />
       {params.templateId === 'magnet' && (
         <section
           className="control-section template-details"
@@ -747,6 +766,7 @@ export const ControlsPanel = ({
           {renderCandidateFeedback('template-details')}
         </section>
       )}
+      {params.templateId === 'magnet' && <hr className="control-section-divider" />}
       {availableStyles.length > 0 && (
         <section
           className="control-section"
@@ -762,7 +782,11 @@ export const ControlsPanel = ({
               onClick={() => resetSection('style')}
             />
           </div>
-          <DesignCardRail label={t(locale, 'styleChoices')}>
+          <DesignCardRail
+            label={t(locale, 'styleChoices')}
+            nextLabel={t(locale, 'scrollToMoreChoices')}
+            previousLabel={t(locale, 'previous')}
+          >
             {availableStyles.map((style) => (
               <DesignSelectCard
                 key={style.id}
@@ -780,6 +804,7 @@ export const ControlsPanel = ({
           {renderCandidateFeedback('style')}
         </section>
       )}
+      {availableStyles.length > 0 && <hr className="control-section-divider" />}
       {isHeartSplit && (
         <section
           className="control-section style-details"
@@ -810,6 +835,7 @@ export const ControlsPanel = ({
           {renderCandidateFeedback('style-details')}
         </section>
       )}
+      {isHeartSplit && <hr className="control-section-divider" />}
       <section
         className="control-section refine-settings"
         data-control-group="refine"
@@ -1096,6 +1122,7 @@ export const ControlsPanel = ({
         </div>
         {renderCandidateFeedback('refine')}
       </section>
+      {!bootFrame && <hr className="control-section-divider" />}
       {!bootFrame && (
         <section
           className="control-section adjustment-settings"
@@ -1121,12 +1148,6 @@ export const ControlsPanel = ({
               />
             </div>
             <div className="control-subsection shape-font-settings" data-testid="font-settings">
-              <div className="section-heading">
-                <h4>{t(locale, 'fontSettings')}</h4>
-                {activeFontTarget === 'primary' && (
-                  <ResetIconButton label={resetActiveFontLabel} onClick={resetActiveFont} />
-                )}
-              </div>
               {renderFontTargetSwitch('shape-font-target')}
               {activeFontTarget === 'primary' && (
                 <div className="range-grid">
@@ -1216,7 +1237,7 @@ export const ControlsPanel = ({
             </div>
             {renderCandidateFeedback('refine', 'adjustments', 'typography')}
           </div>
-          {hasPresentationParameters('template-details') && (
+          {hasTemplateDetailRanges && (
             <div
               className="control-subsection adjustment-category"
               data-adjustment-subcategory="template-details"
@@ -1240,7 +1261,10 @@ export const ControlsPanel = ({
               {renderCandidateFeedback('template-details', 'adjustments', 'template-details')}
             </div>
           )}
-          {hasPresentationParameters('style-details') && (
+          {hasPreviousVisibleAdjustmentGroup('style-details') && (
+            <hr className="control-subsection-divider" />
+          )}
+          {hasStyleDetailRanges && (
             <div
               className="control-subsection adjustment-category"
               data-adjustment-subcategory="style-details"
@@ -1264,7 +1288,10 @@ export const ControlsPanel = ({
               {renderCandidateFeedback('style-details', 'adjustments', 'style-details')}
             </div>
           )}
-          {hasPresentationParameters('refine') && (
+          {hasPreviousVisibleAdjustmentGroup('shape') && (
+            <hr className="control-subsection-divider" />
+          )}
+          {hasShapeRanges && (
             <div
               className="control-subsection adjustment-category"
               data-adjustment-subcategory="shape"
