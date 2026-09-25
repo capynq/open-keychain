@@ -4,6 +4,8 @@ import type { KeychainParams } from '@/domain/keychain/model/types';
 
 import {
   PARAMETER_GROUPS,
+  parameterPresentationGroup,
+  type ParameterPresentationGroup,
   type CustomizerParameter,
   type ShapeParameter,
 } from '@/domain/keychain/model/parameters';
@@ -12,6 +14,7 @@ import { t, type Locale } from '@/infrastructure/i18n';
 export type ParameterGroupListProps = {
   locale: Locale;
   params: KeychainParams;
+  presentation: ParameterPresentationGroup;
   showsParameter: (parameter: CustomizerParameter) => boolean;
   update: <K extends keyof KeychainParams>(key: K, value: KeychainParams[K]) => void;
   renderParameter: (parameter: ShapeParameter) => ReactNode;
@@ -20,23 +23,35 @@ export type ParameterGroupListProps = {
 export const ParameterGroupList = ({
   locale,
   params,
+  presentation,
   showsParameter,
   update,
   renderParameter,
 }: ParameterGroupListProps) => (
-  <div className="control-subsection shape-figure-settings" data-testid="figure-settings">
-    <h3>{t(locale, 'figureSettings')}</h3>
+  <div
+    className="control-subsection shape-figure-settings"
+    data-testid={`${presentation}-settings`}
+  >
     {PARAMETER_GROUPS.map((group) => {
-      const controls = group.parameters.map(renderParameter).filter(Boolean);
+      const controls = group.parameters
+        .filter((parameter) => parameterPresentationGroup(params, parameter) === presentation)
+        .map(renderParameter)
+        .filter(Boolean);
       if (!controls.length) return null;
+      const presentationKey = group.key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
+      const isHeadingAlreadyShown =
+        presentationKey === presentation ||
+        (group.key === 'heart' && params.styleId === 'heart-split');
       return (
         <div className="parameter-group" data-parameter-group={group.key} key={group.key}>
-          <h3>{t(locale, `parameterGroup${group.key[0].toUpperCase()}${group.key.slice(1)}`)}</h3>
+          {!isHeadingAlreadyShown && (
+            <h3>{t(locale, `parameterGroup${group.key[0].toUpperCase()}${group.key.slice(1)}`)}</h3>
+          )}
           <div className="range-grid">{controls}</div>
         </div>
       );
     })}
-    {showsParameter('plantAccentEnabled') && (
+    {presentation === 'template-details' && showsParameter('plantAccentEnabled') && (
       <label className="check-control">
         <input
           type="checkbox"

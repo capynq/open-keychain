@@ -10,7 +10,7 @@ export default defineConfig({
     baseURL: externalBaseUrl ?? 'http://127.0.0.1:4173',
     browserName: 'chromium',
     colorScheme: 'light',
-    deviceScaleFactor: 2,
+    deviceScaleFactor: 1,
     locale: 'en-US',
     timezoneId: 'UTC',
     trace: 'retain-on-failure',
@@ -33,17 +33,23 @@ export default defineConfig({
   projects: [
     {
       name: 'capture-desktop',
-      use: { viewport: { width: 1440, height: 900 } },
+      use: { deviceScaleFactor: 2, viewport: { width: 1440, height: 900 } },
     },
     {
       name: 'capture-mobile',
-      use: { hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } },
+      use: {
+        hasTouch: true,
+        isMobile: true,
+        deviceScaleFactor: 1,
+        viewport: { width: 390, height: 844 },
+      },
     },
     {
       name: 'capture-mobile-2x',
       use: {
         hasTouch: true,
         isMobile: true,
+        deviceScaleFactor: 2,
         viewport: { width: 390, height: 844 },
       },
     },

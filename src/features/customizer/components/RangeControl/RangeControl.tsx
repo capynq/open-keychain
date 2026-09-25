@@ -7,6 +7,7 @@ export const RangeControl = ({
   max,
   step,
   unit,
+  candidateKey,
   onChange,
 }: {
   label: string;
@@ -15,6 +16,7 @@ export const RangeControl = ({
   max: number;
   step: number;
   unit: string;
+  candidateKey?: string;
   onChange: (value: number) => void;
 }) => (
   <label className="range-control">
@@ -26,6 +28,7 @@ export const RangeControl = ({
     </span>
     <input
       type="range"
+      data-candidate-key={candidateKey}
       min={min}
       max={max}
       step={step}

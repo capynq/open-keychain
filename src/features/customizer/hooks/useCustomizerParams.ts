@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 
+import type { GeometryResult } from '../../../domain/keychain/model/types';
 import type { FontNotice } from '../model/customizer-types';
 
 import {
@@ -18,6 +19,8 @@ import {
 } from '../../../domain/keychain/fonts/local-provider';
 import {
   hasActiveParameter,
+  PARAMETER_REGISTRY,
+  parameterPresentationGroup,
   parameterRange,
   type CustomizerParameter,
   type ParameterRange,
@@ -40,10 +43,43 @@ import {
 } from '../model/randomizer';
 import { resetParamsForSection, type CustomizerResetSection } from '../model/reset';
 
+export type CandidateControlGroup =
+  'name' | 'template' | 'template-details' | 'style' | 'style-details' | 'refine' | 'print';
+
+export type CandidateFeedback = {
+  requestId: number;
+  status: 'checking' | 'rejected';
+  group: CandidateControlGroup;
+  controlKey?: keyof KeychainParams;
+  diagnostic?: string;
+};
+
+export type CandidateValidation = (
+  params: KeychainParams,
+  font: FontDefinition,
+  subtitleFont: FontDefinition,
+) => Promise<GeometryResult>;
+
+export type CandidateCallbacks = {
+  pending?: (params: KeychainParams, font: FontDefinition, subtitleFont: FontDefinition) => void;
+  validate?: CandidateValidation;
+  accept?: (
+    params: KeychainParams,
+    result: GeometryResult,
+    font: FontDefinition,
+    subtitleFont: FontDefinition,
+  ) => void;
+  reject?: (params: KeychainParams, font: FontDefinition, subtitleFont: FontDefinition) => void;
+};
+
 export const useCustomizerParams = (
   initialParams?: KeychainParams,
+  candidateCallbacks: CandidateCallbacks = {},
 ): {
   params: KeychainParams;
+  acceptedParams: KeychainParams;
+  candidateFeedback: CandidateFeedback | undefined;
+  clearCandidateFeedback: () => void;
   selectedFont: FontDefinition;
   selectedSubtitleFont: FontDefinition;
   fontForId: (id: string) => FontDefinition;
@@ -61,6 +97,7 @@ export const useCustomizerParams = (
   usesCyrillic: boolean;
   fontNotice: FontNotice | undefined;
   update: <K extends keyof KeychainParams>(key: K, value: KeychainParams[K]) => void;
+  updateMany: (changes: Partial<KeychainParams>, group?: CandidateControlGroup) => void;
   updateText: (text: string) => void;
   updateSubtitle: (subtitle: string) => void;
   updateSubtitleFont: (fontId: string) => void;
@@ -85,17 +122,25 @@ export const useCustomizerParams = (
     ...initialParams,
   }));
   const paramsRef = useRef(params);
+  const acceptedParamsRef = useRef(params);
+  const [acceptedParams, setAcceptedParams] = useState(params);
+  const callbacksRef = useRef(candidateCallbacks);
 
   useEffect(() => {
-    paramsRef.current = params;
-  }, [params]);
+    callbacksRef.current = candidateCallbacks;
+  }, [candidateCallbacks]);
+  const candidateRequestId = useRef(0);
+  const validationTimer = useRef<number | undefined>(undefined);
+  const [candidateFeedback, setCandidateFeedback] = useState<CandidateFeedback>();
 
   const previousParams = useRef<KeychainParams | undefined>(undefined);
   const [canUndo, setCanUndo] = useState(false);
   const setParamsDirect: Dispatch<SetStateAction<KeychainParams>> = (next) => {
     previousParams.current = undefined;
     setCanUndo(false);
-    setParams(next);
+    const candidate = typeof next === 'function' ? next(paramsRef.current) : next;
+
+    proposeCandidate(candidate, 'template', 'templateId');
   };
 
   const [fontNotice, setFontNotice] = useState<FontNotice>();
@@ -139,6 +184,14 @@ export const useCustomizerParams = (
     });
   }, [localStore]);
 
+  useEffect(
+    () => () => {
+      candidateRequestId.current += 1;
+      if (validationTimer.current !== undefined) window.clearTimeout(validationTimer.current);
+    },
+    [],
+  );
+
   const selectedFont = useMemo(
     () =>
       [...allFonts, ...localFonts.flatMap((record) => (record.font ? [record.font] : []))].find(
@@ -167,16 +220,191 @@ export const useCustomizerParams = (
 
   const usesCyrillic = textUsesCyrillic(params.text);
 
+  const commitAccepted = (
+    candidate: KeychainParams,
+    result?: GeometryResult,
+    requestId = candidateRequestId.current,
+  ): void => {
+    if (requestId !== candidateRequestId.current) return;
+    const normalized = normalizeParams(candidate);
+    const font =
+      allFonts.find((item) => item.id === normalized.fontId) ?? fontDefinition(normalized.fontId);
+    const subtitleFont =
+      allFonts.find((item) => item.id === normalized.subtitleFontId) ??
+      fontDefinition(normalized.subtitleFontId);
+    if (result) callbacksRef.current.accept?.(normalized, result, font, subtitleFont);
+    paramsRef.current = normalized;
+    acceptedParamsRef.current = normalized;
+    setParams(normalized);
+    setAcceptedParams(normalized);
+    setCandidateFeedback(undefined);
+  };
+
+  const proposeCandidate = (
+    candidate: KeychainParams,
+    group: CandidateControlGroup,
+    controlKey?: keyof KeychainParams,
+  ): void => {
+    let normalized: KeychainParams;
+    try {
+      normalized = normalizeParams(candidate);
+    } catch (error) {
+      const requestId = ++candidateRequestId.current;
+      if (validationTimer.current !== undefined) window.clearTimeout(validationTimer.current);
+      setFontNotice(undefined);
+      const accepted = acceptedParamsRef.current;
+
+      callbacksRef.current.reject?.(
+        accepted,
+        allFonts.find((item) => item.id === accepted.fontId) ?? fontDefinition(accepted.fontId),
+        allFonts.find((item) => item.id === accepted.subtitleFontId) ??
+          fontDefinition(accepted.subtitleFontId),
+      );
+      paramsRef.current = accepted;
+      setParams(accepted);
+      setCandidateFeedback({
+        requestId,
+        status: 'rejected',
+        group,
+        controlKey,
+        diagnostic: error instanceof Error ? error.message : String(error),
+      });
+      return;
+    }
+    if (JSON.stringify(normalized) === JSON.stringify(paramsRef.current)) return;
+    const requestId = ++candidateRequestId.current;
+
+    previousParams.current = undefined;
+    setCanUndo(false);
+    paramsRef.current = normalized;
+    setParams(normalized);
+    const font =
+      allFonts.find((item) => item.id === normalized.fontId) ?? fontDefinition(normalized.fontId);
+    const subtitleFont =
+      allFonts.find((item) => item.id === normalized.subtitleFontId) ??
+      fontDefinition(normalized.subtitleFontId);
+
+    setCandidateFeedback({ requestId, status: 'checking', group, controlKey });
+    callbacksRef.current.pending?.(normalized, font, subtitleFont);
+    if (validationTimer.current !== undefined) window.clearTimeout(validationTimer.current);
+
+    const validate = callbacksRef.current.validate;
+    if (!validate) {
+      callbacksRef.current.reject?.(normalized, font, subtitleFont);
+      commitAccepted(normalized, undefined, requestId);
+      return;
+    }
+
+    validationTimer.current = window.setTimeout(() => {
+      void validate(normalized, font, subtitleFont)
+        .then((result) => {
+          if (requestId !== candidateRequestId.current) return;
+          const accepted =
+            result.printable && !result.issues.some((issue) => issue.severity === 'error');
+          if (accepted) {
+            commitAccepted(normalized, result, requestId);
+            return;
+          }
+          setFontNotice(undefined);
+          const acceptedParams = acceptedParamsRef.current;
+
+          callbacksRef.current.reject?.(
+            acceptedParams,
+            allFonts.find((item) => item.id === acceptedParams.fontId) ??
+              fontDefinition(acceptedParams.fontId),
+            allFonts.find((item) => item.id === acceptedParams.subtitleFontId) ??
+              fontDefinition(acceptedParams.subtitleFontId),
+          );
+          paramsRef.current = acceptedParamsRef.current;
+          setParams(acceptedParamsRef.current);
+          setCandidateFeedback({
+            requestId,
+            status: 'rejected',
+            group,
+            controlKey,
+            diagnostic:
+              result.issues.find((issue) => issue.severity === 'error')?.code ?? 'not-printable',
+          });
+        })
+        .catch((error: unknown) => {
+          if (requestId !== candidateRequestId.current) return;
+          setFontNotice(undefined);
+          const acceptedParams = acceptedParamsRef.current;
+
+          callbacksRef.current.reject?.(
+            acceptedParams,
+            allFonts.find((item) => item.id === acceptedParams.fontId) ??
+              fontDefinition(acceptedParams.fontId),
+            allFonts.find((item) => item.id === acceptedParams.subtitleFontId) ??
+              fontDefinition(acceptedParams.subtitleFontId),
+          );
+          paramsRef.current = acceptedParamsRef.current;
+          setParams(acceptedParamsRef.current);
+          setCandidateFeedback({
+            requestId,
+            status: 'rejected',
+            group,
+            controlKey,
+            diagnostic: error instanceof Error ? error.message : String(error),
+          });
+        });
+    }, 120);
+  };
+
+  const groupForKey = (
+    key: keyof KeychainParams,
+    current: KeychainParams,
+  ): CandidateControlGroup => {
+    if (key === 'text' || key === 'subtitle') return 'name';
+    if (key === 'templateId') return 'template';
+    if (key === 'styleId') return 'style';
+    if (key in PARAMETER_REGISTRY)
+      return parameterPresentationGroup(current, key as ShapeParameter);
+    if (
+      key === 'magnetPocketPreset' ||
+      key === 'magnetPocketPlacement' ||
+      key === 'plantAccentEnabled'
+    )
+      return 'template-details';
+    if (key === 'heartInteriorMode') return 'style-details';
+    if (
+      key === 'edgeFinish' ||
+      key === 'topEdgeMm' ||
+      key === 'bottomEdgeMm' ||
+      key === 'textEdgeMm' ||
+      key === 'minimumWallMm' ||
+      key === 'bottomClearanceMm' ||
+      key === 'subtitleReliefDepthMm'
+    )
+      return 'print';
+    return 'refine';
+  };
+
   const update = <K extends keyof KeychainParams>(key: K, value: KeychainParams[K]): void => {
     setFontNotice(undefined);
-    setParamsDirect((current) => ({ ...current, [key]: value }));
+    const current = paramsRef.current;
+
+    proposeCandidate({ ...current, [key]: value }, groupForKey(key, current), key);
+  };
+
+  const updateMany = (changes: Partial<KeychainParams>, group?: CandidateControlGroup): void => {
+    setFontNotice(undefined);
+    const current = paramsRef.current;
+    const keys = Object.keys(changes) as (keyof KeychainParams)[];
+
+    proposeCandidate(
+      { ...current, ...changes },
+      group ?? groupForKey(keys[0] ?? 'edgeFinish', current),
+      keys[0],
+    );
   };
 
   const updateText = (text: string): void => {
     setFontNotice(undefined);
+    const current = paramsRef.current;
     const currentFont =
-      allFonts.find((font) => font.id === params.fontId) ?? fontDefinition(params.fontId);
-    const articulated = params.templateId === 'articulated-name';
+      allFonts.find((font) => font.id === current.fontId) ?? fontDefinition(current.fontId);
+    const articulated = current.templateId === 'articulated-name';
     const textForCompatibility = text;
     const compatible = articulated
       ? fontSupportsArticulatedName(currentFont, text)
@@ -188,17 +416,22 @@ export const useCustomizerParams = (
         : allFonts.find((font) => fontSupportsText(font, textForCompatibility));
     if (replacement)
       setFontNotice({ font: currentFont.name, replacement: replacement.name, articulated });
-    setParamsDirect((current) => ({
-      ...current,
-      text,
-      fontId: replacement?.id ?? current.fontId,
-    }));
+    proposeCandidate(
+      {
+        ...current,
+        text,
+        fontId: replacement?.id ?? current.fontId,
+      },
+      'name',
+      'text',
+    );
   };
   const updateSubtitle = (subtitle: string): void => {
     setFontNotice(undefined);
     const currentFont =
-      allFonts.find((font) => font.id === params.subtitleFontId) ??
-      fontDefinition(params.subtitleFontId);
+      allFonts.find((font) => font.id === paramsRef.current.subtitleFontId) ??
+      fontDefinition(paramsRef.current.subtitleFontId);
+    const current = paramsRef.current;
     const replacement =
       !subtitle || fontSupportsText(currentFont, subtitle)
         ? undefined
@@ -210,17 +443,22 @@ export const useCustomizerParams = (
         articulated: false,
         target: 'subtitle',
       });
-    setParamsDirect((current) => ({
-      ...current,
-      subtitle,
-      subtitleFontId: replacement?.id ?? current.subtitleFontId,
-    }));
+    proposeCandidate(
+      {
+        ...current,
+        subtitle,
+        subtitleFontId: replacement?.id ?? current.subtitleFontId,
+      },
+      'name',
+      'subtitle',
+    );
   };
   const updateSubtitleFont = (fontId: string): void => {
     setFontNotice(undefined);
     const selected = allFonts.find((font) => font.id === fontId) ?? fontDefinition(fontId);
-    if (params.subtitle && !fontSupportsText(selected, params.subtitle)) {
-      const replacement = allFonts.find((font) => fontSupportsText(font, params.subtitle));
+    const current = paramsRef.current;
+    if (current.subtitle && !fontSupportsText(selected, current.subtitle)) {
+      const replacement = allFonts.find((font) => fontSupportsText(font, current.subtitle));
       if (replacement) {
         setFontNotice({
           font: selected.name,
@@ -228,18 +466,23 @@ export const useCustomizerParams = (
           articulated: false,
           target: 'subtitle',
         });
-        setParamsDirect((current) => ({ ...current, subtitleFontId: replacement.id }));
+        proposeCandidate(
+          { ...current, subtitleFontId: replacement.id },
+          'refine',
+          'subtitleFontId',
+        );
         return;
       }
     }
-    setParamsDirect((current) => ({ ...current, subtitleFontId: fontId }));
+    proposeCandidate({ ...current, subtitleFontId: fontId }, 'refine', 'subtitleFontId');
   };
 
   const applyDesign = (
     changes: Pick<Partial<KeychainParams>, 'text' | 'subtitle' | 'templateId' | 'styleId'>,
   ): void => {
     setFontNotice(undefined);
-    setParamsDirect((current) => {
+    const current = paramsRef.current;
+    {
       const templateId = changes.templateId ?? current.templateId;
       const template =
         TEMPLATE_CATALOG.find((item) => item.id === templateId) ?? TEMPLATE_CATALOG[0];
@@ -270,17 +513,26 @@ export const useCustomizerParams = (
         fontId: replacement?.id ?? current.fontId,
       };
 
-      return normalizeParams(next);
-    });
+      const controlKey = changes.templateId
+        ? 'templateId'
+        : changes.styleId
+          ? 'styleId'
+          : changes.text
+            ? 'text'
+            : 'subtitle';
+
+      proposeCandidate(normalizeParams(next), groupForKey(controlKey, current), controlKey);
+    }
   };
 
   const selectTemplate = (templateId: TemplateId): void => {
     setFontNotice(undefined);
+    const current = paramsRef.current;
     const selected =
-      allFonts.find((font) => font.id === params.fontId) ?? fontDefinition(params.fontId);
+      allFonts.find((font) => font.id === current.fontId) ?? fontDefinition(current.fontId);
     const previewReplacement =
       templateId === 'articulated-name' && !fontSupportsArticulatedName(selected, params.text)
-        ? articulatedFallbackFont(params.text)
+        ? articulatedFallbackFont(current.text)
         : undefined;
     if (previewReplacement)
       setFontNotice({
@@ -288,7 +540,7 @@ export const useCustomizerParams = (
         replacement: previewReplacement.name,
         articulated: true,
       });
-    setParamsDirect((current) => {
+    {
       const currentFont =
         allFonts.find((font) => font.id === current.fontId) ?? fontDefinition(current.fontId);
       const replacement =
@@ -308,7 +560,7 @@ export const useCustomizerParams = (
       const template =
         TEMPLATE_CATALOG.find((item) => item.id === templateId) ?? TEMPLATE_CATALOG[0];
 
-      return {
+      const next = {
         ...current,
         templateId,
         styleId:
@@ -337,17 +589,43 @@ export const useCustomizerParams = (
               ? Math.max(3.4, Math.min(4, current.baseThicknessMm))
               : Math.min(4, current.baseThicknessMm),
       };
-    });
+
+      proposeCandidate(normalizeParams(next), 'template', 'templateId');
+    }
   };
 
   const resetSection = (section: CustomizerResetSection): void => {
     setFontNotice(undefined);
-    setParamsDirect((current) => resetParamsForSection(current, section));
+    const current = paramsRef.current;
+
+    proposeCandidate(
+      resetParamsForSection(current, section),
+      section === 'style'
+        ? 'style-details'
+        : section === 'template'
+          ? 'template'
+          : section === 'name' || section === 'subtitle'
+            ? 'name'
+            : section === 'font'
+              ? 'refine'
+              : 'refine',
+      section === 'style'
+        ? 'styleId'
+        : section === 'template'
+          ? 'templateId'
+          : section === 'name'
+            ? 'text'
+            : section === 'subtitle'
+              ? 'subtitle'
+              : section === 'font'
+                ? 'fontId'
+                : undefined,
+    );
   };
 
   const reset = (): void => {
     setFontNotice(undefined);
-    setParamsDirect({ ...DEFAULT_PARAMS });
+    proposeCandidate({ ...DEFAULT_PARAMS }, 'template', 'templateId');
   };
   const importLocalFonts = async (files: FileList | File[]): Promise<void> => {
     const imported = await localStore.importFiles(files);
@@ -371,7 +649,8 @@ export const useCustomizerParams = (
   };
   const removeLocalFont = async (id: string): Promise<void> => {
     await localStore.remove(id);
-    if (params.fontId === id || params.subtitleFontId === id)
+    const current = paramsRef.current;
+    if (current.fontId === id || current.subtitleFontId === id)
       setParamsDirect((current) => ({
         ...current,
         ...(current.fontId === id ? { fontId: FONT_CATALOG[0].id } : {}),
@@ -382,6 +661,11 @@ export const useCustomizerParams = (
 
   return {
     params,
+    acceptedParams,
+    candidateFeedback,
+    clearCandidateFeedback: () => {
+      setCandidateFeedback(undefined);
+    },
     selectedFont,
     selectedSubtitleFont,
     fontForId: (id) => allFonts.find((font) => font.id === id) ?? fontDefinition(id),
@@ -399,6 +683,7 @@ export const useCustomizerParams = (
     usesCyrillic,
     fontNotice,
     update,
+    updateMany,
     updateText,
     updateSubtitle,
     updateSubtitleFont,
@@ -410,7 +695,21 @@ export const useCustomizerParams = (
     rangeFor: (parameter) => parameterRange(params, parameter),
     setParams: setParamsDirect,
     randomize: async (random, validate) => {
-      const original = params;
+      const original = acceptedParamsRef.current;
+      const requestId = ++candidateRequestId.current;
+      if (validationTimer.current !== undefined) window.clearTimeout(validationTimer.current);
+      const font =
+        allFonts.find((item) => item.id === original.fontId) ?? fontDefinition(original.fontId);
+      const subtitleFont =
+        allFonts.find((item) => item.id === original.subtitleFontId) ??
+        fontDefinition(original.subtitleFontId);
+
+      callbacksRef.current.reject?.(original, font, subtitleFont);
+      paramsRef.current = original;
+      setParams(original);
+      setCandidateFeedback({ requestId, status: 'checking', group: 'refine' });
+      previousParams.current = undefined;
+      setCanUndo(false);
       const transaction = validate
         ? await randomizeWithValidation(original, validate, { random, fonts: allFonts })
         : {
@@ -418,7 +717,7 @@ export const useCustomizerParams = (
             params: randomizeParams(original, { random, fonts: allFonts }),
             attempts: 1,
           };
-      if (JSON.stringify(paramsRef.current) !== JSON.stringify(original)) {
+      if (requestId !== candidateRequestId.current) {
         return {
           status: 'cancelled' as const,
           params: paramsRef.current,
@@ -428,7 +727,29 @@ export const useCustomizerParams = (
       if (transaction.status === 'accepted') {
         previousParams.current = original;
         setCanUndo(true);
-        setParams(transaction.params);
+        const normalized = normalizeParams(transaction.params);
+        const font =
+          allFonts.find((item) => item.id === normalized.fontId) ??
+          fontDefinition(normalized.fontId);
+        const subtitleFont =
+          allFonts.find((item) => item.id === normalized.subtitleFontId) ??
+          fontDefinition(normalized.subtitleFontId);
+        if (transaction.result)
+          callbacksRef.current.accept?.(normalized, transaction.result, font, subtitleFont);
+        paramsRef.current = normalized;
+        acceptedParamsRef.current = normalized;
+        setAcceptedParams(normalized);
+        setParams(normalized);
+        setCandidateFeedback(undefined);
+      } else {
+        paramsRef.current = original;
+        setParams(original);
+        setCandidateFeedback({
+          requestId,
+          status: 'rejected',
+          group: 'refine',
+          diagnostic: 'randomize-failed',
+        });
       }
       return transaction;
     },
@@ -437,7 +758,7 @@ export const useCustomizerParams = (
       if (!previous) return;
       previousParams.current = undefined;
       setCanUndo(false);
-      setParams(previous);
+      proposeCandidate(previous, 'refine');
     },
     canUndo,
   };

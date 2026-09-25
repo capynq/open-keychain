@@ -1,4 +1,5 @@
 import type { KeychainParams } from '@/domain/keychain/model/types';
+import type { CandidateControlGroup } from '@/features/customizer/hooks/useCustomizerParams';
 import type { Locale } from '@/infrastructure/i18n/config';
 
 import {
@@ -64,11 +65,11 @@ const EdgeDiagram = ({
 export const GeometryFinishControls = ({
   locale,
   params,
-  update,
+  updateMany,
 }: {
   locale: Locale;
   params: KeychainParams;
-  update: <K extends keyof KeychainParams>(key: K, value: KeychainParams[K]) => void;
+  updateMany: (changes: Partial<KeychainParams>, group?: CandidateControlGroup) => void;
 }) => {
   if (params.templateId === 'articulated-name') return null;
 
@@ -81,10 +82,15 @@ export const GeometryFinishControls = ({
   const diagramLabel = t(locale, 'geometryCrossSection');
   const applyFinish = (next: Partial<KeychainParams>): void => {
     const finish = normalizeEdgeFinish({ ...params, ...next });
-    update('edgeFinish', finish.style);
-    update('topEdgeMm', finish.topMm);
-    update('bottomEdgeMm', finish.bottomMm);
-    update('textEdgeMm', finish.textMm);
+    updateMany(
+      {
+        edgeFinish: finish.style,
+        topEdgeMm: finish.topMm,
+        bottomEdgeMm: finish.bottomMm,
+        textEdgeMm: finish.textMm,
+      },
+      'print',
+    );
   };
 
   return (
@@ -108,6 +114,7 @@ export const GeometryFinishControls = ({
           >
             <input
               type="radio"
+              data-candidate-key="edgeFinish"
               name="edge-finish"
               value={profile}
               aria-label={t(locale, `geometryEdge${profile}`)}
@@ -147,6 +154,7 @@ export const GeometryFinishControls = ({
           <h4>{t(locale, 'geometryFineTune')}</h4>
           <div className="range-grid">
             <RangeControl
+              candidateKey="topEdgeMm"
               label={t(locale, 'geometryTopEdge')}
               value={top}
               min={0}
@@ -156,6 +164,7 @@ export const GeometryFinishControls = ({
               onChange={(value) => applyFinish({ topEdgeMm: value })}
             />
             <RangeControl
+              candidateKey="bottomEdgeMm"
               label={t(locale, 'geometryBottomEdge')}
               value={bottom}
               min={0}
@@ -166,6 +175,7 @@ export const GeometryFinishControls = ({
             />
             {params.templateId !== 'nameplate' && (
               <RangeControl
+                candidateKey="textEdgeMm"
                 label={t(locale, 'geometryTextEdge')}
                 value={textEdge}
                 min={0}

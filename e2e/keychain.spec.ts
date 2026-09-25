@@ -139,7 +139,9 @@ test('customizes a name, uses every icon camera preset, and downloads STL', asyn
   const name = page.getByLabel('Name or text');
   await name.fill('OLIVER');
   await page.getByRole('button', { name: 'Capsule' }).click();
-  await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10000 });
+  await expect(page.locator('.status-pill:visible').first()).toHaveText(/Ready/, {
+    timeout: 10000,
+  });
   const viewer = page.locator('.viewer');
   for (const label of cameraViews) {
     const button = page.getByRole('button', { name: label });
@@ -377,8 +379,10 @@ test('supports the Magnet ribbon workflow with subtitle hardware guidance', asyn
 });
 test('keeps subtitle fields full-width, spaced, and keyboard-visible', async ({ page }) => {
   await page.goto('/create');
-  const shape = page.getByTestId('shape-settings');
-  const subtitleInput = page.getByLabel('Subtitle or short message');
+  await expect(page.locator('#boot-shell')).toBeHidden();
+  const customizer = page.locator('main[aria-label="Customizer"]:not(.customizer-boot-frame)');
+  const shape = customizer.getByTestId('shape-settings');
+  const subtitleInput = customizer.getByLabel('Subtitle or short message');
   await subtitleInput.fill('ROLE');
   await shape.getByRole('radio', { name: 'Secondary' }).click();
   const subtitle = shape.getByTestId('subtitle-settings');
@@ -411,15 +415,15 @@ test('keeps subtitle fields full-width, spaced, and keyboard-visible', async ({ 
     };
   });
 
-  expect(metrics.boxes.length).toBe(7);
+  expect(metrics.boxes.length).toBe(6);
   expect(metrics.boxes.every((box) => box.width > 0 && box.controlWidth > 0)).toBe(true);
   expect(metrics.boxes.every((box) => box.controlWidth <= box.width + 0.5)).toBe(true);
   expect(metrics.boxes.every((box) => box.right <= metrics.boxes[0].right + 0.5)).toBe(true);
   expect(metrics.gaps.every((gap) => Math.abs(gap - metrics.rowGap) < 1.5)).toBe(true);
   const reset = subtitle.getByRole('button', { name: 'Reset subtitle' });
-  const input = page.getByTestId('subtitle-input').locator('.subtitle-input');
-  const nameBox = await page.getByLabel('Name or text').boundingBox();
-  const subtitleBox = await page.getByTestId('subtitle-input').boundingBox();
+  const input = customizer.getByTestId('subtitle-input').locator('.subtitle-input');
+  const nameBox = await customizer.getByLabel('Name or text').boundingBox();
+  const subtitleBox = await customizer.getByTestId('subtitle-input').boundingBox();
   expect(nameBox).not.toBeNull();
   expect(subtitleBox).not.toBeNull();
   expect(subtitleBox?.y ?? 0).toBeGreaterThan(nameBox?.y ?? 0);
@@ -444,9 +448,11 @@ test('renders Heart with localized left and right words in one horizontal compos
 });
 test('keeps Heart inputs aligned and exposes through-cut readiness', async ({ page }) => {
   await page.goto('/create');
-  await page.getByTestId('style-card-heart-split').click();
-  const left = page.getByTestId('heart-left-input').locator('input');
-  const right = page.getByTestId('heart-right-input').locator('input');
+  await expect(page.locator('#boot-shell')).toBeHidden();
+  const customizer = page.locator('main[aria-label="Customizer"]:not(.customizer-boot-frame)');
+  await customizer.getByTestId('style-card-heart-split').click();
+  const left = customizer.getByTestId('heart-left-input').locator('input');
+  const right = customizer.getByTestId('heart-right-input').locator('input');
   await left.fill('I');
   await right.fill('KYIV');
   const leftBox = await left.boundingBox();
@@ -454,19 +460,16 @@ test('keeps Heart inputs aligned and exposes through-cut readiness', async ({ pa
   expect(leftBox).not.toBeNull();
   expect(rightBox).not.toBeNull();
   expect(Math.abs((leftBox?.x ?? 0) - (rightBox?.x ?? 0))).toBeLessThan(4);
-  await expect(page.getByTestId('subtitle-settings')).toHaveCount(0);
-  await page.getByLabel('Center treatment').selectOption('through-cut');
-  await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10000 });
+  await expect(customizer.getByTestId('subtitle-settings')).toHaveCount(0);
+  await customizer.getByLabel('Center treatment').selectOption('through-cut');
+  await expect(customizer.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10000 });
   await left.fill('');
   await right.fill('');
-  await expect(page.locator('.status-pill')).toHaveText(
-    /Needs attention|Error|Enter at least one word/,
-    {
-      timeout: 10000,
-    },
-  );
-  await expect(page.locator('.summary-feedback')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Fix this' })).toHaveCount(0);
+  await expect(customizer.getByRole('alert')).toContainText('Your previous design is kept.');
+  await expect(left).toHaveValue('I');
+  await expect(right).toHaveValue('KYIV');
+  await expect(customizer.locator('.status-pill')).toHaveText(/Ready/);
+  await expect(customizer.getByRole('button', { name: 'Fix this' })).toHaveCount(0);
 });
 test('shows only template-relevant shape controls', async ({ page }) => {
   await page.goto('/create');
@@ -480,6 +483,194 @@ test('shows only template-relevant shape controls', async ({ page }) => {
   await expect(page.getByLabel('Border padding')).toHaveCount(0);
   await page.getByRole('button', { name: 'Nameplate' }).click();
   await expect(page.getByLabel('Corner radius')).toBeVisible();
+});
+
+test('keeps template, style, refine, and print choices beside their related settings', async ({
+  page,
+}) => {
+  await page.goto('/create');
+
+  await page.getByRole('button', { name: 'Magnet' }).click();
+  await expect(page.getByTestId('magnet-controls')).toBeVisible();
+  await expect(page.getByLabel('Magnet size')).toBeVisible();
+  await expect(page.getByLabel('Pocket placement')).toBeVisible();
+  await expect(
+    page
+      .getByTestId('magnet-controls')
+      .locator('xpath=ancestor::*[@data-control-group="template-details"]'),
+  ).toContainText('Template details');
+  await expect(page.locator('[data-control-group="style"]:visible').first()).toBeVisible();
+  await expect(page.locator('[data-control-group="refine"]:visible').first()).toBeVisible();
+  await expect(page.locator('[data-control-group="print"]:visible').first()).toBeVisible();
+
+  await page.getByRole('button', { name: 'Articulated name' }).click();
+  await expect(page.locator('[data-control-group="style"]:visible')).toHaveCount(0);
+  await expect(page.locator('[data-control-group="style-details"]:visible')).toHaveCount(0);
+  await expect(page.getByLabel('Joint clearance')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Nameplate' }).click();
+  await expect(page.locator('[data-control-group="style"]:visible')).toHaveCount(0);
+  await expect(page.locator('[data-control-group="style-details"]:visible')).toHaveCount(0);
+  await expect(page.getByLabel('Text tilt')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Name keychain' }).click();
+  await page.getByTestId('style-card-heart-split').filter({ visible: true }).first().click();
+  const heartDetails = page.getByTestId('heart-settings').filter({ visible: true }).first();
+  await expect(heartDetails).toBeVisible();
+  await expect(heartDetails.getByLabel('Heart size')).toBeVisible();
+  await expect(heartDetails.getByLabel('Heart border')).toBeVisible();
+  await expect(heartDetails.getByLabel('Left gap')).toBeVisible();
+  await expect(heartDetails.getByLabel('Right gap')).toBeVisible();
+  await expect(heartDetails.getByLabel('Vertical offset')).toBeVisible();
+  await expect(heartDetails.getByLabel('Center treatment')).toBeVisible();
+});
+
+test('keeps the accepted preview when candidate geometry validation rejects an edge finish', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const NativeWorker = window.Worker;
+    window.Worker = class extends NativeWorker {
+      override postMessage(message: unknown, transfer: Transferable[]): void;
+      override postMessage(message: unknown, options?: StructuredSerializeOptions): void;
+      override postMessage(
+        message: unknown,
+        transferOrOptions?: Transferable[] | StructuredSerializeOptions,
+      ): void {
+        const request = message as {
+          type?: string;
+          requestId?: number;
+          params?: { styleId?: string; edgeFinish?: string };
+        };
+        if (
+          request.type === 'validate' &&
+          request.params?.styleId === 'heart-split' &&
+          request.params.edgeFinish === 'chamfer'
+        ) {
+          queueMicrotask(() =>
+            this.dispatchEvent(
+              new MessageEvent('message', {
+                data: {
+                  type: 'error',
+                  requestId: request.requestId,
+                  message: 'Injected candidate rejection for UI recovery coverage.',
+                },
+              }),
+            ),
+          );
+          return;
+        }
+        if (Array.isArray(transferOrOptions)) super.postMessage(message, transferOrOptions);
+        else super.postMessage(message, transferOrOptions);
+      }
+    };
+  });
+
+  await page.goto('/create');
+  await expect(page.locator('#boot-shell')).toBeHidden();
+  await page.getByTestId('style-card-heart-split').filter({ visible: true }).first().click();
+  await expect(page.locator('.status-pill:visible').first()).toHaveText(/Ready/, {
+    timeout: 10000,
+  });
+  const acceptedGeneration = await page
+    .locator('main[aria-label="Customizer"]:not(.customizer-boot-frame) .preview-panel')
+    .getAttribute('data-generation-id');
+  if (!acceptedGeneration) throw new Error('The accepted preview has no generation id.');
+
+  const chamfer = page.getByRole('radio', { name: 'Chamfer' }).filter({ visible: true }).first();
+  await chamfer.check();
+  await expect(page.getByRole('alert')).toContainText('Your previous design is kept.');
+  await expect(
+    page.getByRole('radio', { name: 'Sharp' }).filter({ visible: true }).first(),
+  ).toBeChecked();
+  await expect(page.locator('.status-pill:visible').first()).toHaveText(/Ready/);
+  await expect(
+    page
+      .locator('main[aria-label="Customizer"]:not(.customizer-boot-frame) .preview-panel')
+      .first(),
+  ).toHaveAttribute('data-generation-id', acceptedGeneration);
+
+  const review = page
+    .getByRole('button', { name: 'Review this setting' })
+    .filter({ visible: true })
+    .first();
+  await review.click();
+  await expect(
+    page.getByRole('radio', { name: 'Sharp' }).filter({ visible: true }).first(),
+  ).toBeFocused();
+});
+
+test('ignores a stale candidate rejection after a newer geometry candidate is accepted', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const NativeWorker = window.Worker;
+    let rejectDelayedRequest: (() => void) | undefined;
+    (window as Window & { releaseStaleCandidate?: () => void }).releaseStaleCandidate = () => {
+      rejectDelayedRequest?.();
+    };
+    window.Worker = class extends NativeWorker {
+      override postMessage(message: unknown, transfer: Transferable[]): void;
+      override postMessage(message: unknown, options?: StructuredSerializeOptions): void;
+      override postMessage(
+        message: unknown,
+        transferOrOptions?: Transferable[] | StructuredSerializeOptions,
+      ): void {
+        const request = message as {
+          type?: string;
+          requestId?: number;
+          params?: { styleId?: string; heartSizeMm?: number };
+        };
+        if (
+          request.type === 'validate' &&
+          request.params?.styleId === 'heart-split' &&
+          request.params.heartSizeMm === 24
+        ) {
+          const requestId = request.requestId;
+          rejectDelayedRequest = () =>
+            this.dispatchEvent(
+              new MessageEvent('message', {
+                data: {
+                  type: 'error',
+                  requestId,
+                  message: 'Stale injected rejection for latest-candidate coverage.',
+                },
+              }),
+            );
+          return;
+        }
+        if (Array.isArray(transferOrOptions)) super.postMessage(message, transferOrOptions);
+        else super.postMessage(message, transferOrOptions);
+      }
+    };
+  });
+
+  await page.goto('/create');
+  await expect(page.locator('#boot-shell')).toBeHidden();
+  const customizer = page.locator('main[aria-label="Customizer"]:not(.customizer-boot-frame)');
+  await customizer.getByTestId('style-card-heart-split').click();
+  await expect(customizer.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10000 });
+
+  const heartSize = customizer.getByLabel('Heart size');
+  const exportButton = page
+    .getByRole('button', { name: 'Export' })
+    .filter({ visible: true })
+    .first();
+  await heartSize.fill('24');
+  await expect(customizer.locator('.candidate-feedback[role="status"]')).toBeVisible();
+  await expect(exportButton).toBeDisabled();
+  await heartSize.fill('26');
+  await expect(customizer.locator('.candidate-feedback')).toBeHidden({ timeout: 10000 });
+  await expect(heartSize).toHaveValue('26');
+  await expect(exportButton).toBeEnabled();
+  await expect(customizer.locator('.status-pill')).toHaveText(/Ready/);
+
+  await page.evaluate(() => {
+    (window as Window & { releaseStaleCandidate?: () => void }).releaseStaleCandidate?.();
+  });
+  await expect(customizer.locator('.candidate-feedback-rejected')).toHaveCount(0);
+  await expect(heartSize).toHaveValue('26');
+  await expect(customizer.locator('.status-pill')).toHaveText(/Ready/);
 });
 test('resets each model section without changing unrelated choices', async ({ page }) => {
   await page.goto('/create');

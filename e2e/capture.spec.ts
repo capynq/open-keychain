@@ -30,7 +30,9 @@ test('captures the reviewed customizer showcase', async ({ page }, testInfo) => 
     screenshot,
     testInfo.project.name === 'capture-desktop'
       ? { width: 2880, height: 1800 }
-      : { width: 780, height: 1688 },
+      : testInfo.project.name === 'capture-mobile-2x'
+        ? { width: 780, height: 1688 }
+        : { width: 390, height: 844 },
   );
   assertNoBrowserErrors();
 });

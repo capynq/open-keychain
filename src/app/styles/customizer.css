@@ -1157,6 +1157,52 @@ p {
   margin: 5px 0 0;
 }
 
+.candidate-feedback {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #e7e6e0;
+  color: #555966;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.candidate-feedback-rejected {
+  border-inline-start: 3px solid #b84838;
+  background: #fbe0cd;
+  color: #733b2a;
+}
+
+.candidate-feedback p {
+  margin: 0;
+}
+
+.candidate-review-action {
+  justify-self: start;
+  min-height: 28px;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.candidate-feedback details {
+  font-size: 10px;
+}
+
+.candidate-feedback code {
+  display: block;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
 .reset-settings {
   width: 100%;
   min-height: 36px;

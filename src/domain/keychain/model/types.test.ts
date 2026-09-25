@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
+import { TEMPLATE_CATALOG } from '../templates/template-builder';
 import {
   hasActiveParameter,
   parameterRange,
+  parameterPresentationGroup,
+  parametersForPresentationGroup,
+  PARAMETER_REGISTRY,
   templateParameterKeys,
   orderedTemplateParameterKeys,
   PARAMETER_DEFINITIONS,
@@ -226,6 +230,59 @@ describe('keychain parameters', () => {
     const ordered = orderedTemplateParameterKeys('nameplate');
     expect(ordered.indexOf('textSizeMm')).toBeLessThan(ordered.indexOf('paddingMm'));
     expect(ordered.indexOf('baseThicknessMm')).toBeLessThan(ordered.indexOf('reliefDepthMm'));
+  });
+
+  it('assigns every active catalogued control to exactly one presentation group', () => {
+    const groups = ['template-details', 'style-details', 'refine', 'print'] as const;
+    for (const template of TEMPLATE_CATALOG) {
+      const styles = template.styles.length ? template.styles : (['contour'] as const);
+      for (const styleId of styles) {
+        const params = normalizeParams({ ...DEFAULT_PARAMS, templateId: template.id, styleId });
+        const active = (
+          Object.keys(PARAMETER_REGISTRY) as (keyof typeof PARAMETER_REGISTRY)[]
+        ).filter((parameter) => hasActiveParameter(params, parameter));
+        const owned = groups.flatMap((group) => parametersForPresentationGroup(params, group));
+
+        expect(
+          new Set(owned).size,
+          `${template.id}/${styleId} has duplicate control ownership`,
+        ).toBe(owned.length);
+        expect(
+          [...owned].sort(),
+          `${template.id}/${styleId} has missing control ownership`,
+        ).toEqual([...active].sort());
+        expect(
+          active.every((parameter) =>
+            groups.includes(parameterPresentationGroup(params, parameter)),
+          ),
+        ).toBe(true);
+      }
+    }
+
+    expect(
+      parameterPresentationGroup(
+        { templateId: 'name-keychain', styleId: 'heart-split' },
+        'heartRightGapMm',
+      ),
+    ).toBe('style-details');
+    expect(
+      parameterPresentationGroup(
+        { templateId: 'articulated-name', styleId: 'contour' },
+        'jointClearanceMm',
+      ),
+    ).toBe('template-details');
+    expect(
+      parameterPresentationGroup(
+        { templateId: 'nameplate', styleId: 'contour' },
+        'nameplateTiltDeg',
+      ),
+    ).toBe('template-details');
+    expect(
+      parameterPresentationGroup(
+        { templateId: 'name-keychain', styleId: 'contour' },
+        'baseThicknessMm',
+      ),
+    ).toBe('print');
   });
 
   it('maps every registry control to its localized label key', () => {

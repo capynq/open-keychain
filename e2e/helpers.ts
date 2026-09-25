@@ -56,8 +56,12 @@ export const waitForReadyGeometry = async (page: Page): Promise<void> => {
 
 /** Capture precondition: a ready status alone must not permit an empty viewer image. */
 export const assertVisibleModel = async (page: Page): Promise<void> => {
-  await expect(page.locator('.preview-panel')).toHaveAttribute('data-model-ready', 'true');
-  const canvas = page.locator('.viewer-surface canvas');
+  const liveCustomizer = page.locator('main[aria-label="Customizer"]:not(.customizer-boot-frame)');
+  await expect(liveCustomizer.locator('.preview-panel')).toHaveAttribute(
+    'data-model-ready',
+    'true',
+  );
+  const canvas = liveCustomizer.locator('.viewer-surface canvas');
   await expect(canvas).toBeVisible();
   await expect
     .poll(

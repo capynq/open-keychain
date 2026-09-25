@@ -45,6 +45,7 @@ export type ShapeParameter =
   | 'heartLeftGapMm'
   | 'heartRightGapMm'
   | 'heartVerticalOffsetMm';
+export type ParameterPresentationGroup = 'template-details' | 'style-details' | 'refine' | 'print';
 export type CustomizerParameter = ShapeParameter | 'plantAccentEnabled';
 export const PARAMETER_RANGES = {
   textSizeMm: { min: 12, max: 30, step: 0.5, unit: 'mm' },
@@ -173,6 +174,59 @@ export const CUSTOMIZER_PARAMETER_DEFINITIONS = {
 } as const;
 /** Single registry consumed by controls, randomization, and normalization. */
 export const PARAMETER_REGISTRY = PARAMETER_DEFINITIONS;
+
+/** UI ownership follows the selected template/style and stays beside that choice. */
+export const parameterPresentationGroup = (
+  params: Pick<KeychainParams, 'templateId' | 'styleId'>,
+  parameter: ShapeParameter,
+): ParameterPresentationGroup => {
+  if (
+    [
+      'holeDiameterMm',
+      'ringOffsetMm',
+      'connectorWidthMm',
+      'jointClearanceMm',
+      'mechanicalGapMm',
+      'maxJointAngleDeg',
+      'jointBossMm',
+      'nameplateTiltDeg',
+      'nameplateEmbedMm',
+      'stakeLengthMm',
+      'stakeShoulderMm',
+    ].includes(parameter)
+  )
+    return 'template-details';
+  if (parameter === 'cornerRadiusMm' && params.templateId === 'nameplate')
+    return 'template-details';
+  if (
+    [
+      'bubbleLobeMm',
+      'tagTailMm',
+      'archCurveMm',
+      'ribbonTailMm',
+      'ribbonNotchMm',
+      'heartSizeMm',
+      'heartBorderMm',
+      'heartLeftGapMm',
+      'heartRightGapMm',
+      'heartVerticalOffsetMm',
+    ].includes(parameter) ||
+    parameter === 'cornerRadiusMm'
+  )
+    return 'style-details';
+  if (parameter === 'baseThicknessMm' || parameter === 'reliefDepthMm') return 'print';
+  return 'refine';
+};
+
+export const parametersForPresentationGroup = (
+  params: KeychainParams,
+  group: ParameterPresentationGroup,
+): ShapeParameter[] =>
+  (Object.keys(PARAMETER_REGISTRY) as ShapeParameter[]).filter(
+    (parameter) =>
+      hasActiveParameter(params, parameter) &&
+      parameterPresentationGroup(params, parameter) === group,
+  );
 /** Presentation groups for the registry-driven controls in Shape > Figure. */
 export const PARAMETER_GROUPS = [
   {

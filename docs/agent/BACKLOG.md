@@ -14,10 +14,13 @@ the status became “Needs attention” with “Not manifold,” but the preview
 valid Heart. This makes valid ranges appear unresponsive and leaves controls, persistence/share state,
 and rendered geometry with different meanings.
 
-**Evidence:** `useCustomizerParams.update` writes immediately; `useGeometryGeneration` retains its
-previous result on rejection and records only the error. Heart controls are in the generic Shape
-parameter groups while center treatment is rendered separately after Geometry Finish. Existing Heart
-browser tests do not cover its range controls combined with edge finishes.
+**Evidence:** On 2026-09-10 the deployed Customizer reproduced the mismatch described above. The
+current implementation keeps candidate and accepted parameters separately, validates candidates
+through `GeometryClient.validate`, adopts only the matching result, and sends accepted parameters to
+share/export. Catalog presentation ownership and Heart's adjacent details block are implemented.
+Browser regressions cover a rejected candidate, latest-candidate-wins, and export gating. The exact
+historical Heart/chamfer parameter values are not recorded in this checkout, so the rejection test
+injects a worker error and does not claim to reproduce that exact geometry failure.
 
 **Desired outcome:** All design-changing entry points use one transactional candidate lifecycle:
 
@@ -46,11 +49,12 @@ move focus or flood toasts while a range is dragged.
 **Dependencies:** A single owner for candidate/accepted state; stable input signatures covering
 parameters and fonts; existing geometry cancellation/supersession behavior; localized error mapping.
 
-**Acceptance:** The exact reported Heart configuration is a regression fixture. No rejected or
-superseded change can alter persisted/shared/exported state, leave its value selected, overwrite a
-newer result, create an unhandled rejection, or present stale geometry as current. Randomization,
-reset, template/style changes, restored/shared documents, and native WebMCP application use the same
-acceptance boundary.
+**Remaining acceptance:** Recover the exact reported Heart configuration and add it as a geometry
+fixture. Broaden regression coverage for persisted/shared/exported state and restore/WebMCP entry
+points; verify worker timeouts and the full failure taxonomy. Rejected or superseded candidates must
+not alter accepted state, overwrite a newer result, create an unhandled rejection, or present stale
+geometry as current. Manual edits, randomization, reset, template/style changes, and current direct
+parameter application already enter the candidate acceptance boundary.
 
 ### Confirmed — prove that exposed controls are effective and safe
 
@@ -82,10 +86,9 @@ tilt/embed/corner radius, magnet pocket placement, and plant-label stake/outline
 **Outcome:** Make the left panel read in one stable order:
 `Name → Template → Template details → Style → Style details → Refine → Print`.
 
-**Evidence:** Template and Style already use `DesignCardRail`/`DesignSelectCard`, but dependent
-numeric controls are grouped later under Shape. Heart center treatment is a separate subsection after
-Geometry Finish, and Magnet settings use another standalone section. The resulting hierarchy does not
-show which choice owns each option.
+**Evidence:** This was the prior hierarchy. The current `ControlsPanel` places template and style
+details beside their selectors, and the parameter registry assigns each active control to one
+presentation owner. The catalog ownership test and focused desktop browser test cover this structure.
 
 **Implementation direction:** Extend canonical template/style/parameter metadata with presentation
 ownership and order. Render a shared companion-details pattern directly beneath its selected card
@@ -94,9 +97,9 @@ Workshop status treatments. Do not duplicate applicability in component-local co
 with no adjustable details shows its selected card and one concise effect description—never an empty
 panel or permanent explanatory wall.
 
-**Acceptance:** Each active parameter is assigned once to Template details, Style details, Refine, or
-Print; a coverage test fails on missing/duplicate ownership or a new catalog entry without UI metadata.
-Keyboard semantics, focus-visible behavior, localization, persistence, and reset scope remain intact.
+**Remaining acceptance:** The ownership matrix and key keyboard/focus/localization checks pass.
+Broaden responsive interaction checks and reset/persistence coverage across every template and style;
+new catalog entries must continue to fail the test if any active parameter lacks exactly one owner.
 
 ### Confirmed — template companion-control coverage
 

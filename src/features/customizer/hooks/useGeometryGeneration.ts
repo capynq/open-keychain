@@ -13,7 +13,7 @@ import type { GeometryResult, KeychainParams } from '../../../domain/keychain/mo
 
 import { GeometryClient } from '../../../infrastructure/geometry/geometry-client';
 
-const geometryInputKey = (
+export const geometryInputKey = (
   params: KeychainParams,
   fontDefinition?: FontDefinition,
   subtitleFontDefinition?: FontDefinition,
@@ -40,6 +40,7 @@ export const useGeometryGeneration = (
   params: KeychainParams,
   fontDefinition?: FontDefinition,
   subtitleFontDefinition?: FontDefinition,
+  skipRequestKey?: string,
 ): {
   clientRef: MutableRefObject<GeometryClient | undefined>;
   result: GeometryResult | undefined;
@@ -94,6 +95,7 @@ export const useGeometryGeneration = (
   }, [result]);
 
   useEffect(() => {
+    if (skipRequestKey === paramsKey) return undefined;
     if (adoptedKeyRef.current === paramsKey) {
       adoptedKeyRef.current = undefined;
       return;
@@ -117,7 +119,7 @@ export const useGeometryGeneration = (
     );
 
     return () => window.clearTimeout(timer);
-  }, [adoptResult, fontDefinition, params, paramsKey, subtitleFontDefinition]);
+  }, [adoptResult, fontDefinition, params, paramsKey, skipRequestKey, subtitleFontDefinition]);
 
   return {
     clientRef,

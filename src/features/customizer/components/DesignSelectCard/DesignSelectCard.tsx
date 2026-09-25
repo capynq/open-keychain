@@ -11,6 +11,7 @@ export type DesignSelectCardProps = {
   onSelect: () => void;
   guideTarget?: string;
   testId?: string;
+  candidateKey?: string;
 };
 
 /** A compact, image-led choice that works for both templates and styles. */
@@ -23,6 +24,7 @@ export const DesignSelectCard = ({
   onSelect,
   guideTarget,
   testId,
+  candidateKey,
 }: DesignSelectCardProps) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const descriptionId = useId();
@@ -48,6 +50,7 @@ export const DesignSelectCard = ({
       aria-describedby={description ? descriptionId : undefined}
       data-guide-target={guideTarget}
       data-testid={testId}
+      data-candidate-key={candidateKey}
       onClick={onSelect}
       onFocus={keepInView}
     >

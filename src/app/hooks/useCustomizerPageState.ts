@@ -1,5 +1,6 @@
 import { useEffect, useReducer, useRef, useState, type SetStateAction } from 'react';
 
+import type { CandidateCallbacks } from '../../features/customizer/hooks/useCustomizerParams';
 import type { SurfacePresetId } from '../../features/preview/components/Viewer/Viewer';
 import type { Locale } from '../../infrastructure/i18n/config';
 
@@ -9,8 +10,12 @@ import {
   type KeychainParams,
   type PrintAppearanceOverrides,
 } from '../../domain/keychain/model/types';
+import { STYLE_CATALOG } from '../../domain/keychain/styles/style-builder';
 import { useCustomizerParams } from '../../features/customizer/hooks/useCustomizerParams';
-import { useGeometryGeneration } from '../../features/customizer/hooks/useGeometryGeneration';
+import {
+  geometryInputKey,
+  useGeometryGeneration,
+} from '../../features/customizer/hooks/useGeometryGeneration';
 import { useExportActions } from '../../features/export/model/use-export-actions';
 import { useHostedAccount } from '../../features/hosted/hooks/useHostedAccount';
 import { previewStatus } from '../../features/preview/model/preview-status';
@@ -36,12 +41,35 @@ export const useCustomizerPageState = (
   );
   const [randomizing, setRandomizing] = useState(false);
   const [randomizeFailure, setRandomizeFailure] = useState(false);
+  const [skipRequestKey, setSkipRequestKey] = useState<string>();
+  const geometryRef = useRef<ReturnType<typeof useGeometryGeneration> | undefined>(undefined);
+  const [candidateCallbacks] = useState<CandidateCallbacks>(() => ({
+    pending: (params, font, subtitleFont) =>
+      setSkipRequestKey(geometryInputKey(params, font, subtitleFont)),
+    validate: (params, font, subtitleFont) => {
+      const client = geometryRef.current?.clientRef.current;
+
+      return client
+        ? client.validate(params, font, subtitleFont)
+        : Promise.reject(new Error('Geometry validation is not ready.'));
+    },
+    accept: (params, result, font, subtitleFont) => {
+      geometryRef.current?.adoptResult(result, params, font, subtitleFont);
+      setSkipRequestKey(undefined);
+    },
+    reject: (params, font, subtitleFont) => {
+      const currentGeometry = geometryRef.current;
+      if (currentGeometry?.result)
+        currentGeometry.adoptResult(currentGeometry.result, params, font, subtitleFont);
+      setSkipRequestKey(undefined);
+    },
+  }));
   const { track } = useAnalytics();
-  const customizer = useCustomizerParams(initialParams);
+  const customizer = useCustomizerParams(initialParams, candidateCallbacks);
   const geometryInputSignature = JSON.stringify([
-    customizer.params,
-    customizer.selectedFont.id,
-    customizer.selectedSubtitleFont.id,
+    customizer.acceptedParams,
+    customizer.fontForId(customizer.acceptedParams.fontId).id,
+    customizer.fontForId(customizer.acceptedParams.subtitleFontId).id,
   ]);
   const disconnectedExportAcknowledged =
     disconnectedAcknowledgedSignature === geometryInputSignature;
@@ -52,16 +80,21 @@ export const useCustomizerPageState = (
     customizer.params,
     customizer.selectedFont,
     customizer.selectedSubtitleFont,
+    skipRequestKey,
   );
+
+  useEffect(() => {
+    geometryRef.current = geometry;
+  }, [geometry]);
   const share = useShareDesign({
-    params: customizer.params,
+    params: customizer.acceptedParams,
     appearanceOverrides,
     hasNonBundledFont:
-      customizer.selectedFont.source !== 'bundled' ||
-      customizer.selectedSubtitleFont.source !== 'bundled',
+      customizer.fontForId(customizer.acceptedParams.fontId).source !== 'bundled' ||
+      customizer.fontForId(customizer.acceptedParams.subtitleFontId).source !== 'bundled',
   });
   const hosted = useHostedAccount(
-    customizer.params,
+    customizer.acceptedParams,
     (projectParams) => {
       customizer.setParams(normalizeParams({ ...DEFAULT_PARAMS, ...projectParams }));
     },
@@ -76,6 +109,7 @@ export const useCustomizerPageState = (
   );
   const canExport =
     !randomizing &&
+    customizer.candidateFeedback?.status !== 'checking' &&
     !geometry.busy &&
     !geometry.error &&
     Boolean(
@@ -85,9 +119,9 @@ export const useCustomizerPageState = (
     );
   const exportState = useExportActions({
     geometry,
-    params: customizer.params,
-    fontDefinition: customizer.selectedFont,
-    subtitleFontDefinition: customizer.selectedSubtitleFont,
+    params: customizer.acceptedParams,
+    fontDefinition: customizer.fontForId(customizer.acceptedParams.fontId),
+    subtitleFontDefinition: customizer.fontForId(customizer.acceptedParams.subtitleFontId),
     appearanceOverrides,
     exportAllowed: canExport,
     allowDisconnected: disconnectedExportAcknowledged,
@@ -113,32 +147,36 @@ export const useCustomizerPageState = (
     setDisconnectedAcknowledgedSignature(undefined);
   }, [customizer, initialAppearanceOverrides, initialParams, routeInputKey]);
 
-  const activeStyle = customizer.availableStyles.find(
-    (style) => style.id === customizer.params.styleId,
-  );
-  const lastTemplate = useRef(customizer.params.templateId);
+  const activeStyle = STYLE_CATALOG.find((style) => style.id === customizer.acceptedParams.styleId);
+  const lastTemplate = useRef(customizer.acceptedParams.templateId);
   const lastGeometryError = useRef<string | undefined>(undefined);
 
   useEffect(() => {
-    if (lastTemplate.current !== customizer.params.templateId) {
-      track('template_selected', { template: customizer.params.templateId, locale });
-      lastTemplate.current = customizer.params.templateId;
+    if (lastTemplate.current !== customizer.acceptedParams.templateId) {
+      track('template_selected', { template: customizer.acceptedParams.templateId, locale });
+      lastTemplate.current = customizer.acceptedParams.templateId;
     }
-  }, [customizer.params.templateId, locale, track]);
+  }, [customizer.acceptedParams.templateId, locale, track]);
 
   useEffect(() => {
     if (geometry.result?.printable) {
-      track('geometry_ready', { template: customizer.params.templateId, locale });
+      track('geometry_ready', { template: customizer.acceptedParams.templateId, locale });
     }
     if (geometry.error && geometry.error !== lastGeometryError.current) {
       track('geometry_error', {
-        template: customizer.params.templateId,
+        template: customizer.acceptedParams.templateId,
         locale,
         category: 'generation',
       });
       lastGeometryError.current = geometry.error;
     }
-  }, [customizer.params.templateId, geometry.error, geometry.result?.printable, locale, track]);
+  }, [
+    customizer.acceptedParams.templateId,
+    geometry.error,
+    geometry.result?.printable,
+    locale,
+    track,
+  ]);
 
   const randomize = (): void => {
     if (randomizing) return;
@@ -160,15 +198,6 @@ export const useCustomizerPageState = (
           return;
         }
         if (transaction.status === 'accepted') {
-          const candidateFont = customizer.fontForId(transaction.params.fontId);
-          const candidateSubtitleFont = customizer.fontForId(transaction.params.subtitleFontId);
-          if (transaction.result)
-            geometry.adoptResult(
-              transaction.result,
-              transaction.params,
-              candidateFont,
-              candidateSubtitleFont,
-            );
           setRandomizing(false);
         } else {
           setRandomizeFailure(true);
@@ -221,10 +250,14 @@ export const useCustomizerPageState = (
     undo,
     status: previewStatus(geometry, locale),
     modelInfo: {
-      templateId: customizer.activeTemplate.id,
-      template: templateName(locale, customizer.activeTemplate.id, customizer.activeTemplate.name),
+      templateId: customizer.acceptedParams.templateId,
+      template: templateName(
+        locale,
+        customizer.acceptedParams.templateId,
+        customizer.activeTemplate.name,
+      ),
       style: activeStyle ? styleName(locale, activeStyle.id, activeStyle.name) : undefined,
-      font: customizer.selectedFont.name,
+      font: customizer.fontForId(customizer.acceptedParams.fontId).name,
     },
   };
 };
