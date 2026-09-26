@@ -47,6 +47,31 @@
   "workspaceSignedIn": "Signed in as {email}",
   "workspaceLoading": "Loading your workspace…",
   "workspaceRetry": "Try again",
+  "billingTitle": "Maker plan",
+  "billingFree": "Free",
+  "billingMaker": "Maker",
+  "billingFreeCopy": "Individual exports remain free. Maker unlocks reusable presets and local batch tools.",
+  "billingTrialTerms": "Try Maker for seven days; then €4.99 monthly or €49 yearly.",
+  "billingPrice": "€4.99 / month · €49 / year",
+  "billingStartMaker": "Start Maker",
+  "billingTrial": "Your seven-day Maker trial is active.",
+  "billingActive": "Maker is active.",
+  "billingRenews": "Renews {date}.",
+  "billingPastDue": "Your Maker payment needs attention. Your workspace is still readable.",
+  "billingScheduledCancel": "Maker ends at the end of the current period.",
+  "billingExpired": "Maker has ended. You can still read, apply, and delete presets; new saves and batches are locked.",
+  "billingRecover": "Open billing",
+  "billingPrivacy": "Names, geometry, and ZIP files stay in this browser; billing receives only account and plan details.",
+  "billingUnavailable": "Billing is temporarily unavailable. The free customizer remains available.",
+  "billingRetry": "Retry billing",
+  "billingRetrying": "Retrying…",
+  "billingBatchLocked": "Batch tools are available with Maker.",
+  "billingVerifyEmail": "Verify your email to use hosted workspace features.",
+  "billingCheckVerification": "Check verification",
+  "billingVerifyCheckout": "Verify your email before opening checkout.",
+  "billingVerifyPortal": "Verify your email before opening billing.",
+  "billingCheckoutError": "We could not open checkout. Try again.",
+  "billingPortalError": "We could not open billing. Try again.",
   "presetLibrary": "Print preset library",
   "presetCreate": "Create a preset",
   "presetEmpty": "No presets yet. Start a name keychain design, then save its reusable settings here.",
@@ -448,7 +473,8 @@
     },
     "runKicker": "Made for your setup",
     "runTitle": "Print one today. Build a repeatable workflow tomorrow.",
-    "runBody": "Use the local browser generator for one-off gifts, shop samples and repeatable home-business work. Self-host the same workflow when you want your own address; a hosted workspace is only planned.",
+    "runBody": "Use the local browser generator for one-off gifts, shop samples and repeatable home-business work. Maker adds reusable presets and local batch tools when you need a repeatable workflow.",
+    "hostedCta": "See Maker on /profile",
     "run": {
       "browser": {
         "eyebrow": "Available now",
@@ -467,10 +493,14 @@
         ]
       },
       "hosted": {
-        "eyebrow": "Planned, not for sale",
-        "title": "Hosted workspace",
-        "status": "Future concept",
-        "items": ["Saved projects across devices", "Seller presets for repeat work", "Batch tools for recurring orders"]
+        "eyebrow": "Maker offer",
+        "title": "A repeatable workflow",
+        "status": "€4.99 monthly · €49 yearly",
+        "items": [
+          "Seven-day trial",
+          "Reusable presets across devices",
+          "Local batch tools; individual exports stay free"
+        ]
       }
     },
     "trustLabel": "Privacy and beta notes",

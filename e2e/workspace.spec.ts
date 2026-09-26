@@ -1,13 +1,15 @@
 import { expect, test, type Page } from '@playwright/test';
 
 const mockSellerWorkspace = async (page: Page) => {
-  await page.route('**/api/me', async (route) => {
+  await page.route('**/api/v1/auth/session', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
-      body: JSON.stringify({ user: { id: 'seller-1', email: 'seller@example.com' } }),
+      body: JSON.stringify({
+        user: { id: 'seller-1', name: 'Seller', email: 'seller@example.com', emailVerified: true },
+      }),
     });
   });
-  await page.route('**/api/presets', async (route) => {
+  await page.route('**/api/v1/presets', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({
@@ -24,27 +26,46 @@ const mockSellerWorkspace = async (page: Page) => {
       }),
     });
   });
+  await page.route('**/api/v1/billing/catalog', async (route) => {
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ plans: [] }) });
+  });
+  await page.route('**/api/v1/billing/status', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        plan: 'maker',
+        status: 'active',
+        entitlements: { presets: true, batch: true },
+        currentPeriodEnd: '2026-10-01T00:00:00.000Z',
+        cancelAtPeriodEnd: false,
+      }),
+    });
+  });
 };
 
 test('renders a signed-in seller workspace without sending order data to the API', async ({
   page,
 }) => {
   await mockSellerWorkspace(page);
+  const apiBodies: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().includes('/api/')) apiBodies.push(request.postData() ?? '');
+  });
 
   await page.goto('/profile');
 
   await expect(page.getByRole('heading', { name: 'Your seller workspace' })).toBeVisible();
   await expect(page.locator('.profile-projects strong', { hasText: 'PLA contour' })).toBeVisible();
-  await expect(page.getByLabel('Order CSV')).toHaveValue('order_id,text,quantity\n');
+  await expect(page.getByLabel('Order CSV')).toHaveValue('order_id,text,quantity,subtitle\n');
   await expect(
     page.getByText('CSV names, generated geometry, and the ZIP stay in this browser.'),
   ).toBeVisible();
+  expect(apiBodies.join('\n')).not.toMatch(/order_id|subtitle|PLA contour|geometry|zip/i);
 });
 
 test('keeps the seller workspace visible while preset navigation loads Customizer', async ({
   page,
 }) => {
-  test.skip(process.env.PLAYWRIGHT_HOSTED_MODE !== 'true');
   await mockSellerWorkspace(page);
 
   let releaseChunk: (() => void) | undefined;

@@ -55,6 +55,51 @@
   padding: 22px;
 }
 
+.profile-billing {
+  border-color: #c9a698;
+  background: #fff8f2;
+}
+
+.profile-plan-badge {
+  color: #9a3d31;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.profile-billing-copy,
+.profile-billing-privacy,
+.profile-attention p,
+.profile-locked {
+  margin: 8px 0 0;
+  color: #686d78;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.profile-billing-copy p:first-child {
+  margin-top: 0;
+}
+.profile-billing-price {
+  color: #303545;
+  font-weight: 800;
+}
+.profile-billing-privacy {
+  color: #777c86;
+  font-size: 11px;
+}
+.profile-attention {
+  display: grid;
+  gap: 8px;
+}
+.profile-attention button,
+.profile-billing-copy button {
+  justify-self: start;
+}
+.profile-locked {
+  color: #9a3d31;
+  font-weight: 700;
+}
+
 .profile-card-heading {
   display: flex;
   align-items: baseline;

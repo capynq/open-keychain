@@ -89,11 +89,7 @@ const isGeometryOrFontFile = (file) => {
 
 const isHostingFile = (file) => {
   const normalized = file.replaceAll('\\', '/');
-  return (
-    normalized === 'netlify.toml' ||
-    normalized === 'public/_headers' ||
-    normalized.startsWith('server/')
-  );
+  return normalized === 'netlify.toml' || normalized === 'public/_headers';
 };
 
 export const classifyChangedFiles = (files) => {

@@ -70,8 +70,8 @@ customizer. Only coarse page type, page ID, locale, and CTA metadata is sent aft
 query strings, geometry, and exported files are never included. Set `VITE_POSTHOG_KEY` (and
 optionally `VITE_POSTHOG_HOST`) at build time to enable it. See [`docs/analytics.md`](docs/analytics.md).
 
-The optional Fastify API remains available for deployments that provide PostgreSQL and the
-environment in [`.env.example`](.env.example). It is started locally with `pnpm server`.
+The official hosted account and subscription service is operated separately. This public repository
+contains only the versioned client contract and mock fixtures needed by the optional hosted UI.
 
 ## What you can make
 
@@ -82,9 +82,15 @@ environment in [`.env.example`](.env.example). It is started locally with `pnpm 
 
 The customizer exports printable STL and 3MF files. Review the downloaded model in your slicer before printing; Open Keychain does not claim physical-print verification for every printer or material.
 
-## Privacy and future hosting
+## Privacy and hosted Maker workspace
 
-The browser workflow keeps generation and export on the device running the browser. The optional SEO analytics is consent-gated and sends only coarse page metadata; it never sends names, search strings, generated geometry, or exported files. There is no active payment flow or public price list. The feature-flagged hosted workspace stores reusable seller presets only; CSV names, generated geometry, and batch ZIPs stay in the seller's browser.
+The browser workflow keeps generation and every individual STL/3MF export on the device running the
+browser, free of charge and without an API call. Optional SEO analytics is consent-gated and sends
+only coarse page metadata; it never sends names, search strings, generated geometry, or exported
+files. The official Maker workspace adds managed accounts, synchronized reusable presets, and a
+25-row browser-local batch workflow. CSV names, generated geometry, and batch ZIPs stay in the
+browser. The service implementation, billing operations, email delivery, and deployment automation
+are maintained outside this public repository.
 
 ## Development
 
@@ -112,4 +118,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development and pull-request guidance
 
 ## License and bundled fonts
 
-Open Keychain is released under the [MIT License](LICENSE). Bundled fonts retain their own licenses; their notices are kept in [`public/fonts/licenses/`](public/fonts/licenses/).
+Open Keychain is released under the [MIT License](LICENSE). The license does not grant trademark
+rights; see [TRADEMARKS.md](TRADEMARKS.md). Bundled fonts retain their own licenses; their notices are
+kept in [`public/fonts/licenses/`](public/fonts/licenses/).

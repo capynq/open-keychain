@@ -11,8 +11,6 @@ import type {
 import type { GeometryClient } from '../../../infrastructure/geometry/geometry-client';
 
 import { useAnalytics } from '../../../infrastructure/telemetry/useTelemetry';
-import { completeExportIntent, requestExportIntent } from '../../hosted/api/hosted-api';
-import { hostedMode } from '../../hosted/config';
 
 export type ExportActionsState = {
   downloading: boolean;
@@ -76,9 +74,7 @@ export const useExportActions = ({
     setStatus('exporting');
     setError(undefined);
     track('export_started', { format, mode, template: params.templateId });
-    let exportToken: string | undefined;
     try {
-      if (hostedMode) exportToken = (await requestExportIntent()).token;
       const file = await geometry.clientRef.current?.export(
         params,
         format,
@@ -96,7 +92,6 @@ export const useExportActions = ({
       anchor.download = file.filename;
       anchor.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-      if (exportToken) await completeExportIntent(exportToken);
       track('export_completed', { format, mode, template: params.templateId });
       setStatus('success');
     } catch (cause) {

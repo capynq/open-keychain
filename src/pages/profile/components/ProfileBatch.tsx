@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import { useMemo, useRef, useState, type SubmitEvent } from 'react';
 
 import type { SellerPreset } from '@/features/hosted/api/hosted-api';
@@ -32,8 +33,15 @@ const downloadArchive = (archive: Uint8Array): void => {
 };
 
 // The profile card intentionally keeps the form controls and generated-output status together.
-// eslint-disable-next-line max-lines-per-function
-export const ProfileBatch = ({ locale, presets }: { locale: Locale; presets: SellerPreset[] }) => {
+export const ProfileBatch = ({
+  locale,
+  presets,
+  enabled = true,
+}: {
+  locale: Locale;
+  presets: SellerPreset[];
+  enabled?: boolean;
+}) => {
   const [presetId, setPresetId] = useState('');
   const [csv, setCsv] = useState('order_id,text,quantity,subtitle\n');
   const [format, setFormat] = useState<ExportBatchFormat>('stl');
@@ -106,7 +114,8 @@ export const ProfileBatch = ({ locale, presets }: { locale: Locale; presets: Sel
         <small>{t(locale, 'batchLimit', { count: MAX_BATCH_ROWS })}</small>
       </div>
       <p>{t(locale, 'batchPrivacy')}</p>
-      {presets.length ? (
+      {!enabled && <p className="profile-locked">{t(locale, 'billingBatchLocked')}</p>}
+      {enabled && presets.length ? (
         <form onSubmit={runBatch}>
           <label>
             {t(locale, 'batchPreset')}
@@ -160,9 +169,9 @@ export const ProfileBatch = ({ locale, presets }: { locale: Locale; presets: Sel
             </button>
           )}
         </form>
-      ) : (
+      ) : enabled ? (
         <p>{t(locale, 'batchNeedsPreset')}</p>
-      )}
+      ) : null}
       {completed !== undefined && (
         <p className="profile-success" role="status">
           {t(locale, 'batchComplete', { count: completed })}

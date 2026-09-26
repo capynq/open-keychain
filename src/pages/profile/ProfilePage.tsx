@@ -10,6 +10,7 @@ import type { Locale } from '../../infrastructure/i18n/config';
 import { t } from '../../infrastructure/i18n/utils';
 import { ProfileAuth } from './components/ProfileAuth';
 import { ProfileBatch } from './components/ProfileBatch';
+import { ProfileBilling } from './components/ProfileBilling';
 import { ProfilePresets } from './components/ProfilePresets';
 import { ProfilePresetSaveCard } from './components/ProfilePresetSaveCard';
 import './ProfilePage.module.css';
@@ -68,6 +69,17 @@ export const ProfilePage = ({
         ) : workspace.account ? (
           <div className="profile-grid">
             <div className="profile-main-column">
+              <ProfileBilling
+                locale={locale}
+                status={workspace.billingStatus}
+                billingError={workspace.billingError}
+                billingBusy={workspace.billingBusy}
+                billingActionError={workspace.billingActionError}
+                onRetry={() => void workspace.retryBilling()}
+                onCheckout={() => void workspace.startCheckout()}
+                onPortal={() => void workspace.openPortal()}
+                emailVerified={workspace.account.emailVerified}
+              />
               <ProfilePresets
                 locale={locale}
                 presets={workspace.presets}
@@ -76,11 +88,22 @@ export const ProfilePage = ({
                 onUse={workspace.loadPreset}
                 onDelete={(preset) => void workspace.removePreset(preset)}
               />
-              <ProfileBatch locale={locale} presets={workspace.presets} />
+              <ProfileBatch
+                locale={locale}
+                presets={workspace.presets}
+                enabled={
+                  workspace.account.emailVerified === true &&
+                  workspace.billingStatus.entitlements.batch
+                }
+              />
             </div>
             <ProfilePresetSaveCard
               locale={locale}
-              canSaveCurrent={canSaveCurrent}
+              canSaveCurrent={
+                canSaveCurrent &&
+                workspace.account.emailVerified === true &&
+                workspace.billingStatus.entitlements.presets
+              }
               presetName={presetName}
               saveBusy={workspace.saveBusy}
               saveError={workspace.saveError}

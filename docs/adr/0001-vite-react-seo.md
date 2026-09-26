@@ -11,7 +11,7 @@ serves one static `index.html` with an SPA fallback.
 
 Geometry, WebGL, workers, and browser font handling are client-oriented and already share the
 customizer runtime. Next.js static export would reintroduce generated route HTML and a second build
-contract. Runtime Next.js rendering would require operating a React server alongside the optional
-Fastify API.
+contract. Runtime Next.js rendering would require operating a React server alongside the separately
+operated hosted service that the browser reaches through its public versioned API contract.
 
 Revisit this decision only if server-rendered or build-time SEO becomes a hard requirement.

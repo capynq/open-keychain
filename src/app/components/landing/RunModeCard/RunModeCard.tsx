@@ -24,6 +24,11 @@ export const RunModeCard = ({ locale, option }: { locale: Locale; option: RunOpt
         {t(locale, 'landing.startDesigning')} <span aria-hidden="true">→</span>
       </Link>
     )}
+    {option === 'hosted' && (
+      <Link to="/profile" className="landing-card-link">
+        {t(locale, 'landing.hostedCta')} <span aria-hidden="true">→</span>
+      </Link>
+    )}
     {option === 'selfHost' && (
       <a href="https://github.com/capynq/open-keychain" className="landing-card-link">
         {t(locale, 'landing.viewSource')} <span aria-hidden="true">→</span>

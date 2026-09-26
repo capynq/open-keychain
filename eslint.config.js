@@ -292,7 +292,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['server/**/*.{ts,tsx}', 'scripts/**/*.{ts,tsx}'],
+    files: ['scripts/**/*.{ts,tsx}'],
     rules: { 'no-console': 'off', 'max-lines-per-function': 'off' },
   },
   {

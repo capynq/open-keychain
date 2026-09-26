@@ -3,7 +3,7 @@ import { classifyChangedFiles, collectChangedFiles } from './pre-push-changed.mj
 
 describe('classifyChangedFiles', () => {
   it('keeps documentation-only pushes on changed-file validation', () => {
-    expect(classifyChangedFiles(['README.md', 'docs/hosting-readiness.md'])).toEqual({
+    expect(classifyChangedFiles(['README.md', 'docs/seo.md'])).toEqual({
       documentationOnly: true,
       needsCoreValidation: false,
       needsBrowserValidation: false,
@@ -61,7 +61,7 @@ describe('classifyChangedFiles', () => {
   });
 
   it('selects core validation for API hosting changes', () => {
-    const result = classifyChangedFiles(['server/app.ts']);
+    const result = classifyChangedFiles(['netlify.toml']);
     expect(result.needsCoreValidation).toBe(true);
     expect(result.needsHostingValidation).toBe(true);
     expect(result.needsBrowserValidation).toBe(false);

@@ -24,23 +24,7 @@ export default defineConfig({
   worker: {
     format: 'es',
   },
-  server: {
-    strictPort: true,
-    proxy: {
-      '/api': {
-        target: 'http://127.0.0.1:3100',
-        changeOrigin: true,
-      },
-    },
-  },
-  preview: {
-    proxy: {
-      '/api': {
-        target: 'http://127.0.0.1:3100',
-        changeOrigin: true,
-      },
-    },
-  },
+  server: { strictPort: true },
   build: {
     target: 'es2022',
     assetsInlineLimit: 0,

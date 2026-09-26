@@ -1,12 +1,10 @@
-export type ExportIntent = {
-  token: string;
-  expiresAt: string;
-};
 export type HostedUser = {
   id: string;
   name: string;
   email: string;
+  emailVerified: boolean;
 };
+
 export type SellerPreset = {
   id: string;
   name: string;
@@ -15,17 +13,61 @@ export type SellerPreset = {
   created_at: string;
   updated_at: string;
 };
-export type HostedProject = {
-  id: string;
+
+export type BillingPlanId = 'free' | 'maker';
+export type BillingSubscriptionStatus =
+  'free' | 'trialing' | 'active' | 'past_due' | 'scheduled_cancel' | 'expired';
+
+export type EntitlementFlags = {
+  presets: boolean;
+  batch: boolean;
+};
+
+export type BillingPlan = {
+  id: BillingPlanId;
+  name: string;
+  priceCents: number;
+  currency: string;
+  interval: 'month' | 'year' | null;
+  entitlements: EntitlementFlags;
+};
+
+export type BillingCatalog = {
+  plans: BillingPlan[];
+};
+
+export type BillingStatus = {
+  plan: BillingPlanId;
+  status: BillingSubscriptionStatus;
+  entitlements: EntitlementFlags;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+};
+
+export type BillingCheckoutRequest = {
+  plan: BillingPlanId;
+  returnUrl: string;
+};
+
+export type BillingPortalRequest = {
+  returnUrl: string;
+};
+
+export type BillingRedirect = {
+  url: string;
+};
+
+export type PresetInput = {
   name: string;
   params: Record<string, unknown>;
-  thumbnail?: string | null;
-  schema_version: number;
-  created_at: string;
-  updated_at: string;
+  printProfileId?: string;
 };
-export const HOSTED_PROJECT_SCHEMA_VERSION = 2;
+
+export type PresetPatch = Partial<PresetInput>;
+
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+const versionedApiPath = (path: string): string => `/api/v1${path}`;
+
 export class HostedApiError extends Error {
   constructor(
     message: string,
@@ -35,6 +77,7 @@ export class HostedApiError extends Error {
     this.name = 'HostedApiError';
   }
 }
+
 const apiRequest = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...init,
@@ -42,9 +85,7 @@ const apiRequest = async <T>(path: string, init?: RequestInit): Promise<T> => {
     headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
   });
   if (!response.ok) {
-    const body = (await response.json().catch(() => ({}))) as {
-      error?: string;
-    };
+    const body = (await response.json().catch(() => ({}))) as { error?: string };
     throw new HostedApiError(
       body.error ?? `Hosted API request failed (${response.status}).`,
       response.status,
@@ -53,117 +94,96 @@ const apiRequest = async <T>(path: string, init?: RequestInit): Promise<T> => {
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 };
-export const requestExportIntent = (): Promise<ExportIntent> => {
-  return apiRequest<ExportIntent>('/api/usage/export-intent', {
-    method: 'POST',
-    body: JSON.stringify({}),
-  });
-};
-export const completeExportIntent = (
-  token: string,
-): Promise<{
-  recorded: boolean;
-}> => {
-  return apiRequest<{
-    recorded: boolean;
-  }>(`/api/usage/export-complete/${encodeURIComponent(token)}`, {
-    method: 'POST',
-    body: JSON.stringify({}),
-  });
-};
+
+/** Reads the application session; Better Auth's mutation endpoints remain unversioned. */
 export const currentUser = async (): Promise<HostedUser | undefined> => {
   try {
     return (
-      await apiRequest<{
-        user: HostedUser;
-      }>('/api/me')
-    ).user;
+      (await apiRequest<{ user: HostedUser | null }>(versionedApiPath('/auth/session'))).user ??
+      undefined
+    );
   } catch (cause) {
     if (cause instanceof HostedApiError && cause.status === 401) return undefined;
     throw cause;
   }
 };
+
 export const signUp = (
   name: string,
   email: string,
   password: string,
-): Promise<{
-  user: HostedUser;
-}> => {
-  return apiRequest<{
-    user: HostedUser;
-  }>('/api/auth/sign-up/email', {
+): Promise<{ user: HostedUser }> =>
+  apiRequest<{ user: HostedUser }>('/api/auth/sign-up/email', {
     method: 'POST',
     body: JSON.stringify({ name, email, password }),
   });
-};
-export const signIn = (
-  email: string,
-  password: string,
-): Promise<{
-  user: HostedUser;
-}> => {
-  return apiRequest<{
-    user: HostedUser;
-  }>('/api/auth/sign-in/email', {
+
+export const signIn = (email: string, password: string): Promise<{ user: HostedUser }> =>
+  apiRequest<{ user: HostedUser }>('/api/auth/sign-in/email', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   });
-};
+
 export const signOut = async (): Promise<void> => {
   await apiRequest('/api/auth/sign-out', {
     method: 'POST',
     body: JSON.stringify({}),
   });
 };
-export const listProjects = async (): Promise<HostedProject[]> => {
-  return (
-    await apiRequest<{
-      projects: HostedProject[];
-    }>('/api/projects')
-  ).projects;
-};
-export const saveProject = (
+
+export const getBillingCatalog = (): Promise<BillingCatalog> =>
+  apiRequest<BillingCatalog>(versionedApiPath('/billing/catalog'));
+
+export const getBillingStatus = (): Promise<BillingStatus> =>
+  apiRequest<BillingStatus>(versionedApiPath('/billing/status'));
+
+export const createCheckout = (request: BillingCheckoutRequest): Promise<BillingRedirect> =>
+  apiRequest<BillingRedirect>(versionedApiPath('/billing/checkout'), {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+
+export const createPortal = (request: BillingPortalRequest): Promise<BillingRedirect> =>
+  apiRequest<BillingRedirect>(versionedApiPath('/billing/portal'), {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+
+export const listPresets = async (): Promise<SellerPreset[]> =>
+  (await apiRequest<{ presets: SellerPreset[] }>(versionedApiPath('/presets'))).presets;
+
+export function savePreset(input: PresetInput): Promise<{ preset: SellerPreset }>;
+export function savePreset(
   name: string,
   params: Record<string, unknown>,
-): Promise<{
-  project: HostedProject;
-}> => {
-  return apiRequest<{
-    project: HostedProject;
-  }>('/api/projects', {
+  printProfileId?: string,
+): Promise<{ preset: SellerPreset }>;
+export function savePreset(
+  inputOrName: PresetInput | string,
+  params?: Record<string, unknown>,
+  printProfileId?: string,
+): Promise<{ preset: SellerPreset }> {
+  const input: PresetInput =
+    typeof inputOrName === 'string'
+      ? { name: inputOrName, params: params ?? {}, printProfileId }
+      : inputOrName;
+  return apiRequest<{ preset: SellerPreset }>(versionedApiPath('/presets'), {
     method: 'POST',
-    body: JSON.stringify({ name, params, schema_version: HOSTED_PROJECT_SCHEMA_VERSION }),
+    body: JSON.stringify(input),
   });
-};
+}
 
-export const deleteProject = async (projectId: string): Promise<void> => {
-  await apiRequest(`/api/projects/${encodeURIComponent(projectId)}`, { method: 'DELETE' });
-};
-
-export const listPresets = async (): Promise<SellerPreset[]> => {
-  return (
-    await apiRequest<{
-      presets: SellerPreset[];
-    }>('/api/presets')
-  ).presets;
-};
-
-export const savePreset = (
-  name: string,
-  params: Record<string, unknown>,
-  printProfileId: string,
-): Promise<{
-  preset: SellerPreset;
-}> => {
-  return apiRequest<{
-    preset: SellerPreset;
-  }>('/api/presets', {
-    method: 'POST',
-    body: JSON.stringify({ name, params, printProfileId }),
-  });
-};
+export const updatePreset = (
+  presetId: string,
+  input: PresetPatch,
+): Promise<{ preset: SellerPreset }> =>
+  apiRequest<{ preset: SellerPreset }>(
+    versionedApiPath(`/presets/${encodeURIComponent(presetId)}`),
+    { method: 'PATCH', body: JSON.stringify(input) },
+  );
 
 export const deletePreset = async (presetId: string): Promise<void> => {
-  await apiRequest(`/api/presets/${encodeURIComponent(presetId)}`, { method: 'DELETE' });
+  await apiRequest(versionedApiPath(`/presets/${encodeURIComponent(presetId)}`), {
+    method: 'DELETE',
+  });
 };
