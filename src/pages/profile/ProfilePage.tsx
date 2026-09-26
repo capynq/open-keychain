@@ -76,7 +76,7 @@ export const ProfilePage = ({
                 billingBusy={workspace.billingBusy}
                 billingActionError={workspace.billingActionError}
                 onRetry={() => void workspace.retryBilling()}
-                onCheckout={() => void workspace.startCheckout()}
+                onCheckout={(interval) => void workspace.startCheckout(interval)}
                 onPortal={() => void workspace.openPortal()}
                 emailVerified={workspace.account.emailVerified}
               />

@@ -23,7 +23,7 @@ export const ProfileBilling = ({
   billingError?: string;
   billingBusy: boolean;
   onRetry: () => void;
-  onCheckout: () => void;
+  onCheckout: (interval: 'month' | 'year') => void;
   onPortal: () => void;
   emailVerified?: boolean;
   billingActionError?: string;
@@ -73,7 +73,7 @@ export const ProfileBilling = ({
       ) : expired ? (
         <div className="profile-attention" role="status">
           <p>{t(locale, 'billingExpired')}</p>
-          <button type="button" onClick={onCheckout} disabled={!verified}>
+          <button type="button" onClick={() => onCheckout('month')} disabled={!verified}>
             {t(locale, 'billingStartMaker')}
           </button>
         </div>
@@ -88,9 +88,14 @@ export const ProfileBilling = ({
           <p>{t(locale, 'billingFreeCopy')}</p>
           <p className="profile-billing-price">{t(locale, 'billingPrice')}</p>
           <p>{t(locale, 'billingTrialTerms')}</p>
-          <button type="button" onClick={onCheckout} disabled={!verified}>
-            {t(locale, 'billingStartMaker')}
-          </button>
+          <div className="profile-billing-actions">
+            <button type="button" onClick={() => onCheckout('month')} disabled={!verified}>
+              {t(locale, 'billingStartMonthly')}
+            </button>
+            <button type="button" onClick={() => onCheckout('year')} disabled={!verified}>
+              {t(locale, 'billingStartYearly')}
+            </button>
+          </div>
         </div>
       )}
       <p className="profile-billing-privacy">{t(locale, 'billingPrivacy')}</p>

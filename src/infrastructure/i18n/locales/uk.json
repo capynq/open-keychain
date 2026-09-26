@@ -53,6 +53,8 @@
   "billingFreeCopy": "Окремий експорт завжди безкоштовний. Maker відкриває налаштування та локальні пакети.",
   "billingTrialTerms": "Пробний період Maker — 7 днів, потім €4,99 на місяць або €49 на рік.",
   "billingStartMaker": "Почати Maker",
+  "billingStartMonthly": "Почати на місяць · €4,99",
+  "billingStartYearly": "Почати на рік · €49",
   "billingPrice": "€4,99 на місяць · €49 на рік",
   "billingTrial": "Ваш семиденний пробний період Maker активний.",
   "billingActive": "Maker активний.",

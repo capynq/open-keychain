@@ -46,6 +46,7 @@ export type BillingStatus = {
 
 export type BillingCheckoutRequest = {
   plan: BillingPlanId;
+  interval: 'month' | 'year';
   returnUrl: string;
 };
 

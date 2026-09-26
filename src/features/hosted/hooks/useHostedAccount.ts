@@ -65,7 +65,7 @@ export type HostedAccountState = {
   billingError: string | undefined;
   billingBusy: boolean;
   retryBilling: () => Promise<void>;
-  startCheckout: () => Promise<void>;
+  startCheckout: (interval: 'month' | 'year') => Promise<void>;
   openPortal: () => Promise<void>;
   billingActionError: string | undefined;
 };
@@ -169,7 +169,7 @@ export const useHostedAccount = (
     }
   }, [account]);
 
-  const startCheckout = async (): Promise<void> => {
+  const startCheckout = async (interval: 'month' | 'year'): Promise<void> => {
     setBillingActionError(undefined);
 
     if (account?.emailVerified !== true) {
@@ -178,7 +178,11 @@ export const useHostedAccount = (
     }
 
     try {
-      const { url } = await createCheckout({ plan: 'maker', returnUrl: window.location.href });
+      const { url } = await createCheckout({
+        plan: 'maker',
+        interval,
+        returnUrl: window.location.href,
+      });
 
       window.location.assign(url);
     } catch {

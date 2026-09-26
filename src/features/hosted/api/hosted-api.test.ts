@@ -77,7 +77,9 @@ describe('hosted API public contract', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ url: '/checkout' }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ url: '/portal' }), { status: 200 }));
 
-    await expect(createCheckout({ plan: 'maker', returnUrl: '/profile' })).resolves.toEqual({
+    await expect(
+      createCheckout({ plan: 'maker', interval: 'month', returnUrl: '/profile' }),
+    ).resolves.toEqual({
       url: '/checkout',
     });
     await expect(createPortal({ returnUrl: '/profile' })).resolves.toEqual({ url: '/portal' });
@@ -85,7 +87,7 @@ describe('hosted API public contract', () => {
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       method: 'POST',
-      body: '{"plan":"maker","returnUrl":"/profile"}',
+      body: '{"plan":"maker","interval":"month","returnUrl":"/profile"}',
     });
     expect(fetch).toHaveBeenNthCalledWith(2, '/api/v1/billing/portal', {
       credentials: 'include',
