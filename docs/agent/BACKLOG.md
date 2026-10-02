@@ -1,7 +1,9 @@
 # Open Keychain backlog
 
-Status labels distinguish confirmed work, investigation, and optional ideas. Priorities apply to the
-local-first beta and optional hosted seller pilot; they do not authorize deployment or outreach.
+Status labels distinguish confirmed work, investigation, and optional ideas. This backlog covers the
+public MIT repository and its local-first product; private hosted-service work requires explicit
+authorization and an external repository. Nothing here authorizes deployment, repository transfer,
+or outreach.
 
 ## P0 — correctness / release blockers
 
@@ -49,12 +51,18 @@ move focus or flood toasts while a range is dragged.
 **Dependencies:** A single owner for candidate/accepted state; stable input signatures covering
 parameters and fonts; existing geometry cancellation/supersession behavior; localized error mapping.
 
+**Progress:** Geometry worker preview, validation, and export requests now have a default deadline;
+timeouts reject pending work, terminate the failed worker, and allow one replacement-worker recovery
+attempt. Focused client coverage exercises timed-out preview/export/validation and the subsequent
+recovery path.
+
 **Remaining acceptance:** Recover the exact reported Heart configuration and add it as a geometry
 fixture. Broaden regression coverage for persisted/shared/exported state and restore/WebMCP entry
-points; verify worker timeouts and the full failure taxonomy. Rejected or superseded candidates must
-not alter accepted state, overwrite a newer result, create an unhandled rejection, or present stale
-geometry as current. Manual edits, randomization, reset, template/style changes, and current direct
-parameter application already enter the candidate acceptance boundary.
+points; verify timeout behavior in browser candidate flows and the remaining normalization/font/
+generator/invalid-mesh taxonomy. Rejected or superseded candidates must not alter accepted state,
+overwrite a newer result, create an unhandled rejection, or present stale geometry as current. Manual
+edits, randomization, reset, template/style changes, and current direct parameter application already
+enter the candidate acceptance boundary.
 
 ### Confirmed — prove that exposed controls are effective and safe
 
@@ -198,26 +206,32 @@ physical-print proof.
 **Acceptance:** Each supported baseline row records printer/profile, measurements, observations, and
 evidence; highest-risk fixtures are repeated as documented.
 
-### Confirmed — verify optional hosted-pilot operational gates
+### Blocked — create and validate the private hosted subscription service
 
-**Outcome:** Make the Fastify/PostgreSQL workspace safe to enable for pilot sellers.
+**Outcome:** Operate the separate private service for accounts, subscriptions, and reusable presets
+behind the public client's versioned `/api/v1` contract, while keeping customer text, generated
+geometry, and batch ZIPs in the browser.
 
-**Evidence:** `docs/hosting-readiness.md`, `deploy/hetzner/`, hosted E2E, and the hosted-mode feature
-flag require disposable E2E, DNS/TLS/proxy/firewall, backup/restore, and three-path health evidence.
+**Current boundary:** The public repository retains the subscription UI, DTOs, and mock fixtures but
+must not regain server, deployment, provider, billing, email, credentials, or hosted-E2E internals.
+The private repository/service has not been created or transferred here.
 
-**Dependencies:** Explicit authority and access for Hetzner/Netlify operations; no production
-credentials in repository or chat.
-
-**Acceptance:** Hosted E2E uses an isolated disposable database; deployment and recovery checks have
-recorded evidence; seller presets exclude customer names and subtitles.
+**Unblock conditions:** Explicit authorization and a supplied external private repository. Service
+implementation, security, billing, deployment, backup/restore, and production readiness require their
+own evidence; none is claimed by this checkout.
 
 ## P3 — optional documented follow-up
 
-### Confirmed — run the seller research and concierge-pilot loop
+### Confirmed — continue seller research without hosted implementation
 
-Run public research and human-approved pilot outreach only after physical and hosted readiness. Keep a
-consent-respecting lead ledger; do not create synthetic accounts or automate sending. Consider pricing
-only after three completed pilots and an explicit paid commitment.
+Continue to qualify public leads and refine draft-only outreach, but do not send messages without
+explicit human approval. A hosted subscription pilot is blocked until the private service exists and
+is separately validated. The broader print matrix remains open and must not be represented as
+physically validated; retain only aggregate pilot evidence in public project records.
+
+When authorized and unblocked, define the pilot protocol in the private-service workstream; retain
+only aggregate completion, failure/reprint, repeat-use, and willingness-to-pay signals in this public
+repository.
 
 ### Optional — extend geometry authoring only through validated slices
 

@@ -14,6 +14,18 @@ import { BoundedResultCache } from './result-cache';
 
 const disposedError = () => new Error('Geometry client disposed.');
 const failedError = () => new Error('Geometry worker failed.');
+export const DEFAULT_GEOMETRY_REQUEST_TIMEOUT_MS = 30_000;
+
+export class GeometryRequestTimeoutError extends Error {
+  constructor() {
+    super('Geometry worker request timed out.');
+    this.name = 'GeometryRequestTimeoutError';
+  }
+}
+
+export type GeometryClientOptions = {
+  requestTimeoutMs?: number;
+};
 
 const stableStringify = (value: unknown): string => {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
@@ -58,7 +70,9 @@ const geometryResultWeight = (result: GeometryResult): number => {
 };
 
 export class GeometryClient {
-  private readonly worker: Worker;
+  private worker: Worker;
+  private readonly requestTimeoutMs: number;
+  private readonly requestTimers = new Map<number, ReturnType<typeof setTimeout>>();
   private nextRequestId = 1;
   private activePreviewRequestId: number | undefined;
   private queuedPreview:
@@ -87,21 +101,22 @@ export class GeometryClient {
   >();
   private disposed = false;
   private workerFailed = false;
+  private recoveryAvailable = true;
   private readonly resultCache = new BoundedResultCache<GeometryResult>(
     8,
     64 * 1024 * 1024,
     geometryResultWeight,
   );
-  constructor() {
-    this.worker = new Worker(new URL('./geometry-worker.ts', import.meta.url), { type: 'module' });
-    this.worker.onmessage = (event: MessageEvent<WorkerResponse>) =>
-      this.handleResponse(event.data);
-    this.worker.onerror = () => this.handleWorkerFailure(failedError());
-    this.worker.onmessageerror = () => this.handleWorkerFailure(failedError());
+  constructor(options: GeometryClientOptions = {}) {
+    this.requestTimeoutMs =
+      options.requestTimeoutMs && Number.isFinite(options.requestTimeoutMs)
+        ? Math.max(1, options.requestTimeoutMs)
+        : DEFAULT_GEOMETRY_REQUEST_TIMEOUT_MS;
+    this.worker = this.createWorker();
     try {
       this.worker.postMessage({ type: 'warmup' } satisfies WorkerRequest);
     } catch (error) {
-      this.handleWorkerFailure(error instanceof Error ? error : failedError());
+      this.handleWorkerFailure(this.worker, error instanceof Error ? error : failedError());
     }
   }
   request(
@@ -177,6 +192,7 @@ export class GeometryClient {
       this.pendingExports.delete(requestId);
       return Promise.reject(error instanceof Error ? error : failedError());
     }
+    this.startRequestTimer(requestId, this.worker);
     return promise;
   }
   /** Validate a candidate independently of the coalesced preview request. */
@@ -208,6 +224,7 @@ export class GeometryClient {
       this.validationCacheKeys.delete(requestId);
       return Promise.reject(error instanceof Error ? error : failedError());
     }
+    this.startRequestTimer(requestId, this.worker);
     return promise;
   }
   dispose(): void {
@@ -219,6 +236,7 @@ export class GeometryClient {
     this.pendingGeometry.clear();
     this.pendingExports.clear();
     this.pendingValidations.clear();
+    this.clearRequestTimers();
     this.queuedPreview = undefined;
     this.activePreviewRequestId = undefined;
     this.resultCache.clear();
@@ -247,10 +265,13 @@ export class GeometryClient {
       this.activePreviewRequestId = undefined;
       return;
     }
+    this.startRequestTimer(requestId, this.worker);
     if (cacheKey) this.previewCacheKeys.set(requestId, cacheKey);
   }
-  private handleResponse(response: WorkerResponse): void {
-    if (this.disposed) return;
+  private handleResponse(worker: Worker, response: WorkerResponse): void {
+    if (this.disposed || worker !== this.worker) return;
+    this.clearRequestTimer(response.requestId);
+    this.recoveryAvailable = true;
     if (response.type === 'geometry') {
       const pending = this.pendingGeometry.get(response.requestId);
       if (pending) {
@@ -349,8 +370,8 @@ export class GeometryClient {
     return this.disposed ? disposedError() : failedError();
   }
 
-  private handleWorkerFailure(error: Error): void {
-    if (this.disposed || this.workerFailed) return;
+  private handleWorkerFailure(worker: Worker, error: Error): void {
+    if (this.disposed || this.workerFailed || worker !== this.worker) return;
     this.workerFailed = true;
     for (const pending of this.pendingGeometry.values()) pending.reject(error);
     for (const pending of this.pendingExports.values()) pending.reject(error);
@@ -358,10 +379,55 @@ export class GeometryClient {
     this.pendingGeometry.clear();
     this.pendingExports.clear();
     this.pendingValidations.clear();
+    this.clearRequestTimers();
     this.previewCacheKeys.clear();
     this.validationCacheKeys.clear();
     this.queuedPreview = undefined;
     this.activePreviewRequestId = undefined;
+    worker.terminate();
+    if (!this.recoveryAvailable) return;
+    this.recoveryAvailable = false;
+    let replacement: Worker | undefined;
+    try {
+      replacement = this.createWorker();
+      replacement.postMessage({ type: 'warmup' } satisfies WorkerRequest);
+      this.worker = replacement;
+      this.workerFailed = false;
+    } catch {
+      replacement?.terminate();
+      this.workerFailed = true;
+    }
+  }
+
+  private createWorker(): Worker {
+    const worker = new Worker(new URL('./geometry-worker.ts', import.meta.url), { type: 'module' });
+    worker.onmessage = (event: MessageEvent<WorkerResponse>) =>
+      this.handleResponse(worker, event.data);
+    worker.onerror = () => this.handleWorkerFailure(worker, failedError());
+    worker.onmessageerror = () => this.handleWorkerFailure(worker, failedError());
+    return worker;
+  }
+
+  private startRequestTimer(requestId: number, worker: Worker): void {
+    this.clearRequestTimer(requestId);
+    this.requestTimers.set(
+      requestId,
+      setTimeout(() => {
+        this.requestTimers.delete(requestId);
+        this.handleWorkerFailure(worker, new GeometryRequestTimeoutError());
+      }, this.requestTimeoutMs),
+    );
+  }
+
+  private clearRequestTimer(requestId: number): void {
+    const timer = this.requestTimers.get(requestId);
+    if (timer !== undefined) clearTimeout(timer);
+    this.requestTimers.delete(requestId);
+  }
+
+  private clearRequestTimers(): void {
+    for (const timer of this.requestTimers.values()) clearTimeout(timer);
+    this.requestTimers.clear();
   }
 
   private fontForWorker(fontDefinition: FontDefinition | undefined): FontDefinition | undefined {
