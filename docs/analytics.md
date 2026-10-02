@@ -4,9 +4,9 @@ Open Keychain keeps the editor local-first. Product analytics and error monitori
 
 ## Static-host environment variables
 
-For local builds, set these in your environment or `.env` file. Production bundles are built in
-GitHub Actions before Netlify deploys the artifact, so set `VITE_POSTHOG_KEY` as a GitHub Actions
-repository secret and `VITE_POSTHOG_HOST` as a repository variable:
+Set these in the Netlify production environment. The GitHub Actions workflows run `netlify build`
+with the production context before deploying, so the build reads the same site settings. For local
+builds, set them in your environment or `.env` file:
 
 - `VITE_POSTHOG_KEY`: the project key from a PostHog project. Events use the first-party reverse proxy at `https://cabinet.open-keychain.com` by default. Set `VITE_POSTHOG_HOST` only when overriding that proxy host.
 
