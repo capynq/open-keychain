@@ -2,8 +2,9 @@
 
 ## Repository state
 
-- **Branch:** `main`; commits `b2e0655`, `34d23f2`, `bf446ef`, and `e73e796` are pushed.
-- A follow-up changes the GitHub build to use Netlify's production environment and is ready to push.
+- **Branch:** `main`; implementation is pushed through `2b80e08` (`fix(deploy): build with Netlify production environment`).
+- The push hook passed locally. GitHub Actions run status could not be queried because `api.github.com`
+  is unreachable from this environment; production deploy completion is unconfirmed.
 
 ## Work completed
 
@@ -24,5 +25,5 @@
 
 ## Next action
 
-Push the Netlify build-context fix. Confirm the resulting GitHub Actions `quality` and deploy jobs
-succeed, then verify consent-gated requests reach the first-party proxy.
+Confirm the GitHub Actions `quality` and deploy jobs succeed, then accept analytics consent on the
+production site and verify requests reach the first-party proxy.
