@@ -53,12 +53,18 @@ reset, restored designs, and tool-driven changes share one safe candidate-valida
 
 ## Milestones
 
-### Completed — local-first product foundations
+### Completed — public MIT product foundations
 
-The browser customizer, STL/3MF export, localized SEO, consent-gated analytics, native WebMCP, and
-optional hosted seller-workspace code are implemented. Commits `6dead43`, `114e9fc`, `5a711ee`,
-`8e7bed2`, and `996e6b2` added the latest geometry, finish-control, export, seller, and public-surface
-work. This is implementation status, not current release or physical-print evidence.
+The browser customizer, geometry validation, free single STL/3MF exports, local batch workflow,
+localized SEO, consent-gated analytics, native WebMCP, and the subscription UI/public `/api/v1`
+DTOs and mock fixtures are in the public MIT repository. This is implementation status, not current
+release or physical-print evidence.
+
+The public repository intentionally excludes the hosted service implementation, deployment/provider
+internals, billing operations, and email delivery. Those belong to a separate private service. The
+private repository/service has not been created or transferred in this worktree; creation, transfer,
+implementation, deployment, and operation remain blocked pending explicit authorization and an
+external repository. No commit, push, or deployment is implied by this plan.
 
 ### Active — unify choice hierarchy and dependent controls
 
@@ -116,24 +122,25 @@ slicer smoke check.
 
 **Completion signal:** Every supported baseline template/style row has recorded physical evidence.
 
-### Future — optional hosted pilot readiness
+### Blocked — private hosted subscription service
 
-- Verify disposable-database hosted E2E; deploy and operate the optional Hetzner API only after DNS,
-  TLS, proxy, migration, backup/restore, firewall, and health checks are evidenced.
-- Enable `VITE_HOSTED_MODE` only after those gates pass; keep CSV names, generated geometry, and
-  batch ZIPs in the browser and seller presets free of customer text.
+The intended hosted product is a separate private service for accounts, subscription enforcement,
+and synchronized reusable presets; the public client keeps customer text, generated geometry, and
+batch ZIPs local. Creating or transferring the private repository, implementing the service, and
+operating its provider/deployment stack require explicit authorization plus an external repository.
+Do not add private service code, credentials, deployment claims, or production integrations to this
+public checkout.
 
-**Completion signal:** The documented three-path health checks, restore drill, and hosted E2E have
-evidence suitable for inviting pilot sellers.
+**Unblock signal:** explicit authorization and a supplied external private repository, followed by
+separate service design, implementation, security, billing, and operational validation.
 
-### Future — evidence-led seller pilots
+### Future — evidence-led seller research
 
-- Research public seller demand, prepare human-approved drafts, and offer concierge batches for
-  feedback.
-- Consider pricing only after three completed pilots and an explicit paid commitment.
-
-**Dependencies:** Physical and hosted-pilot readiness. Outreach and sending remain explicit
-human-approved actions.
+Continue public research and draft preparation without sending outreach. Commercial subscription
+validation and any seller pilot require the separately operated private service and explicit human
+approval; retain only aggregate evidence and keep the broader physical-print matrix distinct from
+recipe-specific evidence. Exact pricing is a later product decision, not a reason to reintroduce
+hosted internals into this repository.
 
 ### Future — optional product exploration
 

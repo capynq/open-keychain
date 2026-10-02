@@ -1,7 +1,11 @@
 # Physical print validation
 
-Use 0.4 mm PLA, 0.2 mm layers, and no supports for the baseline. Complete one row for
-each supported template/style combination before the first public launch.
+Use 0.4 mm PLA, 0.2 mm layers, and no supports for the baseline. The broad product-readiness gate is
+one row for each supported template/style combination. For the first narrow seller pilot, the user
+approved a recipe-specific gate: physically validate the exact Name-keychain preset recipe(s) the
+pilot sellers will use before inviting them. This does not validate other presets, templates, styles,
+printers, or materials; keep those claims provisional. Keep any pilot protocol and evidence separate
+from this broader print-readiness matrix.
 
 ## Repeatable PrusaSlicer smoke check
 
