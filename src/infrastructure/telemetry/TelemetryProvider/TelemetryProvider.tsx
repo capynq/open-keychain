@@ -9,7 +9,7 @@ import './TelemetryProvider.module.css';
 const CONSENT_KEY = 'open-keychain.analytics-consent';
 const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY as string | undefined;
 const POSTHOG_HOST =
-  (import.meta.env.VITE_POSTHOG_HOST as string | undefined) ?? 'https://eu.i.posthog.com';
+  (import.meta.env.VITE_POSTHOG_HOST as string | undefined) || 'https://cabinet.open-keychain.com';
 type PostHogClient = typeof posthog;
 let posthogClient: PostHogClient | undefined;
 let posthogLoad: Promise<PostHogClient> | undefined;
@@ -46,6 +46,7 @@ const configurePostHog = async (): Promise<void> => {
     if (client.__loaded) return;
     client.init(POSTHOG_KEY, {
       api_host: POSTHOG_HOST,
+      defaults: '2026-05-30',
       capture_pageview: false,
       capture_pageleave: false,
       autocapture: false,
