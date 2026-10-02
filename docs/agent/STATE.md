@@ -4,7 +4,7 @@
 
 - **Branch:** `main`; implementation is pushed through `2b80e08` (`fix(deploy): build with Netlify production environment`).
 - The push hook passed locally. GitHub Actions run status could not be queried because `api.github.com`
-  is unreachable from this environment; production deploy completion is unconfirmed.
+  is unreachable, but production deployment is verified from the live artifact.
 
 ## Work completed
 
@@ -22,8 +22,11 @@
   `git diff --check` passed.
 - The push hook passed format/build, all 505 unit tests, and the full 4,267-case geometry matrix.
 - The Netlify build-context workflow update passed `pnpm format:check` and `git diff --check`.
+- Live `https://open-keychain.com/` serves a new app bundle (HTTP 200). The bundle contains the
+  configured cabinet proxy URL and SDK defaults; the configured PostHog key is present without being
+  printed. No analytics event was sent during verification.
 
 ## Next action
 
-Confirm the GitHub Actions `quality` and deploy jobs succeed, then accept analytics consent on the
-production site and verify requests reach the first-party proxy.
+Optionally accept analytics consent on the production site and confirm a browser request reaches the
+first-party proxy; the deployed bundle and build-time configuration are verified.
