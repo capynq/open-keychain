@@ -7,7 +7,7 @@
   Link: </llms.txt>; rel="describedby"; type="text/markdown", </ai-catalog.json>; rel="ai-catalog"; type="application/json"
 
 /
-  Link: </llms.txt>; rel="describedby"; type="text/markdown", </ai-catalog.json>; rel="ai-catalog"; type="application/json", </showcase/v1/create-mobile-490.avif>; rel="preload"; as="image"; type="image/avif"; media="(max-width: 760px) and (max-resolution: 1.99dppx)", </showcase/v1/create-mobile-780.avif>; rel="preload"; as="image"; type="image/avif"; media="(max-width: 760px) and (min-resolution: 2dppx)", </showcase/v1/create-desktop-720.avif>; rel="preload"; as="image"; type="image/avif"; media="(min-width: 761px)"
+  Link: </llms.txt>; rel="describedby"; type="text/markdown", </ai-catalog.json>; rel="ai-catalog"; type="application/json", </showcase/v1/create-mobile-490.avif>; rel="preload"; as="image"; type="image/avif"; media="(max-width: 760px) and (max-resolution: 1.99dppx)", </showcase/v1/create-mobile-780.avif>; rel="preload"; as="image"; type="image/avif"; media="(max-width: 760px) and (min-resolution: 2dppx)"
 
 /llms.txt
   Content-Type: text/markdown; charset=UTF-8

@@ -50,6 +50,7 @@ const configurePostHog = async (): Promise<void> => {
       capture_pageview: false,
       capture_pageleave: false,
       autocapture: false,
+      capture_dead_clicks: false,
       disable_session_recording: true,
       persistence: 'localStorage',
       disable_cookie: true,
