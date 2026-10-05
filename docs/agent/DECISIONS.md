@@ -121,23 +121,27 @@ control and high-risk cross-feature combinations. Controls with no meaningful ef
 fixed or hidden. Motion is limited to selection, update, disclosure, progress, success, and rejection,
 with reduced-motion behavior preserved.
 
-## Local-first customizer and optional hosted boundary
+## Public MIT client and private hosted-service boundary
 
 **Status:** active
 
-**Decision:** Geometry generation, preview, and STL/3MF export stay in the browser and remain free
-in the default workflow. Accounts and the Fastify/PostgreSQL service are optional hosted-workspace
-groundwork; seller presets may persist, while CSV names, generated geometry, and batch ZIPs remain
-local.
+**Decision:** The public MIT repository keeps the Customizer, browser geometry/preview, free single
+STL/3MF exports, local batch generation, subscription UI, and public versioned `/api/v1` DTOs and
+mock fixtures. Accounts, subscriptions, synchronized reusable presets, billing, email, and service
+operations belong to a separate private hosted service. CSV names, generated geometry, and batch ZIPs
+remain local to the browser workflow.
 
-**Evidence:** `README.md`, `docs/hosting-readiness.md`, `docs/seller-research.md`, and hosted API
-validation rules.
+**Evidence:** `README.md`, the current hosted API client contract/tests, and the public/private split
+in the current worktree. The removed server/deployment files are not evidence of a running service.
 
-**Rationale:** The documented product is local-first and limits hosted seller value to measured
-order-processing work.
+**Rationale:** Preserve an auditable open-source local-first product while allowing the commercial
+subscription service to be developed and operated privately without exposing provider or billing
+internals in the public repository.
 
-**Consequences:** Do not move ordinary generation/export server-side, add billing by implication,
-or persist customer text in seller presets.
+**Consequences:** Do not move ordinary generation/export server-side, persist customer text in hosted
+presets, or reintroduce server/deployment/provider internals here. Private repository creation or
+transfer and service implementation require explicit authorization and an external repository; no
+deployment or operational readiness is implied.
 
 ## Vite/React SPA remains the SEO delivery model
 
@@ -185,6 +189,25 @@ printer/material behavior remains external.
 
 **Consequences:** Preserve the baseline print profile, warnings, topology checks, and separate
 physical validation table. Do not silently bypass severity errors.
+
+## Seller-pilot physical checks are limited to the recipes the pilot uses
+
+**Status:** active
+
+**Decision:** If a seller pilot is later authorized through the separate private service, physically
+validate only the exact Name-keychain preset recipe or recipes that seller will use. Do not require
+the complete template/style matrix for that narrow pilot, and do not use pilot evidence to claim that
+untested recipes are physically validated. The full baseline matrix remains the evidence gate for
+broader physical-readiness claims.
+
+**Evidence:** Explicit user selection on 2026-09-26 to validate only the exact pilot recipes before
+inviting the first sellers, while keeping print claims provisional for other combinations.
+
+**Rationale:** Recipe-specific prints provide relevant evidence for the seller batch workflow without
+making a narrow, separately authorized pilot depend on unrelated templates.
+
+**Consequences:** Record printer/profile, dimensions, observations, slicer warnings, and evidence for
+each recipe actually used. Keep software geometry validation and physical print evidence distinct.
 
 ## Published SEO scope and locale rules are finite
 
@@ -244,19 +267,20 @@ public content, and Workshop for customizer/export/seller flows.
 **Consequences:** Preserve native control semantics, visible focus, reduced-motion behavior, shared
 status/field-stack/disclosure/icon conventions, and desktop/mobile/mobile-2x UI review.
 
-## Hosted deployment is a guarded beta operation
+## Private hosted operations are a separate blocked workstream
 
-**Status:** active
+**Status:** blocked pending authorization and an external repository
 
-**Decision:** The optional API is a loopback-only Compose deployment behind Nginx, with PostgreSQL
-not publicly exposed. Enable hosted mode only after migration, TLS/proxy, firewall, backup/restore,
-health, and isolated hosted-E2E evidence.
+**Decision:** Do not implement, deploy, or operate the hosted subscription service from this public
+checkout. When explicitly authorized in a supplied private repository, its service, provider stack,
+security, billing, email, migration, backup/restore, health, and hosted-E2E contracts must be defined
+and validated there.
 
-**Evidence:** `docs/hosting-readiness.md`, `deploy/hetzner/docker-compose.yml`, hosted E2E config,
-and server configuration.
+**Evidence:** Current worktree removes the former server/deployment/provider internals while retaining
+the public client contract and mocks. No private repository or target environment was supplied.
 
-**Rationale:** The documented CX23 arrangement is single-server beta infrastructure, not a strong
-uptime guarantee.
+**Rationale:** Provider and operational details are private product infrastructure, not part of the
+MIT client source; recording an old optional-pilot deployment design would falsely imply readiness.
 
-**Consequences:** Keep secrets outside Git, use disposable local databases for hosted E2E, and do not
-claim live readiness from repository assets alone.
+**Consequences:** Treat hosted service creation, transfer, implementation, deployment, and production
+validation as blocked. Never claim live readiness from public repository assets alone.

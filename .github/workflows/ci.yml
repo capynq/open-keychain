@@ -34,7 +34,14 @@ jobs:
         run: pnpm validate:ci
         env:
           VALIDATION_CONCURRENCY: 2
+      - name: Build production artifact with Netlify environment
+        if: github.event_name != 'pull_request'
+        run: pnpm --package=netlify-cli dlx netlify build --context production
+        env:
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
       - name: Upload production build
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
         with:
           name: dist

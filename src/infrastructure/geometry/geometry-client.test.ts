@@ -47,6 +47,7 @@ const result = () => ({
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   MockWorker.instances.length = 0;
   vi.unstubAllGlobals();
 });
@@ -63,32 +64,74 @@ describe('GeometryClient lifecycle', () => {
     expect(worker.postMessage).toHaveBeenCalledTimes(1);
   });
 
-  it('rejects all pending operations when the worker fails', async () => {
+  it('rejects pending operations and recovers with a replacement worker after worker failure', async () => {
     vi.stubGlobal('Worker', MockWorker);
     const client = new GeometryClient();
     const worker = MockWorker.instances[0];
     const preview = client.request(DEFAULT_PARAMS);
     const exportPromise = client.export(DEFAULT_PARAMS);
     const validation = client.validate(DEFAULT_PARAMS);
+    const rejected = Promise.all([
+      expect(preview).rejects.toThrow('worker failed'),
+      expect(exportPromise).rejects.toThrow('worker failed'),
+      expect(validation).rejects.toThrow('worker failed'),
+    ]);
     worker.onerror?.();
-    await expect(preview).rejects.toThrow('worker failed');
-    await expect(exportPromise).rejects.toThrow('worker failed');
-    await expect(validation).rejects.toThrow('worker failed');
+    await rejected;
     expect(worker.postMessage).toHaveBeenCalledTimes(4);
-    await expect(client.request(DEFAULT_PARAMS)).rejects.toThrow('worker failed');
-    expect(worker.postMessage).toHaveBeenCalledTimes(4);
+    expect(worker.terminate).toHaveBeenCalledTimes(1);
+    expect(MockWorker.instances).toHaveLength(2);
+    const replacement = MockWorker.instances[1];
+    const recovered = client.request(DEFAULT_PARAMS);
+    replacement.emit({ type: 'geometry', requestId: 4, result: result() });
+    await expect(recovered).resolves.toMatchObject({ generationId: 4 });
+    client.dispose();
   });
 
-  it('handles message deserialization failures and rejects later calls without posting', async () => {
+  it('recovers after a message deserialization failure and ignores old worker responses', async () => {
     vi.stubGlobal('Worker', MockWorker);
     const client = new GeometryClient();
     const worker = MockWorker.instances[0];
     const pending = client.request(DEFAULT_PARAMS);
+    const rejected = expect(pending).rejects.toThrow('worker failed');
     worker.onmessageerror?.();
-    await expect(pending).rejects.toThrow('worker failed');
+    await rejected;
     expect(worker.postMessage).toHaveBeenCalledTimes(2);
-    await expect(client.validate(DEFAULT_PARAMS)).rejects.toThrow('worker failed');
-    expect(worker.postMessage).toHaveBeenCalledTimes(2);
+    expect(MockWorker.instances).toHaveLength(2);
+    const replacement = MockWorker.instances[1];
+    const recovered = client.validate(DEFAULT_PARAMS);
+    replacement.emit({ type: 'validation', requestId: 2, result: result() });
+    await expect(recovered).resolves.toMatchObject({ generationId: 2 });
+    worker.emit({ type: 'geometry', requestId: 1, result: result() });
+    expect(worker.terminate).toHaveBeenCalledTimes(1);
+    client.dispose();
+  });
+
+  it('bounds hung requests, rejects related work, and can use the replacement worker', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('Worker', MockWorker);
+    const client = new GeometryClient({ requestTimeoutMs: 500 });
+    const worker = MockWorker.instances[0];
+    const preview = client.request(DEFAULT_PARAMS);
+    const exportPromise = client.export(DEFAULT_PARAMS);
+    const validation = client.validate(DEFAULT_PARAMS);
+    const rejected = Promise.all([
+      expect(preview).rejects.toThrow('timed out'),
+      expect(exportPromise).rejects.toThrow('timed out'),
+      expect(validation).rejects.toThrow('timed out'),
+    ]);
+
+    await vi.advanceTimersByTimeAsync(500);
+    await rejected;
+
+    expect(worker.terminate).toHaveBeenCalledTimes(1);
+    expect(MockWorker.instances).toHaveLength(2);
+    const replacement = MockWorker.instances[1];
+    const recovered = client.validate(DEFAULT_PARAMS);
+    replacement.emit({ type: 'validation', requestId: 4, result: result() });
+    await expect(recovered).resolves.toMatchObject({ generationId: 4 });
+    expect(worker.postMessage).toHaveBeenCalledTimes(4);
+    client.dispose();
   });
 
   it('reuses exact preview results without posting or sharing mesh buffers', async () => {
