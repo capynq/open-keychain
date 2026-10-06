@@ -368,10 +368,11 @@ export const useCustomizerParams = (
       return 'template-details';
     if (key === 'heartInteriorMode') return 'style-details';
     if (
+      key === 'textEdgeMm' ||
+      key === 'textEdgeFinish' ||
       key === 'edgeFinish' ||
       key === 'topEdgeMm' ||
       key === 'bottomEdgeMm' ||
-      key === 'textEdgeMm' ||
       key === 'minimumWallMm' ||
       key === 'bottomClearanceMm' ||
       key === 'subtitleReliefDepthMm'
@@ -394,7 +395,7 @@ export const useCustomizerParams = (
 
     proposeCandidate(
       { ...current, ...changes },
-      group ?? groupForKey(keys[0] ?? 'edgeFinish', current),
+      group ?? groupForKey(keys[0] ?? 'textEdgeFinish', current),
       keys[0],
     );
   };

@@ -8,6 +8,7 @@ import {
   fontSupportsText,
   type FontCategory,
 } from '@/domain/keychain/fonts/catalog';
+import { keyringPresetValues } from '@/domain/keychain/model/keyring-presets';
 import {
   PARAMETER_REGISTRY,
   parameterPresentationGroup,
@@ -18,6 +19,8 @@ import {
   MAGNET_POCKET_PRESETS,
   type HeartInteriorMode,
   type KeychainParams,
+  type PrintAppearanceOverrides,
+  type GeometryResult,
 } from '@/domain/keychain/model/types';
 import { TEMPLATE_CATALOG } from '@/domain/keychain/templates/template-builder';
 import {
@@ -38,7 +41,10 @@ import { ResetIconButton } from '@/shared/ui/ResetIconButton';
 import { stylePreviewAsset, TEMPLATE_PREVIEW_ASSETS } from '../design-card-assets';
 import { DesignCardRail } from '../DesignCardRail/DesignCardRail';
 import { DesignSelectCard } from '../DesignSelectCard/DesignSelectCard';
+import { KeyringPositionPicker } from '../KeyringPositionPicker/KeyringPositionPicker';
+import { KeyringPresetPicker } from '../KeyringPresetPicker/KeyringPresetPicker';
 import { RangeControl } from '../RangeControl/RangeControl';
+import { AppearanceControls } from './AppearanceControls';
 import styles from './ControlsPanel.module.css';
 import { GeometryFinishControls } from './GeometryFinishControls';
 import { ParameterGroupList } from './ParameterGroupList';
@@ -65,12 +71,26 @@ export const ControlsPanel = ({
   onReset,
   bootFrame = false,
   neutralSelection = false,
+  favoriteFontCategories = [],
+  appearanceOverrides = { version: 1 },
+  onAppearanceChange,
+  baseColor = '#B84838',
+  reliefColor = '#FAF4E9',
+  baseFinishLimits,
+  textFinishLimits,
 }: {
   locale: Locale;
   customizer: ReturnType<typeof useCustomizerParams>;
   onReset: () => void;
   bootFrame?: boolean;
   neutralSelection?: boolean;
+  favoriteFontCategories?: FontCategory[];
+  appearanceOverrides?: PrintAppearanceOverrides;
+  onAppearanceChange?: (overrides: PrintAppearanceOverrides) => void;
+  baseColor?: string;
+  reliefColor?: string;
+  baseFinishLimits?: GeometryResult['baseFinishLimits'];
+  textFinishLimits?: GeometryResult['textFinishLimits'];
 }) => {
   const {
     params,
@@ -99,6 +119,7 @@ export const ControlsPanel = ({
   const [loadedGoogleFontIds, setLoadedGoogleFontIds] = useState<Set<string>>(() => new Set());
   const [googleFontLoadPromises] = useState(() => new Map<string, Promise<boolean>>());
   const [previewFontId, setPreviewFontId] = useState<string>();
+  const [showAllFontCategories, setShowAllFontCategories] = useState(false);
   const [openCategories, setOpenCategories] = useState<Set<FontCategory>>(
     () => new Set(FONT_CATEGORY_ORDER),
   );
@@ -111,6 +132,9 @@ export const ControlsPanel = ({
     params.styleId !== 'heart-split' &&
     TEMPLATE_CATALOG.find((template) => template.id === params.templateId)?.supportsSubtitle ===
       true;
+  const supportsKeyring =
+    TEMPLATE_CATALOG.find((template) => template.id === params.templateId)?.supportsKeyring ??
+    false;
   const isHeartSplit = params.styleId === 'heart-split';
   const hasSubtitleText = params.subtitle.trim().length > 0;
   const activeFontTarget: FontTarget = hasSubtitle && hasSubtitleText ? fontTarget : 'primary';
@@ -139,16 +163,28 @@ export const ControlsPanel = ({
       sourceFonts,
     ],
   );
+  const restrictToFavorites =
+    favoriteFontCategories.length > 0 &&
+    !showAllFontCategories &&
+    activeBrowserState.category === 'all' &&
+    !activeBrowserState.search.trim();
   const filteredFonts = useMemo(() => {
     const query = activeBrowserState.search.trim().toLocaleLowerCase();
     return compatibleFonts.filter(
       (font) =>
+        (!restrictToFavorites || favoriteFontCategories.includes(font.category)) &&
         (activeBrowserState.category === 'all' || font.category === activeBrowserState.category) &&
         (!query ||
           font.name.toLocaleLowerCase().includes(query) ||
           font.category.toLocaleLowerCase().includes(query)),
     );
-  }, [activeBrowserState.category, activeBrowserState.search, compatibleFonts]);
+  }, [
+    activeBrowserState.category,
+    activeBrowserState.search,
+    compatibleFonts,
+    favoriteFontCategories,
+    restrictToFavorites,
+  ]);
   const shouldPaginate = fontSource === 'google';
   const pageCount = shouldPaginate
     ? Math.max(1, Math.ceil(filteredFonts.length / fontsPerPage))
@@ -265,9 +301,16 @@ export const ControlsPanel = ({
     else update('fontId', font.id);
     setLoadingFontId(undefined);
   };
+  const orderedFontCategories = [
+    ...favoriteFontCategories,
+    ...FONT_CATEGORY_ORDER.filter((category) => !favoriteFontCategories.includes(category)),
+  ];
   const renderFontGroups = (fonts: typeof FONT_CATALOG) => (
     <div className="font-groups">
-      {FONT_CATEGORY_ORDER.map((category) => {
+      {(!restrictToFavorites
+        ? orderedFontCategories
+        : orderedFontCategories.filter((category) => favoriteFontCategories.includes(category))
+      ).map((category) => {
         const categoryFonts = fonts.filter((font) => font.category === category);
         if (!categoryFonts.length) return null;
         return (
@@ -339,6 +382,15 @@ export const ControlsPanel = ({
           </details>
         );
       })}
+      {!showAllFontCategories && favoriteFontCategories.length > 0 && (
+        <button
+          type="button"
+          className="font-show-all"
+          onClick={() => setShowAllFontCategories(true)}
+        >
+          {t(locale, 'fontShowAllCategories')}
+        </button>
+      )}
     </div>
   );
   const fontFilters = (
@@ -402,6 +454,8 @@ export const ControlsPanel = ({
     if (parameter === 'reliefDepthMm')
       return t(locale, params.templateId === 'nameplate' ? 'textLift' : 'raisedText');
     if (parameter === 'edgeInsetMm') return t(locale, 'edgeInset');
+    if (parameter === 'holeDiameterMm' && params.keyringOpeningShape === 'slot')
+      return t(locale, 'keyringSlotWidth');
     return t(locale, PARAMETER_REGISTRY[parameter].labelKey);
   };
 
@@ -414,10 +468,11 @@ export const ControlsPanel = ({
     'subtitleOffsetXRatio',
     'subtitleOffsetYRatio',
     'subtitleReliefDepthMm',
+    'textEdgeMm',
+    'textEdgeFinish',
+    'edgeFinish',
     'topEdgeMm',
     'bottomEdgeMm',
-    'textEdgeMm',
-    'edgeFinish',
     'plantAccentEnabled',
   ]);
   const adjustmentSubcategoryForKey = (
@@ -443,9 +498,14 @@ export const ControlsPanel = ({
       return presentation === 'refine' ? 'shape' : presentation;
     }
     if (
-      ['subtitleReliefDepthMm', 'topEdgeMm', 'bottomEdgeMm', 'textEdgeMm', 'edgeFinish'].includes(
-        key,
-      )
+      [
+        'subtitleReliefDepthMm',
+        'textEdgeMm',
+        'textEdgeFinish',
+        'edgeFinish',
+        'topEdgeMm',
+        'bottomEdgeMm',
+      ].includes(key)
     )
       return 'print';
     if (key === 'plantAccentEnabled') return 'template-details';
@@ -483,11 +543,11 @@ export const ControlsPanel = ({
       subtitleReliefDepthMm: 'subtitleDepth',
       magnetPocketPreset: 'magnetPocketSize',
       magnetPocketPlacement: 'magnetPocketPlacement',
+      keyringPreset: 'wizardKeyringOpeningTitle',
+      keyringPosition: 'wizardKeyringPositionTitle',
       heartInteriorMode: 'heartInterior',
-      edgeFinish: 'geometryEdgeStyle',
-      topEdgeMm: 'geometryTopEdge',
-      bottomEdgeMm: 'geometryBottomEdge',
       textEdgeMm: 'geometryTextEdge',
+      textEdgeFinish: 'geometryTextEdgeStyle',
       plantAccentEnabled: 'plantAccents',
     };
     const groupLabelKey: Record<CandidateControlGroup, string> = {
@@ -562,6 +622,7 @@ export const ControlsPanel = ({
 
   const renderParameter = (parameter: ShapeParameter) => {
     if (!showsParameter(parameter)) return null;
+    if (parameter === 'keyringSlotLengthMm' && params.keyringOpeningShape !== 'slot') return null;
     const definition = rangeFor(parameter);
     const key = parameter as keyof KeychainParams;
     if (typeof params[key] !== 'number') return null;
@@ -573,9 +634,22 @@ export const ControlsPanel = ({
         value={params[key] as number}
         {...definition}
         {...(parameter === 'edgeInsetMm' ? { min: Math.max(1.2, definition.min) } : {})}
-        onChange={(value) => update(key, value as never)}
+        onChange={(value) => {
+          if (
+            parameter === 'holeDiameterMm' ||
+            parameter === 'keyringSlotLengthMm' ||
+            parameter === 'ringOffsetMm'
+          )
+            updateMany({ [key]: value, keyringPreset: 'custom' }, 'template-details');
+          else update(key, value as never);
+        }}
       />
     );
+  };
+
+  const selectKeyringPreset = (preset: KeychainParams['keyringPreset']) => {
+    if (!preset || preset === 'custom') return;
+    updateMany(keyringPresetValues(preset), 'template-details');
   };
 
   return (
@@ -653,6 +727,15 @@ export const ControlsPanel = ({
         )}
         {renderCandidateFeedback('name')}
       </section>
+      {onAppearanceChange && (
+        <AppearanceControls
+          locale={locale}
+          appearanceOverrides={appearanceOverrides}
+          baseColor={baseColor}
+          reliefColor={reliefColor}
+          onAppearanceChange={onAppearanceChange}
+        />
+      )}
       <hr className="control-section-divider" />
       <section
         className="control-section"
@@ -697,7 +780,39 @@ export const ControlsPanel = ({
         </DesignCardRail>
         {renderCandidateFeedback('template')}
       </section>
-      <hr className="control-section-divider" />
+      {supportsKeyring && <hr className="control-section-divider" />}
+      {supportsKeyring && (
+        <section
+          className="control-section template-details"
+          data-keyring-panel="true"
+          data-control-group="template-details"
+          data-testid="keyring-settings"
+          aria-busy={
+            candidateFeedback?.group === 'template-details' &&
+            candidateFeedback.status === 'checking' &&
+            ['keyringPreset', 'keyringPosition'].includes(candidateFeedback.controlKey ?? '')
+          }
+        >
+          <h2>{t(locale, 'keyringSettings')}</h2>
+          <KeyringPresetPicker
+            locale={locale}
+            selected={params.keyringPreset ?? 'custom'}
+            openingShape={params.keyringOpeningShape ?? 'round'}
+            widthMm={params.holeDiameterMm}
+            lengthMm={params.keyringSlotLengthMm ?? params.holeDiameterMm}
+            onSelect={selectKeyringPreset}
+          />
+          <KeyringPositionPicker
+            locale={locale}
+            selected={params.keyringPosition ?? 'left'}
+            onSelect={(keyringPosition) => updateMany({ keyringPosition }, 'template-details')}
+          />
+          {renderCandidateFeedback('template-details')}
+        </section>
+      )}
+      {(supportsKeyring || params.templateId === 'magnet') && (
+        <hr className="control-section-divider" />
+      )}
       {params.templateId === 'magnet' && (
         <section
           className="control-section template-details"
@@ -1342,7 +1457,13 @@ export const ControlsPanel = ({
                 onChange={(value) => update('subtitleReliefDepthMm', value)}
               />
             )}
-            <GeometryFinishControls locale={locale} params={params} updateMany={updateMany} />
+            <GeometryFinishControls
+              locale={locale}
+              params={params}
+              baseFinishLimits={baseFinishLimits}
+              limits={textFinishLimits}
+              updateMany={updateMany}
+            />
             {renderCandidateFeedback('print', 'adjustments', 'print')}
           </div>
           <button

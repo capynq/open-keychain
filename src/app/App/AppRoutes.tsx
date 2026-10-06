@@ -23,6 +23,7 @@ const RouteCommitted = ({ children }: { children: ReactNode }) => {
     root?.removeAttribute('inert');
     root?.setAttribute('data-app-ready', 'true');
     document.documentElement.setAttribute('data-app-ready', 'true');
+    document.getElementById('boot-customizer')?.replaceChildren();
   }, []);
 
   return children;

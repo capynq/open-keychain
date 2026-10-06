@@ -157,21 +157,24 @@ runtime; server rendering would add a separate build/runtime contract.
 
 **Consequences:** Revisit only if server-rendered or build-time SEO becomes a hard requirement.
 
-## Version 6 design documents are the share contract
+## Version 11 design documents are the share contract
 
 **Status:** active
 
-**Decision:** Persist/share structured v6 design documents. Older v5 share payloads are unsupported;
-unbundled fonts are replaced with a bundled fallback in shared links.
+**Decision:** Persist/share structured v11 design documents, including an optional size envelope,
+independent base and text edge profiles, and keyring opening preset/shape, attachment position, and
+slot length. The position field supports four cardinal edges plus upper-left and upper-right
+diagonals. Continue reading v6-v10 links; v5 links remain unsupported. Unbundled fonts are replaced
+with a bundled fallback in shared links.
 
 **Evidence:** `docs/geometry-roadmap.md`, `src/domain/keychain/design-document.ts`, and its tests.
 
 **Rationale:** The schema separates semantic design sections while preventing font bytes from being
 embedded in URLs.
 
-**Consequences:** Preserve strict decoding and explicit fallback behavior. The removed legacy
-`separateParts` payload field is ignored for compatible v6 decoding; it is not a current design
-parameter.
+**Consequences:** Preserve strict decoding and explicit fallback behavior. A v6 text edge amount
+inherits its old backing profile when decoded. The removed legacy `separateParts` payload field is
+ignored for compatible v6 decoding; it is not a current design parameter.
 
 ## Geometry validation is authoritative software evidence, not physical proof
 
@@ -267,6 +270,39 @@ public content, and Workshop for customizer/export/seller flows.
 **Consequences:** Preserve native control semantics, visible focus, reduced-motion behavior, shared
 status/field-stack/disclosure/icon conventions, and desktop/mobile/mobile-2x UI review.
 
+## Quick setup is optional and size envelopes remain active
+
+**Status:** active
+
+**Decision:** Landing-page Start designing opens a dismissible setup dialog with no selected size.
+The selected width and height are a maximum, not exact stretched dimensions. Keep that envelope in
+the current document and enforce it during subsequent geometry generation. Favorite font categories are
+browser preferences; Show all and explicit search/category filters reveal the remaining choices.
+Direct and restored designs do not automatically open setup.
+
+**Evidence:** `useQuickSetup.ts`, `QuickSetupDialog.tsx`, geometry contracts, and quick-setup E2E.
+
+**Consequences:** Preserve accepted geometry on an impossible size; keep the draft open for recovery.
+Base and text profiles are independent. Text finishing affects its front edge only. Per-profile limits
+travel through the worker result contract. Actual dimensions and selected maximum dimensions are
+shown separately from one accepted-state metrics selector; maximum dimensions never imply stretching.
+
+## 3MF keeps material volumes together and leaves filament assignment to the slicer
+
+**Status:** active
+
+**Decision:** Separate-colors export keeps one model and mesh with Core material regions. Add
+Prusa-compatible named volume ranges carrying each selected hex color. Do not export the backing
+and relief as independent build objects or inject a printer configuration to force display colors.
+
+**Evidence:** PrusaSlicer 2.9.6 CLI drops Core display colors, imports independent component objects
+as separate models, and preserves the named-volume form as one aligned model. The 30-file slicer
+gate and ten separate-color roundtrips preserve volume bounds and color references with no repairs.
+
+**Consequences:** The file carries the selected palette, while users assign matching filaments in
+PrusaSlicer. Export details show the hex references. Geometry/slicer validation is not physical-print
+or automatic filament-mapping proof.
+
 ## Private hosted operations are a separate blocked workstream
 
 **Status:** blocked pending authorization and an external repository
@@ -284,3 +320,44 @@ MIT client source; recording an old optional-pilot deployment design would false
 
 **Consequences:** Treat hosted service creation, transfer, implementation, deployment, and production
 validation as blocked. Never claim live readiness from public repository assets alone.
+
+## Focused optional setup with conditional keyring steps
+
+**Decision:** Setup uses Name & size → Keyring position → Opening → Font styles → Colors → Review for supported templates, with one step visible at a time. Template selection stays in the editor; opening setup never changes the template.
+
+**Rationale:** User feedback explicitly rejects an overloaded single modal and requests icon-led,
+short, adaptive controls based on the supplied reference. Separate keyring position and opening
+steps keep each decision focused.
+
+**Constraints:** No size preselected for fresh models; retain existing maximum-envelope semantics.
+Remember accepted font preferences. Back/review Edit preserve drafts; closing discards unsubmitted
+changes. Colors and preferences commit only after geometry acceptance. Preserve Workshop typography,
+native semantics, reduced motion, and mobile text fitting. Shared/restored designs bypass auto setup.
+
+## Independent base/front-text finishing and compact natural-width choices
+
+**Decision:** Restore base finishing independently of text, superseding the 2026-10-05 removal.
+Use native contour bands for chamfers/rounding, retain independent base top/bottom and text front
+amount controls, and expose verified consecutive 0.2 mm amounts only. Preserve real
+contours/counters and the lower text surface. Zero-volume Boolean residue is numerical cleanup,
+not permission to remove disconnected letters. Enclosed negative-volume void shells do not count
+as separate printable bodies.
+
+Sharp edits verify only the initial 0.2 mm choices; selecting a finish expands its safe range.
+Cache only limit values, never native geometry objects. For tilted nameplates, remove detached
+positive slivers with estimated thickness below 0.001 mm after warping. Preserve cavities by
+rebuilding retained positive bodies and explicitly subtracting reversed negative-shell cutters;
+the native union/compose operation alone fills enclosed cavities.
+
+**Compatibility:** v9 restores backing parameters. v6/v7 retain base settings and infer the v6 text
+profile from its former shared profile. v8 has a sharp base by default. No backing-removal notice
+is shown for restored legacy finishes.
+
+**UI:** Setup width is at most 600 px. Font chips fit their content and use real bundled Aa specimens;
+actions use Lucide icons. Only keyboard focus adds a ring. Sidebar colors use two balanced native
+fields with a 4 px color inset, individual resets, and no reset-all action. Quick setup uses a
+SlidersHorizontal icon beside Export and Share. Rendered preview aspect must match displayed canvas
+aspect; capture readiness includes a completed resize render.
+
+**Evidence:** User decisions on 2026-10-05, ALEX/Nunito 0.6/0.8 mm reproduction, native generation
+regressions, and focused responsive wizard/color captures.

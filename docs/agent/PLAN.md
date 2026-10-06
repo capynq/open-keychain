@@ -6,6 +6,26 @@ Make the Customizer predictable across every template and style: related choices
 coherent workflow, every visible control must have an understandable effect, and a failed geometry
 candidate must never leave the controls describing a different design from the preview.
 
+The feedback slice adds independent base and front-only text finishes, sidebar colors, optional
+focused setup with persistent size envelopes/font preferences, configurable keyring openings and
+attachment edges, and verified Prusa-compatible 3MF material volumes. Selected
+palette references survive import; matching physical filaments remains a slicer action.
+
+## Setup wizard slice
+
+Implemented: Name & size → Keyring position → Opening → Font styles → Colors → Review (the two keyring steps appear only for supported templates). Keep setup optional,
+exclude template selection, and keep precision controls in the editor. Use library action icons, real font specimens, content-sized font chips, short labels, preserved drafts, transactional application, and a stable header/action footer.
+Completion requires every step to pass keyboard, cancellation/rejection, localization, 320 px,
+mobile/mobile-2x, text-zoom, and visual-capture checks without clipped text or hidden actions.
+
+The follow-up slice removes pointer-triggered outlines, caps modal width at 600 px, redesigns
+sidebar colors, and replaces failing text bevel conversion with native front contour bands and
+verified limits. The latest follow-up restores independent base finishing in v11, reads v6-v10,
+centralizes actual/maximum metrics, moves setup into header actions, and fixes proportional captures. Completion
+requires the geometry regressions, responsive UI captures, current repository gates, and export
+mesh/material validation. Current evidence and review boundaries are in
+`STATE.md`.
+
 ## Current milestone
 
 ### Active — Customizer coherence and safe geometry updates

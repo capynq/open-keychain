@@ -1,4 +1,4 @@
-import { Download, Share2, Shuffle, Undo2 } from 'lucide-react';
+import { Download, Share2, Shuffle, SlidersHorizontal, Undo2 } from 'lucide-react';
 import { Link } from 'react-router';
 
 import type { KeychainParams } from '../../../domain/keychain/model/types';
@@ -19,6 +19,8 @@ export const CustomizerNavigationHeader = ({
   exportOpen,
   onExportOpen,
   onShare,
+  onSetupOpen,
+  setupOpen = false,
   onRandomize,
   onUndo,
   canUndo,
@@ -32,6 +34,8 @@ export const CustomizerNavigationHeader = ({
   exportOpen: boolean;
   onExportOpen?: () => void;
   onShare?: () => void;
+  onSetupOpen?: () => void;
+  setupOpen?: boolean;
   onRandomize?: () => void;
   onUndo?: () => void;
   canUndo?: boolean;
@@ -43,6 +47,17 @@ export const CustomizerNavigationHeader = ({
   <header className={`${styles.root} topbar customizer-topbar`}>
     <BrandMark locale={locale} />
     <div className="topbar-export-actions">
+      <IconButton
+        action="setup"
+        className="setup-header-button"
+        icon={SlidersHorizontal}
+        label={t(locale, 'quickSetupReopen')}
+        motion="none"
+        onClick={onSetupOpen}
+        disabled={randomizing}
+        aria-haspopup="dialog"
+        aria-expanded={setupOpen}
+      />
       <IconButton
         action="export"
         className="export-header-button"

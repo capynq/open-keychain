@@ -7,16 +7,26 @@ new designs must pass the same gates before they receive a public route or SEO p
 
 ## Geometry modernization implementation status
 
-The current implementation introduces a version 6 document with content, layout,
-silhouette, finish, hardware, and manufacturing sections. The kernel still compiles
+The current implementation uses a version 11 document with content, layout,
+silhouette, finish, hardware, and manufacturing sections. Hardware stores the keyring opening
+preset and the selected attachment edge. v6-v10 links remain readable; older openings remain
+custom circular holes and default to the left edge. The kernel still compiles
 these sections to its parameter interface; this is not yet a fully incremental feature
-dependency graph. Older version 5 share payloads are not supported by the new codec.
+dependency graph. Version 6/7/8 links remain readable; version 5 payloads are unsupported.
 
 Implemented foundations include corrected glyph-pair positioning, content-sensitive
-font caching, real backing/text edge finishing, accurate disconnected-solid counts,
+font caching, independent base and front-only text edge finishing, optional size envelopes,
+accurate disconnected-solid counts,
 explicit separate-parts intent, named mesh roles, and generation timings. Rounded and
-chamfered edges are geometry changes, not shading effects. The edge cross-section in
-the controls is a schematic, not a measured section of the generated mesh.
+chamfered edges are geometry changes, not shading effects. Native offset contour bands replace
+Three.js bevel triangulation. Text preserves its flat underside; base top/bottom finishes have
+separate amounts. Per-profile limits are verified on fitted outlines at 0.2 mm steps.
+Legacy base finishes are restored independently; v8 documents default to a sharp base.
+
+Separate-colors 3MF keeps one mesh/model with Core material regions plus named Prusa material
+volumes. Volume names include the selected hex references because PrusaSlicer uses assigned
+filament colors instead of Core display colors. The slicer gate checks import roundtrips for volume
+names, alignment, and repairs; users still assign matching filaments.
 
 Seller batch work adds optional subtitles, format selection, exception review,
 cancellation, and a customer-text-free recipe. The labor estimate is based on user

@@ -266,12 +266,22 @@
 .summary-metrics strong {
   display: block;
   margin-top: 3px;
-  overflow: hidden;
   color: #3f4554;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.summary-fit-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  min-width: 0;
+  margin: 8px 0 0;
+  color: #626875;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
 }
 
 .summary-tags {

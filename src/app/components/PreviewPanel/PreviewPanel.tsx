@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { ResetIconButton } from '@/shared/ui/ResetIconButton';
-
 import type {
   GeometryResult,
   PrintAppearanceOverrides,
+  SizeEnvelope,
 } from '../../../domain/keychain/model/types';
 import type {
   SurfacePresetId,
@@ -26,6 +25,7 @@ export type PreviewPanelProps = {
   locale: Locale;
   geometry: {
     result: GeometryResult | undefined;
+    sizeEnvelope?: SizeEnvelope;
     busy: boolean;
     error?: string;
     current?: boolean;
@@ -34,10 +34,9 @@ export type PreviewPanelProps = {
   status: PreviewStatus;
   exportOpen: boolean;
   modelInfo: PreviewModelInfo;
+  appearanceOverrides?: PrintAppearanceOverrides;
   onSurfaceChange: (preset: SurfacePresetId) => void;
   onSurfaceReset: () => void;
-  appearanceOverrides: PrintAppearanceOverrides;
-  onAppearanceChange: (overrides: PrintAppearanceOverrides) => void;
   neutralSummary?: boolean;
 };
 
@@ -48,10 +47,9 @@ export const PreviewPanel = ({
   status,
   exportOpen,
   modelInfo,
+  appearanceOverrides = { version: 1 },
   onSurfaceChange,
   onSurfaceReset,
-  appearanceOverrides,
-  onAppearanceChange,
   neutralSummary = false,
 }: PreviewPanelProps) => {
   const [Viewer, setViewer] = useState<ViewerComponent | undefined>(undefined);
@@ -184,46 +182,6 @@ export const PreviewPanel = ({
         exportOpen={exportOpen}
         neutral={neutralSummary}
       />
-      <div className="appearance-controls" aria-label={t(locale, 'printColors')}>
-        <div className="appearance-control">
-          <span>{t(locale, 'baseColor')}</span>
-          <input
-            type="color"
-            aria-label={t(locale, 'baseColor')}
-            value={appearanceOverrides.base ?? geometry.result?.appearance.base.color ?? '#B84838'}
-            onChange={(event) =>
-              onAppearanceChange({ ...appearanceOverrides, base: event.target.value })
-            }
-          />
-          <ResetIconButton
-            label={t(locale, 'resetBaseColor')}
-            onClick={() => onAppearanceChange({ ...appearanceOverrides, base: undefined })}
-          />
-        </div>
-        <div className="appearance-control">
-          <span>{t(locale, 'secondaryColor')}</span>
-          <input
-            type="color"
-            aria-label={t(locale, 'secondaryColor')}
-            value={
-              appearanceOverrides.relief ?? geometry.result?.appearance.relief.color ?? '#FAF4E9'
-            }
-            onChange={(event) =>
-              onAppearanceChange({ ...appearanceOverrides, relief: event.target.value })
-            }
-          />
-          <ResetIconButton
-            label={t(locale, 'resetSecondaryColor')}
-            onClick={() => onAppearanceChange({ ...appearanceOverrides, relief: undefined })}
-          />
-        </div>
-        <div className="appearance-reset-all">
-          <ResetIconButton
-            label={t(locale, 'resetColors')}
-            onClick={() => onAppearanceChange({ version: 1 })}
-          />
-        </div>
-      </div>
     </section>
   );
 };

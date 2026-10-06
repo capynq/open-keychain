@@ -6,7 +6,7 @@ import { PROFILE_ROUTE } from '@/app/routes';
 import { hostedMode } from '@/features/hosted/config';
 import { t } from '@/infrastructure/i18n';
 
-import { createPath } from '../../../shared/lib/create-path';
+import { createSetupPath } from '../../../shared/lib/create-path';
 import { BrandMark } from '../BrandMark/BrandMark';
 import { LanguagePicker } from '../LanguagePicker/LanguagePicker';
 import styles from './LandingNavigationHeader.module.css';
@@ -63,7 +63,7 @@ export const LandingNavigationHeader = ({
           {t(locale, 'profile')}
         </Link>
       )}
-      <Link className="landing-header-cta" to={createPath(locale)}>
+      <Link className="landing-header-cta" to={createSetupPath(locale)}>
         {t(locale, 'landing.startDesigning')}
       </Link>
     </div>

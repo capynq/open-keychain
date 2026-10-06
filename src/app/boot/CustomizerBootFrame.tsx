@@ -1,7 +1,13 @@
 import { CustomizerFooter } from '@/app/components/CustomizerFooter/CustomizerFooter';
 import { CustomizerNavigationHeader } from '@/app/components/CustomizerNavigationHeader/CustomizerNavigationHeader';
 import { PreviewPanel } from '@/app/components/PreviewPanel/PreviewPanel';
-import { DEFAULT_PARAMS, normalizeParams, type TemplateId } from '@/domain/keychain/model/types';
+import {
+  ARTICULATED_PRINT_APPEARANCE,
+  DEFAULT_PARAMS,
+  DEFAULT_PRINT_APPEARANCE,
+  normalizeParams,
+  type TemplateId,
+} from '@/domain/keychain/model/types';
 import { TEMPLATE_CATALOG } from '@/domain/keychain/templates/template-builder';
 import { ControlsPanel } from '@/features/customizer/components/ControlsPanel/ControlsPanel';
 import { useCustomizerParams } from '@/features/customizer/hooks/useCustomizerParams';
@@ -12,8 +18,8 @@ import '@/app/styles/preview.css';
 
 import './CustomizerBootFrame.css';
 
-const BOOT_STYLE = { version: 1 } as const;
 const noop = (): void => {};
+const BOOT_STYLE = { version: 1 } as const;
 
 export const CustomizerBootFrame = ({
   locale,
@@ -30,6 +36,8 @@ export const CustomizerBootFrame = ({
     ...(neutral ? { text: '', subtitle: '' } : {}),
   });
   const customizer = useCustomizerParams(params);
+  const appearance =
+    templateId === 'articulated-name' ? ARTICULATED_PRINT_APPEARANCE : DEFAULT_PRINT_APPEARANCE;
   const activeTemplate = TEMPLATE_CATALOG.find((template) => template.id === templateId)!;
   const activeStyle = customizer.availableStyles.find(
     (style) => style.id === customizer.params.styleId,
@@ -58,6 +66,10 @@ export const CustomizerBootFrame = ({
           onReset={noop}
           bootFrame
           neutralSelection={neutral}
+          appearanceOverrides={BOOT_STYLE}
+          onAppearanceChange={noop}
+          baseColor={appearance.base.color}
+          reliefColor={appearance.relief.color}
         />
         <PreviewPanel
           locale={locale}
@@ -68,8 +80,6 @@ export const CustomizerBootFrame = ({
           modelInfo={modelInfo}
           onSurfaceChange={noop}
           onSurfaceReset={noop}
-          appearanceOverrides={BOOT_STYLE}
-          onAppearanceChange={noop}
           neutralSummary={neutral}
         />
       </div>

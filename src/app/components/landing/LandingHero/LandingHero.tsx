@@ -4,7 +4,7 @@ import type { Locale } from '@/infrastructure/i18n';
 
 import { t } from '@/infrastructure/i18n';
 
-import { createPath } from '../../../../shared/lib/create-path';
+import { createSetupPath } from '../../../../shared/lib/create-path';
 import { ConfiguratorShowcase } from '../ConfiguratorShowcase/ConfiguratorShowcase';
 import { HOW_IT_WORKS } from '../content';
 import styles from './LandingHero.module.css';
@@ -26,7 +26,7 @@ export const LandingHero = ({
       <div className="landing-actions">
         <Link
           className="landing-button landing-button-primary"
-          to={createPath(locale)}
+          to={createSetupPath(locale)}
           onClick={onStartDesigning}
         >
           {t(locale, 'landing.startDesigning')}

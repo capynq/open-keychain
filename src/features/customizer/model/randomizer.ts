@@ -101,6 +101,7 @@ export const randomizeParams = (
       }
     }
     if (templateId === 'plant-label') next = { ...next, plantAccentEnabled: random() >= 0.5 };
+    if (template.supportsKeyring) next = { ...next, keyringPreset: 'custom' };
     if (templateId !== 'articulated-name' && current.subtitle) {
       next = {
         ...next,

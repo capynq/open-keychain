@@ -1,11 +1,16 @@
-import { useLocation } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 
 import { CustomizerFooter } from '@/app/components/CustomizerFooter/CustomizerFooter';
 import { CustomizerNavigationHeader } from '@/app/components/CustomizerNavigationHeader/CustomizerNavigationHeader';
 import { CustomizerWorkspace } from '@/app/components/CustomizerWorkspace/CustomizerWorkspace';
+import { QuickSetupDialog } from '@/app/components/QuickSetupDialog/QuickSetupDialog';
 import { Toast, type ToastVariant } from '@/app/components/Toast/Toast';
 import { useCustomizerPageState } from '@/app/hooks/useCustomizerPageState';
+import { selectAcceptedMetrics } from '@/domain/keychain/model/accepted-metrics';
+import { TEMPLATE_CATALOG } from '@/domain/keychain/templates/template-builder';
 import { applyPrintAppearanceOverrides } from '@/entities/keychain/model/types';
+import { useQuickSetup } from '@/features/customizer/hooks/useQuickSetup';
+import { setupAppearance } from '@/features/customizer/model/quick-setup';
 import { useWebMcp } from '@/features/webmcp/hooks/useWebMcp';
 
 import type { Locale } from '../../infrastructure/i18n/config';
@@ -27,12 +32,25 @@ export const CustomizerPage = ({
   onLocaleChange: (locale: Locale) => void;
 }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const routeModel = parseCustomizerRoute(location.search, location.state);
   const state = useCustomizerPageState(
     locale,
     routeModel.initialParams,
     routeModel.initialAppearanceOverrides,
     routeModel.routeInputKey,
+  );
+  const quickSetup = useQuickSetup({
+    search: location.search,
+    locationState: location.state,
+    locale,
+    navigate,
+    customizer: state.customizer,
+    onAppearanceChange: state.setAppearanceOverrides,
+  });
+  const acceptedMetrics = selectAcceptedMetrics(
+    state.geometry.result,
+    state.customizer.acceptedParams.sizeEnvelope,
   );
   useWebMcp(state.customizer, {
     ...state.modelInfo,
@@ -50,6 +68,8 @@ export const CustomizerPage = ({
         exportOpen={state.exportOpen}
         onExportOpen={state.openExport}
         onShare={() => void state.shareDesign()}
+        onSetupOpen={quickSetup.openSetup}
+        setupOpen={quickSetup.setupOpen}
         onRandomize={state.randomize}
         onUndo={state.undo}
         canUndo={state.customizer.canUndo}
@@ -111,7 +131,43 @@ export const CustomizerPage = ({
             </Toast>
           );
         })()}
-      <CustomizerWorkspace locale={locale} state={state} />
+      <CustomizerWorkspace
+        locale={locale}
+        state={state}
+        favoriteFontCategories={quickSetup.favoriteFontCategories}
+      />
+      <QuickSetupDialog
+        locale={locale}
+        open={quickSetup.setupOpen}
+        submitting={quickSetup.setupSubmitting}
+        checking={state.customizer.candidateFeedback?.status === 'checking'}
+        error={quickSetup.setupError ? t(locale, 'quickSetupRejected') : undefined}
+        onClose={quickSetup.closeSetup}
+        onApply={quickSetup.applySetup}
+        initialText={state.customizer.params.text}
+        supportsKeyring={
+          TEMPLATE_CATALOG.find(
+            (template) => template.id === state.customizer.acceptedParams.templateId,
+          )?.supportsKeyring ?? false
+        }
+        initialKeyringPreset={state.customizer.acceptedParams.keyringPreset ?? 'standard-round'}
+        initialKeyringPosition={state.customizer.acceptedParams.keyringPosition ?? 'left'}
+        initialKeyringOpeningShape={state.customizer.acceptedParams.keyringOpeningShape ?? 'round'}
+        initialKeyringWidthMm={state.customizer.acceptedParams.holeDiameterMm}
+        initialKeyringLengthMm={
+          state.customizer.acceptedParams.keyringSlotLengthMm ??
+          state.customizer.acceptedParams.holeDiameterMm
+        }
+        initialAppearanceOverrides={setupAppearance(
+          state.customizer.acceptedParams.templateId,
+          state.appearanceOverrides,
+          state.geometry.result?.appearance,
+        )}
+        initialSize={state.customizer.acceptedParams.sizeEnvelope}
+        initialFavoriteCategories={quickSetup.favoriteFontCategories}
+        acceptedMetrics={acceptedMetrics}
+        acceptedText={state.customizer.acceptedParams.text}
+      />
       <CustomizerFooter locale={locale} />
       <ExportDialog
         locale={locale}
@@ -140,6 +196,7 @@ export const CustomizerPage = ({
               )
             : undefined
         }
+        acceptedMetrics={acceptedMetrics}
         onClose={() => state.setExportOpen(false)}
         disconnectedExportAcknowledged={state.disconnectedExportAcknowledged}
         onDisconnectedExportAcknowledged={state.setDisconnectedExportAcknowledged}

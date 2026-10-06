@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 
 import { IconButton } from '@/shared/ui/IconButton';
 
+import type { AcceptedMetrics } from '../../../../domain/keychain/model/accepted-metrics';
 import type { PrintAppearance } from '../../../../domain/keychain/model/types';
 import type { Locale } from '../../../../infrastructure/i18n/config';
 import type { PreflightReport } from '../../model/preflight';
@@ -20,6 +21,7 @@ export const ExportDialog = ({
   exportState,
   preflight,
   effectiveAppearance,
+  acceptedMetrics,
   onClose,
   onExportSuccess,
   disconnectedExportAcknowledged,
@@ -30,6 +32,7 @@ export const ExportDialog = ({
   exportState: ExportActionsState;
   preflight: PreflightReport;
   effectiveAppearance?: PrintAppearance;
+  acceptedMetrics?: AcceptedMetrics;
   onClose: () => void;
   onExportSuccess?: () => void;
   disconnectedExportAcknowledged: boolean;
@@ -91,6 +94,7 @@ export const ExportDialog = ({
           locale={locale}
           preflight={preflight}
           effectiveAppearance={effectiveAppearance}
+          acceptedMetrics={acceptedMetrics}
         />
         {preflight.issues.some(
           (issue) => issue.code === 'disconnected' && issue.severity === 'error',

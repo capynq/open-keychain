@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test';
+import { strFromU8, unzipSync } from 'fflate';
+import { readFile } from 'node:fs/promises';
 
+import { waitForReadyGeometry } from './helpers';
 import { selectLocale } from './helpers';
 const cameraViews = [
   'Home view',
@@ -20,6 +23,7 @@ test.beforeEach(async ({ page }) => {
 test('keeps semantic icon actions still when reduced motion is requested', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
 
   for (const motion of ['nudge', 'rotate'] as const) {
     const button = page.locator(`[data-icon-motion="${motion}"]:not(:disabled)`).first();
@@ -57,6 +61,7 @@ for (const flow of [
     page,
   }) => {
     await page.goto('/create');
+    await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
 
     if (flow.locale === 'RU') {
       await selectLocale(page, 'ru');
@@ -132,6 +137,7 @@ for (const flow of [
 
 test('customizes a name, uses every icon camera preset, and downloads STL', async ({ page }) => {
   await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await expect(page.getByRole('link', { name: 'Open Keychain' })).toBeVisible();
   await expect(page.locator('.brand-mark small')).toHaveCount(0);
   await expect(page.locator('.preview-heading h2')).toHaveText('Live preview');
@@ -182,6 +188,7 @@ test('customizes a name, uses every icon camera preset, and downloads STL', asyn
 
 test('keeps shared icon glyphs centered while showing tactile hover feedback', async ({ page }) => {
   await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10000 });
   const buttons = [
     page.getByRole('button', { name: 'Export' }),
@@ -217,6 +224,7 @@ test('treats adjusted NIKITA Bubble geometry as ready and keeps width warnings e
   page,
 }) => {
   await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await page.getByLabel('Name or text').fill('NIKITA');
   await page.getByRole('button', { name: 'Bubble' }).click();
   await page.getByRole('button', { name: /Bungee/ }).click();
@@ -233,6 +241,7 @@ test('treats adjusted NIKITA Bubble geometry as ready and keeps width warnings e
 });
 test('switches to a bilingual font when Cyrillic text is entered', async ({ page }) => {
   await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await page.getByRole('button', { name: /Bungee/ }).click();
   await page.getByLabel('Name or text').fill('НИКИТА');
   await expect(page.getByRole('button', { name: /Bungee/ })).toHaveCount(0);
@@ -244,6 +253,7 @@ test('selects a printable heavy font for articulated names and hides unsuitable 
   page,
 }) => {
   await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await page.getByRole('button', { name: /Caveat/ }).click();
   await expect(page.getByRole('button', { name: /Caveat/ })).toHaveClass(/selected/);
   await page.getByRole('button', { name: 'Articulated name' }).click();
@@ -260,6 +270,7 @@ test('supports bounded zoom, preview surfaces, locales, and configurable 3MF exp
   page,
 }) => {
   await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await expect(page.locator('.status-pill')).toHaveText('Ready to print', { timeout: 10000 });
   await expect(page.getByRole('region', { name: 'Model summary' })).toBeVisible();
   for (let click = 0; click < 8; click += 1)
@@ -290,8 +301,37 @@ test('supports bounded zoom, preview surfaces, locales, and configurable 3MF exp
     .click();
   expect((await download).suggestedFilename()).toMatch(/\.3mf$/);
 });
+test('exports the selected base and raised-text colors as named 3MF volumes', async ({ page }) => {
+  await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
+  await expect(page.locator('.status-pill')).toHaveText('Ready to print', { timeout: 10000 });
+  await page.getByLabel('Base color', { exact: true }).fill('#123456');
+  await page.getByLabel('Text color', { exact: true }).fill('#fedcba');
+  await page.getByRole('button', { name: 'Export' }).click();
+  const pendingDownload = page.waitForEvent('download');
+  await page
+    .getByRole('dialog', { name: 'Choose an export' })
+    .getByRole('button', {
+      name: /3MF · separate colors/,
+    })
+    .click();
+  const download = await pendingDownload;
+  const path = await download.path();
+  expect(path).toBeTruthy();
+  const files = unzipSync(new Uint8Array(await readFile(path!)));
+  const model = strFromU8(files['3D/3dmodel.model']);
+  expect(model).toContain('<base name="Backing" displaycolor="#123456"/>');
+  expect(model).toContain('<base name="Raised text" displaycolor="#FEDCBA"/>');
+  expect(model.match(/<object id=/g)).toHaveLength(1);
+  expect(model).toContain('<item objectid="1"/>');
+  const volumes = strFromU8(files['Metadata/Slic3r_PE_model.config']);
+  expect(volumes).toContain('Backing (#123456)');
+  expect(volumes).toContain('Raised text (#FEDCBA)');
+  expect(volumes.match(/<volume firstid=/g)).toHaveLength(2);
+});
 test('supports beta templates and premium local scene presets', async ({ page }) => {
   await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await expect(page.getByRole('button', { name: 'Frame' })).toHaveCount(0);
   for (const template of ['Articulated name', 'Nameplate', 'Plant label', 'Name keychain']) {
     await page.getByRole('button', { name: template }).click();
@@ -317,6 +357,7 @@ test('scopes styles to supported templates and keeps the Montserrat preview visi
   page,
 }) => {
   await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   const readMontserratPreview = async () => {
     const montserrat = page.getByRole('button', { name: /Montserrat Black/ });
 
@@ -351,6 +392,7 @@ test('scopes styles to supported templates and keeps the Montserrat preview visi
 });
 test('renders the plant label as a pointed T-shaped printable template', async ({ page }) => {
   await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await page.getByRole('button', { name: 'Plant label' }).click();
   await expect(page.getByLabel('Stake length')).toBeVisible();
   await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10000 });
@@ -360,6 +402,7 @@ test('renders the plant label as a pointed T-shaped printable template', async (
 });
 test('supports the Magnet ribbon workflow with subtitle hardware guidance', async ({ page }) => {
   await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await page.getByRole('button', { name: 'Magnet' }).click();
   await expect(page.getByRole('button', { name: 'Plain' })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByLabel('Ribbon tail length')).toHaveCount(0);
@@ -373,6 +416,7 @@ test('supports the Magnet ribbon workflow with subtitle hardware guidance', asyn
     .getByRole('radio', { name: 'Secondary' })
     .click();
   await expect(page.getByLabel('Customizer controls').getByText(/10\.4 mm diameter/)).toBeVisible();
+  await waitForReadyGeometry(page);
   await page.getByRole('button', { name: 'Bottom view' }).click();
   await expect(page.locator('.viewer')).toHaveAttribute('data-view', 'bottom');
   await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10000 });
@@ -382,6 +426,7 @@ test('supports the Magnet ribbon workflow with subtitle hardware guidance', asyn
 });
 test('keeps subtitle fields full-width, spaced, and keyboard-visible', async ({ page }) => {
   await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await expect(page.locator('#boot-shell')).toBeHidden();
   const customizer = page.locator('main[aria-label="Customizer"]:not(.customizer-boot-frame)');
   const shape = customizer.getByTestId('typography-adjustments');
@@ -439,6 +484,7 @@ test('renders Heart with localized left and right words in one horizontal compos
   page,
 }) => {
   await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await page.getByRole('button', { name: 'Heart' }).click();
   const left = page.getByTestId('heart-left-input').locator('input');
   const right = page.getByTestId('heart-right-input').locator('input');
@@ -451,6 +497,7 @@ test('renders Heart with localized left and right words in one horizontal compos
 });
 test('keeps Heart inputs aligned and exposes through-cut readiness', async ({ page }) => {
   await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await expect(page.locator('#boot-shell')).toBeHidden();
   const customizer = page.locator('main[aria-label="Customizer"]:not(.customizer-boot-frame)');
   await customizer.getByTestId('style-card-heart-split').click();
@@ -476,6 +523,7 @@ test('keeps Heart inputs aligned and exposes through-cut readiness', async ({ pa
 });
 test('shows only template-relevant shape controls', async ({ page }) => {
   await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await page.getByRole('button', { name: 'Plant label' }).click();
   await expect(page.getByRole('slider', { name: 'Keyring hole diameter' })).toHaveCount(0);
   await expect(page.getByLabel('Letter spacing')).toBeVisible();
@@ -490,6 +538,7 @@ test('shows only template-relevant shape controls', async ({ page }) => {
 
 test('keeps range controls in one section with contextual adjustment groups', async ({ page }) => {
   await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   const customizer = page.locator('main[aria-label="Customizer"]:not(.customizer-boot-frame)');
   const adjustments = customizer.getByTestId('adjustment-settings');
 
@@ -560,12 +609,12 @@ test('keeps the accepted preview when candidate geometry validation rejects an e
         const request = message as {
           type?: string;
           requestId?: number;
-          params?: { styleId?: string; edgeFinish?: string };
+          params?: { styleId?: string; textEdgeFinish?: string };
         };
         if (
           request.type === 'validate' &&
-          request.params?.styleId === 'heart-split' &&
-          request.params.edgeFinish === 'chamfer'
+          request.params?.styleId === 'contour' &&
+          request.params.textEdgeFinish === 'chamfer'
         ) {
           queueMicrotask(() =>
             this.dispatchEvent(
@@ -587,8 +636,8 @@ test('keeps the accepted preview when candidate geometry validation rejects an e
   });
 
   await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await expect(page.locator('#boot-shell')).toBeHidden();
-  await page.getByTestId('style-card-heart-split').filter({ visible: true }).first().click();
   await expect(page.locator('.status-pill:visible').first()).toHaveText(/Ready/, {
     timeout: 10000,
   });
@@ -597,12 +646,11 @@ test('keeps the accepted preview when candidate geometry validation rejects an e
     .getAttribute('data-generation-id');
   if (!acceptedGeneration) throw new Error('The accepted preview has no generation id.');
 
-  const chamfer = page.getByRole('radio', { name: 'Chamfer' }).filter({ visible: true }).first();
+  const backingProfile = page.getByRole('radiogroup', { name: 'Text profile', exact: true });
+  const chamfer = backingProfile.getByRole('radio', { name: 'Chamfer' });
   await chamfer.check();
   await expect(page.getByRole('alert')).toContainText('Your previous design is kept.');
-  await expect(
-    page.getByRole('radio', { name: 'Sharp' }).filter({ visible: true }).first(),
-  ).toBeChecked();
+  await expect(backingProfile.getByRole('radio', { name: 'Sharp', exact: true })).toBeChecked();
   await expect(page.locator('.status-pill:visible').first()).toHaveText(/Ready/);
   await expect(
     page
@@ -615,9 +663,7 @@ test('keeps the accepted preview when candidate geometry validation rejects an e
     .filter({ visible: true })
     .first();
   await review.click();
-  await expect(
-    page.getByRole('radio', { name: 'Sharp' }).filter({ visible: true }).first(),
-  ).toBeFocused();
+  await expect(backingProfile.getByRole('radio', { name: 'Sharp', exact: true })).toBeFocused();
 });
 
 test('ignores a stale candidate rejection after a newer geometry candidate is accepted', async ({
@@ -666,6 +712,7 @@ test('ignores a stale candidate rejection after a newer geometry candidate is ac
   });
 
   await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await expect(page.locator('#boot-shell')).toBeHidden();
   const customizer = page.locator('main[aria-label="Customizer"]:not(.customizer-boot-frame)');
   await customizer.getByTestId('style-card-heart-split').click();
@@ -694,6 +741,7 @@ test('ignores a stale candidate rejection after a newer geometry candidate is ac
 });
 test('resets each model section without changing unrelated choices', async ({ page }) => {
   await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await page.getByLabel('Name or text').fill('OLIVER');
   await page.getByRole('button', { name: /Caveat/ }).click();
   await page.getByRole('button', { name: 'Plant label' }).click();
@@ -730,6 +778,7 @@ for (const viewport of [
   }) => {
     await page.setViewportSize(viewport);
     await page.goto('/create');
+    await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
     await expect(page.locator('.status-pill')).toHaveText('Ready to print', { timeout: 10000 });
     const layout = await page.evaluate(() => {
       const controls = document.querySelector('.controls-panel')!.getBoundingClientRect();
@@ -783,6 +832,7 @@ for (const viewport of [
   test(`renders one accessible export trigger on ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await page.goto('/create');
+    await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
     await expect(page.locator('.export-header-button')).toHaveCount(1);
     await expect(page.getByRole('button', { name: 'Export' })).toHaveCount(1);
   });
@@ -793,6 +843,7 @@ test('keeps the complete articulated shape control set reachable in the scrollab
 }) => {
   await page.setViewportSize({ width: 1280, height: 600 });
   await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await page.getByRole('button', { name: 'Articulated name' }).click();
   const controls = page.locator('.controls-panel');
   const metrics = await controls.evaluate((element) => ({
@@ -810,6 +861,7 @@ test('keeps the complete articulated shape control set reachable in the scrollab
 test('keeps the customizer footer in the desktop viewport', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await expect(page.locator('.status-pill')).toHaveText('Ready to print', { timeout: 10000 });
 
   const pageState = await page.evaluate(() => {
@@ -832,6 +884,7 @@ test('keeps the customizer footer in the desktop viewport', async ({ page }) => 
 test('keeps the preview prominent and touch targets comfortable at 390 px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await expect(page.locator('.viewer')).toBeVisible();
   const dimensions = await page
     .locator('.viewer')

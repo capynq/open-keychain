@@ -1,193 +1,186 @@
-import type { KeychainParams } from '@/domain/keychain/model/types';
+import type { KeychainParams, GeometryResult } from '@/domain/keychain/model/types';
 import type { CandidateControlGroup } from '@/features/customizer/hooks/useCustomizerParams';
 import type { Locale } from '@/infrastructure/i18n/config';
 
-import {
-  EDGE_FINISH_GRID_MM,
-  edgeFinishPreset,
-  normalizeEdgeFinish,
-} from '@/domain/keychain/model/edge-finish';
+import { EDGE_FINISH_GRID_MM } from '@/domain/keychain/model/edge-finish';
 import { t } from '@/infrastructure/i18n/utils';
 
 import { RangeControl } from '../RangeControl/RangeControl';
 
 const EDGE_PROFILES = ['sharp', 'chamfer', 'round'] as const;
-type EdgeProfile = (typeof EDGE_PROFILES)[number];
-
-const profilePath = (style: EdgeProfile, top: number, bottom: number): string => {
-  const radius = style === 'sharp' ? 0 : style === 'round' ? Math.min(22, top * 18) : top * 14;
-  const lowerRadius =
-    style === 'sharp' ? 0 : style === 'round' ? Math.min(22, bottom * 18) : bottom * 14;
-  return style === 'chamfer'
-    ? `M ${20 + radius} 20 H ${240 - radius} L 240 ${20 + radius} V ${90 - lowerRadius} L ${240 - lowerRadius} 90 H ${20 + lowerRadius} L 20 ${90 - lowerRadius} V ${20 + radius} Z`
-    : `M ${20 + radius} 20 H ${240 - radius} Q 240 20 240 ${20 + radius} V ${90 - lowerRadius} Q 240 90 ${240 - lowerRadius} 90 H ${20 + lowerRadius} Q 20 90 20 ${90 - lowerRadius} V ${20 + radius} Q 20 20 ${20 + radius} 20 Z`;
-};
-
-const EdgeDiagram = ({
-  style,
-  top,
-  bottom,
-  textEdge,
-  large = false,
-  label,
-}: {
-  style: EdgeProfile;
-  top: number;
-  bottom: number;
-  textEdge: number;
-  large?: boolean;
-  label: string;
-}) => (
-  <svg
-    className={
-      large ? 'geometry-finish-diagram geometry-finish-diagram-large' : 'geometry-finish-diagram'
-    }
-    viewBox="0 0 260 110"
-    role="img"
-    aria-label={label}
-  >
-    <path
-      d={profilePath(style, top, bottom)}
-      fill="var(--color-terracotta)"
-      stroke="var(--color-slate)"
-      strokeWidth={large ? 1.5 : 1.25}
-    />
-    <path
-      d={`M ${82 + textEdge * 3} ${18 - textEdge * 3} H ${178 - textEdge * 3} V 38 H ${82 + textEdge * 3} Z`}
-      fill="var(--color-cream)"
-      stroke="var(--color-slate)"
-      strokeWidth="1"
-    />
-    <path d="M 10 94 H 250" fill="none" stroke="var(--color-muted)" strokeWidth="1" />
-  </svg>
-);
-
 export const GeometryFinishControls = ({
   locale,
   params,
+  baseFinishLimits,
+  limits,
   updateMany,
 }: {
   locale: Locale;
   params: KeychainParams;
+  baseFinishLimits?: GeometryResult['baseFinishLimits'];
+  limits?: GeometryResult['textFinishLimits'];
   updateMany: (changes: Partial<KeychainParams>, group?: CandidateControlGroup) => void;
 }) => {
-  if (params.templateId === 'articulated-name') return null;
-
-  const style = params.edgeFinish ?? 'sharp';
-  const top = params.topEdgeMm ?? 0;
-  const bottom = params.bottomEdgeMm ?? 0;
-  const textEdge = params.textEdgeMm ?? 0;
-  const thickness = params.baseThicknessMm;
-  const supportsVisibleBackingFinish = thickness - params.minimumWallMm >= EDGE_FINISH_GRID_MM;
-  const diagramLabel = t(locale, 'geometryCrossSection');
-  const applyFinish = (next: Partial<KeychainParams>): void => {
-    const finish = normalizeEdgeFinish({ ...params, ...next });
-    updateMany(
-      {
-        edgeFinish: finish.style,
-        topEdgeMm: finish.topMm,
-        bottomEdgeMm: finish.bottomMm,
-        textEdgeMm: finish.textMm,
-      },
-      'print',
-    );
-  };
-
+  const baseSupported = params.templateId !== 'articulated-name';
+  const baseProfile = params.edgeFinish ?? 'sharp';
+  const baseTop = params.topEdgeMm ?? 0;
+  const baseBottom = params.bottomEdgeMm ?? 0;
+  const baseTopMaximum = Math.max(
+    0,
+    Math.min(2, params.baseThicknessMm - params.minimumWallMm - baseBottom),
+  );
+  const baseBottomMaximum = Math.max(
+    0,
+    Math.min(2, params.baseThicknessMm - params.minimumWallMm - baseTop),
+  );
+  const verifiedBaseMaximum =
+    baseProfile === 'round'
+      ? (baseFinishLimits?.roundMaxMm ?? 0)
+      : (baseFinishLimits?.chamferMaxMm ?? 0);
+  const profile = params.textEdgeFinish ?? 'sharp';
+  const maximum = profile === 'round' ? (limits?.roundMaxMm ?? 0) : (limits?.chamferMaxMm ?? 0);
+  const unavailable =
+    limits &&
+    (limits.chamferMaxMm < EDGE_FINISH_GRID_MM || limits.roundMaxMm < EDGE_FINISH_GRID_MM);
   return (
     <section
       className="control-subsection geometry-finish-controls"
       data-testid="geometry-finish-settings"
     >
       <div className="geometry-finish-heading">
-        <h4>{t(locale, 'geometryFinishTitle')}</h4>
-        <span>{t(locale, 'geometryEdgeStyle')}</span>
+        <h4>{t(locale, 'geometryBaseFinishTitle')}</h4>
+      </div>
+      {!baseSupported ? (
+        <p className="field-help">{t(locale, 'geometryBaseFinishUnavailable')}</p>
+      ) : (
+        <>
+          <div
+            className="geometry-finish-profiles"
+            role="radiogroup"
+            aria-label={t(locale, 'geometryBaseEdgeStyle')}
+          >
+            {EDGE_PROFILES.map((next) => {
+              const nextMaximum =
+                next === 'round'
+                  ? (baseFinishLimits?.roundMaxMm ?? 0)
+                  : next === 'chamfer'
+                    ? (baseFinishLimits?.chamferMaxMm ?? 0)
+                    : Infinity;
+              return (
+                <label
+                  className={`geometry-finish-profile${baseProfile === next ? ' is-selected' : ''}`}
+                  key={`base-${next}`}
+                >
+                  <input
+                    type="radio"
+                    data-candidate-key="edgeFinish"
+                    name="base-edge-finish"
+                    value={next}
+                    aria-label={t(locale, `geometryEdge${next}`)}
+                    checked={baseProfile === next}
+                    disabled={next !== 'sharp' && nextMaximum < EDGE_FINISH_GRID_MM}
+                    onChange={() =>
+                      updateMany(
+                        {
+                          edgeFinish: next,
+                          topEdgeMm: next === 'sharp' ? 0 : EDGE_FINISH_GRID_MM,
+                          bottomEdgeMm: next === 'sharp' ? 0 : EDGE_FINISH_GRID_MM,
+                        },
+                        'print',
+                      )
+                    }
+                  />
+                  <strong>{t(locale, `geometryEdge${next}`)}</strong>
+                </label>
+              );
+            })}
+          </div>
+          {baseProfile !== 'sharp' && verifiedBaseMaximum >= EDGE_FINISH_GRID_MM && (
+            <div className="geometry-finish-tune">
+              <div className="range-grid">
+                <RangeControl
+                  candidateKey="topEdgeMm"
+                  label={t(locale, 'geometryBaseTopEdge')}
+                  value={baseTop}
+                  min={0}
+                  max={Math.min(baseTopMaximum, verifiedBaseMaximum)}
+                  step={EDGE_FINISH_GRID_MM}
+                  unit="mm"
+                  onChange={(value) => updateMany({ topEdgeMm: value }, 'print')}
+                />
+                <RangeControl
+                  candidateKey="bottomEdgeMm"
+                  label={t(locale, 'geometryBaseBottomEdge')}
+                  value={baseBottom}
+                  min={0}
+                  max={Math.min(baseBottomMaximum, verifiedBaseMaximum)}
+                  step={EDGE_FINISH_GRID_MM}
+                  unit="mm"
+                  onChange={(value) => updateMany({ bottomEdgeMm: value }, 'print')}
+                />
+              </div>
+            </div>
+          )}
+        </>
+      )}
+      <div className="geometry-finish-heading">
+        <h4>{t(locale, 'geometryTextFinishTitle')}</h4>
       </div>
       <div
         className="geometry-finish-profiles"
         role="radiogroup"
-        aria-label={t(locale, 'geometryEdgeStyle')}
+        aria-label={t(locale, 'geometryTextEdgeStyle')}
       >
-        {EDGE_PROFILES.map((profile) => (
-          <label
-            className={`geometry-finish-profile${style === profile ? ' is-selected' : ''}`}
-            key={profile}
-          >
-            <input
-              type="radio"
-              data-candidate-key="edgeFinish"
-              name="edge-finish"
-              value={profile}
-              aria-label={t(locale, `geometryEdge${profile}`)}
-              checked={style === profile}
-              disabled={profile !== 'sharp' && !supportsVisibleBackingFinish}
-              onChange={() => {
-                const preset = edgeFinishPreset(profile);
-                applyFinish({
-                  edgeFinish: preset.style,
-                  topEdgeMm: preset.topMm,
-                  bottomEdgeMm: preset.bottomMm,
-                  textEdgeMm: params.textEdgeMm ?? 0,
-                });
-              }}
-            />
-            <EdgeDiagram
-              style={profile}
-              top={style === profile ? top : profile === 'sharp' ? 0 : 0.6}
-              bottom={style === profile ? bottom : profile === 'sharp' ? 0 : 0.4}
-              textEdge={style === profile ? textEdge : 0}
-              label={`${t(locale, `geometryEdge${profile}`)} · ${diagramLabel}`}
-            />
-            <strong>{t(locale, `geometryEdge${profile}`)}</strong>
-          </label>
-        ))}
-      </div>
-      <EdgeDiagram
-        style={style}
-        top={top}
-        bottom={bottom}
-        textEdge={textEdge}
-        large
-        label={diagramLabel}
-      />
-      {style !== 'sharp' && (
-        <div className="geometry-finish-tune">
-          <h4>{t(locale, 'geometryFineTune')}</h4>
-          <div className="range-grid">
-            <RangeControl
-              candidateKey="topEdgeMm"
-              label={t(locale, 'geometryTopEdge')}
-              value={top}
-              min={0}
-              max={Math.max(0, Math.min(2, thickness - params.minimumWallMm - bottom))}
-              step={EDGE_FINISH_GRID_MM}
-              unit="mm"
-              onChange={(value) => applyFinish({ topEdgeMm: value })}
-            />
-            <RangeControl
-              candidateKey="bottomEdgeMm"
-              label={t(locale, 'geometryBottomEdge')}
-              value={bottom}
-              min={0}
-              max={Math.max(0, Math.min(2, thickness - params.minimumWallMm - top))}
-              step={EDGE_FINISH_GRID_MM}
-              unit="mm"
-              onChange={(value) => applyFinish({ bottomEdgeMm: value })}
-            />
-            {params.templateId !== 'nameplate' && (
-              <RangeControl
-                candidateKey="textEdgeMm"
-                label={t(locale, 'geometryTextEdge')}
-                value={textEdge}
-                min={0}
-                max={Math.max(0, params.reliefDepthMm - 0.2)}
-                step={EDGE_FINISH_GRID_MM}
-                unit="mm"
-                onChange={(value) => applyFinish({ textEdgeMm: value })}
+        {EDGE_PROFILES.map((next) => {
+          const nextMaximum =
+            next === 'sharp'
+              ? Infinity
+              : next === 'round'
+                ? (limits?.roundMaxMm ?? 0)
+                : (limits?.chamferMaxMm ?? 0);
+          return (
+            <label
+              className={`geometry-finish-profile${profile === next ? ' is-selected' : ''}`}
+              key={next}
+            >
+              <input
+                type="radio"
+                data-candidate-key="textEdgeFinish"
+                name="text-edge-finish"
+                value={next}
+                aria-label={t(locale, `geometryTextEdge${next}`)}
+                checked={profile === next}
+                disabled={nextMaximum < EDGE_FINISH_GRID_MM}
+                onChange={() =>
+                  updateMany(
+                    {
+                      textEdgeFinish: next,
+                      textEdgeMm: next === 'sharp' ? 0 : EDGE_FINISH_GRID_MM,
+                    },
+                    'print',
+                  )
+                }
               />
-            )}
-          </div>
+              <strong>{t(locale, `geometryTextEdge${next}`)}</strong>
+            </label>
+          );
+        })}
+      </div>
+      {profile !== 'sharp' && maximum >= EDGE_FINISH_GRID_MM && (
+        <div className="geometry-finish-tune">
+          <RangeControl
+            candidateKey="textEdgeMm"
+            label={t(locale, 'geometryTextEdge')}
+            value={params.textEdgeMm ?? 0}
+            min={0}
+            max={maximum}
+            step={EDGE_FINISH_GRID_MM}
+            unit="mm"
+            onChange={(value) => updateMany({ textEdgeMm: value }, 'print')}
+          />
         </div>
       )}
+      {unavailable && <p className="field-help">{t(locale, 'textFinishUnavailable')}</p>}
     </section>
   );
 };

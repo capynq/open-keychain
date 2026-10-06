@@ -1,0 +1,134 @@
+.picker {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.picker legend {
+  margin-bottom: 8px;
+  color: #626875;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.picker .option {
+  position: relative;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 50px;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  border: 1px solid #d7c8bd;
+  border-radius: 12px;
+  background: #fffdf9;
+  color: #303545;
+  cursor: pointer;
+  font-size: 0.82rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  transition:
+    background 120ms,
+    border-color 120ms;
+}
+
+.directionWell {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #e5dbd2;
+  border-radius: 9px;
+  background: #f5f1eb;
+  color: #626875;
+}
+
+.picker .option:has(input:checked) {
+  border-color: #bf563f;
+  background: #fff2ec;
+}
+
+.picker .option:hover {
+  border-color: #bd806b;
+}
+
+.picker .option:active {
+  background: #f9e7de;
+}
+
+.picker .option:has(input:checked) .directionWell {
+  border-color: #efc1ae;
+  background: #fffdf9;
+  color: #bf563f;
+}
+
+.picker .option:has(input:focus-visible) {
+  outline: 2px solid #ef815e;
+  outline-offset: 2px;
+}
+
+.picker .option input {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  appearance: none;
+  border: 1.5px solid #8d909b;
+  border-radius: 50%;
+  background: #fffdf9;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.picker .option input:checked {
+  border-color: #bf563f;
+  background: #bf563f;
+  box-shadow: inset 0 0 0 3px #fffdf9;
+}
+
+.picker .option input:focus-visible {
+  outline: none;
+}
+
+@media (max-width: 360px) {
+  .picker .option {
+    gap: 7px;
+    padding-left: 8px;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 479px) {
+  .picker.setup .option {
+    grid-template-columns: minmax(0, 1fr) 18px;
+    grid-template-rows: 24px auto;
+    gap: 4px 8px;
+    padding: 6px;
+    font-size: 0.7rem;
+  }
+
+  .picker.setup .directionWell {
+    grid-column: 1;
+    grid-row: 1;
+    width: 24px;
+    height: 24px;
+  }
+
+  .picker.setup .option > span:not(.directionWell) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}

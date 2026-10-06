@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import type { Locale } from '../../../../infrastructure/i18n/config';
 
 import { t } from '../../../../infrastructure/i18n/utils';
-import { createPath } from '../../../../shared/lib/create-path';
+import { createSetupPath } from '../../../../shared/lib/create-path';
 import { type RunOption } from '../content';
 import styles from './RunModeCard.module.css';
 
@@ -20,7 +20,7 @@ export const RunModeCard = ({ locale, option }: { locale: Locale; option: RunOpt
       ))}
     </ul>
     {option === 'browser' && (
-      <Link to={createPath(locale)} className="landing-card-link">
+      <Link to={createSetupPath(locale)} className="landing-card-link">
         {t(locale, 'landing.startDesigning')} <span aria-hidden="true">→</span>
       </Link>
     )}

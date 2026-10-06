@@ -1,0 +1,166 @@
+.picker {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.picker legend {
+  margin-bottom: 8px;
+  color: #626875;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.picker .option {
+  position: relative;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 62px;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid #d7c8bd;
+  border-radius: 12px;
+  background: #fffdf9;
+  color: #303545;
+  cursor: pointer;
+}
+
+.picker .option:has(input:checked) {
+  border-color: #bf563f;
+  background: #fff2ec;
+}
+
+.picker .option:hover {
+  border-color: #bd806b;
+}
+
+.picker .option:active {
+  background: #f9e7de;
+}
+
+.picker .option:has(input:focus-visible) {
+  outline: 2px solid #ef815e;
+  outline-offset: 2px;
+}
+
+.picker .option input {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  appearance: none;
+  border: 1.5px solid #8d909b;
+  border-radius: 50%;
+  background: #fffdf9;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.picker .option input:checked {
+  border-color: #bf563f;
+  background: #bf563f;
+  box-shadow: inset 0 0 0 3px #fffdf9;
+}
+
+.picker .option input:focus-visible {
+  outline: none;
+}
+
+.iconWell {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  box-sizing: border-box;
+  border: 1px solid #e5dbd2;
+  border-radius: 50%;
+  background: #f5f1eb;
+  color: #626875;
+  transition:
+    background 120ms,
+    border-color 120ms,
+    color 120ms;
+}
+
+.icon,
+.slot {
+  flex: none;
+  color: #626875;
+}
+
+.picker .option:has(input:checked) .iconWell {
+  border-color: #efc1ae;
+  background: #fffdf9;
+  color: #bf563f;
+}
+
+.copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  padding-right: 12px;
+  overflow-wrap: anywhere;
+}
+
+.copy strong {
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.copy small {
+  color: #6e727d;
+  font-size: 0.7rem;
+  line-height: 1.3;
+}
+
+.setup .grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 479px) {
+  .setup .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.picker.setup .option {
+  min-height: 78px;
+  padding: 10px 12px;
+}
+
+.customOption {
+  grid-column: 1 / -1;
+  min-height: 52px;
+}
+
+@container keyring-sidebar (max-width: 360px) {
+  .picker:not(.setup) .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 360px) {
+  .picker .option {
+    gap: 7px;
+    padding-inline: 7px;
+  }
+
+  .copy strong {
+    font-size: 0.72rem;
+  }
+}

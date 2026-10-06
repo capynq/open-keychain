@@ -16,6 +16,37 @@ repeated landing-page persuasion.
 alive: selected choices, regenerated preview, progress, and print states show what
 changed. Make comes first; precision and manufacturing controls are contextual.
 
+New-design entry offers an optional focused Workshop setup: **Name & size → Keyring position →
+Opening → Font styles → Colors → Review**. The two keyring steps appear only for supported templates.
+Template selection and precision controls stay in the editor. No size is selected
+for a fresh model; selected dimensions remain an upper bound. Favorite categories hide other groups
+until Show all or an explicit search. Keep colors directly after Name in the editor. Base and text
+finishes use separate profiles; text finishing affects only its visible front edge.
+
+### Progressive setup contract
+
+- Setup is capped at 600 px on desktop. Font choices wrap at their natural width with modest padding;
+  do not force equal-width category cards. Native checkboxes have a rounded styled surface.
+- Pointer clicks do not add a focus outline. Keyboard focus has one visible ring, separate from the
+  single selected border and tint. Keep native color fields balanced and reset each color separately.
+- Native color swatches fill their controls with a 4 px inset. Quick setup uses a library icon in
+  the header action row beside Export and Share. Actual model metrics and the selected maximum
+  size are distinct labels derived from one accepted-state metrics selector.
+- Preview drawing-buffer proportions must match the displayed canvas. Captures wait for stable
+  layout and a completed resize render; larger mobile assets use the native 2x capture.
+
+- Render one step at a time, with one short heading and at most one helper sentence. Never combine
+  every setup parameter into a single crowded modal.
+- Prefer icon-led selection cards with short visible labels; icon-only Close, Reset, and Edit actions
+  require accessible names. Preserve native input semantics and 44 px minimum touch targets.
+- Keep the header and actions visible while the step body scrolls. Labels must wrap, never clip or
+  truncate essential choices. Check 320 px width, EN/RU/UK, 200% text zoom, and mobile keyboards.
+- Back, Next, and review Edit preserve draft choices. Closing discards unsubmitted changes; reopening
+  starts from accepted settings. Commit colors/preferences only after geometry acceptance.
+- Use state-led spring motion and Workshop tokens. Reduced motion removes transforms; no decorative
+  background animation. Use library icons for actions and real bundled-font specimens for font categories. Do not draw
+  category glyphs or action icons as custom SVG paths.
+
 ## Interface rules
 
 - Prefer visual state and an action to explanatory paragraphs. Visible helper copy
@@ -30,6 +61,12 @@ changed. Make comes first; precision and manufacturing controls are contextual.
   explain the action, keep the glyph optically centered, and disappear under reduced motion.
 - Keep content and controls responsive at desktop, mobile, and mobile-2x. A preview
   or product visual must show real geometry, never a decorative placeholder.
+- Group the sidebar's Keyring settings in one quiet inset panel. Opening choices pair
+  proportionally scaled shape cues with measured sizes; position choices use directional arrows for
+  Left, Right, Top, Bottom, Top left, and Top right. Keep all six positions in a two-column grid and
+  center each radio in its card. Use Lucide's natural ellipse glyph for oval slots. Keep radio inputs
+  out of the text-field baseline, and stack opening choices when the panel is narrow enough to split
+  names awkwardly.
 - In the Customizer, keep every range input inside one `Adjustments` section. Use
   compact, unboxed subcategory headings for Typography, Shape, Template details,
   Style details, and Print; hide empty groups. Keep non-range choices beside the

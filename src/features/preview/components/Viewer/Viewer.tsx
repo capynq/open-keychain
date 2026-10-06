@@ -240,7 +240,7 @@ export const Viewer = ({
     renderer.domElement.addEventListener('webglcontextlost', handleContextLost, false);
 
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(host.clientWidth, Math.min(Math.max(host.clientHeight, 1), 500), false);
+    renderer.setSize(Math.max(host.clientWidth, 1), Math.max(host.clientHeight, 1), false);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.08;
@@ -332,9 +332,8 @@ export const Viewer = ({
       displayOffsetZ: 0,
     };
     const resize = () => {
-      const width = host.clientWidth;
-      const maxHeight = width < 760 ? Math.min(360, width * 0.75) : Math.min(500, width * 0.625);
-      const height = Math.min(Math.max(host.clientHeight, 1), Math.max(maxHeight, 1));
+      const width = Math.max(host.clientWidth, 1);
+      const height = Math.max(host.clientHeight, 1);
 
       renderer.setSize(width, height, false);
       camera.aspect = width / Math.max(height, 1);
@@ -358,6 +357,8 @@ export const Viewer = ({
       const drawStartedAt = pendingTimings ? performance.now() : undefined;
 
       renderer.render(scene, camera);
+      renderer.domElement.dataset.renderedWidth = String(renderer.domElement.width);
+      renderer.domElement.dataset.renderedHeight = String(renderer.domElement.height);
       const drawSubmitMs =
         drawStartedAt === undefined ? undefined : performance.now() - drawStartedAt;
 

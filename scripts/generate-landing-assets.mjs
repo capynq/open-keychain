@@ -33,7 +33,11 @@ const assets = [
 const generateVariant = async (asset, width, format) => {
   const output = resolve(publicDirectory, `${asset.output}-${width}.${format}`);
   await mkdir(dirname(output), { recursive: true });
-  const image = sharp(resolve(publicDirectory, asset.input)).resize({
+  const source =
+    asset.input === 'showcase/create-mobile.png' && width > 390
+      ? 'showcase/create-mobile@2x.png'
+      : asset.input;
+  const image = sharp(resolve(publicDirectory, source)).resize({
     width,
     withoutEnlargement: true,
   });

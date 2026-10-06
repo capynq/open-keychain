@@ -2,16 +2,24 @@ import type { PrintAppearance } from '../../../../domain/keychain/model/types';
 import type { Locale } from '../../../../infrastructure/i18n/config';
 import type { PreflightReport } from '../../model/preflight';
 
+import {
+  formatAcceptedMaximum,
+  formatAcceptedSize,
+  formatAcceptedThickness,
+  type AcceptedMetrics,
+} from '../../../../domain/keychain/model/accepted-metrics';
 import { issueMessage, t } from '../../../../infrastructure/i18n/utils';
 
 export const ExportPreflight = ({
   locale,
   preflight,
   effectiveAppearance,
+  acceptedMetrics,
 }: {
   locale: Locale;
   preflight: PreflightReport;
   effectiveAppearance?: PrintAppearance;
+  acceptedMetrics?: AcceptedMetrics;
 }) => {
   const statusLabelKey =
     preflight.status === 'generating'
@@ -33,12 +41,17 @@ export const ExportPreflight = ({
         <strong>{t(locale, statusLabelKey)}</strong>
       </summary>
       <div className="export-preflight-body">
-        {preflight.dimensions && (
+        {acceptedMetrics && (
           <p>
-            <strong>{t(locale, 'dimensions')}:</strong> {preflight.dimensions.widthMm.toFixed(1)}{' '}
-            {t(locale, 'dimensionSeparator')} {preflight.dimensions.heightMm.toFixed(1)}{' '}
-            {t(locale, 'dimensionSeparator')} {preflight.dimensions.thicknessMm.toFixed(1)}{' '}
-            {t(locale, 'millimeterUnit')}
+            <strong>{t(locale, 'modelSize')}:</strong> {formatAcceptedSize(acceptedMetrics)} ·{' '}
+            <strong>{t(locale, 'thickness')}:</strong> {formatAcceptedThickness(acceptedMetrics)} ·{' '}
+            <strong>{t(locale, 'parts')}:</strong> {acceptedMetrics.parts ?? '—'}
+          </p>
+        )}
+        {acceptedMetrics?.fitsWithinMaximum !== undefined && (
+          <p>
+            <strong>{t(locale, 'fitsWithinMaximum')}:</strong>{' '}
+            {formatAcceptedMaximum(acceptedMetrics)} {acceptedMetrics.fitsWithinMaximum ? '✓' : '—'}
           </p>
         )}
         {preflight.profile && (
@@ -59,19 +72,22 @@ export const ExportPreflight = ({
           </p>
         )}
         {effectiveAppearance && (
-          <p>
-            <strong>{t(locale, 'printColors')}:</strong>{' '}
-            <span
-              className="export-color-chip"
-              style={{ backgroundColor: effectiveAppearance.base.color }}
-            />{' '}
-            {t(locale, 'baseRole')} ·{' '}
-            <span
-              className="export-color-chip"
-              style={{ backgroundColor: effectiveAppearance.relief.color }}
-            />{' '}
-            {t(locale, 'reliefRole')}
-          </p>
+          <>
+            <p>
+              <strong>{t(locale, 'printColors')}:</strong>{' '}
+              <span
+                className="export-color-chip"
+                style={{ backgroundColor: effectiveAppearance.base.color }}
+              />{' '}
+              {t(locale, 'baseRole')} <code>{effectiveAppearance.base.color}</code> ·{' '}
+              <span
+                className="export-color-chip"
+                style={{ backgroundColor: effectiveAppearance.relief.color }}
+              />{' '}
+              {t(locale, 'reliefRole')} <code>{effectiveAppearance.relief.color}</code>
+            </p>
+            <p>{t(locale, 'exportColorGuidance')}</p>
+          </>
         )}
         {preflight.issues.length > 0 && (
           <ul>

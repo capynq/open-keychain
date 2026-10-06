@@ -44,6 +44,9 @@ export const waitForLocalFonts = async (page: Page): Promise<void> => {
 
 export const waitForReadyGeometry = async (page: Page): Promise<void> => {
   const liveCustomizer = page.locator('main[aria-label="Customizer"]:not(.customizer-boot-frame)');
+  await expect(liveCustomizer.locator('.candidate-feedback[role="status"]')).toHaveCount(0, {
+    timeout: 30_000,
+  });
   await expect(liveCustomizer.locator('.status-pill')).toHaveText(/Ready/, { timeout: 30_000 });
   await expect(liveCustomizer.locator('.viewer-surface canvas')).toBeVisible();
   await page.evaluate(
@@ -115,4 +118,33 @@ export const prepareForCapture = async (page: Page): Promise<void> => {
       }
     `,
   });
+  await waitForProportionalPreview(page);
+};
+
+/** Wait for the resized drawing buffer to be rendered at its displayed aspect ratio. */
+export const waitForProportionalPreview = async (page: Page): Promise<void> => {
+  const canvas = page.locator('.viewer-surface canvas');
+  await expect
+    .poll(async () =>
+      canvas.evaluate(async (element) => {
+        const drawing = element as HTMLCanvasElement;
+        const before = drawing.getBoundingClientRect();
+        await new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        );
+        const after = drawing.getBoundingClientRect();
+        const rendered =
+          drawing.dataset.renderedWidth === String(drawing.width) &&
+          drawing.dataset.renderedHeight === String(drawing.height);
+        return (
+          rendered &&
+          after.width > 0 &&
+          after.height > 0 &&
+          Math.abs(before.width - after.width) < 0.5 &&
+          Math.abs(before.height - after.height) < 0.5 &&
+          Math.abs(drawing.width / drawing.height - after.width / after.height) < 0.01
+        );
+      }),
+    )
+    .toBe(true);
 };

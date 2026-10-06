@@ -18,22 +18,41 @@ test('keeps geometry finish controls contained and printable across viewports', 
 
   const finishSettings = page.getByTestId('geometry-finish-settings');
   await expect(finishSettings).toBeVisible();
-  await expect(finishSettings.getByRole('heading', { name: 'Edge finish' })).toBeVisible();
-  await expect(finishSettings.getByText('Before you print', { exact: true })).toHaveCount(0);
-  const edgeStyle = page.getByRole('radio', { name: 'Sharp' });
-  await expect(edgeStyle).toBeChecked();
-  await page.getByRole('radio', { name: 'Rounded' }).check();
-  await expect(page.getByLabel('Backing top edge')).toHaveValue('0.6');
-  await expect(page.getByLabel('Backing bottom edge')).toHaveValue('0.4');
-  await expect(page.getByLabel('Backing top edge')).toHaveAttribute('step', '0.2');
-  const diagramOutline = finishSettings.locator('.geometry-finish-diagram-large path').first();
-  const roundedOutlineBefore = await diagramOutline.getAttribute('d');
-  await page.getByLabel('Backing top edge').fill('0.4');
-  await page.getByLabel('Backing bottom edge').fill('0.4');
-  await expect(page.getByLabel('Backing top edge')).toHaveValue('0.4');
-  await expect(page.getByLabel('Backing bottom edge')).toHaveValue('0.4');
-  await expect(diagramOutline).not.toHaveAttribute('d', roundedOutlineBefore ?? '');
+  await expect(
+    finishSettings.getByRole('heading', { name: 'Text edge finish', exact: true }),
+  ).toBeVisible();
+  await expect(
+    finishSettings.getByRole('heading', { name: 'Backing edge finish', exact: true }),
+  ).toBeVisible();
+  const backing = finishSettings.getByRole('radiogroup', { name: 'Backing profile', exact: true });
+  await expect(backing).toBeVisible();
   await waitForReadyGeometry(page);
+  await backing.getByRole('radio', { name: 'Chamfered', exact: true }).check();
+  await waitForReadyGeometry(page);
+  const baseTop = page.getByLabel('Backing top edge');
+  const baseBottom = page.getByLabel('Backing bottom edge');
+  await expect(baseTop).toBeVisible();
+  await expect(baseBottom).toBeVisible();
+  const text = finishSettings.getByRole('radiogroup', { name: 'Text profile', exact: true });
+  await expect(text.getByRole('radio', { name: 'Sharp', exact: true })).toBeChecked();
+  await waitForReadyGeometry(page);
+  await text.getByRole('radio', { name: 'Rounded', exact: true }).check();
+  await waitForReadyGeometry(page);
+  await expect(backing.getByRole('radio', { name: 'Chamfered', exact: true })).toBeChecked();
+  const amount = page.getByLabel('Edge amount', { exact: true });
+  await expect(amount).toHaveAttribute('step', '0.2');
+  await expect(amount).toHaveValue('0.2');
+  const maximum = Number(await amount.getAttribute('max'));
+  expect(maximum).toBeGreaterThanOrEqual(0.2);
+  await amount.fill(String(maximum));
+  await waitForReadyGeometry(page);
+  await baseTop.fill((await baseTop.getAttribute('max')) ?? '0.2');
+  await waitForReadyGeometry(page);
+  await expect(text.getByRole('radio', { name: 'Rounded', exact: true })).toBeChecked();
+  await expect(baseBottom).toHaveValue('0.2');
+  await backing.getByRole('radio', { name: 'Rounded', exact: true }).check();
+  await waitForReadyGeometry(page);
+  await expect(text.getByRole('radio', { name: 'Rounded', exact: true })).toBeChecked();
   await assertVisibleModel(page);
 
   const viewerSurface = page.locator('.viewer-surface');
@@ -58,8 +77,12 @@ test('keeps geometry finish controls contained and printable across viewports', 
   await expect(page.locator('.viewer')).toHaveAttribute('data-view', 'custom');
   await expect(page.locator('.viewer')).toHaveAttribute('data-zoom-scale', zoomBeforeEdit ?? '');
 
-  await page.getByRole('radio', { name: 'Chamfered' }).check();
+  await text.getByRole('radio', { name: 'Sharp', exact: true }).check();
   await waitForReadyGeometry(page);
+  await expect(amount).toHaveCount(0);
+  await text.getByRole('radio', { name: 'Chamfered', exact: true }).check();
+  await waitForReadyGeometry(page);
+  await expect(amount).toHaveValue('0.2');
   await assertVisibleModel(page);
 
   const containment = await finishSettings.evaluate((element) => {
@@ -82,8 +105,11 @@ test('keeps geometry finish controls contained and printable across viewports', 
   await finishSettings.screenshot({ path: testInfo.outputPath('geometry-finish.png') });
 
   await page.getByRole('button', { name: 'Articulated name' }).click();
-  await expect(page.getByRole('radio', { name: 'Sharp' })).toBeHidden();
-  await expect(page.getByRole('heading', { name: 'Edge finish' })).toBeHidden();
+  await expect(
+    finishSettings.getByRole('radiogroup', { name: 'Backing profile', exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByText(/unavailable for articulated/i)).toBeVisible();
+  await expect(text).toBeVisible();
   await waitForReadyGeometry(page);
   assertNoBrowserErrors();
 });

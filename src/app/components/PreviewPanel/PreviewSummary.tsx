@@ -1,7 +1,13 @@
-import type { GeometryResult } from '../../../domain/keychain/model/types';
+import type { GeometryResult, SizeEnvelope } from '../../../domain/keychain/model/types';
 import type { PreviewStatus } from '../../../features/preview/model/preview-status';
 import type { Locale } from '../../../infrastructure/i18n/config';
 
+import {
+  formatAcceptedMaximum,
+  formatAcceptedSize,
+  formatAcceptedThickness,
+  selectAcceptedMetrics,
+} from '../../../domain/keychain/model/accepted-metrics';
 import { t } from '../../../infrastructure/i18n/utils';
 
 export type PreviewModelInfo = {
@@ -20,35 +26,39 @@ export const PreviewSummary = ({
   neutral = false,
 }: {
   locale: Locale;
-  geometry: { result: GeometryResult | undefined };
+  geometry: { result: GeometryResult | undefined; sizeEnvelope?: SizeEnvelope };
   status: PreviewStatus;
   exportOpen: boolean;
   modelInfo: PreviewModelInfo;
   neutral?: boolean;
 }) => {
   const result = geometry.result;
-  const dimensions = result?.dimensions;
+  const metrics = selectAcceptedMetrics(result, geometry.sizeEnvelope);
 
   return (
     <section className="preview-summary" aria-label={t(locale, 'modelSummary')}>
       <div className="summary-metrics">
         <div>
-          <span>{t(locale, 'dimensions')}</span>
-          <strong>
-            {dimensions
-              ? `${dimensions.widthMm.toFixed(0)} × ${dimensions.heightMm.toFixed(0)} mm`
-              : '-'}
-          </strong>
+          <span>{t(locale, 'modelSize')}</span>
+          <strong>{metrics ? formatAcceptedSize(metrics) : '-'}</strong>
         </div>
         <div>
           <span>{t(locale, 'thickness')}</span>
-          <strong>{dimensions ? `${dimensions.thicknessMm.toFixed(1)} mm` : '-'}</strong>
+          <strong>{metrics ? formatAcceptedThickness(metrics) : '-'}</strong>
         </div>
         <div>
           <span>{t(locale, 'parts')}</span>
-          <strong>{result?.solidCount ?? '-'}</strong>
+          <strong>{metrics?.parts ?? '-'}</strong>
         </div>
       </div>
+      {metrics?.fitsWithinMaximum !== undefined && (
+        <p className="summary-fit-status">
+          <span>{t(locale, 'fitsWithinMaximum')}</span>
+          <strong>
+            {formatAcceptedMaximum(metrics)} {metrics.fitsWithinMaximum ? '✓' : '—'}
+          </strong>
+        </p>
+      )}
       {!neutral && (
         <div className="summary-tags">
           <span>

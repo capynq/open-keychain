@@ -27,7 +27,7 @@ describe('parseCustomizerRoute', () => {
     ).toBe(true);
   });
 
-  it('prefers a shared v6 document over template and project state', () => {
+  it('prefers a shared v9 document over template and project state', () => {
     const design = encodeDesignDocument(createDesignDocument(DEFAULT_PARAMS));
     const route = parseCustomizerRoute(`?template=magnet&design=${design}`, {
       projectParams: { templateId: 'plant-label' },
@@ -42,5 +42,19 @@ describe('parseCustomizerRoute', () => {
 
     expect(route.hasInvalidDesign).toBe(true);
     expect(route.initialParams).toBeUndefined();
+  });
+  it('restores legacy backing independently of the text finish', () => {
+    const payload = Buffer.from(
+      JSON.stringify({ finish: { ef: 'round', et: 0.6, es: 'chamfer', er: 0.2 } }),
+    ).toString('base64url');
+    const route = parseCustomizerRoute(`?design=v7.${payload}`, null);
+    expect(route.initialParams?.textEdgeFinish).toBe('chamfer');
+    expect(route.initialParams?.edgeFinish).toBe('round');
+    expect(route.initialParams?.topEdgeMm).toBeCloseTo(0.6);
+    expect(
+      parseCustomizerRoute('', {
+        projectParams: { ...DEFAULT_PARAMS, edgeFinish: 'round', topEdgeMm: 0.2 },
+      }).initialParams?.edgeFinish,
+    ).toBe('round');
   });
 });
