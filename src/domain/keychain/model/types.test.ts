@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import { TEMPLATE_CATALOG } from '../templates/template-builder';
+import { KEYRING_POSITIONS } from './keyring-position';
 import {
   hasActiveParameter,
   parameterRange,
   parameterPresentationGroup,
   parametersForPresentationGroup,
   PARAMETER_REGISTRY,
+  PARAMETER_GROUPS,
   templateParameterKeys,
   orderedTemplateParameterKeys,
   PARAMETER_DEFINITIONS,
@@ -27,6 +29,9 @@ import {
   type KeychainParams,
 } from './types';
 describe('keychain parameters', () => {
+  it('keeps raised text depth in the rendered parameter groups', () => {
+    expect(PARAMETER_GROUPS.flatMap((group) => [...group.parameters])).toContain('reliefDepthMm');
+  });
   it('rejects malformed geometry metadata without throwing', () => {
     expect(() => validateGeometryResult({} as never)).not.toThrow();
     expect(validateGeometryResult({} as never)).toBe(false);
@@ -37,6 +42,33 @@ describe('keychain parameters', () => {
         reliefMesh: {},
         dimensions: undefined,
       } as never),
+    ).toBe(false);
+  });
+  it('accepts text finish limits only on the 0.2 mm grid', () => {
+    const geometry = {
+      generationId: 1,
+      baseMesh: { positions: new Float32Array([0, 0, 0]), indices: new Uint32Array([0, 0, 0]) },
+      reliefMesh: {
+        positions: new Float32Array([0, 0, 0]),
+        indices: new Uint32Array([0, 0, 0]),
+      },
+      dimensions: {
+        widthMm: 1,
+        heightMm: 1,
+        thicknessMm: 1,
+        centerMm: [0, 0, 0] as [number, number, number],
+      },
+      issues: [],
+      printable: true,
+      appearance: DEFAULT_PRINT_APPEARANCE,
+      textFinishLimits: { chamferMaxMm: 0.4, roundMaxMm: 1 },
+    };
+    expect(validateGeometryResult(geometry)).toBe(true);
+    expect(
+      validateGeometryResult({
+        ...geometry,
+        textFinishLimits: { chamferMaxMm: 0.41, roundMaxMm: 1 },
+      }),
     ).toBe(false);
   });
   it('keeps Magnet roof and normalizes subtitle/ribbon scope', () => {
@@ -381,6 +413,22 @@ describe('keychain parameters', () => {
     expect(metrics.outerRadiusMm).toBeCloseTo(4.8);
     expect(metrics.rootWidthMm).toBe(6);
     expect(metrics.overlapMm).toBe(5);
+  });
+
+  it('normalizes slot length so the oval opening is never narrower than its width', () => {
+    expect(
+      normalizeParams({
+        ...DEFAULT_PARAMS,
+        keyringOpeningShape: 'slot',
+        holeDiameterMm: 6,
+        keyringSlotLengthMm: 4,
+      }).keyringSlotLengthMm,
+    ).toBe(6);
+  });
+  it.each(KEYRING_POSITIONS)('preserves the %s keyring position', (keyringPosition) => {
+    expect(normalizeParams({ ...DEFAULT_PARAMS, keyringPosition }).keyringPosition).toBe(
+      keyringPosition,
+    );
   });
   it('creates safe friendly filenames', () => {
     expect(sanitizeFilename('Émilie & Jo', 'soft-tag')).toBe('keychain-emilie-jo-soft-tag.stl');

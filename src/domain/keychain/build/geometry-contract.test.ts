@@ -1,7 +1,7 @@
 import { strFromU8, unzipSync } from 'fflate';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { validateMesh } from '@/infrastructure/geometry/manifold-utils';
 import { asMesh, manifoldFromMesh } from '@/infrastructure/geometry/manifold-utils';
@@ -10,6 +10,7 @@ import { VALIDATION_FIXTURES } from '../../../../scripts/validation-fixtures';
 import { serializeThreeMf } from '../../../infrastructure/export/three-mf-serializer';
 import { FONT_CATALOG } from '../fonts/catalog';
 import { DEFAULT_PARAMS } from '../model/types';
+import * as textFinish from './edge-finish';
 import { buildKeychain, createWasm } from './keychain-builder';
 
 let wasm: Awaited<ReturnType<typeof createWasm>>;
@@ -66,7 +67,7 @@ describe('finished geometry contracts', () => {
   );
 
   it.each(VALIDATION_FIXTURES)(
-    'serializes the $id fixture as one merged object or two named colored material objects',
+    'serializes the $id fixture as one model with two named colored material volumes',
     async (fixture) => {
       const built = await buildKeychain(wasm, { ...DEFAULT_PARAMS, ...fixture.params }, true);
       const separate = strFromU8(
@@ -102,33 +103,11 @@ describe('finished geometry contracts', () => {
       expect(separate).toContain(`name="${built.result.appearance.relief.name}"`);
       expect(separate).toContain(`displaycolor="${built.result.appearance.base.color}"`);
       expect(separate).toContain(`displaycolor="${built.result.appearance.relief.color}"`);
-      expect(separate).toContain('p1="1" p2="1" p3="1"');
+      expect(separate).toContain('p1="1"');
       expect(merged.match(/<object id=/g)).toHaveLength(1);
       expect(merged).toContain('name="Keychain"');
     },
     30000,
-  );
-
-  it.each(['name-keychain', 'nameplate'] as const)(
-    'canonicalizes oversized edge finishes for %s',
-    async (templateId) => {
-      const params = {
-        ...DEFAULT_PARAMS,
-        templateId,
-        edgeFinish: 'round' as const,
-        topEdgeMm: 2,
-        bottomEdgeMm: 2,
-      };
-      const bounded = await buildKeychain(wasm, params);
-      expect(bounded.result.edgeFinish).toBeDefined();
-      const applied = bounded.result.edgeFinish!;
-      expect(applied.topMm + applied.bottomMm).toBeLessThanOrEqual(
-        params.baseThicknessMm - params.minimumWallMm,
-      );
-      const recovered = await buildKeychain(wasm, { ...params, edgeFinish: 'sharp' }, true);
-      expect(recovered.result.printable).toBe(true);
-      expect(validateMesh(recovered.exportMesh!)).toBe(true);
-    },
   );
 
   it('invalidates parsed fonts when bytes change without an id or revision change', async () => {
@@ -145,7 +124,7 @@ describe('finished geometry contracts', () => {
     const sameFont = await buildKeychain(wasm, subtitleParams, false, first, first);
     const otherFont = await buildKeychain(wasm, subtitleParams, false, first, second);
     expect(otherFont.result.reliefMesh.positions).not.toEqual(sameFont.result.reliefMesh.positions);
-  });
+  }, 30000);
 
   it('blocks disconnected solids and reports the actual solid count', async () => {
     const params = {
@@ -166,38 +145,169 @@ describe('finished geometry contracts', () => {
   });
 
   it.each(['round', 'chamfer'] as const)(
-    'exports an actual %s backing edge, keeping dimensions and a flat bed',
-    async (edgeFinish) => {
-      const params = { ...DEFAULT_PARAMS, styleId: 'capsule' as const };
+    'exports every supported ALEX %s front amount with unchanged lower sections',
+    async (textEdgeFinish) => {
+      const params = { ...DEFAULT_PARAMS, text: 'ALEX' };
       const sharp = await buildKeychain(wasm, params, true);
-      const finished = await buildKeychain(wasm, { ...params, edgeFinish, topEdgeMm: 0.3 }, true);
-      expect(finished.result.printable, JSON.stringify(finished.result.issues)).toBe(true);
-      expect(finished.result.baseMesh.positions).not.toEqual(sharp.result.baseMesh.positions);
-      expect(finished.result.dimensions.widthMm).toBeCloseTo(sharp.result.dimensions.widthMm, 2);
-      expect(finished.result.dimensions.thicknessMm).toBeCloseTo(
-        sharp.result.dimensions.thicknessMm,
-        2,
-      );
-      const zs = finished.result.baseMesh.positions.filter((_, index) => index % 3 === 2);
-      expect(Math.min(...zs)).toBeCloseTo(0, 4);
-      expect(zs.some((z) => z > 2.1 && z < 2.4)).toBe(true);
-      expect(validateMesh(finished.exportMesh!)).toBe(true);
+      const initial = await buildKeychain(wasm, { ...params, textEdgeFinish, textEdgeMm: 0.2 });
+      const maximum =
+        textEdgeFinish === 'round'
+          ? initial.result.textFinishLimits!.roundMaxMm
+          : initial.result.textFinishLimits!.chamferMaxMm;
+      expect(maximum).toBe(0.8);
+      const sharpRelief = manifoldFromMesh(wasm, sharp.result.reliefMesh);
+      const originalLower = sharpRelief.slice((params.baseThicknessMm + 0.1) * 1000);
+      try {
+        for (const textEdgeMm of [0.2, 0.4, 0.6, 0.8]) {
+          const finished = await buildKeychain(
+            wasm,
+            { ...params, textEdgeFinish, textEdgeMm },
+            true,
+          );
+          expect(finished.result.printable, JSON.stringify(finished.result.issues)).toBe(true);
+          expect(finished.result.solidCount).toBe(1);
+          expect(validateMesh(finished.exportMesh!)).toBe(true);
+          expect(finished.result.dimensions).toEqual(sharp.result.dimensions);
+          const relief = manifoldFromMesh(wasm, finished.result.reliefMesh);
+          const lower = relief.slice((params.baseThicknessMm + 0.1) * 1000);
+          try {
+            // Float32 export reconstruction adds sub-micron signed noise, not a changed contour.
+            expect(
+              Math.abs(lower.area() - originalLower.area()) / originalLower.area(),
+            ).toBeLessThan(1e-7);
+          } finally {
+            lower.delete();
+            relief.delete();
+          }
+          expect(finished.result.edgeFinish).toMatchObject({
+            style: 'sharp',
+            topMm: 0,
+            bottomMm: 0,
+          });
+        }
+      } finally {
+        originalLower.delete();
+        sharpRelief.delete();
+      }
     },
+    30000,
   );
 
-  it('rejects unsupported text edge combinations instead of producing a no-op', async () => {
-    const base = {
+  it('rejects externally supplied amounts beyond a thin inscription limit', async () => {
+    const params = { ...DEFAULT_PARAMS, fontId: 'marck-script', fontWeightMm: 0, text: 'thin' };
+    const sharp = await buildKeychain(wasm, params);
+    const limit = sharp.result.textFinishLimits!.roundMaxMm;
+    expect(limit).toBeLessThan(0.8);
+    await expect(
+      buildKeychain(wasm, { ...params, textEdgeFinish: 'round', textEdgeMm: 0.8 }),
+    ).rejects.toThrow('too large');
+  });
+
+  it.each(['name-keychain', 'articulated-name', 'nameplate', 'plant-label', 'magnet'] as const)(
+    'applies a separate text profile to %s',
+    async (templateId) => {
+      const params = {
+        ...DEFAULT_PARAMS,
+        templateId,
+        ...(templateId === 'articulated-name' ? { fontId: 'rubik' } : {}),
+        ...(templateId === 'magnet' ? { baseThicknessMm: 4.6 } : {}),
+      };
+      const sharp = await buildKeychain(wasm, params);
+      const finished = await buildKeychain(wasm, {
+        ...params,
+        textEdgeFinish: 'chamfer',
+        textEdgeMm: 0.2,
+      });
+      expect(finished.result.printable, JSON.stringify(finished.result.issues)).toBe(true);
+      expect(finished.result.reliefMesh.positions).not.toEqual(sharp.result.reliefMesh.positions);
+    },
+    30000,
+  );
+
+  it('recovers from an unsafe articulated finish before building letter bodies', async () => {
+    const params = {
       ...DEFAULT_PARAMS,
-      text: 'O',
-      styleId: 'capsule' as const,
-      edgeFinish: 'round' as const,
-      topEdgeMm: 0.4,
-      bottomEdgeMm: 0,
-      textEdgeMm: 0,
+      templateId: 'articulated-name' as const,
+      fontId: 'rubik',
+      text: 'ABOO',
     };
-    const sharpText = await buildKeychain(wasm, base);
-    expect(sharpText.result.printable).toBe(true);
-    await expect(buildKeychain(wasm, { ...base, textEdgeMm: 0.2 })).rejects.toThrow(/Not manifold/);
+    const unsafeLimits = vi
+      .spyOn(textFinish, 'textFinishLimits')
+      .mockReturnValue({ chamferMaxMm: 0, roundMaxMm: 0 });
+    try {
+      await expect(
+        buildKeychain(wasm, { ...params, textEdgeFinish: 'round', textEdgeMm: 0.2 }),
+      ).rejects.toThrow('too large');
+    } finally {
+      unsafeLimits.mockRestore();
+    }
+    const recovered = await buildKeychain(
+      wasm,
+      { ...params, textEdgeFinish: 'round', textEdgeMm: 0.2 },
+      true,
+    );
+    expect(recovered.result.printable, JSON.stringify(recovered.result.issues)).toBe(true);
+    expect(validateMesh(recovered.exportMesh!)).toBe(true);
+  }, 30000);
+
+  it('keeps finished nameplate counters as voids within one printable body', async () => {
+    const built = await buildKeychain(
+      wasm,
+      {
+        ...DEFAULT_PARAMS,
+        templateId: 'nameplate',
+        text: 'BOO',
+        textEdgeFinish: 'round',
+        textEdgeMm: 0.2,
+      },
+      true,
+    );
+    expect(built.result.printable, JSON.stringify(built.result.issues)).toBe(true);
+    const model = manifoldFromMesh(wasm, built.exportMesh!);
+    const components = model.decompose();
+    try {
+      expect(components.filter((component) => component.volume() > 1)).toHaveLength(1);
+      expect(model.status()).toBe('NoError');
+    } finally {
+      components.forEach((component) => component.delete());
+      model.delete();
+    }
+  }, 30000);
+
+  it('keeps a requested size envelope active in the generated dimensions', async () => {
+    const params = { ...DEFAULT_PARAMS, sizeEnvelope: { widthMm: 60, heightMm: 25 } };
+    const built = await buildKeychain(wasm, params);
+    expect(built.result.printable, JSON.stringify(built.result.issues)).toBe(true);
+    expect(built.result.dimensions.widthMm).toBeLessThanOrEqual(60.1);
+    expect(built.result.dimensions.heightMm).toBeLessThanOrEqual(25.1);
+  });
+
+  it.each([
+    [40, 20],
+    [60, 25],
+    [80, 30],
+    [100, 35],
+    [120, 40],
+  ])('fits the default name within the %i × %i mm setup preset', async (widthMm, heightMm) => {
+    const built = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      sizeEnvelope: { widthMm, heightMm },
+    });
+    expect(built.result.printable, JSON.stringify(built.result.issues)).toBe(true);
+    expect(built.result.dimensions.widthMm).toBeLessThanOrEqual(widthMm + 0.1);
+    expect(built.result.dimensions.heightMm).toBeLessThanOrEqual(heightMm + 0.1);
+  });
+
+  it('rejects an envelope smaller than fixed template hardware', async () => {
+    const built = await buildKeychain(wasm, {
+      ...DEFAULT_PARAMS,
+      templateId: 'plant-label',
+      sizeEnvelope: { widthMm: 40, heightMm: 20 },
+    });
+    expect(built.result.printable).toBe(false);
+    expect(built.result.issues).toContainEqual(
+      expect.objectContaining({ code: 'size-envelope-unavailable', severity: 'error' }),
+    );
   });
 
   it('rejects malformed triangle buffers consistently', () => {

@@ -8,7 +8,7 @@ const triangle: MeshBuffer = {
   indices: new Uint32Array([0, 1, 2]),
 };
 describe('3MF export', () => {
-  it('writes separate colored printable parts without viewer geometry', () => {
+  it('writes separate named colored printable parts without viewer geometry', () => {
     const files = unzipSync(new Uint8Array(serializeThreeMf(triangle, triangle, triangle)));
     const model = strFromU8(files['3D/3dmodel.model']);
     expect(model).toContain('unit="millimeter"');
@@ -18,10 +18,17 @@ describe('3MF export', () => {
     expect(model).toContain('displaycolor="#FAF4E9"');
     expect(model).toContain('pid="10" pindex="0"');
     expect(model).toContain('pid="10" p1="1" p2="1" p3="1"');
+    expect(model).toContain('<object id="1" type="model" name="Keychain"');
+    const volumes = strFromU8(files['Metadata/Slic3r_PE_model.config']);
+    expect(volumes).toContain('value="Backing (#B84838)"');
+    expect(volumes).toContain('value="Raised text (#FAF4E9)"');
+    expect(volumes).toContain('firstid="0" lastid="0"');
+    expect(volumes).toContain('firstid="1" lastid="1"');
     expect(model.match(/<mesh>/g)).toHaveLength(1);
     expect(model.match(/<item objectid=/g)).toHaveLength(1);
+    expect(model).toContain('<item objectid="1"/>');
     expect(model.match(/<object id=/g)).toHaveLength(1);
-    expect(model).toContain('<triangle v1="3" v2="4" v3="5" pid="10" p1="1" p2="1" p3="1"/>');
+    expect(model).toContain('<triangle v1="0" v2="1" v3="2"/>');
     expect(model).not.toContain('<name>');
     expect(model).not.toContain('surface');
   });
@@ -69,5 +76,24 @@ describe('3MF export', () => {
         relief: { name: 'Relief', color: '#FAF4E9' },
       }),
     ).toThrow('Invalid 3MF color');
+  });
+
+  it('assigns selected colors to the corresponding printable objects', () => {
+    const files = unzipSync(
+      new Uint8Array(
+        serializeThreeMf(triangle, triangle, triangle, 'separate-colors', {
+          base: { name: 'Backing', color: '#123456' },
+          relief: { name: 'Raised text', color: '#FEDCBA' },
+        }),
+      ),
+    );
+    const model = strFromU8(files['3D/3dmodel.model']);
+    expect(model).toContain('<base name="Backing" displaycolor="#123456"/>');
+    expect(model).toContain('<base name="Raised text" displaycolor="#FEDCBA"/>');
+    expect(model).toContain('pid="10" pindex="0"');
+    expect(model).toContain('pid="10" p1="1" p2="1" p3="1"');
+    const volumes = strFromU8(files['Metadata/Slic3r_PE_model.config']);
+    expect(volumes).toContain('Backing (#123456)');
+    expect(volumes).toContain('Raised text (#FEDCBA)');
   });
 });

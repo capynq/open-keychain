@@ -6,6 +6,8 @@ import {
   type DesignDocument,
   type DesignSection,
 } from './model/design-schema';
+import { KEYRING_POSITIONS, type KeyringPosition } from './model/keyring-position';
+import { KEYRING_PRESETS } from './model/keyring-presets';
 import { validateModelFeatures } from './model/model-feature';
 import {
   hasActiveParameter,
@@ -22,7 +24,9 @@ import {
 import { STYLE_CATALOG } from './styles/style-builder';
 import { TEMPLATE_CATALOG } from './templates/template-builder';
 
-const DOCUMENT_PREFIX = 'v6.';
+const DOCUMENT_PREFIX = 'v11.';
+const LEGACY_DOCUMENT_PREFIXES = ['v6.', 'v7.', 'v8.', 'v9.', 'v10.'] as const;
+const LEGACY_OPENING_PREFIXES = ['v6.', 'v7.', 'v8.', 'v9.'] as const;
 const COMPACT_PARAM_KEYS: Record<keyof KeychainParams, string> = {
   text: 't',
   subtitle: 'st',
@@ -42,6 +46,10 @@ const COMPACT_PARAM_KEYS: Record<keyof KeychainParams, string> = {
   edgeInsetMm: 'e',
   letterSpacingMm: 'l',
   holeDiameterMm: 'd',
+  keyringPreset: 'kp',
+  keyringPosition: 'kq',
+  keyringOpeningShape: 'ko',
+  keyringSlotLengthMm: 'kl',
   connectorWidthMm: 'c',
   cornerRadiusMm: 'k',
   stakeLengthMm: 'q',
@@ -73,10 +81,12 @@ const COMPACT_PARAM_KEYS: Record<keyof KeychainParams, string> = {
   heartRightGapMm: 'ap',
   heartVerticalOffsetMm: 'aq',
   heartInteriorMode: 'ar',
-  edgeFinish: 'ef',
-  topEdgeMm: 'et',
-  bottomEdgeMm: 'eb',
   textEdgeMm: 'er',
+  textEdgeFinish: 'es',
+  edgeFinish: 'bf',
+  topEdgeMm: 'bt',
+  bottomEdgeMm: 'bb',
+  sizeEnvelope: 'se',
   modelFeatures: 'mf',
 };
 const COMPACT_TO_PARAM = Object.fromEntries(
@@ -106,7 +116,7 @@ const isValidParams = (value: unknown): value is KeychainParams => {
   if (typeof value.fontId !== 'string' || value.fontId.length > 200) return false;
   if (!TEMPLATE_CATALOG.some((item) => item.id === value.templateId)) return false;
   if (!STYLE_CATALOG.some((item) => item.id === value.styleId)) return false;
-  return PARAM_KEYS.every((key) => {
+  const fieldsValid = PARAM_KEYS.every((key) => {
     const field = value[key];
     if (key === 'modelFeatures') return validateModelFeatures(field);
     if (
@@ -125,14 +135,32 @@ const isValidParams = (value: unknown): value is KeychainParams => {
           ? ['center', 'upper', 'lower', 'left', 'right'].includes(field as string)
           : typeof field === 'string';
     if (key === 'heartInteriorMode') return field === 'relief' || field === 'through-cut';
-    if (key === 'edgeFinish') return ['sharp', 'chamfer', 'round'].includes(field as string);
-    if (key === 'topEdgeMm' || key === 'bottomEdgeMm' || key === 'textEdgeMm')
-      return (
-        typeof field === 'number' &&
-        Number.isFinite(field) &&
-        field >= 0 &&
-        field <= (key === 'textEdgeMm' ? 1 : 2)
+    if (key === 'keyringPreset')
+      return ['compact-round', 'standard-round', 'large-round', 'oval-slot', 'custom'].includes(
+        field as string,
       );
+    if (key === 'keyringPosition') return KEYRING_POSITIONS.includes(field as KeyringPosition);
+    if (key === 'keyringOpeningShape') return field === 'round' || field === 'slot';
+    if (key === 'edgeFinish' || key === 'textEdgeFinish')
+      return ['sharp', 'chamfer', 'round'].includes(field as string);
+    if (key === 'sizeEnvelope')
+      return (
+        field === undefined ||
+        (isRecord(field) &&
+          Object.keys(field).sort().join(',') === 'heightMm,widthMm' &&
+          typeof field.widthMm === 'number' &&
+          Number.isFinite(field.widthMm) &&
+          field.widthMm >= 20 &&
+          field.widthMm <= 120 &&
+          typeof field.heightMm === 'number' &&
+          Number.isFinite(field.heightMm) &&
+          field.heightMm >= 15 &&
+          field.heightMm <= 80)
+      );
+    if (key === 'textEdgeMm')
+      return typeof field === 'number' && Number.isFinite(field) && field >= 0 && field <= 1;
+    if (key === 'topEdgeMm' || key === 'bottomEdgeMm')
+      return typeof field === 'number' && Number.isFinite(field) && field >= 0 && field <= 2;
     if (key === 'plantAccentEnabled') return typeof field === 'boolean';
     if (key === 'subtitleOffsetXRatio' || key === 'subtitleOffsetYRatio')
       return typeof field === 'number' && Number.isFinite(field) && field >= -1 && field <= 1;
@@ -150,6 +178,15 @@ const isValidParams = (value: unknown): value is KeychainParams => {
             : true)
     );
   });
+  if (!fieldsValid) return false;
+  if (value.keyringPreset === 'custom') return true;
+  const keyringPreset = KEYRING_PRESETS.find((preset) => preset.id === value.keyringPreset);
+  return Boolean(
+    keyringPreset &&
+    value.keyringOpeningShape === keyringPreset.shape &&
+    value.holeDiameterMm === keyringPreset.widthMm &&
+    value.keyringSlotLengthMm === keyringPreset.lengthMm,
+  );
 };
 
 const isValidAppearance = (value: unknown): value is PrintAppearanceOverrides => {
@@ -179,8 +216,18 @@ const base64UrlToBytes = (encoded: string): Uint8Array => {
 
 export const encodeDesignDocument = (document: DesignDocument): string => {
   const params = designParams(document);
+  const sectionsValid = (Object.keys(DESIGN_SECTIONS) as DesignSection[]).every((section) => {
+    const value = document[section];
+    return (
+      isRecord(value) &&
+      Object.keys(value).every((key) =>
+        (DESIGN_SECTIONS[section] as readonly string[]).includes(key),
+      )
+    );
+  });
   if (
-    document.version !== 6 ||
+    document.version !== 11 ||
+    !sectionsValid ||
     !isValidParams(params) ||
     (document.appearanceOverrides !== undefined && !isValidAppearance(document.appearanceOverrides))
   )
@@ -218,22 +265,35 @@ export const encodeDesignDocument = (document: DesignDocument): string => {
 export const decodeDesignDocument = (encoded: string): DesignDocument | undefined => {
   try {
     if (encoded.length > 24_000) return undefined;
-    if (!encoded.startsWith(DOCUMENT_PREFIX)) return undefined;
-    const payload = encoded.slice(DOCUMENT_PREFIX.length);
+    const prefix = encoded.startsWith(DOCUMENT_PREFIX)
+      ? DOCUMENT_PREFIX
+      : LEGACY_DOCUMENT_PREFIXES.find((candidate) => encoded.startsWith(candidate));
+    if (!prefix) return undefined;
+    const payload = encoded.slice(prefix.length);
     const parsed: unknown = JSON.parse(new TextDecoder().decode(base64UrlToBytes(payload)));
-    return decodeCompactDocument(parsed);
+    return decodeCompactDocument(parsed, prefix);
   } catch {
     return undefined;
   }
 };
 
-const decodeCompactDocument = (parsed: unknown): DesignDocument | undefined => {
+const decodeCompactDocument = (
+  parsed: unknown,
+  prefix: typeof DOCUMENT_PREFIX | (typeof LEGACY_DOCUMENT_PREFIXES)[number],
+): DesignDocument | undefined => {
+  const legacyOpening = LEGACY_OPENING_PREFIXES.some((candidate) => candidate === prefix);
+  const legacyFinishes = ['v6.', 'v7.', 'v8.'].includes(prefix);
+  const v6 = prefix === 'v6.';
   if (!isRecord(parsed)) return undefined;
   if (
     Object.keys(parsed).some((key) => ![...Object.keys(DESIGN_SECTIONS), 'a', 'ff'].includes(key))
   )
     return undefined;
   const params = { ...DEFAULT_PARAMS } as KeychainParams;
+  if (legacyOpening) params.keyringPreset = 'custom';
+  let legacyBackingStyle: 'sharp' | 'chamfer' | 'round' = 'sharp';
+  let legacyTopMm = 0;
+  let legacyBottomMm = 0;
   for (const section of Object.keys(DESIGN_SECTIONS) as DesignSection[]) {
     if (parsed[section] === undefined) continue;
     const values = parsed[section];
@@ -246,11 +306,35 @@ const decodeCompactDocument = (parsed: unknown): DesignDocument | undefined => {
         if (typeof value !== 'boolean') return undefined;
         continue;
       }
+      if (
+        (prefix === 'v6.' || prefix === 'v7.') &&
+        section === 'finish' &&
+        (compactKey === 'ef' || compactKey === 'et' || compactKey === 'eb')
+      ) {
+        if (compactKey === 'ef') {
+          if (!['sharp', 'chamfer', 'round'].includes(value as string)) return undefined;
+          legacyBackingStyle = value as typeof legacyBackingStyle;
+        } else {
+          if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 2)
+            return undefined;
+          if (compactKey === 'et') legacyTopMm = value;
+          else legacyBottomMm = value;
+        }
+        continue;
+      }
       const key = COMPACT_TO_PARAM[compactKey];
       if (!key || !(DESIGN_SECTIONS[section] as readonly string[]).includes(key)) return undefined;
       params[key] = value as never;
     }
   }
+  // v6 used one finish selector for both backing and text. Infer text first,
+  // then discard the removed backing controls from the current model.
+  if (legacyFinishes) {
+    params.edgeFinish = legacyBackingStyle;
+    params.topEdgeMm = legacyTopMm;
+    params.bottomEdgeMm = legacyBottomMm;
+  }
+  if (v6 && (params.textEdgeMm ?? 0) > 0) params.textEdgeFinish = legacyBackingStyle;
   if (!isValidParams(params)) return undefined;
   let appearanceOverrides: PrintAppearanceOverrides | undefined;
   if (parsed.a !== undefined) {

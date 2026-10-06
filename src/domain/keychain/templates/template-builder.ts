@@ -7,6 +7,13 @@ import type {
 import type { StyleId, TemplateId } from '../model/types';
 
 import {
+  extrudeTextFinished,
+  textFinishLimits,
+  intersectTextFinishLimits,
+  assertTextFinishAmount,
+  type TextFinishLimits,
+} from '../build/edge-finish';
+import {
   DEFAULT_GEOMETRY_CONSTRAINTS,
   DEFAULT_PRINT_PROFILE,
   type GeometryConstraints,
@@ -39,6 +46,7 @@ const ALL_STYLE_IDS: readonly StyleId[] = ['contour', 'capsule', 'soft-tag', 'bu
 const RIBBON_STYLES: readonly StyleId[] = [...ALL_STYLE_IDS, 'ribbon'];
 const NAME_KEYCHAIN_STYLES: readonly StyleId[] = [...RIBBON_STYLES, 'heart-split'];
 export type ArticulatedPart = {
+  textFinishLimits: TextFinishLimits;
   body: Solid;
   cap: Solid;
   solid: Solid;
@@ -57,6 +65,7 @@ export type ArticulatedPart = {
   };
 };
 export type ArticulatedBuild = {
+  textFinishLimits: TextFinishLimits;
   kind: 'articulated';
   parts: ArticulatedPart[];
   connectors: Solid[];
@@ -429,8 +438,10 @@ const articulatedStyle = (wasm: GeometryWasm, input: StyleInput): ArticulatedBui
         structural,
         input.holeDiameter,
         input.keyringWall,
-        'left',
+        input.keyringPosition ?? 'left',
         input.ringOffsetMm ?? 0,
+        input.keyringOpeningShape ?? 'round',
+        input.keyringSlotLength ?? input.holeDiameter,
       );
       structural.delete();
       structural = next;
@@ -450,6 +461,37 @@ const articulatedStyle = (wasm: GeometryWasm, input: StyleInput): ArticulatedBui
     });
   }
   let nextLeft = 0;
+  // Finish rejection must occur before allocating any structural bodies.
+  let limits: TextFinishLimits;
+  const preparedCaps: Solid[] = [];
+  try {
+    limits = intersectTextFinishLimits(
+      prototypes.map((prototype) =>
+        textFinishLimits(
+          wasm,
+          prototype.glyph,
+          reliefDepth,
+          input.reliefDepth ?? reliefDepth,
+          (input.textEdgeFinish ?? 'sharp') !== 'sharp',
+        ),
+      ),
+    );
+    assertTextFinishAmount(input.textEdgeFinish ?? 'sharp', input.textEdgeMm ?? 0, limits);
+    for (const prototype of prototypes)
+      preparedCaps.push(
+        extrudeTextFinished(
+          wasm,
+          prototype.glyph,
+          reliefDepth,
+          input.textEdgeFinish ?? 'sharp',
+          input.textEdgeMm ?? 0,
+        ),
+      );
+  } catch (error) {
+    deleteAll(preparedCaps);
+    prototypes.forEach((prototype) => deleteAll([prototype.glyph, prototype.structural]));
+    throw error;
+  }
   const offsets = prototypes.map((prototype) => {
     const offset = nextLeft - prototype.structuralBounds.min[0];
     nextLeft = offset + prototype.structuralBounds.max[0] + mechanicalGap + letterSpacing;
@@ -505,11 +547,12 @@ const articulatedStyle = (wasm: GeometryWasm, input: StyleInput): ArticulatedBui
       socket.delete();
       body = next;
     }
-    const cap = glyph2d.extrude(reliefDepth).translate([0, 0, baseThickness]);
+    const cap = preparedCaps[index].translate([offsetX, 0, baseThickness]);
     const solid = body.add(cap);
     const glyphWorldBounds = sectionBounds(glyph2d);
     const centerX = (structuralBounds.min[0] + structuralBounds.max[0]) / 2;
     parts.push({
+      textFinishLimits: limits,
       body,
       cap,
       solid,
@@ -525,6 +568,7 @@ const articulatedStyle = (wasm: GeometryWasm, input: StyleInput): ArticulatedBui
     glyph2d.delete();
   }
   prototypes.forEach((prototype) => deleteAll([prototype.glyph, prototype.structural]));
+  deleteAll(preparedCaps);
   const connectors: Solid[] = [];
   for (let index = 0; index + 1 < parts.length; index += 1) {
     const leftAnchor = parts[index].rightAnchor;
@@ -546,6 +590,7 @@ const articulatedStyle = (wasm: GeometryWasm, input: StyleInput): ArticulatedBui
   const bounds = aggregateBounds(allSolids);
   return {
     kind: 'articulated',
+    textFinishLimits: intersectTextFinishLimits(parts.map((part) => part.textFinishLimits)),
     parts,
     connectors,
     widthMm: (bounds.max[0] - bounds.min[0]) / MANIFOLD_SCALE,

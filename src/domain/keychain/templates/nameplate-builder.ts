@@ -9,7 +9,16 @@ import {
   partitionMaterialSolids,
   validateMesh,
 } from '../../../infrastructure/geometry/manifold-utils';
-import { extrudeFinished } from '../build/edge-finish';
+import {
+  extrudeFinished,
+  baseFinishLimits,
+  assertBaseFinishAmount,
+  extrudeTextFinished,
+  textFinishLimits,
+  intersectTextFinishLimits,
+  assertTextFinishAmount,
+  regularizeFinishedSolid,
+} from '../build/edge-finish';
 import {
   DEFAULT_PRINT_APPEARANCE,
   geometryConstraintsFor,
@@ -34,17 +43,55 @@ export const buildNameplate = (
   let maximumSlices = 1;
   const reliefSource = styled.subtitle ? styled.relief.add(styled.subtitle) : styled.relief;
   const baseThickness = Math.round(params.baseThicknessMm * MANIFOLD_SCALE);
+  const backingFinishLimits = baseFinishLimits(
+    wasm,
+    styled.backing,
+    baseThickness,
+    params.minimumWallMm,
+    [styled.relief, ...(styled.subtitle ? [styled.subtitle] : [])],
+    params.edgeFinish !== 'sharp',
+  );
   const embedDepth = Math.min(
     Math.max(200, Math.round(params.nameplateEmbedMm * MANIFOLD_SCALE)),
     Math.max(200, baseThickness - 300),
   );
   const visibleDepth = Math.round(params.reliefDepthMm * MANIFOLD_SCALE);
   let plate: Manifold;
+  let limits: ReturnType<typeof textFinishLimits>;
   try {
+    assertBaseFinishAmount(
+      params.edgeFinish ?? 'sharp',
+      params.topEdgeMm ?? 0,
+      params.bottomEdgeMm ?? 0,
+      backingFinishLimits,
+      params.baseThicknessMm,
+      params.minimumWallMm,
+    );
+    limits = intersectTextFinishLimits([
+      textFinishLimits(
+        wasm,
+        styled.relief,
+        visibleDepth,
+        params.reliefDepthMm,
+        (params.textEdgeFinish ?? 'sharp') !== 'sharp',
+      ),
+      ...(styled.subtitle
+        ? [
+            textFinishLimits(
+              wasm,
+              styled.subtitle,
+              Math.round((params.subtitleReliefDepthMm ?? params.reliefDepthMm) * MANIFOLD_SCALE),
+              params.subtitleReliefDepthMm ?? params.reliefDepthMm,
+              (params.textEdgeFinish ?? 'sharp') !== 'sharp',
+            ),
+          ]
+        : []),
+    ]);
+    assertTextFinishAmount(params.textEdgeFinish ?? 'sharp', params.textEdgeMm ?? 0, limits);
     plate = extrudeFinished(wasm, styled.backing, baseThickness, {
       style: params.edgeFinish ?? 'sharp',
-      topMm: params.edgeFinish === 'sharp' ? 0 : (params.topEdgeMm ?? 0),
-      bottomMm: params.edgeFinish === 'sharp' ? 0 : (params.bottomEdgeMm ?? 0),
+      topMm: params.topEdgeMm ?? 0,
+      bottomMm: params.bottomEdgeMm ?? 0,
     });
   } catch (error) {
     deleteGeometry([
@@ -98,7 +145,11 @@ export const buildNameplate = (
     // than subdividing every inscription into thirteen vertical intervals.
     const slices = Math.max(1, Math.ceil(Math.sqrt((depth * Math.abs(Math.sin(angle / 2))) / 40)));
     maximumSlices = Math.max(maximumSlices, slices);
-    const raw = source.extrude(depth, slices - 1);
+    const textStyle = params.textEdgeFinish ?? 'sharp';
+    const raw =
+      textStyle === 'sharp'
+        ? source.extrude(depth, slices - 1)
+        : extrudeTextFinished(wasm, source, depth, textStyle, params.textEdgeMm ?? 0, slices - 1);
     const centered = raw.translate([-pivotX, -pivotY, 0]);
     const cosine = Math.cos(angle);
     const sine = Math.sin(angle);
@@ -116,7 +167,7 @@ export const buildNameplate = (
     });
     const placed = stretched.translate([pivotX, pivotY, baseThickness - rootDepth]);
     deleteGeometry([raw, centered, stretched]);
-    return placed;
+    return regularizeFinishedSolid(wasm, placed, 1);
   };
   for (let attempt = 0; attempt < 13; attempt += 1) {
     attempts = attempt + 1;
@@ -130,7 +181,7 @@ export const buildNameplate = (
         )
       : undefined;
     const candidateText = candidateSubtitle
-      ? wasm.Manifold.union([candidateMain, candidateSubtitle])
+      ? regularizeFinishedSolid(wasm, wasm.Manifold.union([candidateMain, candidateSubtitle]), 1)
       : candidateMain;
     if (candidateSubtitle) candidateSubtitle.delete();
     const candidateBounds = candidateText.boundingBox();
@@ -143,6 +194,8 @@ export const buildNameplate = (
     );
     const candidateParts = candidateText.decompose();
     const candidateEmbedded = candidateParts.every((part) => {
+      // Negative shells describe enclosed voids, not separate printable bodies.
+      if (part.volume() <= 0) return true;
       const overlap = plate.intersect(part);
       const embedded = overlap.numTri() > 0;
       overlap.delete();
@@ -152,10 +205,11 @@ export const buildNameplate = (
     const candidateHasVisibleCap = candidateBounds.max[2] > baseThickness + 300;
     const candidateCarrierEmbedded = carrierBounds.max[2] <= baseThickness - 100;
     const candidateUnion = wasm.Manifold.union([plate, carrier, candidateText]);
-    const candidateModel = candidateUnion.simplify(15);
+    const candidateModel = regularizeFinishedSolid(wasm, candidateUnion.simplify(15), 1);
     candidateUnion.delete();
     const candidateComponents = candidateModel.decompose();
-    const candidateConnected = candidateComponents.length === 1;
+    const candidateConnected =
+      candidateComponents.filter((component) => component.volume() > 0).length === 1;
     deleteGeometry(candidateComponents);
     if (
       candidateInsidePlateFootprint &&
@@ -254,11 +308,14 @@ export const buildNameplate = (
     issues,
     printable,
     appearance: DEFAULT_PRINT_APPEARANCE,
+    textFinishLimits: limits,
+    baseFinishLimits: backingFinishLimits,
     edgeFinish: {
       style: params.edgeFinish ?? 'sharp',
+      textStyle: params.textEdgeFinish ?? 'sharp',
       topMm: params.topEdgeMm ?? 0,
       bottomMm: params.bottomEdgeMm ?? 0,
-      textMm: 0,
+      textMm: params.textEdgeMm ?? 0,
       quality: 'verified',
     },
     constraints: geometryConstraintsFor(params),

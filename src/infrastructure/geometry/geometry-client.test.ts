@@ -53,6 +53,49 @@ afterEach(() => {
 });
 
 describe('GeometryClient lifecycle', () => {
+  it('accepts a finished text edge with a sharp backing from the worker', async () => {
+    vi.stubGlobal('Worker', MockWorker);
+    const client = new GeometryClient();
+    const validation = client.validate({
+      ...DEFAULT_PARAMS,
+      textEdgeFinish: 'round',
+      textEdgeMm: 0.2,
+    });
+    MockWorker.instances[0].emit({
+      type: 'validation',
+      requestId: 1,
+      result: {
+        ...result(),
+        edgeFinish: {
+          style: 'sharp',
+          textStyle: 'round',
+          topMm: 0,
+          bottomMm: 0,
+          textMm: 0.2,
+          quality: 'verified',
+        },
+      },
+    });
+    await expect(validation).resolves.toMatchObject({
+      edgeFinish: { textStyle: 'round', textMm: 0.2 },
+    });
+    client.dispose();
+  });
+  it('rejects worker results with off-grid text finish limits', async () => {
+    vi.stubGlobal('Worker', MockWorker);
+    const client = new GeometryClient();
+    const validation = client.validate(DEFAULT_PARAMS);
+    MockWorker.instances[0].emit({
+      type: 'validation',
+      requestId: 1,
+      result: {
+        ...result(),
+        textFinishLimits: { chamferMaxMm: 0.41, roundMaxMm: 0.8 },
+      },
+    });
+    await expect(validation).rejects.toThrow('invalid validation result');
+    client.dispose();
+  });
   it('rejects disposed calls without posting a request', async () => {
     vi.stubGlobal('Worker', MockWorker);
     const client = new GeometryClient();

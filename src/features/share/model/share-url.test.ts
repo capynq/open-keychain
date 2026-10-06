@@ -7,7 +7,7 @@ import { DEFAULT_PARAMS, normalizeParams } from '../../../domain/keychain/model/
 import { buildShareUrl } from './share-url';
 
 describe('buildShareUrl', () => {
-  it('preserves the current route and creates a v6 design payload', () => {
+  it('preserves the current route and creates a v8 design payload', () => {
     const appearanceOverrides = { version: 1 as const, base: '#B84838' as const };
     const value = buildShareUrl(
       'https://open-keychain.com/create?template=magnet',

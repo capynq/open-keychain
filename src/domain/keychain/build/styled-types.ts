@@ -14,4 +14,5 @@ export type StandardStyledGeometry = {
   magnetPocket?: MagnetPocketMetadata;
   reliefDepthMm?: number;
   widthMm: number;
+  heightMm: number;
 };

@@ -23,6 +23,7 @@ export type ShapeParameter =
   | 'edgeInsetMm'
   | 'letterSpacingMm'
   | 'holeDiameterMm'
+  | 'keyringSlotLengthMm'
   | 'connectorWidthMm'
   | 'jointClearanceMm'
   | 'mechanicalGapMm'
@@ -56,6 +57,7 @@ export const PARAMETER_RANGES = {
   edgeInsetMm: { min: 0.8, max: 4, step: 0.1, unit: 'mm' },
   letterSpacingMm: { min: 0, max: 8, step: 0.1, unit: 'mm' },
   holeDiameterMm: { min: 3, max: 7, step: 0.1, unit: 'mm' },
+  keyringSlotLengthMm: { min: 3, max: 14, step: 0.5, unit: 'mm' },
   connectorWidthMm: { min: 1.4, max: 3, step: 0.1, unit: 'mm' },
   jointClearanceMm: { min: 0.2, max: 0.6, step: 0.05, unit: 'mm' },
   mechanicalGapMm: { min: 0.4, max: 1.5, step: 0.1, unit: 'mm' },
@@ -95,6 +97,7 @@ export const PARAMETER_DEFINITIONS: Record<ShapeParameter, ParameterDefinition> 
             edgeInsetMm: 'backingSize',
             letterSpacingMm: 'letterSpacing',
             holeDiameterMm: 'keyringHole',
+            keyringSlotLengthMm: 'keyringSlotLength',
             connectorWidthMm: 'connectorWidth',
             jointClearanceMm: 'jointClearance',
             mechanicalGapMm: 'mechanicalGap',
@@ -135,6 +138,11 @@ export const PARAMETER_DEFINITIONS: Record<ShapeParameter, ParameterDefinition> 
         defaultValue: DEFAULT_PARAMS[parameter],
         applicable: (params: Pick<KeychainParams, 'templateId' | 'styleId'>) =>
           hasTemplateParameter(params.templateId, parameter) &&
+          !(
+            parameter === 'keyringSlotLengthMm' &&
+            params.templateId !== 'name-keychain' &&
+            params.templateId !== 'articulated-name'
+          ) &&
           !(parameter === 'bubbleLobeMm' && params.styleId !== 'bubble') &&
           !(parameter === 'tagTailMm' && params.styleId !== 'soft-tag') &&
           !(parameter === 'archCurveMm' && params.styleId !== 'arch') &&
@@ -183,6 +191,7 @@ export const parameterPresentationGroup = (
   if (
     [
       'holeDiameterMm',
+      'keyringSlotLengthMm',
       'ringOffsetMm',
       'connectorWidthMm',
       'jointClearanceMm',
@@ -236,12 +245,13 @@ export const PARAMETER_GROUPS = [
       'paddingMm',
       'edgeInsetMm',
       'holeDiameterMm',
+      'keyringSlotLengthMm',
       'ringOffsetMm',
     ] as const,
   },
   {
     key: 'relief',
-    parameters: ['reliefHaloMm'] as const,
+    parameters: ['reliefDepthMm', 'reliefHaloMm'] as const,
   },
   {
     key: 'outline',
@@ -293,6 +303,7 @@ export const TEMPLATE_PARAMETER_KEYS: Record<TemplateId, readonly ShapeParameter
     'paddingMm',
     'letterSpacingMm',
     'holeDiameterMm',
+    'keyringSlotLengthMm',
     'reliefHaloMm',
     'ringOffsetMm',
     'bubbleLobeMm',
@@ -310,6 +321,7 @@ export const TEMPLATE_PARAMETER_KEYS: Record<TemplateId, readonly ShapeParameter
     ...COMMON_PARAMETERS,
     ...RELIEF_PARAMETERS,
     'holeDiameterMm',
+    'keyringSlotLengthMm',
     'connectorWidthMm',
     'jointClearanceMm',
     'mechanicalGapMm',

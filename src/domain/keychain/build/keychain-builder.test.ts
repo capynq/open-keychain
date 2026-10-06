@@ -3,6 +3,7 @@ import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { FONT_CATALOG } from '../fonts/catalog';
+import { KEYRING_POSITIONS } from '../model/keyring-position';
 import {
   DEFAULT_PARAMS as PRODUCT_DEFAULTS,
   type KeychainParams,
@@ -156,6 +157,37 @@ describe('finished keychain geometry', () => {
     expect(result.dimensions.heightMm).toBeCloseTo(25.995, 2);
     expect(result.dimensions.thicknessMm).toBeCloseTo(3.4, 2);
   }, 30000);
+
+  it.each(
+    (['name-keychain', 'articulated-name'] as const).flatMap((templateId) =>
+      KEYRING_POSITIONS.map((keyringPosition) => ({
+        templateId,
+        keyringPosition,
+        styleId: 'contour' as const,
+        text: 'ALEX',
+      })),
+    ),
+  )(
+    'builds an oval keyring slot on the $keyringPosition for $templateId',
+    async ({ templateId, styleId, text, keyringPosition }) => {
+      const { result } = await buildKeychain(wasm, {
+        ...DEFAULT_PARAMS,
+        templateId,
+        styleId,
+        text,
+        fontId: templateId === 'articulated-name' ? 'bungee' : 'nunito',
+        keyringPosition,
+        keyringPreset: 'oval-slot',
+        keyringOpeningShape: 'slot',
+        holeDiameterMm: 4,
+        keyringSlotLengthMm: 8,
+      });
+      expect(result.printable, JSON.stringify(result.issues)).toBe(true);
+      const baseTopology = topology(result.baseMesh);
+      expect(baseTopology.eulerCharacteristic).toBeLessThan(baseTopology.components * 2);
+    },
+    30000,
+  );
 
   it('builds every magnet style with a blind rear pocket and no keyring', async () => {
     for (const styleId of [

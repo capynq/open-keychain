@@ -24,6 +24,7 @@ export const DESIGN_SECTIONS = {
     'heartLeftGapMm',
     'heartRightGapMm',
     'heartVerticalOffsetMm',
+    'sizeEnvelope',
   ],
   silhouette: [
     'templateId',
@@ -52,9 +53,14 @@ export const DESIGN_SECTIONS = {
     'topEdgeMm',
     'bottomEdgeMm',
     'textEdgeMm',
+    'textEdgeFinish',
   ],
   hardware: [
     'holeDiameterMm',
+    'keyringPreset',
+    'keyringPosition',
+    'keyringOpeningShape',
+    'keyringSlotLengthMm',
     'ringOffsetMm',
     'magnetPocketPreset',
     'magnetPocketPlacement',
@@ -69,7 +75,7 @@ export const DESIGN_SECTIONS = {
 
 export type DesignSection = keyof typeof DESIGN_SECTIONS;
 export type DesignDocument = {
-  version: 6;
+  version: 11;
   appearanceOverrides?: PrintAppearanceOverrides;
   fontFallback?: boolean;
 } & {
@@ -81,7 +87,7 @@ export const createDesignDocument = (
   appearanceOverrides?: PrintAppearanceOverrides,
 ): DesignDocument =>
   ({
-    version: 6,
+    version: 11,
     ...Object.fromEntries(
       Object.entries(DESIGN_SECTIONS).map(([section, keys]) => [
         section,

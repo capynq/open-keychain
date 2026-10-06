@@ -2,6 +2,8 @@ import type { FontDefinition } from '../fonts/catalog';
 import type { ModelFeature } from './model-feature';
 
 import { normalizeEdgeFinish } from './edge-finish';
+import { KEYRING_POSITIONS, type KeyringPosition } from './keyring-position';
+import { KEYRING_PRESETS, type KeyringOpeningShape, type KeyringPresetId } from './keyring-presets';
 
 export type StyleId =
   'plain' | 'contour' | 'capsule' | 'soft-tag' | 'bubble' | 'arch' | 'ribbon' | 'heart-split';
@@ -11,6 +13,7 @@ export type MagnetPocketPreset = '6x2' | '8x2' | '10x3' | '12x3' | '15x3';
 export type MagnetPocketPlacement = 'center' | 'upper' | 'lower' | 'left' | 'right';
 export type HeartInteriorMode = 'relief' | 'through-cut';
 export type EdgeFinish = 'sharp' | 'chamfer' | 'round';
+export type SizeEnvelope = { widthMm: number; heightMm: number };
 export type MagnetPocketPresetMetadata = {
   id: MagnetPocketPreset;
   diameterMm: number;
@@ -47,6 +50,10 @@ export type KeychainParams = {
   edgeInsetMm: number;
   letterSpacingMm: number;
   holeDiameterMm: number;
+  keyringPreset?: KeyringPresetId;
+  keyringPosition?: KeyringPosition;
+  keyringOpeningShape?: KeyringOpeningShape;
+  keyringSlotLengthMm?: number;
   connectorWidthMm: number;
   cornerRadiusMm: number;
   stakeLengthMm: number;
@@ -82,6 +89,8 @@ export type KeychainParams = {
   topEdgeMm?: number;
   bottomEdgeMm?: number;
   textEdgeMm?: number;
+  textEdgeFinish?: EdgeFinish;
+  sizeEnvelope?: SizeEnvelope;
   modelFeatures?: ModelFeature[];
 };
 export const MAGNET_SUBTITLE_MAX_LENGTH = 24;
@@ -228,9 +237,18 @@ export type GeometryResult = {
   validation?: GeometryChecks;
   timings?: Record<string, number>;
   edgeFinish?: EdgeFinishQuality;
+  textFinishLimits?: {
+    chamferMaxMm: number;
+    roundMaxMm: number;
+  };
+  baseFinishLimits?: {
+    chamferMaxMm: number;
+    roundMaxMm: number;
+  };
 };
 export type EdgeFinishQuality = {
   style: EdgeFinish;
+  textStyle?: EdgeFinish;
   topMm: number;
   bottomMm: number;
   textMm: number;
@@ -288,6 +306,7 @@ export const validateGeometryResult = (result: GeometryResult): boolean => {
   const edgeFinishValid = (finish: unknown): boolean => {
     if (!isRecord(finish)) return false;
     const style = finish.style;
+    const textStyle = finish.textStyle ?? style;
     const topMm = finish.topMm;
     const bottomMm = finish.bottomMm;
     const textMm = finish.textMm;
@@ -295,6 +314,8 @@ export const validateGeometryResult = (result: GeometryResult): boolean => {
     return (
       typeof style === 'string' &&
       ['sharp', 'chamfer', 'round'].includes(style) &&
+      (textStyle === undefined ||
+        (typeof textStyle === 'string' && ['sharp', 'chamfer', 'round'].includes(textStyle))) &&
       typeof topMm === 'number' &&
       typeof bottomMm === 'number' &&
       typeof textMm === 'number' &&
@@ -310,11 +331,37 @@ export const validateGeometryResult = (result: GeometryResult): boolean => {
       [topMm, bottomMm, textMm].every(
         (value) => Math.abs(value / 0.2 - Math.round(value / 0.2)) < 1e-6,
       ) &&
-      (style !== 'sharp' || (topMm === 0 && bottomMm === 0 && textMm === 0)) &&
+      ['sharp', 'chamfer', 'round'].includes(textStyle as string) &&
+      (style !== 'sharp' || (topMm === 0 && bottomMm === 0)) &&
+      (textStyle !== 'sharp' || textMm === 0) &&
       typeof quality === 'string' &&
       ['verified', 'degraded', 'unverified'].includes(quality)
     );
   };
+  const textFinishLimitsValid = (limits: unknown): boolean =>
+    isRecord(limits) &&
+    typeof limits.chamferMaxMm === 'number' &&
+    Number.isFinite(limits.chamferMaxMm) &&
+    limits.chamferMaxMm >= 0 &&
+    limits.chamferMaxMm <= 1 &&
+    Math.abs(limits.chamferMaxMm / 0.2 - Math.round(limits.chamferMaxMm / 0.2)) < 1e-8 &&
+    typeof limits.roundMaxMm === 'number' &&
+    Number.isFinite(limits.roundMaxMm) &&
+    limits.roundMaxMm >= 0 &&
+    limits.roundMaxMm <= 1 &&
+    Math.abs(limits.roundMaxMm / 0.2 - Math.round(limits.roundMaxMm / 0.2)) < 1e-8;
+  const baseFinishLimitsValid = (limits: unknown): boolean =>
+    isRecord(limits) &&
+    ['chamferMaxMm', 'roundMaxMm'].every((key) => {
+      const value = limits[key];
+      return (
+        typeof value === 'number' &&
+        Number.isFinite(value) &&
+        value >= 0 &&
+        value <= 2 &&
+        Math.abs(value / 0.2 - Math.round(value / 0.2)) < 1e-8
+      );
+    });
   const magnetPocketValid = (pocket: unknown): boolean => {
     if (!isRecord(pocket) || !Array.isArray(pocket.centerMm)) return false;
     const centerMm = pocket.centerMm;
@@ -347,7 +394,9 @@ export const validateGeometryResult = (result: GeometryResult): boolean => {
     typeof result.printable === 'boolean' &&
     !!result.appearance &&
     (!result.magnetPocket || magnetPocketValid(result.magnetPocket)) &&
-    (!result.edgeFinish || edgeFinishValid(result.edgeFinish))
+    (!result.edgeFinish || edgeFinishValid(result.edgeFinish)) &&
+    (!result.textFinishLimits || textFinishLimitsValid(result.textFinishLimits)) &&
+    (!result.baseFinishLimits || baseFinishLimitsValid(result.baseFinishLimits))
   );
 };
 export type WorkerRequest =
@@ -422,6 +471,10 @@ export const DEFAULT_PARAMS: KeychainParams = {
   edgeInsetMm: 2.4,
   letterSpacingMm: 1,
   holeDiameterMm: 5,
+  keyringPreset: 'standard-round',
+  keyringPosition: 'left',
+  keyringOpeningShape: 'round',
+  keyringSlotLengthMm: 5,
   connectorWidthMm: 1.8,
   cornerRadiusMm: 4,
   stakeLengthMm: 48,
@@ -453,23 +506,67 @@ export const DEFAULT_PARAMS: KeychainParams = {
   subtitleLetterSpacingMm: 0.5,
   subtitleReliefDepthMm: 0.8,
   subtitleGapMm: 1.5,
+  textEdgeMm: 0,
+  textEdgeFinish: 'sharp',
   edgeFinish: 'sharp',
   topEdgeMm: 0,
   bottomEdgeMm: 0,
-  textEdgeMm: 0,
+  sizeEnvelope: undefined,
   modelFeatures: [],
 };
 export const normalizeParams = (params: KeychainParams): NormalizedParams => {
+  const sizeEnvelope = params.sizeEnvelope;
+  if (
+    sizeEnvelope !== undefined &&
+    (!Number.isFinite(sizeEnvelope.widthMm) ||
+      !Number.isFinite(sizeEnvelope.heightMm) ||
+      sizeEnvelope.widthMm < 20 ||
+      sizeEnvelope.widthMm > 120 ||
+      sizeEnvelope.heightMm < 15 ||
+      sizeEnvelope.heightMm > 80)
+  )
+    throw new Error('Size must be 20–120 mm wide and 15–80 mm high.');
   const text = params.text.normalize('NFC').trim().replace(/\s+/g, ' ');
   const baseThicknessMm = clamp(
     params.baseThicknessMm,
     params.templateId === 'articulated-name' ? 3.4 : params.templateId === 'magnet' ? 4.4 : 1.6,
     params.templateId === 'magnet' ? 5 : 4,
   );
+  const keyringOpeningShape: KeyringOpeningShape =
+    params.keyringOpeningShape === 'slot' ? 'slot' : 'round';
+  const keyringPosition = KEYRING_POSITIONS.includes(params.keyringPosition ?? 'left')
+    ? (params.keyringPosition ?? 'left')
+    : 'left';
+  const holeDiameterMm = clamp(params.holeDiameterMm, 3, 7);
+  const keyringSlotLengthMm =
+    keyringOpeningShape === 'slot'
+      ? Math.max(holeDiameterMm, clamp(params.keyringSlotLengthMm ?? 8, 4, 14))
+      : clamp(params.keyringSlotLengthMm ?? holeDiameterMm, 3, 14);
+  const requestedKeyringPreset: KeyringPresetId = [
+    'compact-round',
+    'standard-round',
+    'large-round',
+    'oval-slot',
+    'custom',
+  ].includes(params.keyringPreset ?? '')
+    ? params.keyringPreset!
+    : 'standard-round';
+  const keyringPreset =
+    requestedKeyringPreset === 'custom' ||
+    !KEYRING_PRESETS.some(
+      (preset) =>
+        preset.id === requestedKeyringPreset &&
+        preset.shape === keyringOpeningShape &&
+        preset.widthMm === holeDiameterMm &&
+        preset.lengthMm === keyringSlotLengthMm,
+    )
+      ? 'custom'
+      : requestedKeyringPreset;
   const normalized: NormalizedParams = {
-    // Legacy callers may still provide the removed v6 export toggle; it is ignored
-    // by the typed model and never copied into the canonical design document.
-    ...params,
+    ...(() => {
+      const currentParams = { ...params } as KeychainParams & Record<string, unknown>;
+      return currentParams as KeychainParams;
+    })(),
     text,
     edgeFinish: ['sharp', 'chamfer', 'round'].includes(params.edgeFinish ?? '')
       ? params.edgeFinish
@@ -477,6 +574,10 @@ export const normalizeParams = (params: KeychainParams): NormalizedParams => {
     topEdgeMm: clamp(Number.isFinite(params.topEdgeMm) ? params.topEdgeMm! : 0, 0, 2),
     bottomEdgeMm: clamp(Number.isFinite(params.bottomEdgeMm) ? params.bottomEdgeMm! : 0, 0, 2),
     textEdgeMm: clamp(Number.isFinite(params.textEdgeMm) ? params.textEdgeMm! : 0, 0, 1),
+    textEdgeFinish: ['sharp', 'chamfer', 'round'].includes(params.textEdgeFinish ?? '')
+      ? params.textEdgeFinish
+      : 'sharp',
+    sizeEnvelope,
     styleId:
       params.styleId === 'heart-split' && params.templateId !== 'name-keychain'
         ? params.templateId === 'magnet'
@@ -522,7 +623,11 @@ export const normalizeParams = (params: KeychainParams): NormalizedParams => {
     paddingMm: clamp(params.paddingMm, 1.2, 5),
     edgeInsetMm: clamp(params.edgeInsetMm ?? params.paddingMm, 0.8, 4),
     letterSpacingMm: clamp(params.letterSpacingMm ?? 1, 0, 8),
-    holeDiameterMm: clamp(params.holeDiameterMm, 3, 7),
+    holeDiameterMm,
+    keyringPreset,
+    keyringPosition,
+    keyringOpeningShape,
+    keyringSlotLengthMm,
     connectorWidthMm: clamp(params.connectorWidthMm ?? 1.8, 1.4, 3),
     cornerRadiusMm: clamp(params.cornerRadiusMm ?? 4, 1.5, 12),
     stakeLengthMm: clamp(params.stakeLengthMm ?? 48, 24, 100),
@@ -668,12 +773,16 @@ export const normalizeParams = (params: KeychainParams): NormalizedParams => {
     normalized.fontWeightMm = 0;
     normalized.edgeInsetMm = normalized.paddingMm;
     normalized.letterSpacingMm = 0;
+    normalized.edgeFinish = 'sharp';
+    normalized.topEdgeMm = 0;
+    normalized.bottomEdgeMm = 0;
   }
   const finish = normalizeEdgeFinish(normalized);
   normalized.edgeFinish = finish.style;
   normalized.topEdgeMm = finish.topMm;
   normalized.bottomEdgeMm = finish.bottomMm;
   normalized.textEdgeMm = finish.textMm;
+  normalized.textEdgeFinish = finish.textStyle;
   return normalized;
 };
 export const clamp = (value: number, min: number, max: number): number => {

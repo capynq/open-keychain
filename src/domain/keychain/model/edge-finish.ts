@@ -8,6 +8,7 @@ export type EdgeFinishValues = {
   style: EdgeFinish;
   topMm: number;
   bottomMm: number;
+  textStyle: EdgeFinish;
   textMm: number;
 };
 
@@ -20,12 +21,6 @@ export const canonicalEdgeMm = (value: number | undefined, maximum: number): num
   return Math.min(maximum, Math.round(clamped / EDGE_FINISH_GRID_MM) * EDGE_FINISH_GRID_MM);
 };
 
-/** Defaults used when a non-sharp profile is selected before fine tuning. */
-export const edgeFinishPreset = (style: EdgeFinish): EdgeFinishValues =>
-  style === 'sharp'
-    ? { style, topMm: 0, bottomMm: 0, textMm: 0 }
-    : { style, topMm: 0.6, bottomMm: 0.4, textMm: 0 };
-
 /**
  * Resolve the persisted finish controls into the one contract consumed by builders.
  * Legacy values remain readable, while unsupported template combinations become sharp.
@@ -33,39 +28,24 @@ export const edgeFinishPreset = (style: EdgeFinish): EdgeFinishValues =>
 export const normalizeEdgeFinish = (
   params: Pick<
     KeychainParams,
-    | 'templateId'
-    | 'edgeFinish'
-    | 'topEdgeMm'
-    | 'bottomEdgeMm'
-    | 'textEdgeMm'
-    | 'baseThicknessMm'
-    | 'minimumWallMm'
-    | 'reliefDepthMm'
+    'edgeFinish' | 'topEdgeMm' | 'bottomEdgeMm' | 'textEdgeMm' | 'textEdgeFinish' | 'reliefDepthMm'
   >,
 ): EdgeFinishValues => {
   const style: EdgeFinish = ['sharp', 'chamfer', 'round'].includes(params.edgeFinish ?? '')
     ? params.edgeFinish!
     : 'sharp';
-  if (style === 'sharp' || params.templateId === 'articulated-name')
-    return { style: 'sharp', topMm: 0, bottomMm: 0, textMm: 0 };
-
-  const topMm = canonicalEdgeMm(params.topEdgeMm, 2);
-  const availableMm = Math.max(
-    0,
-    Math.floor(
-      (finiteOrZero(params.baseThicknessMm) - finiteOrZero(params.minimumWallMm)) /
-        EDGE_FINISH_GRID_MM,
-    ) * EDGE_FINISH_GRID_MM,
-  );
-  const canonicalTop = Math.min(topMm, availableMm);
-  const bottomMm = Math.min(canonicalEdgeMm(params.bottomEdgeMm, 2), availableMm - canonicalTop);
+  const topMm = style === 'sharp' ? 0 : canonicalEdgeMm(params.topEdgeMm, 2);
+  const bottomMm = style === 'sharp' ? 0 : canonicalEdgeMm(params.bottomEdgeMm, 2);
+  const textStyle: EdgeFinish = ['sharp', 'chamfer', 'round'].includes(params.textEdgeFinish ?? '')
+    ? params.textEdgeFinish!
+    : 'sharp';
   return {
     style,
-    topMm: canonicalTop,
+    topMm,
     bottomMm,
-    // Nameplates have a standalone finish and must not round their relief text.
+    textStyle,
     textMm:
-      params.templateId === 'nameplate'
+      textStyle === 'sharp'
         ? 0
         : canonicalEdgeMm(
             params.textEdgeMm,

@@ -1,5 +1,13 @@
 import type { CrossSection, GeometryWasm } from '../../../infrastructure/geometry/manifold-types';
-import type { GeometryConstraints, PrintProfile, StyleId, TemplateId } from '../model/types';
+import type { KeyringPosition } from '../model/keyring-position';
+import type { KeyringOpeningShape } from '../model/keyring-presets';
+import type {
+  EdgeFinish,
+  GeometryConstraints,
+  PrintProfile,
+  StyleId,
+  TemplateId,
+} from '../model/types';
 import type { GlyphOutline } from '../text/outline';
 
 import { sectionArea } from '../../../infrastructure/geometry/manifold-utils';
@@ -24,6 +32,9 @@ export type StyleInput = {
   textInset?: number;
   letterSpacing?: number;
   holeDiameter: number;
+  keyringOpeningShape?: KeyringOpeningShape;
+  keyringPosition?: KeyringPosition;
+  keyringSlotLength?: number;
   keyringWall: number;
   templateId?: TemplateId;
   connectorWidth?: number;
@@ -35,6 +46,8 @@ export type StyleInput = {
   glyphs?: GlyphOutline[];
   baseThickness?: number;
   reliefDepth?: number;
+  textEdgeFinish?: EdgeFinish;
+  textEdgeMm?: number;
   jointClearance?: number;
   mechanicalGap?: number;
   maxJointAngleDeg?: number;
@@ -255,30 +268,80 @@ export const ringAssembly = (
   base: CrossSection,
   holeDiameter: number,
   wall: number,
-  side: 'left' | 'right' = 'left',
+  position: KeyringPosition = 'left',
   offsetMm = 0,
+  openingShape: KeyringOpeningShape = 'round',
+  slotLength = holeDiameter,
+): CrossSection => {
+  const rotation = {
+    left: 0,
+    right: 180,
+    top: 90,
+    bottom: 270,
+    'top-left': 45,
+    'top-right': 135,
+  }[position];
+  const localBase = rotation === 0 ? base.translate([0, 0]) : base.rotate(rotation);
+  let localResult: CrossSection;
+  try {
+    localResult = ringAssemblyAtLeft(
+      wasm,
+      localBase,
+      holeDiameter,
+      wall,
+      offsetMm,
+      openingShape,
+      slotLength,
+    );
+  } finally {
+    localBase.delete();
+  }
+  if (rotation === 0) return localResult;
+  try {
+    return localResult.rotate(-rotation);
+  } finally {
+    localResult.delete();
+  }
+};
+
+const ringAssemblyAtLeft = (
+  wasm: GeometryWasm,
+  base: CrossSection,
+  holeDiameter: number,
+  wall: number,
+  offsetMm: number,
+  openingShape: KeyringOpeningShape,
+  slotLength: number,
 ): CrossSection => {
   const bounds = sectionBounds(base);
   const outerRadius = holeDiameter / 2 + wall;
   const overlap = Math.max(5000, wall * 2);
   const rootWidth = Math.max(6000, wall * 2.5);
-  const anchor = attachmentAnchor(base, Math.max(wall, 3200), side);
-  const x =
-    side === 'left'
-      ? anchor[0] - outerRadius + Math.min(1600, outerRadius * 0.34)
-      : anchor[0] + outerRadius - Math.min(1600, outerRadius * 0.34);
+  const anchor = attachmentAnchor(base, Math.max(wall, 3200), 'left');
+  const x = anchor[0] - outerRadius + Math.min(1600, outerRadius * 0.34);
   const center: Vec2 = [x, anchor[1] + offsetMm * 1000];
-  const outer = wasm.CrossSection.circle(outerRadius, 96).translate(center);
+  const hole =
+    openingShape === 'slot'
+      ? capsule(
+          wasm,
+          [center[0], center[1] - Math.max(0, slotLength - holeDiameter) / 2],
+          [center[0], center[1] + Math.max(0, slotLength - holeDiameter) / 2],
+          holeDiameter,
+        )
+      : wasm.CrossSection.circle(holeDiameter / 2, 96).translate(center);
+  const outer =
+    openingShape === 'slot'
+      ? hole.offset(wall, 'Round', 2, 96)
+      : wasm.CrossSection.circle(outerRadius, 96).translate(center);
   const rootHeight = Math.min(
     bounds.max[1] - bounds.min[1],
     Math.max(wall * 2.7, outerRadius * 1.45),
   );
   const root = roundedRect(wasm, rootWidth + overlap, rootHeight, rootHeight / 2).translate([
-    side === 'left' ? anchor[0] - (rootWidth - overlap) / 2 : anchor[0] + (rootWidth - overlap) / 2,
+    anchor[0] - (rootWidth - overlap) / 2,
     anchor[1],
   ]);
   const tabOuter = wasm.CrossSection.hull([outer, root]);
-  const hole = wasm.CrossSection.circle(holeDiameter / 2, 96).translate(center);
   const tab = tabOuter.subtract(hole);
   const result = union(wasm, [base, tab]);
   outer.delete();
@@ -374,8 +437,10 @@ export const finishStyle = (
         combined,
         input.holeDiameter,
         input.keyringWall,
-        side,
+        input.keyringPosition ?? side,
         input.ringOffsetMm ?? 0,
+        input.keyringOpeningShape ?? 'round',
+        input.keyringSlotLength ?? input.holeDiameter,
       )
     : combined;
   if (result !== combined) combined.delete();

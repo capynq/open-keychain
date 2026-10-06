@@ -50,7 +50,16 @@ import {
 } from '../templates/template-builder';
 import { flattenText, hasRequiredGlyphs, layoutText, type GlyphOutline } from '../text/outline';
 import { validateArticulatedBuild } from './articulated-validation';
-import { extrudeFinished } from './edge-finish';
+import {
+  extrudeTextFinished,
+  extrudeFinished,
+  baseFinishLimits,
+  assertBaseFinishAmount,
+  textFinishLimits,
+  intersectTextFinishLimits,
+  assertTextFinishAmount,
+  regularizeFinishedSolid,
+} from './edge-finish';
 import { applyFeatureGraph } from './feature-graph';
 const MAX_WIDTH_MM = 120;
 const MIN_TEXT_HEIGHT_MM = 12;
@@ -158,6 +167,7 @@ type ArticulatedStyledGeometry = {
   rawText: CrossSection;
   build: ArticulatedBuild;
   widthMm: number;
+  heightMm: number;
 };
 type StyledGeometry = StandardStyledGeometry | ArticulatedStyledGeometry;
 const releaseStyledGeometry = (geometry: StyledGeometry): void => {
@@ -236,7 +246,15 @@ const finalizeArticulated = (
     issues,
     printable: valid && finiteBounds(bounds) && validateMesh(baseMesh) && validateMesh(reliefMesh),
     appearance: ARTICULATED_PRINT_APPEARANCE,
-    edgeFinish: { style: 'sharp', topMm: 0, bottomMm: 0, textMm: 0, quality: 'verified' },
+    textFinishLimits: build.textFinishLimits,
+    edgeFinish: {
+      style: 'sharp',
+      textStyle: params.textEdgeFinish ?? 'sharp',
+      topMm: 0,
+      bottomMm: 0,
+      textMm: params.textEdgeMm ?? 0,
+      quality: 'verified',
+    },
     constraints: geometryConstraintsFor(params),
     printProfile: printProfileFor(geometryConstraintsFor(params)),
     solidCount: build.parts.length * 2 - 1,
@@ -249,7 +267,7 @@ const finalizeArticulated = (
   void scale;
   return { result, exportMesh };
 };
-/** Build validated printable geometry, fitting finished backing dimensions before tessellation. */
+/** Build validated printable geometry, fitting dimensions before tessellation. */
 const buildKeychainGeometry = async (
   wasm: Wasm,
   input: KeychainParams,
@@ -481,6 +499,9 @@ const buildKeychainGeometry = async (
         params.templateId === 'articulated-name' ? undefined : params.edgeInsetMm * MANIFOLD_SCALE,
       letterSpacing: params.templateId === 'articulated-name' ? 0 : params.letterSpacingMm,
       holeDiameter: params.holeDiameterMm * MANIFOLD_SCALE,
+      keyringOpeningShape: params.keyringOpeningShape,
+      keyringPosition: params.keyringPosition,
+      keyringSlotLength: (params.keyringSlotLengthMm ?? params.holeDiameterMm) * MANIFOLD_SCALE,
       keyringWall: keyring.wallMm * MANIFOLD_SCALE,
       templateId: params.templateId,
       connectorWidth: params.connectorWidthMm,
@@ -492,6 +513,8 @@ const buildKeychainGeometry = async (
       glyphs: articulatedGlyphs ? scaleGlyphs(articulatedGlyphs, scale) : undefined,
       baseThickness: params.baseThicknessMm,
       reliefDepth: params.reliefDepthMm,
+      textEdgeFinish: params.textEdgeFinish,
+      textEdgeMm: params.textEdgeMm,
       jointClearance: params.jointClearanceMm,
       mechanicalGap: params.mechanicalGapMm,
       maxJointAngleDeg: params.maxJointAngleDeg,
@@ -521,7 +544,14 @@ const buildKeychainGeometry = async (
       printProfile: printProfileFor(geometryConstraintsFor(params)),
     });
     if (isArticulatedBuild(style))
-      return { kind: 'articulated', scale, rawText: text, build: style, widthMm: style.widthMm };
+      return {
+        kind: 'articulated',
+        scale,
+        rawText: text,
+        build: style,
+        widthMm: style.widthMm,
+        heightMm: (style.bounds.max[1] - style.bounds.min[1]) / MANIFOLD_SCALE,
+      };
     const bounds = style.backing.bounds();
     return {
       kind: 'standard',
@@ -536,6 +566,7 @@ const buildKeychainGeometry = async (
       magnetPocket: style.magnetPocket,
       reliefDepthMm: style.reliefDepthMm,
       widthMm: (bounds.max[0] - bounds.min[0]) / MANIFOLD_SCALE,
+      heightMm: (bounds.max[1] - bounds.min[1]) / MANIFOLD_SCALE,
     };
   };
   let styled = buildStyledGeometry(1);
@@ -598,6 +629,45 @@ const buildKeychainGeometry = async (
       }
     }
   }
+  if (params.sizeEnvelope) {
+    const { widthMm, heightMm } = params.sizeEnvelope;
+    const fits = (geometry: StyledGeometry): boolean =>
+      geometry.widthMm <= widthMm + 0.05 && geometry.heightMm <= heightMm + 0.05;
+    if (!fits(styled)) {
+      const minimumScale = Math.min(styled.scale, 6 / params.textSizeMm);
+      const smallest = buildStyledGeometry(minimumScale);
+      if (!fits(smallest)) {
+        releaseStyledGeometry(styled);
+        releaseStyledGeometry(smallest);
+        return invalidResult(
+          issues,
+          'size-envelope-unavailable',
+          `This name and template cannot fit within ${widthMm} × ${heightMm} mm. Choose a larger size or a shorter name.`,
+        );
+      }
+      let low = minimumScale;
+      let high = styled.scale;
+      releaseStyledGeometry(styled);
+      styled = smallest;
+      for (let iteration = 0; iteration < WIDTH_FIT_ITERATIONS; iteration += 1) {
+        const middle = (low + high) / 2;
+        const candidate = buildStyledGeometry(middle);
+        if (fits(candidate)) {
+          releaseStyledGeometry(styled);
+          styled = candidate;
+          low = middle;
+        } else {
+          releaseStyledGeometry(candidate);
+          high = middle;
+        }
+      }
+      issues.push({
+        severity: 'warning',
+        code: 'size-envelope-fit',
+        message: `The design was fitted within ${widthMm} × ${heightMm} mm. Its actual dimensions are shown in the preview.`,
+      });
+    }
+  }
   if (styled.kind === 'articulated')
     return finalizeArticulated(
       wasm,
@@ -641,13 +711,30 @@ const buildKeychainGeometry = async (
         'The raised text extends beyond its foundation. Choose another style or adjust the name.',
     });
   const baseThickness = Math.round(params.baseThicknessMm * MANIFOLD_SCALE);
-  const finishStyle = params.edgeFinish ?? 'sharp';
+  const baseFinishStyle = params.edgeFinish ?? 'sharp';
+  const backingFinishLimits = baseFinishLimits(
+    wasm,
+    styleBase,
+    baseThickness,
+    params.minimumWallMm,
+    [textSection, ...(subtitleSection ? [subtitleSection] : [])],
+    baseFinishStyle !== 'sharp',
+  );
+  const textFinishStyle = params.textEdgeFinish ?? 'sharp';
   let base: Manifold;
   try {
+    assertBaseFinishAmount(
+      baseFinishStyle,
+      params.topEdgeMm ?? 0,
+      params.bottomEdgeMm ?? 0,
+      backingFinishLimits,
+      params.baseThicknessMm,
+      params.minimumWallMm,
+    );
     base = extrudeFinished(wasm, styleBase, baseThickness, {
-      style: finishStyle,
-      topMm: finishStyle === 'sharp' ? 0 : (params.topEdgeMm ?? 0),
-      bottomMm: finishStyle === 'sharp' ? 0 : (params.bottomEdgeMm ?? 0),
+      style: baseFinishStyle,
+      topMm: params.topEdgeMm ?? 0,
+      bottomMm: params.bottomEdgeMm ?? 0,
     });
   } catch (error) {
     releaseStyledGeometry(styled);
@@ -690,16 +777,37 @@ const buildKeychainGeometry = async (
   }
   const effectiveReliefDepthMm = styled.reliefDepthMm ?? params.reliefDepthMm;
   let reliefSource: Manifold;
+  let limits: ReturnType<typeof textFinishLimits>;
   try {
-    reliefSource = extrudeFinished(
+    limits = intersectTextFinishLimits([
+      textFinishLimits(
+        wasm,
+        textSection,
+        Math.round((effectiveReliefDepthMm + 0.15) * MANIFOLD_SCALE),
+        effectiveReliefDepthMm,
+        textFinishStyle !== 'sharp',
+      ),
+      ...(subtitleSection
+        ? [
+            textFinishLimits(
+              wasm,
+              subtitleSection,
+              Math.round(
+                ((params.subtitleReliefDepthMm ?? effectiveReliefDepthMm) + 0.15) * MANIFOLD_SCALE,
+              ),
+              params.subtitleReliefDepthMm ?? effectiveReliefDepthMm,
+              textFinishStyle !== 'sharp',
+            ),
+          ]
+        : []),
+    ]);
+    assertTextFinishAmount(textFinishStyle, params.textEdgeMm ?? 0, limits);
+    reliefSource = extrudeTextFinished(
       wasm,
       textSection,
       Math.round((effectiveReliefDepthMm + 0.15) * MANIFOLD_SCALE),
-      {
-        style: finishStyle,
-        topMm: finishStyle === 'sharp' ? 0 : (params.textEdgeMm ?? 0),
-        bottomMm: 0,
-      },
+      textFinishStyle,
+      params.textEdgeMm ?? 0,
     );
   } catch (error) {
     base.delete();
@@ -711,17 +819,14 @@ const buildKeychainGeometry = async (
   let subtitleSource: Manifold | undefined;
   try {
     subtitleSource = subtitleSection
-      ? extrudeFinished(
+      ? extrudeTextFinished(
           wasm,
           subtitleSection,
           Math.round(
             ((params.subtitleReliefDepthMm ?? effectiveReliefDepthMm) + 0.15) * MANIFOLD_SCALE,
           ),
-          {
-            style: finishStyle,
-            topMm: finishStyle === 'sharp' ? 0 : (params.textEdgeMm ?? 0),
-            bottomMm: 0,
-          },
+          textFinishStyle,
+          params.textEdgeMm ?? 0,
         )
       : undefined;
   } catch (error) {
@@ -733,7 +838,7 @@ const buildKeychainGeometry = async (
   const subtitleRelief = subtitleSource?.translate([0, 0, baseThickness - 150]);
   subtitleSource?.delete();
   const reliefCombined = subtitleRelief ? relief.add(subtitleRelief) : relief;
-  const model = base.add(reliefCombined);
+  const model = regularizeFinishedSolid(wasm, base.add(reliefCombined));
   const partition = partitionMaterialSolids(base, reliefCombined, model);
   base.delete();
   const partitionedBase = partition.base;
@@ -742,8 +847,9 @@ const buildKeychainGeometry = async (
   const reliefMesh = asMesh(reliefCombined);
   const exportMesh = includeExport ? asMesh(model) : undefined;
   const components = model.decompose();
-  const solidCount = components.length;
-  const connected = components.length === 1;
+  // Enclosed negative shells are cavities inside a printable body.
+  const solidCount = components.filter((component) => component.volume() > 0).length;
+  const connected = solidCount === 1;
   deleteAll(components);
   let printable =
     model.status() === 'NoError' &&
@@ -803,13 +909,16 @@ const buildKeychainGeometry = async (
     issues,
     printable,
     appearance: DEFAULT_PRINT_APPEARANCE,
+    textFinishLimits: limits,
+    baseFinishLimits: backingFinishLimits,
     edgeFinish: {
-      style: finishStyle,
+      style: baseFinishStyle,
+      textStyle: textFinishStyle,
       topMm: params.topEdgeMm ?? 0,
       bottomMm: params.bottomEdgeMm ?? 0,
       textMm: params.textEdgeMm ?? 0,
       quality:
-        (input.edgeFinish ?? 'sharp') !== finishStyle ||
+        (input.edgeFinish ?? 'sharp') !== baseFinishStyle ||
         (input.topEdgeMm ?? 0) !== (params.topEdgeMm ?? 0) ||
         (input.bottomEdgeMm ?? 0) !== (params.bottomEdgeMm ?? 0) ||
         (input.textEdgeMm ?? 0) !== (params.textEdgeMm ?? 0)
@@ -846,6 +955,20 @@ export const buildKeychain = async (
   if (args[1].modelFeatures?.length)
     built = applyFeatureGraph(args[0], built.result, args[1], args[2] ?? false);
   const result = built.result;
+  const envelope = args[1].sizeEnvelope;
+  if (
+    envelope &&
+    result.printable &&
+    (result.dimensions.widthMm > envelope.widthMm + 0.1 ||
+      result.dimensions.heightMm > envelope.heightMm + 0.1)
+  ) {
+    result.printable = false;
+    result.issues.push({
+      severity: 'error',
+      code: 'size-envelope-unavailable',
+      message: `This design cannot fit within ${envelope.widthMm} × ${envelope.heightMm} mm. Choose a larger size or simplify the design.`,
+    });
+  }
   result.parts = [
     { id: 'base', name: result.appearance.base.name, role: 'base', mesh: result.baseMesh },
     { id: 'relief', name: result.appearance.relief.name, role: 'relief', mesh: result.reliefMesh },

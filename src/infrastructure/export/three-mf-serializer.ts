@@ -58,14 +58,28 @@ const modelXml = (parts: ThreeMfPart[]): string => {
         `<base name="${escapeXml(part.name)}" displaycolor="${normalizeColor(part.color)}"/>`,
     )
     .join('');
-  const build = '<item objectid="1"/>';
   return `<?xml version="1.0" encoding="UTF-8"?>
 <model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
   <metadata name="Title">Open Keychain</metadata>
   <metadata name="Description">Printable keychain generated locally in the browser.</metadata>
   <resources><basematerials id="10">${materials}</basematerials>${object}</resources>
-  <build>${build}</build>
+  <build><item objectid="1"/></build>
 </model>`;
+};
+
+/** Prusa ignores Core display colors; named volumes preserve alignment and color references. */
+const prusaModelConfig = (parts: ThreeMfPart[]): string => {
+  let firstTriangle = 0;
+  const volumes = parts
+    .map((part) => {
+      const triangleCount = part.mesh.indices.length / 3;
+      if (triangleCount === 0) return '';
+      const first = firstTriangle;
+      firstTriangle += triangleCount;
+      return `<volume firstid="${first}" lastid="${firstTriangle - 1}"><metadata type="volume" key="name" value="${escapeXml(`${part.name} (${normalizeColor(part.color)})`)}"/><metadata type="volume" key="volume_type" value="ModelPart"/></volume>`;
+    })
+    .join('');
+  return `<?xml version="1.0" encoding="UTF-8"?><config><object id="1" instances_count="1"><metadata type="object" key="name" value="Keychain"/>${volumes}</object></config>`;
 };
 /** Serialize printable meshes only. Viewer surfaces and lighting never enter this archive. */
 export const serializeThreeMf = (
@@ -82,10 +96,11 @@ export const serializeThreeMf = (
           { name: appearance.base.name, mesh: baseMesh, color: appearance.base.color },
           { name: appearance.relief.name, mesh: reliefMesh, color: appearance.relief.color },
         ];
-  const files = {
+  const files: Record<string, Uint8Array> = {
     '[Content_Types].xml': strToU8(`<?xml version="1.0" encoding="UTF-8"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="config" ContentType="application/octet-stream"/>
   <Override PartName="/3D/3dmodel.model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>
 </Types>`),
     '_rels/.rels': strToU8(`<?xml version="1.0" encoding="UTF-8"?>
@@ -94,6 +109,8 @@ export const serializeThreeMf = (
 </Relationships>`),
     '3D/3dmodel.model': strToU8(modelXml(parts)),
   };
+  if (mode === 'separate-colors')
+    files['Metadata/Slic3r_PE_model.config'] = strToU8(prusaModelConfig(parts));
   const zipped = zipSync(files);
   return zipped.buffer.slice(
     zipped.byteOffset,
