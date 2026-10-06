@@ -12,123 +12,139 @@
   font-weight: 700;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+.illustration {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  aspect-ratio: 926 / 444;
+  margin-inline: auto;
+  overflow: hidden;
+  border: 1px solid #e3d9d0;
+  border-radius: 14px;
+  background: transparent;
+  box-sizing: border-box;
+}
+
+.artwork {
+  position: absolute;
+  top: 16.67%;
+  left: 7.99%;
+  width: 84.02%;
+  height: 66.67%;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .picker .option {
-  position: relative;
+  position: absolute;
+  z-index: 1;
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) 18px;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  min-height: 50px;
-  box-sizing: border-box;
-  padding: 6px 10px;
-  border: 1px solid #d7c8bd;
-  border-radius: 12px;
-  background: #fffdf9;
-  color: #303545;
-  cursor: pointer;
-  font-size: 0.82rem;
-  line-height: 1.3;
-  overflow-wrap: anywhere;
-  transition:
-    background 120ms,
-    border-color 120ms;
-}
-
-.directionWell {
-  display: grid;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  gap: 0;
   place-items: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid #e5dbd2;
-  border-radius: 9px;
-  background: #f5f1eb;
+  box-sizing: border-box;
+  border-radius: 50%;
+  cursor: pointer;
+  touch-action: manipulation;
+  transform: translate(-50%, -50%);
+}
+
+.option input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.marker {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  box-sizing: border-box;
+  border: 2px solid #626875;
+  border-radius: 50%;
+  background: transparent;
+  transition:
+    transform 130ms ease,
+    border-color 130ms ease,
+    background-color 130ms ease;
+}
+
+.hole {
+  width: 7px;
+  height: 7px;
+  box-sizing: border-box;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
   color: #626875;
+  background: transparent;
 }
 
-.picker .option:has(input:checked) {
-  border-color: #bf563f;
-  background: #fff2ec;
-}
-
-.picker .option:hover {
+.option:hover .marker {
+  transform: scale(1.1);
   border-color: #bd806b;
 }
 
-.picker .option:active {
-  background: #f9e7de;
+.option:active .marker {
+  transform: scale(0.94);
 }
 
-.picker .option:has(input:checked) .directionWell {
-  border-color: #efc1ae;
-  background: #fffdf9;
+.option:has(input:checked) .marker {
+  border-color: #bf563f;
+  background: #bf563f;
+}
+
+.option:has(input:checked) .hole {
   color: #bf563f;
 }
 
-.picker .option:has(input:focus-visible) {
+.option:has(input:focus-visible) {
   outline: 2px solid #ef815e;
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
-.picker .option input {
-  position: absolute;
-  top: 50%;
-  right: 10px;
-  width: 18px;
-  height: 18px;
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  appearance: none;
-  border: 1.5px solid #8d909b;
-  border-radius: 50%;
-  background: #fffdf9;
-  cursor: pointer;
-  transform: translateY(-50%);
-}
-
-.picker .option input:checked {
+.option:has(input:focus-visible) .marker {
   border-color: #bf563f;
-  background: #bf563f;
-  box-shadow: inset 0 0 0 3px #fffdf9;
 }
 
-.picker .option input:focus-visible {
-  outline: none;
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
-@media (max-width: 360px) {
-  .picker .option {
-    gap: 7px;
-    padding-left: 8px;
-    font-size: 0.75rem;
-  }
+.selectedPosition {
+  margin: 6px 0 0;
+  color: #303545;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
-@media (max-width: 479px) {
-  .picker.setup .option {
-    grid-template-columns: minmax(0, 1fr) 18px;
-    grid-template-rows: 24px auto;
-    gap: 4px 8px;
-    padding: 6px;
-    font-size: 0.7rem;
+@media (prefers-reduced-motion: reduce) {
+  .marker {
+    transition: none;
   }
 
-  .picker.setup .directionWell {
-    grid-column: 1;
-    grid-row: 1;
-    width: 24px;
-    height: 24px;
-  }
-
-  .picker.setup .option > span:not(.directionWell) {
-    grid-column: 1 / -1;
-    grid-row: 2;
+  .option:hover .marker,
+  .option:active .marker {
+    transform: none;
   }
 }

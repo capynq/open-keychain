@@ -62,11 +62,15 @@ finishes use separate profiles; text finishing affects only its visible front ed
 - Keep content and controls responsive at desktop, mobile, and mobile-2x. A preview
   or product visual must show real geometry, never a decorative placeholder.
 - Group the sidebar's Keyring settings in one quiet inset panel. Opening choices pair
-  proportionally scaled shape cues with measured sizes; position choices use directional arrows for
-  Left, Right, Top, Bottom, Top left, and Top right. Keep all six positions in a two-column grid and
-  center each radio in its card. Use Lucide's natural ellipse glyph for oval slots. Keep radio inputs
-  out of the text-field baseline, and stack opening choices when the panel is narrow enough to split
-  names awkwardly.
+  proportionally scaled shape cues with measured sizes. Position selection reuses a responsive ALEX
+  outline illustration in a transparent, bordered frame across the sidebar and setup. Its six radio
+  targets map to the attachment locations for Left, Right, Top, Bottom, Top left, and Top right,
+  with the selected localized label beneath the lettering. Do not draw a plaque outline around ALEX.
+  Keep targets at least 44 px, spaced without overlap, and aligned to the drawing in both contexts.
+  The supplied rounded ALEX outline image is a fixed guide and does not replace the actual
+  preview. Use Lucide's natural ellipse glyph for oval slots. Keep radio inputs out of the
+  text-field baseline, and stack opening choices when the panel is narrow enough to split names
+  awkwardly.
 - In the Customizer, keep every range input inside one `Adjustments` section. Use
   compact, unboxed subcategory headings for Typography, Shape, Template details,
   Style details, and Print; hide empty groups. Keep non-range choices beside the

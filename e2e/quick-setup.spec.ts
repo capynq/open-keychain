@@ -46,22 +46,79 @@ const checkFit = async (dialog: Locator) => {
   expect(splitWords).toEqual([]);
 };
 
-const expectRadioCentered = async (radio: Locator) => {
-  const centerOffset = await radio.evaluate((input) => {
-    const card = input.closest('label');
-    if (!card) return Number.POSITIVE_INFINITY;
-    const radioBounds = input.getBoundingClientRect();
-    const cardBounds = card.getBoundingClientRect();
-    return Math.abs(
-      radioBounds.top + radioBounds.height / 2 - (cardBounds.top + cardBounds.height / 2),
-    );
-  });
-  expect(centerOffset).toBeLessThan(1);
+const expectPositionIllustration = async (scope: Locator) => {
+  const diagram = scope.getByTestId('keyring-position-diagram');
+  await expect(diagram).toBeVisible();
+  await expect(diagram).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  const sample = diagram.locator('img');
+  await expect(sample).toHaveAttribute('src', '/showcase/keyring-position-alex.png');
+  await expect(sample).toHaveAttribute('alt', '');
+  await expect(sample).toHaveAttribute('draggable', 'false');
+  await expect(sample).toHaveCSS('pointer-events', 'none');
+  await expect(sample).toHaveCSS('mix-blend-mode', 'multiply');
+  await expect(sample).toHaveCSS('user-select', 'none');
+  await sample.evaluate((image) => (image as HTMLImageElement).decode());
+  expect(await sample.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBe(778);
+  expect(await sample.evaluate((image) => (image as HTMLImageElement).naturalHeight)).toBe(296);
+  await expect(diagram.getByRole('radio')).toHaveCount(6);
+  await expect(
+    diagram.locator('label[data-position="right"]').locator('span[aria-hidden="true"]'),
+  ).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(diagram.getByRole('radio', { name: /ALEX/ })).toHaveCount(0);
+  const markers = await diagram.locator('label[data-position]').evaluateAll((labels) =>
+    labels.map((label) => {
+      const { x, y } = label.getBoundingClientRect();
+      return {
+        position: label.getAttribute('data-position'),
+        x,
+        y,
+        width: (label as HTMLElement).offsetWidth,
+        height: (label as HTMLElement).offsetHeight,
+      };
+    }),
+  );
+  expect(markers).toHaveLength(6);
+  expect(markers.every(({ width, height }) => width >= 44 && height >= 44)).toBe(true);
+  const byPosition = Object.fromEntries(markers.map((marker) => [marker.position, marker]));
+  expect(byPosition['top-left'].x).toBeLessThan(byPosition.top.x);
+  expect(byPosition.top.x).toBeLessThan(byPosition['top-right'].x);
+  expect(byPosition['top-left'].y).toBeLessThan(byPosition.left.y);
+  expect(byPosition['top-right'].y).toBeLessThan(byPosition.right.y);
+  expect(byPosition.bottom.y).toBeGreaterThan(byPosition.left.y);
+  const expectedAnchors: Record<string, [number, number]> = {
+    left: [0.1275, 0.7523],
+    right: [0.89, 0.7523],
+    top: [0.5983, 0.2838],
+    bottom: [0.5983, 0.7568],
+    'top-left': [0.1857, 0.3559],
+    'top-right': [0.8736, 0.2793],
+  };
+  const diagramBounds = await diagram.boundingBox();
+  expect(diagramBounds).not.toBeNull();
+  for (const marker of markers) {
+    const anchor = expectedAnchors[marker.position!];
+    const relativeX = (marker.x + marker.width / 2 - diagramBounds!.x) / diagramBounds!.width;
+    const relativeY = (marker.y + marker.height / 2 - diagramBounds!.y) / diagramBounds!.height;
+    expect(Math.abs(relativeX - anchor[0])).toBeLessThan(0.015);
+    expect(Math.abs(relativeY - anchor[1])).toBeLessThan(0.015);
+  }
+  for (let first = 0; first < markers.length; first += 1) {
+    for (let second = first + 1; second < markers.length; second += 1) {
+      const a = markers[first];
+      const b = markers[second];
+      const overlaps =
+        a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+      expect(overlaps, `${a.position} and ${b.position} targets overlap`).toBe(false);
+    }
+  }
 };
 
 test('sidebar keyring choices show their shape, size, and direction controls', async ({
   page,
 }, testInfo) => {
+  await page.addInitScript(() =>
+    localStorage.setItem('open-keychain.analytics-consent', 'declined'),
+  );
   await page.goto('/create');
   await waitForReadyGeometry(page);
 
@@ -72,6 +129,8 @@ test('sidebar keyring choices show their shape, size, and direction controls', a
   await expect(keyring.getByRole('heading', { name: 'Keyring' })).toBeVisible();
   await expect(opening).toBeVisible();
   await expect(position).toBeVisible();
+  await expectPositionIllustration(keyring);
+  await expect(keyring.getByTestId('keyring-position-current')).toHaveText('Left');
   await expect(opening.locator('..')).toContainText('5 mm');
   const roundOpeningGlyphSizes = await Promise.all(
     ['Compact round', 'Standard round', 'Large round'].map((name) =>
@@ -97,12 +156,9 @@ test('sidebar keyring choices show their shape, size, and direction controls', a
   expect(ovalGlyph.aspectRatio).toBeGreaterThan(1.2);
   expect(ovalGlyph.transform).toBe('none');
 
-  for (const control of [opening, position]) {
-    await expect(control).toHaveCSS('width', '18px');
-    await expect(control).toHaveCSS('height', '18px');
-    await expect(control.locator('..')).toHaveCSS('display', 'grid');
-  }
-  await expectRadioCentered(position);
+  await expect(opening).toHaveCSS('width', '18px');
+  await expect(opening).toHaveCSS('height', '18px');
+  await expect(opening.locator('..')).toHaveCSS('display', 'grid');
   const splitWords = await keyring
     .locator('label span:not([aria-hidden="true"])')
     .evaluateAll((elements) =>
@@ -124,6 +180,10 @@ test('sidebar keyring choices show their shape, size, and direction controls', a
     );
   expect(splitWords).toEqual([]);
   await keyring.screenshot({ path: testInfo.outputPath('keyring-sidebar.png') });
+  await position.check();
+  await expect(position).toBeChecked();
+  await expect(keyring.getByTestId('keyring-position-current')).toHaveText('Top');
+  await expectPositionIllustration(keyring);
 });
 
 test('walks through six focused steps and applies accepted keyring, colors, and preferences', async ({
@@ -147,18 +207,12 @@ test('walks through six focused steps and applies accepted keyring, colors, and 
   await checkFit(dialog);
   await next(dialog).click();
   await expect(dialog.getByRole('heading', { name: 'Position' })).toBeFocused();
+  await expectPositionIllustration(dialog);
   for (const position of ['Left', 'Right', 'Bottom', 'Top', 'Top left', 'Top right']) {
     const choice = dialog.getByRole('radio', { name: position, exact: true });
     await choice.check();
     await expect(choice).toBeChecked();
-    await expectRadioCentered(choice);
-    expect(
-      await choice.evaluate(
-        (input) =>
-          getComputedStyle(input.parentElement!.parentElement!).gridTemplateColumns.split(' ')
-            .length,
-      ),
-    ).toBe(2);
+    await expect(dialog.getByTestId('keyring-position-current')).toHaveText(position);
   }
   await dialog.screenshot({ path: testInfo.outputPath('step-keyring-position.png') });
   await checkFit(dialog);
@@ -289,7 +343,7 @@ test('keeps both diagonal position labels in setup review', async ({ page }) => 
 
     const position = dialog.getByRole('radio', { name: label, exact: true });
     await position.check();
-    await expectRadioCentered(position);
+    await expectPositionIllustration(dialog);
     await next(dialog).click();
     await next(dialog).click();
     await next(dialog).click();
@@ -436,6 +490,7 @@ for (const locale of ['en', 'ru', 'uk']) {
     await dialog.locator('input[type="radio"]').nth(2).check();
     for (let step = 1; step <= 6; step++) {
       if (step === 2) {
+        await expectPositionIllustration(dialog);
         const labels =
           locale === 'en'
             ? ['Top left', 'Top right']
@@ -447,7 +502,7 @@ for (const locale of ['en', 'ru', 'uk']) {
           await expect(position).toBeVisible();
           await position.check();
           await expect(position).toBeChecked();
-          await expectRadioCentered(position);
+          await expect(dialog.getByTestId('keyring-position-current')).toHaveText(label);
         }
       }
       await checkFit(dialog);
