@@ -25,4 +25,16 @@ identifier. Names, raw query strings, geometry, and exported files are never inc
 
 PostHog autocapture, page capture, page-leave capture, cookies, and session replay are disabled.
 
+## Customizer feedback survey
+
+The Customizer feedback widget is configured in PostHog project `251074` and targets the `/create`
+route. It asks for a required 1–5 usefulness rating and an optional single-choice reason. It has no
+free-text question, and the survey does not request names, design parameters, or generated geometry.
+The existing consent-gated SDK loads only after analytics is accepted; PostHog keeps surveys hidden
+while capture is disabled and after opt-out. Autocapture and session recording remain disabled.
+
+The survey is live. PostHog's survey page provides its response results. Add a Survey Results widget
+to the existing **Open Keychain Activation** dashboard when dashboard widget creation is available
+through the connected PostHog interface.
+
 Visitors can decline analytics and can review the policy at `/privacy`.
