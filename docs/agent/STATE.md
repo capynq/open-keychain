@@ -2,20 +2,24 @@
 
 ## Current work
 
-- Added consent-gated Customizer signals for setup-step views, completions, and exits, plus coarse option changes using fixed step IDs and catalog-backed option IDs. The event sanitizer rejects names, dimensions, slider values, colors, and other unapproved properties.
-- Added a bounded queue for events while PostHog initializes. Consent is rechecked before initialization and when the SDK becomes ready; declining clears pending events and opts out. The SDK explicitly disables performance, campaign/referrer persistence, and client-side console-log capture, alongside existing autocapture, pageview, pageleave, dead-click, cookie, and session-recording settings. `before_send` strips URL query/hash, campaign/search attribution, referrers, and unneeded SDK metadata from event properties and person-property containers.
-- Updated analytics consent copy and privacy documentation to describe pseudonymous activity. The existing rating-and-reason widget remains the only prompt.
-- The activation funnel is an ordered, 14-day unique-person funnel. For 2026-09-07 through 2026-10-07, event totals were 7 `landing_view` events from 4 people/sessions and 3 `start_designing` events from 3 people/sessions. One person/session had both events, but `start_designing` came first; there were no landing-to-start conversions. Trend event totals and funnel progression are different measures, so the zero conversion is consistent with the event sequence.
-- Survey `01a112ce-d450-0000-ef5b-f8987da5d5ea` remains live and had 0 shown, dismissed, or sent events at the latest check on 2026-10-07. Keep its results tile deferred until responses exist.
+- Implemented local validation profiles, changed-file planning, event-driven gates, streaming per-gate logs, bounded diagnostics, fail-fast cancellation, interactive/plain renderers, and success-only local caching with verified build artifacts.
+- Split the heavy keychain-builder tests into four isolated files. The geometry/export matrix remains complete at 4,267 stable cases and now runs a persistent worker pool over balanced packages, reports per-phase CPU/time/memory, and emits per-case outcomes for parity checks.
+- CI runs the full matrix on eight deterministic shards with four workers per shard. Its aggregator rejects missing/duplicate/misassigned cases, failures, unexpected-invalid counts, and a matrix duration over five minutes. The validation scheduler caps matrix workers by the shared concurrency budget; CI sets both limits to four.
+- Direct-main CI requires format, lint, typecheck, full unit and build. It conditionally requires browser smoke and the full geometry matrix, and production build/deploy wait for `required-checks`. `ci.yml` is the only workflow with a production deployment command; the separate Netlify production workflow was removed.
+- Updated CONTRIBUTING and geometry validation docs with profiles, cache, TUI, worker settings, direct-main deployment behavior, matrix sharding, and the Node/Bun benchmark.
 
-## Validation
+## Validation and measurements
 
-- Passed before the privacy re-review: `pnpm validate:changed` for all touched files, `pnpm typecheck`, `pnpm build`, focused telemetry/setup tests (10/10), route consent/CTA E2E (9/9 across desktop, mobile, and mobile-2x), quick-setup flow E2E (3/3 across those viewports), and `git diff --check`. After remediation, telemetry tests passed (9/9), `pnpm validate:changed`, `pnpm typecheck`, `pnpm build`, and `git diff --check` passed again. The separated reviewer confirms the campaign/referrer finding is resolved and reports no new code regression.
-- Build completed with the existing Vite warning that `manifold-3d` externalizes `node:module` for browser compatibility.
-- Known unrelated failure in untouched `src/features/customizer/hooks/useQuickSetup.test.ts`: `does not commit a setup superseded by a different accepted model` expects `setupError` to be true but receives false. Not investigated in this task.
+- `VALIDATION_CONCURRENCY=4 VALIDATION_UI=plain VALIDATION_CACHE=0 pnpm validate:ci` passed format, lint, typecheck, build, and all 639 unit tests in 5m24s on macOS ARM64.
+- Focused matrix/scheduler/workflow checks passed: 20 tests; geometry contract file passed 72 tests. `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, and `git diff --check` passed.
+- A full local Node shard completed all 536 assigned cases (536 passed, 0 expected invalid, 0 failed) in 217.6s with four workers; max single-case time was 28.7s and peak worker RSS was 904 MB. The other seven shards were not run locally; hosted Linux CI remains the acceptance check for full coverage and the five-minute target.
+- Node 24.15.0 vs installed Bun 1.3.5 A/B on the same stratified 100-case sample, three runs each, four workers: median 35.827s vs 31.745s (Bun 11.4% faster), exact per-case outcome parity, and peak worker RSS ratio 1.09. This misses the 20% adoption threshold; Node remains canonical. `pnpm validate:bench runtime --sample=100 --runs=3 --concurrency=4` reproduces it. The report is under `node_modules/.cache/open-keychain-validation/benchmarks/`.
+- Profile data shows `buildKeychain`/WASM dominates the measured work; mesh scans and STL/3MF validation are a small fraction. Mesh validity now scans typed arrays without allocating full JS-array copies. No native geometry rewrite or runtime/package-manager migration was made.
+- Earlier work recorded a full 4,267-case sequential local matrix at 183m08s with two workers, versus the prior 40m41s run. The new sharded path is materially different, but a complete hosted run has not yet confirmed the target.
+- Browser smoke previously passed 6/6 desktop/mobile cases. Actual `/dev/tty` key/resize/skip restoration remains unverified because the sandbox denied terminal access; plain mode and terminal-unavailable fallback were exercised.
 
 ## Repository state and next action
 
-- Branch `main`, HEAD `271f706`, aligned with `origin/main`. Task changes are uncommitted; no commit, push, or deploy was made.
-- A live `project-get` on 2026-10-07 confirmed project `251074` still has `capture_console_log_opt_in: true` and `logs_settings.capture_console_logs: true`. The connected PostHog tools expose no project-settings write operation, and no browser is available in this session; the external setting remains unresolved. PostHog documents that project-level console logging can independently enable capture despite the local `logs.captureConsoleLogs: false` setting.
-- No commit or push was made. Next: disable project-level console-log capture for project `251074` and verify it is off; then re-review/validate and obtain commit authorization before pushing. After action events accrue, compare event trends with the ordered funnel again; add the survey results tile only after responses exist.
+- Branch `main`, HEAD `d4bc544`, already one commit ahead of `origin/main` before this task. Current work remains uncommitted. No commit, push, PR, or deploy was performed.
+- `git diff --check` is clean. Working tree contains the validation runner/cache/TUI, test split, CI, documentation, and matrix changes; preserve them during review.
+- Next action: inspect the local diff, then let the normal GitHub Actions run validate all eight shards on hosted Linux. Production deploy remains gated on the required-checks job.

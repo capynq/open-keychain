@@ -152,7 +152,12 @@ export const createWasm = async (): Promise<Wasm> => {
         window?: unknown;
       }
     ).window !== 'undefined';
-  const isWorkerRuntime = typeof self !== 'undefined';
+  const workerScopeConstructor = (globalThis as unknown as { WorkerGlobalScope?: new () => object })
+    .WorkerGlobalScope;
+  const isWorkerRuntime =
+    workerScopeConstructor !== undefined &&
+    typeof self !== 'undefined' &&
+    self instanceof workerScopeConstructor;
   const wasmPath =
     isBrowserRuntime || isWorkerRuntime
       ? '/manifold-v1.wasm'

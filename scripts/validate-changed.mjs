@@ -4,7 +4,11 @@ import process from 'node:process';
 
 const args = process.argv.slice(2);
 const fix = args.includes('--fix');
-const files = args.filter((file) => file !== '--fix' && file !== '--');
+const formatOnly = args.includes('--format-only');
+const lintOnly = args.includes('--lint-only');
+const files = args.filter(
+  (file) => !['--fix', '--format-only', '--lint-only', '--'].includes(file),
+);
 
 const FORMAT_EXTENSIONS = new Set([
   '.css',
@@ -36,9 +40,21 @@ const run = (command, commandArgs) => {
   if (result.status !== 0) process.exit(result.status ?? 1);
 };
 
-if (formatFiles.length > 0) {
+if (!lintOnly && formatFiles.length > 0) {
   run('pnpm', ['exec', 'prettier', fix ? '--write' : '--check', '--', ...formatFiles]);
 }
-if (lintFiles.length > 0) {
-  run('pnpm', ['exec', 'eslint', ...(fix ? ['--fix'] : []), '--', ...lintFiles]);
+if (!formatOnly && lintFiles.length > 0) {
+  run('pnpm', [
+    'exec',
+    'eslint',
+    ...(fix ? ['--fix'] : []),
+    '--cache',
+    '--cache-location',
+    'node_modules/.cache/eslint',
+    '--cache-strategy',
+    'content',
+    '--max-warnings=0',
+    '--',
+    ...lintFiles,
+  ]);
 }

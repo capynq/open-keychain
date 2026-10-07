@@ -96,18 +96,16 @@ are maintained outside this public repository.
 ## Development
 
 ```sh
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm bench:matrix
-pnpm test:e2e:smoke
+pnpm validate:push
+pnpm validate:full
+pnpm validate:ci
 ```
 
-For the shortest feedback loop, use `pnpm test:fast` for focused unit checks and
-`pnpm test:e2e:smoke` for browser changes. The complete unit suite remains `pnpm test`; the full
-201-test browser matrix is a release gate. Set `PUSH_E2E_MODE=full` when an explicit full browser
-run is required from the pre-push hook, and use `PUSH_E2E_WORKERS` to tune its worker count.
-Use `pnpm test:e2e:performance` for the dedicated six-case preview performance regression suite.
+`pnpm validate:push` selects local checks from the pushed commit. Use `pnpm test:fast` for unit
+checks without the heavy geometry integration groups. `pnpm validate:full` includes complete browser
+and geometry coverage. `pnpm validate:bench [push|ui|geometry|docs|full|ci] [runs]` compares cold and cached times;
+`pnpm validate:cache:clear` removes only the validation cache. Use `pnpm test:e2e:performance` for
+the dedicated preview performance regression suite.
 
 Bun is an experimental shadow runtime for local tooling only. It does not replace Node in CI,
 the geometry matrix, slicer validation, or release workflows. The geometry matrix is automated
@@ -115,7 +113,7 @@ printability evidence and is not a claim of physical-printer validation.
 
 Install Chromium for the browser checks once with `pnpm exec playwright install chromium`. Use `pnpm capture:ui` when the reviewed customizer screenshots need to be refreshed; it is an explicit capture command and does not run in ordinary CI.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development and pull-request guidance. Report vulnerabilities through the [security policy](.github/SECURITY.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for local validation and the direct-main deployment workflow. GitHub Actions checks after direct pushes; production deploy waits for the required CI gate. Report vulnerabilities through the [security policy](.github/SECURITY.md).
 
 ## License and bundled fonts
 

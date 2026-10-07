@@ -2,60 +2,55 @@
 
 Open Keychain is a client-side React, Three.js, and Manifold project. Geometry and exports run locally in a worker, so changes should preserve printable, manifold output and keep preview-only surfaces out of files.
 
-Before opening a pull request:
+## Validation profiles
 
 ```sh
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm bench:matrix
-pnpm test:e2e:smoke
+pnpm validate:push          # selected checks for the pushed commit (Husky pre-push)
+pnpm validate:full          # full local format/lint/typecheck/unit/build/browser/geometry
+pnpm validate:ci            # required CI format/lint/typecheck/full unit/build checks
+pnpm validate:bench          # repeat the quick validation profile and compare timings
+pnpm validate:cache:clear    # remove only node_modules/.cache/open-keychain-validation
 ```
 
-The pre-push hook checks formatting and lint for changed files, then selects the local gates from the files in the push. It never rewrites files, amends commits, or pushes on your behalf:
+`pnpm validate:bench [push|ui|geometry|docs|full|ci] [runs]` accepts a profile and 1–10 repeats. It reports wall times, per-gate durations, slowest tests/cases, and matrix phase/worker/memory data. Run once with `VALIDATION_CACHE=0` for cold measurements, then again normally for a warm-cache comparison. `VALIDATION_CONCURRENCY` must be a whole number from 1 to 8 and defaults to 2. Geometry uses a shared process budget: effective workers are the lower of `MATRIX_CONCURRENCY` (1–5, default 2) and `VALIDATION_CONCURRENCY`; raise both to run more geometry workers. `MATRIX_PACKAGE_SIZE` defaults to four cases per assignment.
 
-- Every code push runs typecheck, unit tests, and a production build with the deterministic Playwright Google-font key.
-- UI, route, export, public-asset, and E2E changes also run the focused Playwright smoke suite (six checks across desktop and mobile) against that existing build.
-- Geometry and font changes also run `pnpm bench:matrix`.
-- Documentation-only pushes run only the changed-file formatter/linter checks.
+Compare Node with installed Bun using `pnpm validate:bench runtime --sample=100 --runs=3 --concurrency=4`; the report is stored under `node_modules/.cache/open-keychain-validation/benchmarks`. Use `--full` to benchmark the complete 4,267-case matrix. Set `BUN_BINARY` to choose a specific Bun executable. The comparison disables validation cache, checks per-case outcomes, and reports phase time, CPU, and memory. Bun is not the default validation or production-build runtime; consider adopting it for the matrix runner only after at least a 20% median wall-time gain, no more than 10% higher peak worker RSS, and matching results. Verify process/WASM compatibility under the exact Bun version being measured.
 
-Install Chromium once with `pnpm exec playwright install chromium`.
+## Local push checks
 
-The hook can be bypassed with `HUSKY=0 git push`, but that skips all of these local safety gates and leaves GitHub's main-branch quality workflow as the remaining check.
+The Husky pre-push hook reads Git's ref input, verifies the pushed commit is the checked-out `HEAD`, and rejects tracked modifications plus untracked files that can affect validation. An ordinary push chooses gates from the changes:
 
-For a focused local run:
+- Documentation runs changed-file formatting.
+- UI/CSS runs changed format/lint, typecheck, the fast unit suite (or an isolated changed-test run when every changed path is a test), a production build when source/assets/config affect it, and browser smoke when UI routes/components change.
+- Geometry, bundled fonts and WASM run geometry contracts and the full export matrix. Export changes also run related serializers and the matrix.
+- Lockfiles, shared configuration, Husky and validation tooling use the conservative full local profile.
+- Deleted files remain part of classification. Dynamic imports and asset changes fall back to the fast unit suite; an empty `vitest related` result is never used as evidence that no tests apply.
 
-```sh
-pnpm typecheck
-pnpm test:fast
-pnpm build:artifact
-pnpm test:e2e:smoke
-pnpm test:e2e:performance
-```
+The full builder geometry tests are grouped into separate contracts, style/font, magnet/nameplate/plant-label, and keyring/articulated files. `pnpm test:fast` excludes these expensive geometry integrations. `pnpm test:full` and CI include all of them.
 
-The full browser matrix remains available for release validation with `pnpm test:e2e --workers=1`. To opt into it from the pre-push hook, use `PUSH_E2E_MODE=full git push`; `PUSH_E2E_WORKERS` controls its worker count. Smoke validation defaults to two workers.
+Successful local gates are cached separately under `node_modules/.cache/open-keychain-validation`, keyed by each gate's relevant tracked/untracked input content, command, Node/platform, lockfile and relevant environment. Geometry fingerprints include builder/templates, export serializers, fonts, WASM, matrix code, and package metadata, so documentation changes do not invalidate geometry. Only successful completion is saved. The build cache also saves and digest-checks its `dist` artifact before browser tests can use it. Cache bypass is `VALIDATION_CACHE=0`; clear it with the command above. CI disables local validation results and verifies its checkout independently.
 
-`pnpm test` is the complete unit aggregate, including server and script tests. The geometry matrix
-must remain at its recorded full case count for geometry/export changes; it is an automated gate,
-not physical-printer evidence. Node 22+ with pnpm 10 is the canonical runtime. Bun may be used for
-experimental local comparisons, but CI and release validation stay on Node.
+## TUI and plain mode
 
-## Formatting
+`VALIDATION_UI=auto|tui|plain` selects the live terminal view. `auto` uses TUI only for an interactive terminal outside CI; `tui` explicitly requests it, and `plain` never sends ANSI control sequences. Keyboard input comes from `/dev/tty`, not the pre-push ref stream. If the controlling terminal is unavailable or cannot switch modes, validation falls back to plain output and disables keyboard controls.
 
-Run `pnpm format` before committing and use `pnpm format:check` in CI. TypeScript and JavaScript use a 100-column print-width guideline; Markdown, JSON, stylesheets, and generated declaration/configuration files retain a 120-column width. Prettier's `objectWrap: "preserve"` keeps an object literal multiline when its opening brace is followed by a newline, while long single-line objects wrap automatically at the configured width.
+- `↑` / `↓`: select a gate.
+- `l`: show or hide the selected gate's log tail and log path.
+- `v`: show shorter or more detailed diagnostics.
+- `?`: show key help.
+- `s`: request a skip for an optional local gate, then confirm with `y`; `N` cancels.
+- `Ctrl+C`: cancel validation and the push.
 
-Prettier does not infer semantic groups between variables and methods. The targeted ESLint `padding-line-between-statements` rule inserts a blank line after declarations before expressions or returns in React feature code; keep one intentional blank line between hook calls, derived values, effects, handlers, and returns. Prettier preserves it but collapses repeated blank lines.
+Required checks cannot be skipped. Quick-profile skips are reported as `SKIPPED BY USER` and `Local validation partial; CI must complete before deployment`. Full-profile skips fail the command. CI has no keyboard skip path. A skip never creates a cache entry.
 
-Use the existing style and camera tests as templates for new geometry cases. Add a regression test for every new validation rule, export format, locale, or viewer interaction.
+## Main and production workflow
 
-Frontend additions follow the FSD boundaries documented in `docs/architecture.md`:
-one component per file, composition-only pages, and dedicated model, hook, and
-library modules. Keep SEO catalog, locale precedence, canonical/privacy paths,
-and structured-data rules centralized; extend their unit tests and the relevant
-Playwright route checks together with any change.
+Work directly on `main`; GitHub Actions runs after a direct push and cannot reject that push. It always requires format, lint, typecheck, the full unit suite, and build. Git history independently selects browser smoke for browser-affecting changes and the full geometry/export matrix for geometry, font, WASM or export changes. If a baseline is missing, CI selects both optional suites conservatively. A final required-checks job distinguishes `not required` from a failed/cancelled job. Production build and deploy wait for that gate and use Netlify's `production` build context/environment. The manual production bypass workflow has been removed.
 
-## Commit and review workflow
+Install Chromium once with `pnpm exec playwright install chromium`. `pnpm validate:full` runs browser coverage and the complete geometry matrix locally; these are automated checks, not physical-printer evidence.
 
-Use conventional commit messages such as `feat(geometry): preserve counters during bridging` or `fix(viewer): keep long models inside the camera bounds`. Husky and lint-staged run staged-file checks before commits; Commitlint rejects messages outside the conventional format.
+## Formatting and architecture
 
-Keep pull requests focused, explain user-facing behavior, and update README or localization when the public behavior changes. Never commit credentials, production environment files, generated meshes, or browser test artifacts. Do not use `capture:ui`, `pnpm fix`, or auto-fix hooks in unattended validation because they can modify tracked files.
+Run `pnpm format:check`, `pnpm lint`, and `pnpm typecheck` before reviewing a meaningful change. Prettier retains the repository's configured widths. Frontend additions follow the FSD boundaries documented in `docs/architecture.md`: one component per file, composition-only pages, dedicated model, hook, and library modules, and centralized SEO and locale invariants.
+
+Use existing style and camera tests as templates for new geometry cases. Add regression assertions for new validation rules, export formats, locales, or viewer interactions. Do not use capture or autofix commands in unattended validation because they can modify tracked files.

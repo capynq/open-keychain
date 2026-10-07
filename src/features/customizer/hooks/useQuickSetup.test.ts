@@ -110,6 +110,7 @@ describe('setup transaction', () => {
   it('does not commit a setup superseded by a different accepted model', async () => {
     const customizer = buildCustomizer();
 
+    customizer.acceptedParams = { ...DEFAULT_PARAMS, sizeEnvelope: undefined };
     customizer.updateMany.mockImplementation(() => {
       customizer.candidateFeedback = { requestId: 3, status: 'checking', group: 'template' };
     });
