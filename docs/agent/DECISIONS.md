@@ -234,6 +234,12 @@ entry points.
 **Decision:** PostHog integrations remain disabled until visitor consent. Events contain only the
 documented coarse allowlisted metadata; names, raw queries, geometry, and files are excluded.
 
+The approved Customizer feedback signals extend this allowlist with fixed setup-step IDs and stable
+catalog option IDs. Campaign/referrer persistence is disabled; SDK URLs are reduced to origin and
+route before sending; campaign/search attribution, referrer, raw user-agent, viewport-size, and
+client-side GeoIP properties are omitted from event and person-property containers. Activity is
+pseudonymous, not fully anonymous.
+
 **Evidence:** `docs/analytics.md`, `README.md`, and telemetry implementation.
 
 **Rationale:** The editor's local-first privacy promise.

@@ -4,6 +4,7 @@ import type { Locale } from '@/infrastructure/i18n/config';
 
 import { EDGE_FINISH_GRID_MM } from '@/domain/keychain/model/edge-finish';
 import { t } from '@/infrastructure/i18n/utils';
+import { useAnalytics } from '@/infrastructure/telemetry/useTelemetry';
 
 import { RangeControl } from '../RangeControl/RangeControl';
 
@@ -21,6 +22,7 @@ export const GeometryFinishControls = ({
   limits?: GeometryResult['textFinishLimits'];
   updateMany: (changes: Partial<KeychainParams>, group?: CandidateControlGroup) => void;
 }) => {
+  const { track } = useAnalytics();
   const baseSupported = params.templateId !== 'articulated-name';
   const baseProfile = params.edgeFinish ?? 'sharp';
   const baseTop = params.topEdgeMm ?? 0;
@@ -79,7 +81,11 @@ export const GeometryFinishControls = ({
                     aria-label={t(locale, `geometryEdge${next}`)}
                     checked={baseProfile === next}
                     disabled={next !== 'sharp' && nextMaximum < EDGE_FINISH_GRID_MM}
-                    onChange={() =>
+                    onChange={() => {
+                      track('customizer_option_changed', {
+                        family: 'base_finish',
+                        option_id: next,
+                      });
                       updateMany(
                         {
                           edgeFinish: next,
@@ -87,8 +93,8 @@ export const GeometryFinishControls = ({
                           bottomEdgeMm: next === 'sharp' ? 0 : EDGE_FINISH_GRID_MM,
                         },
                         'print',
-                      )
-                    }
+                      );
+                    }}
                   />
                   <strong>{t(locale, `geometryEdge${next}`)}</strong>
                 </label>
@@ -151,15 +157,19 @@ export const GeometryFinishControls = ({
                 aria-label={t(locale, `geometryTextEdge${next}`)}
                 checked={profile === next}
                 disabled={nextMaximum < EDGE_FINISH_GRID_MM}
-                onChange={() =>
+                onChange={() => {
+                  track('customizer_option_changed', {
+                    family: 'text_finish',
+                    option_id: next,
+                  });
                   updateMany(
                     {
                       textEdgeFinish: next,
                       textEdgeMm: next === 'sharp' ? 0 : EDGE_FINISH_GRID_MM,
                     },
                     'print',
-                  )
-                }
+                  );
+                }}
               />
               <strong>{t(locale, `geometryTextEdge${next}`)}</strong>
             </label>

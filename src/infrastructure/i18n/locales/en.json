@@ -448,7 +448,7 @@
   "metaCreateDescription": "Design a personalized printable keychain or label, preview the geometry, and export STL or 3MF locally.",
   "analytics": {
     "consentTitle": "Help us improve Open Keychain",
-    "consentBody": "Allow anonymous product analytics about pages, templates, and export formats. We never record your name or session.",
+    "consentBody": "Allow pseudonymous product analytics about pages, setup progress, choices, and exports. We never send your name or design dimensions.",
     "privacyLink": "See the privacy note.",
     "accept": "Allow analytics",
     "decline": "No thanks"

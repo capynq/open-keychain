@@ -6,6 +6,7 @@ import {
   keyringPositionNameKey,
 } from '@/domain/keychain/model/keyring-position';
 import { t } from '@/infrastructure/i18n';
+import { useAnalytics } from '@/infrastructure/telemetry/useTelemetry';
 
 import styles from './KeyringPositionPicker.module.css';
 
@@ -29,48 +30,58 @@ export const KeyringPositionPicker = ({
   selected: KeyringPosition;
   variant?: 'editor' | 'setup';
   onSelect: (position: KeyringPosition) => void;
-}) => (
-  <fieldset className={styles.picker}>
-    <legend>{t(locale, 'keyringPosition')}</legend>
-    <div className={styles.illustration} data-testid="keyring-position-diagram">
-      <img
-        alt=""
-        className={styles.artwork}
-        draggable={false}
-        src="/showcase/keyring-position-alex.png"
-      />
+}) => {
+  const { track } = useAnalytics();
 
-      {KEYRING_POSITIONS.map((position) => (
-        <label
-          className={styles.option}
-          data-position={position}
-          key={position}
-          style={anchors[position]}
-          title={t(locale, keyringPositionNameKey(position))}
-        >
-          <input
-            type="radio"
-            name={`keyring-position-${variant}`}
-            data-candidate-key="keyringPosition"
-            value={position}
-            checked={selected === position}
-            onChange={() => onSelect(position)}
-          />
-          <span aria-hidden="true" className={styles.marker}>
-            <span className={styles.hole} />
-          </span>
-          <span className={styles.visuallyHidden}>
-            {t(locale, keyringPositionNameKey(position))}
-          </span>
-        </label>
-      ))}
-    </div>
-    <p
-      aria-hidden="true"
-      className={styles.selectedPosition}
-      data-testid="keyring-position-current"
-    >
-      {t(locale, keyringPositionNameKey(selected))}
-    </p>
-  </fieldset>
-);
+  return (
+    <fieldset className={styles.picker}>
+      <legend>{t(locale, 'keyringPosition')}</legend>
+      <div className={styles.illustration} data-testid="keyring-position-diagram">
+        <img
+          alt=""
+          className={styles.artwork}
+          draggable={false}
+          src="/showcase/keyring-position-alex.png"
+        />
+
+        {KEYRING_POSITIONS.map((position) => (
+          <label
+            className={styles.option}
+            data-position={position}
+            key={position}
+            style={anchors[position]}
+            title={t(locale, keyringPositionNameKey(position))}
+          >
+            <input
+              type="radio"
+              name={`keyring-position-${variant}`}
+              data-candidate-key="keyringPosition"
+              value={position}
+              checked={selected === position}
+              onChange={() => {
+                onSelect(position);
+                track('customizer_option_changed', {
+                  family: 'keyring_position',
+                  option_id: position,
+                });
+              }}
+            />
+            <span aria-hidden="true" className={styles.marker}>
+              <span className={styles.hole} />
+            </span>
+            <span className={styles.visuallyHidden}>
+              {t(locale, keyringPositionNameKey(position))}
+            </span>
+          </label>
+        ))}
+      </div>
+      <p
+        aria-hidden="true"
+        className={styles.selectedPosition}
+        data-testid="keyring-position-current"
+      >
+        {t(locale, keyringPositionNameKey(selected))}
+      </p>
+    </fieldset>
+  );
+};

@@ -21,6 +21,7 @@ import type { QuickSetupChanges } from '@/features/customizer/model/quick-setup'
 import type { Locale } from '@/infrastructure/i18n';
 
 import { t } from '@/infrastructure/i18n';
+import { useAnalytics } from '@/infrastructure/telemetry/useTelemetry';
 
 import { ColorStep } from './ColorStep';
 import { FontStep } from './FontStep';
@@ -78,6 +79,7 @@ export const QuickSetupDialog = ({
   initialKeyringWidthMm = 5,
   initialKeyringLengthMm = 5,
 }: Props) => {
+  const { consent, track } = useAnalytics();
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousActiveRef = useRef<HTMLElement | null>(null);
   const [draft, setDraft] = useQuickSetupDraft({
@@ -94,6 +96,18 @@ export const QuickSetupDialog = ({
   });
   const [step, setStep] = useState(0);
   const editing = useRef(false);
+  const wasOpenRef = useRef(false);
+  const currentStepRef = useRef<QuickSetupStepId>('name-size');
+  const lastTrackedStepRef = useRef<QuickSetupStepId | null>(null);
+  const submittedRef = useRef(false);
+  const steps: QuickSetupStepId[] = supportsKeyring
+    ? ['name-size', 'keyring-position', 'keyring-opening', 'fonts', 'colors', 'review']
+    : ['name-size', 'fonts', 'colors', 'review'];
+  const stepKey = steps[step] ?? 'name-size';
+
+  useEffect(() => {
+    if (open) currentStepRef.current = stepKey;
+  }, [open, stepKey]);
 
   useEffect(() => {
     if (!open) {
@@ -110,6 +124,31 @@ export const QuickSetupDialog = ({
     setStep(0);
     return () => previousActiveRef.current?.focus();
   }, [open]);
+  useEffect(() => {
+    if (open) {
+      wasOpenRef.current = true;
+      return;
+    }
+    if (!wasOpenRef.current) return;
+
+    track(submittedRef.current ? 'setup_step_completed' : 'setup_step_backed_out', {
+      step: submittedRef.current ? 'review' : currentStepRef.current,
+    });
+    wasOpenRef.current = false;
+    lastTrackedStepRef.current = null;
+    submittedRef.current = false;
+  }, [open, track]);
+  useEffect(() => {
+    if (!error) return;
+    submittedRef.current = false;
+  }, [error]);
+  useEffect(() => {
+    if (!open || consent !== 'accepted' || lastTrackedStepRef.current === stepKey) {
+      return;
+    }
+    lastTrackedStepRef.current = stepKey;
+    track('setup_step_viewed', { step: stepKey });
+  }, [consent, open, stepKey, track]);
   useEffect(() => {
     if (!open) return;
     dialogRef.current?.querySelector<HTMLElement>('[data-step-title]')?.focus();
@@ -147,10 +186,6 @@ export const QuickSetupDialog = ({
   if (!open) return null;
   const activeSize = getDraftSize(draft);
   const valid = Boolean(draft.text.trim() && activeSize);
-  const steps: QuickSetupStepId[] = supportsKeyring
-    ? ['name-size', 'keyring-position', 'keyring-opening', 'fonts', 'colors', 'review']
-    : ['name-size', 'fonts', 'colors', 'review'];
-  const stepKey = steps[step] ?? 'name-size';
   const titles: Record<QuickSetupStepId, string> = {
     'name-size': 'wizardNameSizeTitle',
     'keyring-position': 'wizardKeyringPositionTitle',
@@ -169,6 +204,7 @@ export const QuickSetupDialog = ({
   };
   const next = () => {
     if (step < steps.length - 1 && (stepKey !== 'name-size' || valid)) {
+      track('setup_step_completed', { step: stepKey });
       const nextStep = editing.current ? steps.length - 1 : step + 1;
 
       editing.current = false;
@@ -176,7 +212,8 @@ export const QuickSetupDialog = ({
     }
   };
   const apply = () => {
-    if (!submitting && !checking && valid && activeSize)
+    if (!submitting && !checking && valid && activeSize) {
+      submittedRef.current = true;
       onApply({
         text: draft.text.trim(),
         sizeEnvelope: activeSize,
@@ -189,6 +226,7 @@ export const QuickSetupDialog = ({
         favoriteFontCategories: draft.favoriteCategories,
         appearanceOverrides: draft.appearanceOverrides,
       });
+    }
   };
   const edit = (value: QuickSetupStepId) => {
     if (submitting) return;

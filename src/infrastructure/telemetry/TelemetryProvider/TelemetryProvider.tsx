@@ -2,7 +2,12 @@ import type posthog from 'posthog-js';
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
-import { sanitizeProperties, type AnalyticsEvent, type AnalyticsProperties } from '../events';
+import {
+  sanitizePostHogEvent,
+  sanitizeProperties,
+  type AnalyticsEvent,
+  type AnalyticsProperties,
+} from '../events';
 import { AnalyticsContext, type AnalyticsConsent } from '../telemetry-context';
 import './TelemetryProvider.module.css';
 
@@ -13,6 +18,29 @@ const POSTHOG_HOST =
 type PostHogClient = typeof posthog;
 let posthogClient: PostHogClient | undefined;
 let posthogLoad: Promise<PostHogClient> | undefined;
+let posthogInitStarted = false;
+const MAX_PENDING_EVENTS = 100;
+const pendingEvents: Array<{
+  event: AnalyticsEvent;
+  properties: Record<string, string | number | boolean>;
+}> = [];
+
+const flushPendingEvents = (): void => {
+  if (
+    captureConsent !== 'accepted' ||
+    !posthogClient?.__loaded ||
+    posthogClient.has_opted_out_capturing()
+  ) {
+    return;
+  }
+  for (const pending of pendingEvents.splice(0)) {
+    try {
+      posthogClient.capture(pending.event, pending.properties);
+    } catch {
+      continue;
+    }
+  }
+};
 
 const readConsent = (): AnalyticsConsent => {
   if (typeof window === 'undefined') return 'unknown';
@@ -21,6 +49,25 @@ const readConsent = (): AnalyticsConsent => {
     return value === 'accepted' || value === 'declined' ? value : 'unknown';
   } catch {
     return 'unknown';
+  }
+};
+
+let captureConsent: AnalyticsConsent = readConsent();
+
+const syncPostHogConsent = (): void => {
+  const client = posthogClient;
+  if (!client?.__loaded) return;
+
+  if (captureConsent === 'accepted') {
+    if (client.has_opted_out_capturing()) client.opt_in_capturing();
+    flushPendingEvents();
+    return;
+  }
+
+  pendingEvents.length = 0;
+  if (!client.has_opted_out_capturing()) {
+    client.opt_out_capturing();
+    client.reset();
   }
 };
 
@@ -40,10 +87,18 @@ const loadPostHog = (): Promise<PostHogClient> => {
 };
 
 const configurePostHog = async (): Promise<void> => {
-  if (!POSTHOG_KEY || posthogClient?.__loaded) return;
+  if (!POSTHOG_KEY) return;
+  if (captureConsent !== 'accepted' || posthogClient?.__loaded || posthogInitStarted) {
+    syncPostHogConsent();
+    return;
+  }
   try {
     const client = await loadPostHog();
-    if (client.__loaded) return;
+    if (captureConsent !== 'accepted' || client.__loaded || posthogInitStarted) {
+      syncPostHogConsent();
+      return;
+    }
+    posthogInitStarted = true;
     client.init(POSTHOG_KEY, {
       api_host: POSTHOG_HOST,
       defaults: '2026-05-30',
@@ -51,11 +106,22 @@ const configurePostHog = async (): Promise<void> => {
       capture_pageleave: false,
       autocapture: false,
       capture_dead_clicks: false,
+      capture_performance: false,
+      logs: { captureConsoleLogs: false },
+      save_campaign_params: false,
+      save_referrer: false,
+      disable_capture_url_hashes: true,
+      before_send: sanitizePostHogEvent,
+      loaded: () => {
+        posthogInitStarted = false;
+        syncPostHogConsent();
+      },
       disable_session_recording: true,
       persistence: 'localStorage',
       disable_cookie: true,
     });
   } catch {
+    posthogInitStarted = false;
     return;
   }
 };
@@ -68,31 +134,36 @@ export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
   }, [consent]);
 
   const setConsent = useCallback((nextConsent: Exclude<AnalyticsConsent, 'unknown'>): void => {
+    captureConsent = nextConsent;
     try {
       window.localStorage.setItem(CONSENT_KEY, nextConsent);
     } catch {
-      return setConsentState(nextConsent);
+      // Apply this tab's choice even when the browser blocks local storage.
     }
     try {
       if (nextConsent === 'accepted') {
-        void configurePostHog().then(() => {
-          if (posthogClient?.__loaded) posthogClient.opt_in_capturing();
-        });
-      } else if (posthogClient?.__loaded) {
-        posthogClient.opt_out_capturing();
-        posthogClient.reset();
+        void configurePostHog();
+      } else {
+        pendingEvents.length = 0;
+        syncPostHogConsent();
       }
     } catch {
-      return setConsentState(nextConsent);
+      if (nextConsent === 'declined') pendingEvents.length = 0;
     }
     setConsentState(nextConsent);
   }, []);
 
   const track = useCallback(
     (event: AnalyticsEvent, properties: AnalyticsProperties = {}): void => {
-      if (consent !== 'accepted' || !POSTHOG_KEY || !posthogClient?.__loaded) return;
+      if (consent !== 'accepted' || captureConsent !== 'accepted' || !POSTHOG_KEY) return;
       try {
-        posthogClient.capture(event, sanitizeProperties(properties));
+        const safeProperties = sanitizeProperties(event, properties);
+        if (!posthogClient?.__loaded || posthogClient.has_opted_out_capturing()) {
+          if (pendingEvents.length < MAX_PENDING_EVENTS)
+            pendingEvents.push({ event, properties: safeProperties });
+          return;
+        }
+        posthogClient.capture(event, safeProperties);
       } catch {
         return;
       }

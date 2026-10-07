@@ -7,6 +7,7 @@ import type { Locale } from '@/infrastructure/i18n';
 import { FONT_CATEGORY_ORDER, type FontCategory } from '@/domain/keychain/fonts/catalog';
 import { FONT_CATALOG } from '@/domain/keychain/fonts/catalog';
 import { t } from '@/infrastructure/i18n';
+import { useAnalytics } from '@/infrastructure/telemetry/useTelemetry';
 
 import type { QuickSetupDraft } from './model/useQuickSetupDraft';
 
@@ -42,6 +43,7 @@ export const FontStep = ({
   draft: QuickSetupDraft;
   setDraft: Dispatch<SetStateAction<QuickSetupDraft>>;
 }) => {
+  const { track } = useAnalytics();
   const categories = FONT_CATEGORY_ORDER;
 
   return (
@@ -55,14 +57,18 @@ export const FontStep = ({
               <input
                 type="checkbox"
                 checked={draft.favoriteCategories.includes(category)}
-                onChange={() =>
+                onChange={() => {
                   setDraft((current) => ({
                     ...current,
                     favoriteCategories: current.favoriteCategories.includes(category)
                       ? current.favoriteCategories.filter((item) => item !== category)
                       : [...current.favoriteCategories, category],
-                  }))
-                }
+                  }));
+                  track('customizer_option_changed', {
+                    family: 'font_category',
+                    option_id: category,
+                  });
+                }}
               />
               <Check className={styles.choiceCheck} aria-hidden="true" />
               <span

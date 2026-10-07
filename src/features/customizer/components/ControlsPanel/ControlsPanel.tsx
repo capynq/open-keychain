@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, Info, RefreshCw } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   FONT_CATEGORY_ORDER,
@@ -35,6 +35,7 @@ import {
   t,
   type Locale,
 } from '@/infrastructure/i18n';
+import { useAnalytics } from '@/infrastructure/telemetry/useTelemetry';
 import { IconButton } from '@/shared/ui/IconButton';
 import { ResetIconButton } from '@/shared/ui/ResetIconButton';
 
@@ -92,6 +93,7 @@ export const ControlsPanel = ({
   baseFinishLimits?: GeometryResult['baseFinishLimits'];
   textFinishLimits?: GeometryResult['textFinishLimits'];
 }) => {
+  const { track } = useAnalytics();
   const {
     params,
     candidateFeedback,
@@ -123,6 +125,7 @@ export const ControlsPanel = ({
   const [openCategories, setOpenCategories] = useState<Set<FontCategory>>(
     () => new Set(FONT_CATEGORY_ORDER),
   );
+  const customOpeningTransitionTracked = useRef(false);
   const { controlsRef, scrollState } = useControlsScrollState();
   const fileSystemPickerAvailable =
     typeof window !== 'undefined' && typeof window.showOpenFilePicker === 'function';
@@ -141,6 +144,12 @@ export const ControlsPanel = ({
   const activeTargetText = activeFontTarget === 'secondary' ? params.subtitle : params.text;
   const activeTargetFontId =
     activeFontTarget === 'secondary' ? params.subtitleFontId : params.fontId;
+
+  useEffect(() => {
+    if ((params.keyringPreset ?? 'custom') !== 'custom') {
+      customOpeningTransitionTracked.current = false;
+    }
+  }, [params.keyringPreset]);
 
   const sourceFonts =
     fontSource === 'google'
@@ -299,6 +308,8 @@ export const ControlsPanel = ({
     }
     if (activeFontTarget === 'secondary') updateSubtitleFont(font.id);
     else update('fontId', font.id);
+    if (font.source === 'bundled')
+      track('customizer_option_changed', { family: 'font', option_id: font.id });
     setLoadingFontId(undefined);
   };
   const orderedFontCategories = [
@@ -639,9 +650,19 @@ export const ControlsPanel = ({
             parameter === 'holeDiameterMm' ||
             parameter === 'keyringSlotLengthMm' ||
             parameter === 'ringOffsetMm'
-          )
+          ) {
+            if (
+              (params.keyringPreset ?? 'custom') !== 'custom' &&
+              !customOpeningTransitionTracked.current
+            ) {
+              customOpeningTransitionTracked.current = true;
+              track('customizer_option_changed', {
+                family: 'keyring_opening',
+                option_id: 'custom',
+              });
+            }
             updateMany({ [key]: value, keyringPreset: 'custom' }, 'template-details');
-          else update(key, value as never);
+          } else update(key, value as never);
         }}
       />
     );
@@ -649,6 +670,7 @@ export const ControlsPanel = ({
 
   const selectKeyringPreset = (preset: KeychainParams['keyringPreset']) => {
     if (!preset || preset === 'custom') return;
+    customOpeningTransitionTracked.current = false;
     updateMany(keyringPresetValues(preset), 'template-details');
   };
 
@@ -773,6 +795,7 @@ export const ControlsPanel = ({
               candidateKey="templateId"
               onSelect={() => {
                 if (!template.supportsSubtitle) setFontTarget('primary');
+                customOpeningTransitionTracked.current = false;
                 selectTemplate(template.id);
               }}
             />

@@ -66,8 +66,9 @@ Publish the resulting `dist/` directory on a static host such as Netlify. The re
 `/manifold.wasm`, `/fonts/`, `/showcase/`, and hashed `/assets/` files.
 
 SEO pages are rendered by the React application and use the same consent-gated analytics as the
-customizer. Only coarse page type, page ID, locale, and CTA metadata is sent after opt-in; names,
-query strings, geometry, and exported files are never included. Set `VITE_POSTHOG_KEY` (and
+customizer. After opt-in, analytics sends coarse page, setup-step, selected catalog-option, and export
+metadata; names, exact dimensions, query strings, campaign/search attribution, geometry, and exported
+files are never included. Set `VITE_POSTHOG_KEY` (and
 optionally `VITE_POSTHOG_HOST`) at build time to enable it. See [`docs/analytics.md`](docs/analytics.md).
 
 The official hosted account and subscription service is operated separately. This public repository
@@ -85,9 +86,9 @@ The customizer exports printable STL and 3MF files. Review the downloaded model 
 ## Privacy and hosted Maker workspace
 
 The browser workflow keeps generation and every individual STL/3MF export on the device running the
-browser, free of charge and without an API call. Optional SEO analytics is consent-gated and sends
-only coarse page metadata; it never sends names, search strings, generated geometry, or exported
-files. The official Maker workspace adds managed accounts, synchronized reusable presets, and a
+browser, free of charge and without an API call. Optional product analytics is consent-gated and
+sends only coarse page, setup-step, selected catalog-option, and export metadata; it never sends
+names, search strings, exact dimensions, generated geometry, or exported files. The official Maker workspace adds managed accounts, synchronized reusable presets, and a
 25-row browser-local batch workflow. CSV names, generated geometry, and batch ZIPs stay in the
 browser. The service implementation, billing operations, email delivery, and deployment automation
 are maintained outside this public repository.

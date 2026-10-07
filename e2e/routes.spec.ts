@@ -41,7 +41,7 @@ test('takes the primary landing call to action to the customizer', async ({ page
 
   await page.goto('/');
   await page.getByRole('link', { name: 'Start designing' }).first().click();
-  await expect(page).toHaveURL('/create?lang=en');
+  await expect(page).toHaveURL('/create?setup=1&lang=en');
   await waitForReadyGeometry(page);
   assertNoBrowserErrors();
 });
@@ -579,7 +579,7 @@ test('accepts analytics consent without blocking the primary action', async ({ p
     'accepted',
   );
   await page.getByRole('link', { name: 'Start designing' }).first().click();
-  await expect(page).toHaveURL('/create?lang=en');
+  await expect(page).toHaveURL('/create?setup=1&lang=en');
   assertNoBrowserErrors();
 });
 
