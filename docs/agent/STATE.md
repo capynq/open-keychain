@@ -20,6 +20,7 @@
 
 ## Repository state and next action
 
-- Branch `main`, HEAD `dd7bef9`, two commits ahead of `origin/main`. Follow-up push-hook cleanup changes are uncommitted; no commit, push, PR, or deploy was performed.
-- Push validation now removes untracked `.DS_Store` files and temporarily isolates ignored root `.env*` files, restoring env files after success, failure, or handled cancellation. Neither file type is staged. Focused Git validation and scheduler tests pass (13 tests), as do touched-file ESLint, Prettier, and `git diff --check`.
-- Next action: commit the reviewed hook cleanup changes locally, then retry `git push`; CI remains responsible for all eight hosted matrix shards and the required-check deploy gate.
+- Branch `main`, HEAD `16500fb`, three commits ahead of `origin/main`. TUI color changes in `scripts/validation-ui.mjs`, its focused test, and `CONTRIBUTING.md` are uncommitted; no commit, push, PR, or deploy was performed in this turn.
+- The push hook cleanup is in HEAD: it removes untracked `.DS_Store` files and temporarily isolates ignored root `.env*` files, restoring env files after success, failure, or handled cancellation. Neither file type is staged.
+- TUI uses warm brand accents and semantic colors for states, selection, progress, and diagnostics. Focused TUI/scheduler tests pass (10 tests), along with touched-file ESLint, Prettier, and `git diff --check`. PTY launch fell back to plain because `/dev/tty` access is unavailable here; color formatting and plain-mode ANSI suppression are covered by tests.
+- Next action: review and commit the TUI color changes locally; hosted CI remains responsible for all eight geometry shards and the required-check deploy gate.

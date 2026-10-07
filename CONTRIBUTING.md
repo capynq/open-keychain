@@ -32,7 +32,7 @@ Successful local gates are cached separately under `node_modules/.cache/open-key
 
 ## TUI and plain mode
 
-`VALIDATION_UI=auto|tui|plain` selects the live terminal view. `auto` uses TUI only for an interactive terminal outside CI; `tui` explicitly requests it, and `plain` never sends ANSI control sequences. Keyboard input comes from `/dev/tty`, not the pre-push ref stream. If the controlling terminal is unavailable or cannot switch modes, validation falls back to plain output and disables keyboard controls.
+`VALIDATION_UI=auto|tui|plain` selects the live terminal view. `auto` uses TUI only for an interactive terminal outside CI; `tui` explicitly requests it, and `plain` never sends ANSI control sequences. TUI colors use a warm Open Keychain accent with cyan active states, green success, red failure, amber warnings/skips, and violet cache hits. Set `NO_COLOR` or `TERM=dumb` to disable color; `FORCE_COLOR` does not enable the TUI without an interactive terminal. Keyboard input comes from `/dev/tty`, not the pre-push ref stream. If the controlling terminal is unavailable or cannot switch modes, validation falls back to plain output and disables keyboard controls.
 
 - `↑` / `↓`: select a gate.
 - `l`: show or hide the selected gate's log tail and log path.

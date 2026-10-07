@@ -17,6 +17,81 @@ const STATUS = {
   'not-required': '—',
 };
 const spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+const COLOR_16 = {
+  accent: '33',
+  active: '36',
+  success: '32',
+  failure: '31',
+  warning: '33',
+  cached: '35',
+  muted: '2',
+  info: '34',
+};
+const COLOR_256 = {
+  accent: '38;5;173',
+  active: '38;5;81',
+  success: '38;5;114',
+  failure: '38;5;203',
+  warning: '38;5;221',
+  cached: '38;5;141',
+  muted: '38;5;245',
+  info: '38;5;75',
+};
+const STATUS_STYLE = {
+  queued: 'muted',
+  running: 'active',
+  passed: 'success',
+  failed: 'failure',
+  cached: 'cached',
+  skipped: 'warning',
+  cancelled: 'muted',
+  blocked: 'warning',
+  'not-required': 'muted',
+};
+
+export const supportsColor = ({ interactive, environment = process.env } = {}) =>
+  Boolean(interactive) &&
+  !environment.CI &&
+  environment.TERM !== 'dumb' &&
+  !Object.hasOwn(environment, 'NO_COLOR');
+
+const paletteFor = (environment) =>
+  /(?:256color|truecolor|direct)/i.test(`${environment.TERM ?? ''} ${environment.COLORTERM ?? ''}`)
+    ? COLOR_256
+    : COLOR_16;
+
+export const formatStyledLine = (
+  { text, spans = [] },
+  width,
+  { colors = false, palette = COLOR_16 } = {},
+) => {
+  const clipped = truncate(text, width);
+  const wasTruncated = widthOf(text) > width;
+  const visibleTextLength = wasTruncated
+    ? Math.max(0, clipped.length - (width >= 2 ? 1 : 0))
+    : clipped.length;
+  if (!colors || spans.length === 0)
+    return clipped + ' '.repeat(Math.max(0, width - widthOf(clipped)));
+
+  const output = [];
+  let cursor = 0;
+  for (const span of spans) {
+    const start = Math.max(cursor, span.start);
+    const end = Math.min(visibleTextLength, span.end);
+    if (end <= start) continue;
+    output.push(text.slice(cursor, start));
+    const codes = [span.bold ? '1' : '', palette[span.style]].filter(Boolean).join(';');
+    output.push(`\u001b[${codes}m${text.slice(start, end)}\u001b[0m`);
+    cursor = end;
+  }
+  output.push(text.slice(cursor, visibleTextLength));
+  if (wasTruncated) output.push('…');
+  const visibleWidth = widthOf(clipped);
+  output.push(' '.repeat(Math.max(0, width - visibleWidth)));
+  return output.join('');
+};
+
+export const statusStyle = (status) => STATUS_STYLE[status] ?? 'muted';
 
 const widthOf = (value) => {
   let width = 0;
@@ -132,6 +207,8 @@ export class ValidationUi {
     this.mode = mode;
     this.interactive =
       Boolean(process.stdout.isTTY) && !environment.CI && (mode === 'tui' || mode === 'auto');
+    this.colors = supportsColor({ interactive: this.interactive, environment });
+    this.palette = paletteFor(environment);
     this.startedAt = Date.now();
     this.lastEventAt = this.startedAt;
     this.lastCompletionAt = this.startedAt;
@@ -169,6 +246,7 @@ export class ValidationUi {
         this.renderTimer = setInterval(() => this.#scheduleRender(), 150);
       } catch {
         this.interactive = false;
+        this.colors = false;
         this.#closeInput();
       }
     }
@@ -391,19 +469,31 @@ export class ValidationUi {
     const activeWorkers =
       this.activeCases.size || this.gates.filter((gate) => gate.status === 'running').length;
     const lines = [];
-    lines.push(
-      `Open Keychain · pre-push · ${this.branch} · ${this.sha} · profile: ${this.profile}`,
-    );
-    lines.push(
-      `Changed: ${this.changedCount} · Gates: ${completed}/${this.selectedGates.length} · Active workers: ${activeWorkers} · Elapsed: ${duration(elapsed)}`,
-    );
-    lines.push('');
+    const pushLine = (text, spans = []) => lines.push({ text, spans });
+    const title = `Open Keychain · pre-push · ${this.branch} · ${this.sha} · profile: ${this.profile}`;
+    const profileOffset = title.lastIndexOf(this.profile);
+    pushLine(title, [
+      { start: 0, end: profileOffset, style: 'accent', bold: true },
+      { start: profileOffset, end: title.length, style: 'active', bold: true },
+    ]);
+    const summary = `Changed: ${this.changedCount} · Gates: ${completed}/${this.selectedGates.length} · Active workers: ${activeWorkers} · Elapsed: ${duration(elapsed)}`;
+    const gatesOffset = summary.indexOf('Gates:');
+    pushLine(summary, [
+      {
+        start: gatesOffset,
+        end: gatesOffset + `Gates: ${completed}/${this.selectedGates.length}`.length,
+        style: 'active',
+        bold: true,
+      },
+    ]);
+    pushLine('');
     const compact = width < 72;
     if (!compact)
-      lines.push(
+      pushLine(
         `${pad('STATUS', 9)} ${pad('GATE', width - 48)} ${pad('DONE/TOTAL', 13)} ${pad('TIME', 8)} CACHE / PHASE`,
+        [{ start: 0, end: width, style: 'muted' }],
       );
-    for (const gate of this.gates) {
+    for (const [gateIndex, gate] of this.gates.entries()) {
       const gateElapsed = gate.startedAt ? (gate.finishedAt ?? Date.now()) - gate.startedAt : 0;
       const icon =
         gate.status === 'running'
@@ -417,39 +507,123 @@ export class ValidationUi {
             : gate.status;
       const counter = gate.total === undefined ? '—' : `${gate.completed}/${gate.total}`;
       const detail = gate.status === 'running' && !gate.detail ? 'running' : gate.detail;
-      lines.push(
-        compact
-          ? `${icon} ${statusText} ${gate.name} ${counter} ${gate.startedAt ? duration(gateElapsed) : '—'} ${detail}`
-          : `${pad(`${icon} ${statusText}`, 9)} ${pad(gate.name, width - 48)} ${pad(counter, 13)} ${pad(gate.startedAt ? duration(gateElapsed) : '—', 8)} ${truncate(detail, width - 66)}`,
-      );
+      const selected = gateIndex === this.selectedIndex;
+      const marker = selected ? '›' : ' ';
+      const statusCell = compact
+        ? `${marker}${icon} ${statusText}`
+        : pad(`${marker}${icon} ${statusText}`, 10);
+      const nameCell = compact ? gate.name : pad(gate.name, width - 49);
+      const nameStart = statusCell.length + 1;
+      const line = compact
+        ? `${statusCell} ${nameCell} ${counter} ${gate.startedAt ? duration(gateElapsed) : '—'} ${detail}`
+        : `${statusCell} ${nameCell} ${pad(counter, 13)} ${pad(gate.startedAt ? duration(gateElapsed) : '—', 8)} ${truncate(detail, width - 67)}`;
+      const spans = [
+        { start: 0, end: 1, style: 'active', bold: selected },
+        { start: 1, end: statusCell.length, style: statusStyle(gate.status), bold: true },
+      ];
+      if (selected)
+        spans.push({
+          start: nameStart,
+          end: nameStart + gate.name.length,
+          style: 'active',
+          bold: true,
+        });
+      pushLine(line, spans);
     }
     const unit = this.gates.find((gate) => gate.id.startsWith('unit'));
     const geometry = this.gates.find((gate) => gate.id === 'geometry');
     const browser = this.gates.find((gate) => gate.id === 'browser');
-    lines.push('');
-    lines.push(`Unit progress: ${this.#progressText(unit)}`);
-    lines.push(`Geometry progress: ${this.#progressText(geometry)}`);
-    lines.push(
-      `Browser: ${browser ? `${browser.completed}/${browser.total ?? '—'}${browser.currentName ? ` · ${browser.currentName}` : ''}` : 'not required'}`,
+    pushLine('');
+    const unitProgress = `Unit progress: ${this.#progressText(unit)}`;
+    const unitBar = unitProgress.indexOf('█');
+    pushLine(
+      unitProgress,
+      unitBar >= 0
+        ? [
+            {
+              start: unitBar,
+              end: unitProgress.length,
+              style: statusStyle(unit.status),
+              bold: true,
+            },
+          ]
+        : [
+            {
+              start: unitProgress.indexOf(':') + 2,
+              end: unitProgress.length,
+              style: statusStyle(unit?.status ?? 'not-required'),
+            },
+          ],
     );
+    const geometryProgress = `Geometry progress: ${this.#progressText(geometry)}`;
+    const geometryBar = geometryProgress.indexOf('█');
+    pushLine(
+      geometryProgress,
+      geometryBar >= 0
+        ? [
+            {
+              start: geometryBar,
+              end: geometryProgress.length,
+              style: statusStyle(geometry.status),
+              bold: true,
+            },
+          ]
+        : [
+            {
+              start: geometryProgress.indexOf(':') + 2,
+              end: geometryProgress.length,
+              style: statusStyle(geometry?.status ?? 'not-required'),
+            },
+          ],
+    );
+    const browserText = `Browser: ${browser ? `${browser.completed}/${browser.total ?? '—'}${browser.currentName ? ` · ${browser.currentName}` : ''}` : 'not required'}`;
+    const browserValueOffset = browserText.indexOf(':') + 2;
+    pushLine(browserText, [
+      { start: 0, end: 'Browser:'.length, style: 'muted' },
+      {
+        start: browserValueOffset,
+        end: browserText.length,
+        style: statusStyle(browser?.status ?? 'not-required'),
+      },
+    ]);
     const currentUnit =
       unit?.currentName ??
       [...this.activeCases.values()].find((item) => item.gateId.startsWith('unit'))?.name ??
       '—';
-    lines.push(`Current unit test: ${currentUnit}`);
+    pushLine(`Current unit test: ${currentUnit}`, [
+      { start: 0, end: 'Current unit test:'.length, style: 'muted' },
+    ]);
     const activeGeometry = [...this.activeCases.values()]
       .filter((item) => item.gateId === 'geometry')
       .map(
         (item) => `${item.workerId ?? 0}: ${item.name} (${duration(Date.now() - item.startedAt)})`,
       );
-    lines.push(`Geometry workers: ${activeGeometry.length ? activeGeometry.join(' · ') : '—'}`);
-    lines.push(`Time since completion: ${duration(Date.now() - this.lastCompletionAt)}`);
-    lines.push('ETA: —');
-    lines.push(`Diagnostics${this.detailed ? ' (detailed)' : ''}:`);
+    const geometryWorkers = `Geometry workers: ${activeGeometry.length ? activeGeometry.join(' · ') : '—'}`;
+    pushLine(geometryWorkers, [
+      { start: 0, end: 'Geometry workers:'.length, style: 'muted' },
+      ...(activeGeometry.length
+        ? [{ start: 'Geometry workers: '.length, end: geometryWorkers.length, style: 'active' }]
+        : []),
+    ]);
+    pushLine(`Time since completion: ${duration(Date.now() - this.lastCompletionAt)}`, [
+      { start: 0, end: 'Time since completion:'.length, style: 'muted' },
+    ]);
+    pushLine('ETA: —', [{ start: 0, end: 'ETA:'.length, style: 'muted' }]);
+    pushLine(`Diagnostics${this.detailed ? ' (detailed)' : ''}:`, [
+      {
+        start: 0,
+        end: `Diagnostics${this.detailed ? ' (detailed)' : ''}`.length,
+        style: 'warning',
+        bold: true,
+      },
+    ]);
     for (const diagnostic of this.diagnostics.slice(this.detailed ? -5 : -3))
-      lines.push(`  ${truncate(diagnostic, this.detailed ? width - 2 : Math.min(120, width - 2))}`);
+      pushLine(`  ${truncate(diagnostic, this.detailed ? width - 2 : Math.min(120, width - 2))}`, [
+        { start: 0, end: 2, style: 'failure' },
+        { start: 2, end: width, style: 'failure' },
+      ]);
     if (this.showLogs) {
-      lines.push(`Logs: ${this.logDir}`);
+      pushLine(`Logs: ${this.logDir}`, [{ start: 0, end: 'Logs:'.length, style: 'muted' }]);
       const selected = this.gates[this.selectedIndex];
       if (selected?.logPath) {
         try {
@@ -459,25 +633,30 @@ export class ValidationUi {
             .trimEnd()
             .split(/\r?\n/)
             .slice(-4);
-          lines.push(...log.map((line) => `  ${line}`));
+          for (const line of log) pushLine(`  ${line}`, [{ start: 0, end: width, style: 'muted' }]);
         } catch {
-          lines.push('  No gate log yet.');
+          pushLine('  No gate log yet.', [{ start: 0, end: width, style: 'muted' }]);
         }
       }
     }
     if (this.confirmation)
-      lines.push(
+      pushLine(
         `Skip ${this.confirmation.name}? Consequence: local validation will be partial. Confirm y/N`,
+        [{ start: 0, end: width, style: 'warning', bold: true }],
       );
     else if (this.help)
-      lines.push(
+      pushLine(
         '↑/↓ select gate · l logs · v diagnostics · ? help · s skip optional gate · Ctrl+C cancel push',
+        [{ start: 0, end: width, style: 'active' }],
       );
     else
-      lines.push(
+      pushLine(
         'Keys: ↑/↓ select · l logs · v diagnostics · ? help · s skip optional · Ctrl+C cancel',
+        [{ start: 0, end: 'Keys:'.length, style: 'accent', bold: true }],
       );
-    const visible = lines.slice(0, Math.max(8, rows - 1)).map((line) => pad(line, width));
+    const visible = lines
+      .slice(0, Math.max(8, rows - 1))
+      .map((line) => formatStyledLine(line, width, { colors: this.colors, palette: this.palette }));
     process.stdout.write(`\u001b[H${visible.join('\n')}\u001b[0J`);
     this.outputRows = visible.length;
   }
