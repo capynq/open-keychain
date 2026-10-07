@@ -2,7 +2,7 @@
 
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ProfileAuth } from './ProfileAuth';
 
@@ -10,12 +10,17 @@ describe('ProfileAuth form contract', () => {
   let root: Root | undefined;
   let container: HTMLDivElement | undefined;
 
+  beforeEach(() => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  });
+
   afterEach(() => {
     if (root) act(() => root?.unmount());
 
     container?.remove();
     root = undefined;
     container = undefined;
+    vi.unstubAllGlobals();
   });
 
   it('keeps signup controls natively discoverable and constrained', async () => {
