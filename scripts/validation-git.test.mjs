@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { access, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -7,6 +7,7 @@ import {
   assertCleanValidationInputs,
   collectPushChanges,
   parsePrePushInput,
+  withCleanValidationWorkspace,
 } from './validation-git.mjs';
 
 const roots = [];
@@ -87,6 +88,39 @@ describe('push checkout and change detection', () => {
     await expect(assertCleanValidationInputs({ root })).rejects.toThrow(
       /validation inputs must be tracked/,
     );
+  });
+
+  it('removes Finder metadata and restores ignored env files after push validation', async () => {
+    const root = await createRepo();
+    await writeFile(path.join(root, '.git', 'info', 'exclude'), '.env*\n.DS_Store\n');
+    await mkdir(path.join(root, 'src', 'app'), { recursive: true });
+    await writeFile(path.join(root, 'src', '.DS_Store'), 'finder data');
+    await writeFile(path.join(root, 'src', 'app', '.DS_Store'), 'finder data');
+    await writeFile(path.join(root, '.env'), 'LOCAL_TOKEN=do-not-commit\n');
+
+    await withCleanValidationWorkspace({ root }, async () => {
+      await expect(access(path.join(root, '.env'))).rejects.toThrow();
+      await expect(access(path.join(root, 'src', '.DS_Store'))).rejects.toThrow();
+      await expect(access(path.join(root, 'src', 'app', '.DS_Store'))).rejects.toThrow();
+      await expect(assertCleanValidationInputs({ root })).resolves.toBeUndefined();
+    });
+
+    expect(await readFile(path.join(root, '.env'), 'utf8')).toBe('LOCAL_TOKEN=do-not-commit\n');
+    expect(git(root, 'status', '--short')).toBe('');
+  });
+
+  it('restores ignored env files when validation throws', async () => {
+    const root = await createRepo();
+    await writeFile(path.join(root, '.git', 'info', 'exclude'), '.env*\n');
+    await writeFile(path.join(root, '.env'), 'LOCAL_ONLY=true\n');
+
+    await expect(
+      withCleanValidationWorkspace({ root }, async () => {
+        await expect(access(path.join(root, '.env'))).rejects.toThrow();
+        throw new Error('simulated validation failure');
+      }),
+    ).rejects.toThrow('simulated validation failure');
+    expect(await readFile(path.join(root, '.env'), 'utf8')).toBe('LOCAL_ONLY=true\n');
   });
 
   it('does not claim different pushed refs were checked by one checkout', async () => {

@@ -18,7 +18,7 @@ Compare Node with installed Bun using `pnpm validate:bench runtime --sample=100 
 
 ## Local push checks
 
-The Husky pre-push hook reads Git's ref input, verifies the pushed commit is the checked-out `HEAD`, and rejects tracked modifications plus untracked files that can affect validation. An ordinary push chooses gates from the changes:
+The Husky pre-push hook reads Git's ref input and verifies the pushed commit is the checked-out `HEAD`. Before validation it removes untracked macOS `.DS_Store` metadata and temporarily moves ignored root `.env*` files outside the checkout, restoring them on success, failure, or cancellation. This prevents machine-local Vite settings and Finder files from changing the result; these files are never staged. Other untracked files that can affect validation and all tracked modifications are still rejected, so commit or remove those before pushing. Keep secrets in `.env*`; commit only sanitized `.env.example` values. An ordinary push chooses gates from the changes:
 
 - Documentation runs changed-file formatting.
 - UI/CSS runs changed format/lint, typecheck, the fast unit suite (or an isolated changed-test run when every changed path is a test), a production build when source/assets/config affect it, and browser smoke when UI routes/components change.

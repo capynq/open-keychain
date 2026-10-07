@@ -1,5 +1,7 @@
 import { spawnSync } from 'node:child_process';
-import { readdir } from 'node:fs/promises';
+import { lstat, mkdtemp, readdir, rename, rm } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import process from 'node:process';
 
 const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
@@ -141,6 +143,111 @@ export const assertCleanValidationInputs = async ({ root = process.cwd() } = {})
     throw new Error(
       `pre-push: validation inputs must be tracked by the pushed commit; remove or add these files before validation: ${affecting.slice(0, 12).join(', ')}${affecting.length > 12 ? ` and ${affecting.length - 12} more` : ''}`,
     );
+};
+
+const ignoredEnvFiles = async (root) => {
+  const tracked = new Set(trackedPaths(root));
+  const entries = await readdir(root, { withFileTypes: true });
+  const files = [];
+  for (const entry of entries) {
+    if (!entry.name.startsWith('.env') || entry.name === '.env.example' || tracked.has(entry.name))
+      continue;
+    if (
+      git(['check-ignore', '-q', '--', entry.name], { cwd: root, allowFailure: true }).status !== 0
+    )
+      continue;
+    if (!entry.isFile() && !entry.isSymbolicLink()) continue;
+    try {
+      await lstat(path.join(root, entry.name));
+      files.push(entry.name);
+    } catch {
+      // A concurrently removed environment file needs no isolation.
+    }
+  }
+  return files;
+};
+
+const removeUntrackedFinderFiles = async (root) => {
+  const tracked = new Set(trackedPaths(root));
+  const removed = [];
+  const excluded = new Set([
+    '.git',
+    'node_modules',
+    '.pnpm-store',
+    'dist',
+    'artifacts',
+    '.netlify',
+  ]);
+  const visit = async (directory, relative = '') => {
+    let entries;
+    try {
+      entries = await readdir(directory, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (relative === '' && excluded.has(entry.name)) continue;
+      const childRelative = relative ? path.join(relative, entry.name) : entry.name;
+      const absolute = path.join(directory, entry.name);
+      if (entry.name === '.DS_Store' && !tracked.has(childRelative)) {
+        await rm(absolute, { force: true });
+        removed.push(childRelative);
+      } else if (entry.isDirectory() && !entry.isSymbolicLink()) {
+        await visit(absolute, childRelative);
+      }
+    }
+  };
+  await visit(root);
+  return removed;
+};
+
+/**
+ * Keep ignored machine-local environment files away from Vite/build/test discovery during the
+ * push check, then restore them even when validation fails or is cancelled. Finder metadata files
+ * are harmless and removed automatically. Neither kind of file is staged or added to Git.
+ */
+export const withCleanValidationWorkspace = async (
+  { root = process.cwd(), onCleanup = () => {} } = {},
+  task,
+) => {
+  const removedFinderFiles = await removeUntrackedFinderFiles(root);
+  if (removedFinderFiles.length) onCleanup({ removedFinderFiles });
+
+  const envFiles = await ignoredEnvFiles(root);
+  if (envFiles.length === 0) return task();
+
+  const quarantine = await mkdtemp(path.join(os.tmpdir(), 'open-keychain-validation-env-'));
+  const moved = [];
+  let result;
+  let taskError;
+  try {
+    for (const name of envFiles) {
+      const source = path.join(root, name);
+      const target = path.join(quarantine, name);
+      await rename(source, target);
+      moved.push({ source, target });
+    }
+    onCleanup({ isolatedEnvFiles: envFiles });
+    result = await task();
+  } catch (error) {
+    taskError = error;
+  }
+  const restoreErrors = [];
+  for (const { source, target } of moved.reverse()) {
+    try {
+      await rename(target, source);
+    } catch (error) {
+      restoreErrors.push(`${path.basename(source)} (${error.message})`);
+    }
+  }
+  if (restoreErrors.length)
+    throw new Error(
+      `Validation finished but could not restore local environment file(s): ${restoreErrors.join(', ')}. Recover them from ${quarantine}.`,
+      { cause: taskError },
+    );
+  await rm(quarantine, { recursive: true, force: true });
+  if (taskError) throw taskError;
+  return result;
 };
 
 export const diffFromBase = ({ root = process.cwd(), baseRef = 'origin/main' } = {}) => {

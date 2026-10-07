@@ -20,6 +20,6 @@
 
 ## Repository state and next action
 
-- Branch `main`, HEAD `d4bc544`, already one commit ahead of `origin/main` before this task. Current work remains uncommitted. No commit, push, PR, or deploy was performed.
-- `git diff --check` is clean. Working tree contains the validation runner/cache/TUI, test split, CI, documentation, and matrix changes; preserve them during review.
-- Next action: inspect the local diff, then let the normal GitHub Actions run validate all eight shards on hosted Linux. Production deploy remains gated on the required-checks job.
+- Branch `main`, HEAD `dd7bef9`, two commits ahead of `origin/main`. Follow-up push-hook cleanup changes are uncommitted; no commit, push, PR, or deploy was performed.
+- Push validation now removes untracked `.DS_Store` files and temporarily isolates ignored root `.env*` files, restoring env files after success, failure, or handled cancellation. Neither file type is staged. Focused Git validation and scheduler tests pass (13 tests), as do touched-file ESLint, Prettier, and `git diff --check`.
+- Next action: commit the reviewed hook cleanup changes locally, then retry `git push`; CI remains responsible for all eight hosted matrix shards and the required-check deploy gate.

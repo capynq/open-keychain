@@ -16,7 +16,11 @@ import {
 } from './validation-cache.mjs';
 import { ValidationUi, eventFor } from './validation-ui.mjs';
 import { createGatePlan } from './validation-plan.mjs';
-import { collectPushChanges, assertCleanValidationInputs } from './validation-git.mjs';
+import {
+  collectPushChanges,
+  assertCleanValidationInputs,
+  withCleanValidationWorkspace,
+} from './validation-git.mjs';
 
 const ROOT = process.cwd();
 const LOG_DIR = path.join(ROOT, 'artifacts', 'validation-logs');
@@ -526,57 +530,84 @@ const main = async () => {
   }
   let files;
   if (command === 'push' || command === 'bench-push') {
-    let changes;
+    const input =
+      command === 'push'
+        ? await (async () => {
+            const chunks = [];
+            if (!process.stdin.isTTY) for await (const chunk of process.stdin) chunks.push(chunk);
+            return Buffer.concat(chunks).toString('utf8');
+          })()
+        : '';
+    const executePush = async () => {
+      let changes;
+      if (command === 'push') {
+        await assertCleanValidationInputs({ root: ROOT });
+        changes = collectPushChanges({ hookInput: input, root: ROOT });
+      } else {
+        const working = execFileSync('git', ['diff', '--name-only', '-z', 'HEAD'], {
+          cwd: ROOT,
+          encoding: 'utf8',
+        })
+          .split('\0')
+          .filter(Boolean);
+        const staged = execFileSync('git', ['diff', '--cached', '--name-only', '-z'], {
+          cwd: ROOT,
+          encoding: 'utf8',
+        })
+          .split('\0')
+          .filter(Boolean);
+        const untracked = execFileSync(
+          'git',
+          ['ls-files', '--others', '--exclude-standard', '-z'],
+          {
+            cwd: ROOT,
+            encoding: 'utf8',
+          },
+        )
+          .split('\0')
+          .filter(Boolean);
+        changes = {
+          files: [...new Set([...working, ...staged, ...untracked])].sort(),
+          branch: process.env.VALIDATION_BRANCH ?? 'benchmark',
+          head: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim(),
+          conservative: false,
+        };
+      }
+      files = changes.files;
+      const branch = changes.branch;
+      const sha = changes.head.slice(0, 10);
+      if (('deletedOnly' in changes && changes.deletedOnly) || files.length === 0) {
+        process.stdout.write('No pushed file changes require validation.\n');
+        return;
+      }
+      if (changes.conservative)
+        process.stdout.write('Git baseline unavailable; using conservative full validation.\n');
+      const gates = createGatePlan(files, changes.conservative ? 'full' : 'push');
+      const outcome = await runValidationGates(gates, {
+        files,
+        profile: 'quick',
+        branch,
+        sha,
+        mode: parseMode(),
+      });
+      process.exitCode = outcome.ok ? 0 : 1;
+    };
     if (command === 'push') {
-      const chunks = [];
-      if (!process.stdin.isTTY) for await (const chunk of process.stdin) chunks.push(chunk);
-      const input = Buffer.concat(chunks).toString('utf8');
-      await assertCleanValidationInputs({ root: ROOT });
-      changes = collectPushChanges({ hookInput: input, root: ROOT });
-    } else {
-      const working = execFileSync('git', ['diff', '--name-only', '-z', 'HEAD'], {
-        cwd: ROOT,
-        encoding: 'utf8',
-      })
-        .split('\0')
-        .filter(Boolean);
-      const staged = execFileSync('git', ['diff', '--cached', '--name-only', '-z'], {
-        cwd: ROOT,
-        encoding: 'utf8',
-      })
-        .split('\0')
-        .filter(Boolean);
-      const untracked = execFileSync('git', ['ls-files', '--others', '--exclude-standard', '-z'], {
-        cwd: ROOT,
-        encoding: 'utf8',
-      })
-        .split('\0')
-        .filter(Boolean);
-      changes = {
-        files: [...new Set([...working, ...staged, ...untracked])].sort(),
-        branch: process.env.VALIDATION_BRANCH ?? 'benchmark',
-        head: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim(),
-        conservative: false,
-      };
-    }
-    files = changes.files;
-    const branch = changes.branch;
-    const sha = changes.head.slice(0, 10);
-    if (('deletedOnly' in changes && changes.deletedOnly) || files.length === 0) {
-      process.stdout.write('No pushed file changes require validation.\n');
-      return;
-    }
-    if (changes.conservative)
-      process.stdout.write('Git baseline unavailable; using conservative full validation.\n');
-    const gates = createGatePlan(files, changes.conservative ? 'full' : 'push');
-    const outcome = await runValidationGates(gates, {
-      files,
-      profile: 'quick',
-      branch,
-      sha,
-      mode: parseMode(),
-    });
-    process.exitCode = outcome.ok ? 0 : 1;
+      await withCleanValidationWorkspace(
+        {
+          root: ROOT,
+          onCleanup: ({ removedFinderFiles = [], isolatedEnvFiles = [] }) => {
+            if (removedFinderFiles.length)
+              process.stdout.write(`Removed Finder metadata: ${removedFinderFiles.join(', ')}\n`);
+            if (isolatedEnvFiles.length)
+              process.stdout.write(
+                `Temporarily isolated local env files for validation (will restore): ${isolatedEnvFiles.join(', ')}\n`,
+              );
+          },
+        },
+        executePush,
+      );
+    } else await executePush();
     return;
   }
   const profile =
