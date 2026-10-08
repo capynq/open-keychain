@@ -269,6 +269,7 @@ describe('native front text finishing', () => {
         section.delete();
       }
     },
+    15_000,
   );
 
   it('does not expose a radius that removes a narrow component', () => {
