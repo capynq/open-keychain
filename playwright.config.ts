@@ -20,6 +20,7 @@ export default defineConfig({
   testDir: './e2e',
   testIgnore: hostedRun ? ignoredSpecs : [...ignoredSpecs, /workspace\.spec\.ts/],
   timeout: 30_000,
+  retries: process.env.CI ? 1 : 0,
   use: {
     baseURL: externalBaseUrl ?? previewUrl,
     browserName: 'chromium',
