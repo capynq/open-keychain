@@ -331,7 +331,8 @@ test('preserves visible Font cards in the taller desktop first viewport', async 
   const bootCards = await readVisibleFontCards('#boot-customizer');
   releaseAppEntry?.();
   await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
-  await expect(await readVisibleFontCards('#root')).toEqual(bootCards);
+  const liveCards = await readVisibleFontCards('#root');
+  await expect(liveCards.slice(0, bootCards.length)).toEqual(bootCards);
 });
 
 test('keeps root overlays inert until the cold Customizer route commits', async ({ page }) => {

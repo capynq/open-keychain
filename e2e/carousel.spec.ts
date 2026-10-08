@@ -105,7 +105,9 @@ test('supports keyboard and horizontal swipe navigation', async ({ page }) => {
   const viewport = page.locator(carousel);
   await expect(page.locator('[data-showcase-control="next"]')).toBeEnabled();
   await viewport.focus();
+  await expect(viewport).toBeFocused();
   await page.keyboard.press('ArrowRight');
+  await expect(viewport).toHaveAttribute('data-moving', 'true');
   await waitForSlide(page, 'print-example-1');
   await page.keyboard.press('ArrowLeft');
   await waitForSlide(page, 'configurator');

@@ -88,8 +88,11 @@ finishes use separate profiles; text finishing affects only its visible front ed
   the boot frame and hydrated controls keep the same first-viewport font choices.
   At widths of at least 1100px and heights of at least 1000px, anchor the app
   shell to the viewport and use 6px padding with the compact controls density so
-  all six boot-frame Font cards fit in the first viewport. Keep the 16px section
-  padding at mobile widths.
+  all six boot-frame Font cards fit in the first viewport. Reduce template card
+  height and top-level header/footer spacing at this size; preserve 44px font-card
+  targets. The hydrated catalog may reveal additional cards below the boot frame's
+  six-card preview, while keeping those first six card positions unchanged. Keep
+  the 16px section padding at mobile widths.
 - In Adjustments, separate visible Template details, Style details, and Shape
   `h3` subcategories with a quiet rule only when another such category precedes
   them. Do not leave rules after Typography or before Print when no detail

@@ -1716,10 +1716,23 @@ input[type='range'] {
     min-height: 0;
   }
 
+  .topbar {
+    padding-block: 8px;
+  }
+
+  .workspace {
+    padding-block: 10px;
+  }
+
+  .customizer-footer {
+    padding-block: 8px;
+  }
+
   .controls-panel {
     --control-section-gap: 6px;
     --control-subsection-gap: 4px;
     --control-section-padding: 6px;
+    --field-control-height: 36px;
   }
 
   .controls-panel [data-control-group='name'],
@@ -1733,7 +1746,7 @@ input[type='range'] {
   }
 
   .controls-panel .design-select-card {
-    aspect-ratio: 1.55 / 1;
+    aspect-ratio: 2 / 1;
   }
 
   .font-groups {
