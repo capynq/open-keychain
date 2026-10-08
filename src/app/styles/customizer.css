@@ -1715,6 +1715,12 @@ input[type='range'] {
     --control-section-padding: 6px;
   }
 
+  .controls-panel [data-control-group='name'],
+  .controls-panel [data-control-group='template'],
+  .controls-panel [data-control-group='style'] {
+    padding-block: 6px;
+  }
+
   .control-section-divider {
     margin-block: 4px;
   }

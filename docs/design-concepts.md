@@ -86,7 +86,9 @@ finishes use separate profiles; text finishing affects only its visible front ed
   sibling margins.
 - On desktop, the Name, Template, and Style sections use 12px vertical padding so
   the boot frame and hydrated controls keep the same first-viewport font choices.
-  Keep the 16px section padding at mobile widths.
+  At widths of at least 1100px and heights of at least 1000px, use 6px padding
+  with the compact controls density so all six boot-frame Font cards fit in the
+  first viewport. Keep the 16px section padding at mobile widths.
 - In Adjustments, separate visible Template details, Style details, and Shape
   `h3` subcategories with a quiet rule only when another such category precedes
   them. Do not leave rules after Typography or before Print when no detail
