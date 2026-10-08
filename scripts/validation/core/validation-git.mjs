@@ -5,10 +5,23 @@ import path from 'node:path';
 import process from 'node:process';
 
 const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
+const GIT_CONTEXT_ENV = [
+  'GIT_DIR',
+  'GIT_WORK_TREE',
+  'GIT_INDEX_FILE',
+  'GIT_COMMON_DIR',
+  'GIT_OBJECT_DIRECTORY',
+  'GIT_ALTERNATE_OBJECT_DIRECTORIES',
+  'GIT_PREFIX',
+  'GIT_SUPER_PREFIX',
+  'GIT_NAMESPACE',
+];
 export const isZeroSha = (sha) => !sha || /^0+$/.test(sha);
 
 const git = (args, { cwd = process.cwd(), allowFailure = false } = {}) => {
-  const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
+  const env = { ...process.env };
+  for (const key of GIT_CONTEXT_ENV) delete env[key];
+  const result = spawnSync('git', args, { cwd, encoding: 'utf8', env });
   if (result.status !== 0 && !allowFailure)
     throw new Error((result.stderr || `git ${args.join(' ')} failed`).trim());
   return { status: result.status ?? 1, stdout: result.stdout ?? '', stderr: result.stderr ?? '' };

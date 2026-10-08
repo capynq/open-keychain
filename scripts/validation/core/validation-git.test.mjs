@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { access, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import process from 'node:process';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   assertCleanValidationInputs,
@@ -11,18 +12,28 @@ import {
 } from './validation-git.mjs';
 
 const roots = [];
+const isolatedGitEnvironment = Object.fromEntries(
+  Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')),
+);
 const createRepo = async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'validation-git-'));
   roots.push(root);
-  execFileSync('git', ['init', '-b', 'main'], { cwd: root });
-  execFileSync('git', ['config', 'user.email', 'validation@example.test'], { cwd: root });
-  execFileSync('git', ['config', 'user.name', 'Validation Test'], { cwd: root });
+  execFileSync('git', ['init', '-b', 'main'], { cwd: root, env: isolatedGitEnvironment });
+  execFileSync('git', ['config', 'user.email', 'validation@example.test'], {
+    cwd: root,
+    env: isolatedGitEnvironment,
+  });
+  execFileSync('git', ['config', 'user.name', 'Validation Test'], {
+    cwd: root,
+    env: isolatedGitEnvironment,
+  });
   await writeFile(path.join(root, 'README.md'), 'initial\n');
-  execFileSync('git', ['add', 'README.md'], { cwd: root });
-  execFileSync('git', ['commit', '-m', 'initial'], { cwd: root });
+  execFileSync('git', ['add', 'README.md'], { cwd: root, env: isolatedGitEnvironment });
+  execFileSync('git', ['commit', '-m', 'initial'], { cwd: root, env: isolatedGitEnvironment });
   return root;
 };
-const git = (root, ...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
+const git = (root, ...args) =>
+  execFileSync('git', args, { cwd: root, encoding: 'utf8', env: isolatedGitEnvironment }).trim();
 afterEach(async () =>
   Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true }))),
 );
