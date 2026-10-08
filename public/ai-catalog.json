@@ -11,12 +11,26 @@
       "displayName": "Open Keychain browser customizer",
       "type": "text/html",
       "url": "https://open-keychain.com/create",
-      "description": "A browser-local WebMCP customizer for printable 3D keychains.",
-      "tags": ["3D printing", "keychain", "WebMCP", "browser-local"],
+      "description": "Free browser-local customizer for five templates: name keychain, articulated name, nameplate, plant label, and a personalized magnet with a blind rear disc-magnet pocket. No account is needed for one-off designs or individual exports. Exports are STL, one-model color-separated 3MF, and merged 3MF. Paid Maker adds reusable presets and batch tools; individual exports remain free. Names and geometry stay in the browser. Optional Google Fonts needs an API key and internet; built-in fonts work offline. The software is MIT-licensed; bundled fonts have separate SIL Open Font License terms.",
+      "tags": [
+        "3D printing",
+        "keychain",
+        "magnet",
+        "nameplate",
+        "plant label",
+        "STL",
+        "3MF",
+        "free",
+        "MIT",
+        "WebMCP",
+        "browser-local"
+      ],
       "capabilities": ["get-keychain-state", "customize-keychain"],
       "representativeQueries": [
         "Customize a printable 3D keychain in the browser",
-        "Create a keychain design with Open Keychain"
+        "Create a keychain design with Open Keychain",
+        "Make a personalized magnet with a disc-magnet pocket",
+        "Export a color-separated or merged 3MF"
       ],
       "version": "1.0.0"
     }

@@ -40,9 +40,14 @@ test('selects modern landing images while preserving lazy PNG fallbacks', async 
     .toContain(expectedHeroAsset);
 
   const templateImages = page.locator('.landing-template-card img');
-  await expect(templateImages).toHaveCount(4);
+  await expect(templateImages).toHaveCount(5);
   await expect(templateImages.first()).toHaveAttribute('loading', 'lazy');
   await expect(templateImages.first()).toHaveAttribute('decoding', 'async');
+  await expect
+    .poll(() =>
+      templateImages.last().evaluate((element) => (element as HTMLImageElement).currentSrc),
+    )
+    .toContain('/showcase/templates/magnet.png');
   await expect(page.locator('[data-showcase-kind="photo"] img').first()).toHaveAttribute(
     'loading',
     'lazy',

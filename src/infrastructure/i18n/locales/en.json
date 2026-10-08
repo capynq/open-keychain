@@ -140,9 +140,9 @@
   "exportStl": "STL file",
   "exportStlDescription": "One printable mesh for slicers and broad compatibility.",
   "export3mfSeparate": "3MF · separate colors",
-  "export3mfSeparateDescription": "Keep structural letters and raised caps as separate colored objects.",
+  "export3mfSeparateDescription": "Keep the design in one 3MF model with color-separated material regions.",
   "export3mfMerged": "3MF · merged object",
-  "export3mfMergedDescription": "Combine all printable shells into one 3MF object.",
+  "export3mfMergedDescription": "Combine all printable shells into one merged 3MF object.",
   "exportUnavailable": "Export is unavailable until the model is printable.",
   "exporting": "Preparing your download…",
   "exportCompleted": "Download ready.",
@@ -237,7 +237,7 @@
   "fontLocalAboutDescription": "Font files stay on this device. Your browser may ask for permission again, and a moved or deleted file will need reconnecting.",
   "remove": "Remove",
   "fontSourceGoogle": "Google Fonts",
-  "fontGoogleUnavailable": "Google Fonts are unavailable (missing key, network failure, blocked request, timeout, or invalid response). Included fonts remain available offline.",
+  "fontGoogleUnavailable": "Online fonts are unavailable in this build or connection. The built-in font collection remains available offline.",
   "fontGoogleLoading": "Loading Google Fonts…",
   "fontGoogleEmpty": "Google Fonts returned no compatible fonts. Try another filter or use the built-in collection.",
   "fontRuntimeLoadFailed": "This font could not be loaded. Your current font remains selected.",
@@ -461,7 +461,7 @@
     "navFaq": "FAQ",
     "heroKicker": "Local-first 3D product maker",
     "heroTitle": "Turn a name into something you can print.",
-    "heroBody": "Make a personalized product in minutes, export STL or 3MF, and take the file straight to your slicer.",
+    "heroBody": "Design for free in your browser without an account. Export STL or either 3MF format, then take the file to your slicer.",
     "startDesigning": "Start designing",
     "chooseTemplate": "Choose this template",
     "viewSource": "View source",
@@ -487,7 +487,8 @@
       "nameKeychain": "ALEX name keychain preview with a raised name and keyring hole",
       "articulatedName": "ALEX articulated name preview with linked printable letters",
       "nameplate": "ALEX nameplate preview on a compact printable plaque",
-      "plantLabel": "ALEX plant label preview with a pointed stake"
+      "plantLabel": "ALEX plant label preview with a pointed stake",
+      "magnet": "ALEX personalized magnet preview with a recessed disc-magnet pocket"
     },
     "howKicker": "A repeatable maker workflow",
     "howTitle": "From customer idea to a file for printing.",
@@ -501,7 +502,7 @@
       "shape": {
         "title": "Shape it",
         "body": "Choose a template",
-        "detail": "Pick a keychain, articulated name, nameplate or plant label, then tune font, style and dimensions."
+        "detail": "Pick a keychain, articulated name, nameplate, plant label or magnet, then tune font, style and dimensions."
       },
       "export": {
         "title": "Export it",
@@ -510,7 +511,7 @@
       }
     },
     "productsKicker": "Start with a proven shape",
-    "productsTitle": "Four templates for the names people ask for.",
+    "productsTitle": "Five templates, from keychains to magnets.",
     "products": {
       "keychain": {
         "title": "Name keychain",
@@ -527,18 +528,26 @@
       "plantLabel": {
         "title": "Plant label",
         "body": "A pointed label for pots, herbs and small garden rows."
+      },
+      "magnet": {
+        "title": "Disc-magnet design",
+        "body": "A personalized magnet with a blind rear pocket for a standard disc magnet. Glue in the magnet after printing."
       }
     },
     "runKicker": "Made for your setup",
     "runTitle": "Print one today. Build a repeatable workflow tomorrow.",
-    "runBody": "Use the local browser generator for one-off gifts, shop samples and repeatable home-business work. Maker adds reusable presets and local batch tools when you need a repeatable workflow.",
+    "runBody": "One-off designs and exports are free in your browser without an account. The paid Maker plan adds reusable presets and batch tools; individual exports remain free.",
     "hostedCta": "See Maker on /profile",
     "run": {
       "browser": {
         "eyebrow": "Available now",
         "title": "Use it in your browser",
-        "status": "Free local generator",
-        "items": ["No account needed", "Geometry and exports stay on this device", "Download STL or 3MF"]
+        "status": "Free designs and exports",
+        "items": [
+          "No account needed",
+          "Geometry and exports stay on this device",
+          "STL, color-separated 3MF or merged 3MF"
+        ]
       },
       "selfHost": {
         "eyebrow": "Available now",
@@ -551,7 +560,7 @@
         ]
       },
       "hosted": {
-        "eyebrow": "Maker offer",
+        "eyebrow": "Paid Maker plan",
         "title": "A repeatable workflow",
         "status": "€4.99 monthly · €49 yearly",
         "items": [
@@ -564,12 +573,12 @@
     "trustLabel": "Privacy and beta notes",
     "localFirstKicker": "Local-first by default",
     "localFirstTitle": "Your design work stays close to you.",
-    "localFirstBody": "In the browser workflow, fonts, geometry generation and exports run locally. Open Keychain is MIT-licensed open source.",
+    "localFirstBody": "Names and geometry stay in your browser. The MIT license allows commercial use of the software with its notice; bundled fonts keep their separate SIL Open Font License terms.",
     "betaKicker": "Beta, with honest limits",
     "betaTitle": "A generated file is not a physical-print guarantee.",
     "betaBody": "Check every export in your slicer and test it on your own printer. Printer, material and settings can all change the result.",
     "resourcesTitle": "Explore templates and guides",
-    "footerLicense": "MIT licensed · open source"
+    "footerLicense": "MIT software license · bundled fonts have separate licenses"
   },
   "templateDescriptions": {
     "name-keychain": "A backing contour that follows the name.",
@@ -584,16 +593,16 @@
     "languageLabel": "Language",
     "home": {
       "title": "Open Keychain 3D | Free 3D printable name-keychain generator",
-      "description": "Use a free 3D printable name-keychain generator in your browser. Create a name keychain without CAD, then export STL or 3MF locally.",
+      "description": "Design five 3D-printable templates free in your browser without an account. Export STL, color-separated 3MF or merged 3MF locally; one-off designs and exports stay free.",
       "heading": "Create a free 3D printable name keychain.",
       "intro": "Open Keychain 3D turns a name or short label into a printable model without CAD software or uploading your design.",
       "cta": "Start designing a keychain",
       "templatesHeading": "Choose a printable template",
-      "templatesBody": "Start with a name keychain, articulated name, nameplate, or plant label, then adjust the style and export a file for your slicer.",
+      "templatesBody": "Choose a name keychain, articulated name, nameplate, plant label or magnet with a blind rear disc-magnet pocket. Adjust the style, then export STL, color-separated 3MF or merged 3MF.",
       "workflowHeading": "A local-first 3D printing workflow",
-      "workflowBody": "Enter text, choose a shape, check the preview, and download STL or 3MF. Geometry and exports stay in your browser.",
+      "workflowBody": "Use the browser customizer free without an account. Enter text, choose one of five templates, and download STL, color-separated 3MF or merged 3MF. Geometry and exports stay in your browser.",
       "privacyHeading": "Your design stays on your device",
-      "privacyBody": "Names, geometry parameters, and exported files are processed locally. Check every file in your slicer before printing.",
+      "privacyBody": "Names, geometry parameters, and exported files stay on your device. Optional online fonts need an API key and internet access; built-in fonts work offline. Check every file in your slicer before printing.",
       "faqHeading": "Printable keychain questions",
       "examplesHeading": "Printed examples",
       "examplesBody": "Examples from the project gallery are illustrative; check your own sliced preview before printing.",
@@ -603,7 +612,7 @@
       "faq": [
         {
           "question": "Can I export an STL file?",
-          "answer": "Yes. The customizer validates the model and lets you download an STL or 3MF file for your slicer."
+          "answer": "Yes. Choose one STL, a color-separated 3MF with material regions, or a merged 3MF object for your slicer."
         },
         {
           "question": "Do I need CAD software?",
@@ -611,7 +620,15 @@
         },
         {
           "question": "Is my name uploaded?",
-          "answer": "No. In the browser workflow, your text and generated geometry stay on your device."
+          "answer": "No. Your text and generated geometry stay on your device. If you choose an online font, the app requests its catalog and font file without sending your text. Built-in fonts are available offline."
+        },
+        {
+          "question": "Is the browser customizer free?",
+          "answer": "Yes. One-off designs and individual exports are free without an account. Paid Maker adds reusable presets and batch tools."
+        },
+        {
+          "question": "Can I use Open Keychain commercially?",
+          "answer": "The software is MIT-licensed, which permits commercial use, modification and distribution when the copyright and license notice are included. Bundled fonts have separate SIL Open Font License terms; those fonts may be bundled with software but may not be sold by themselves."
         }
       ]
     },

@@ -51,7 +51,7 @@ test('exposes a working customizer entry point for every landing template card',
 }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
   await page.goto('/');
-  const expected = ['name-keychain', 'articulated-name', 'nameplate', 'plant-label'];
+  const expected = ['name-keychain', 'articulated-name', 'nameplate', 'plant-label', 'magnet'];
   const links = page.locator('.landing-template-card-action');
   await expect(links).toHaveCount(expected.length);
   for (const [index, templateId] of expected.entries()) {
@@ -67,6 +67,42 @@ test('exposes a working customizer entry point for every landing template card',
     'template-card-nameplate',
   );
   assertNoBrowserErrors();
+});
+
+test('localizes the template, export, free-use, font, and license facts', async ({ page }) => {
+  const facts = {
+    en: {
+      magnet: 'Disc-magnet design',
+      free: 'One-off designs and exports are free',
+      export: 'color-separated 3MF',
+      fonts: 'Built-in fonts are available offline',
+      license: 'SIL Open Font License',
+    },
+    ru: {
+      magnet: 'Дизайн магнита',
+      free: 'Разовые дизайны и экспорты в браузере бесплатны',
+      export: '3MF с разделёнными цветами',
+      fonts: 'Встроенные шрифты доступны офлайн',
+      license: 'SIL Open Font License',
+    },
+    uk: {
+      magnet: 'Дизайн магніту',
+      free: 'Разові дизайни й експорти у браузері безкоштовні',
+      export: 'кольоровий 3MF',
+      fonts: 'Вбудовані шрифти доступні офлайн',
+      license: 'SIL Open Font License',
+    },
+  } as const;
+
+  await page.goto('/');
+  for (const locale of ['en', 'ru', 'uk'] as const) {
+    await selectLocale(page, locale);
+    await expect(page.locator('#products')).toContainText(facts[locale].magnet);
+    await expect(page.locator('#run')).toContainText(facts[locale].free);
+    await expect(page.locator('#run')).toContainText(facts[locale].export);
+    await expect(page.locator('#faq')).toContainText(facts[locale].fonts);
+    await expect(page.locator('#faq')).toContainText(facts[locale].license);
+  }
 });
 
 test('renders the real Customizer frame before React and hands off without a layout jump', async ({
@@ -347,10 +383,10 @@ test('loads all reviewed landing visuals at the active responsive breakpoint', a
   const assertNoBrowserErrors = watchBrowserErrors(page);
 
   await page.goto('/');
-  await expect(page.locator('.landing-template-card img')).toHaveCount(4);
+  await expect(page.locator('.landing-template-card img')).toHaveCount(5);
   await page.locator('.landing-template-card').last().scrollIntoViewIfNeeded();
   await Promise.all([
-    ...Array.from({ length: 4 }, (_, index) =>
+    ...Array.from({ length: 5 }, (_, index) =>
       waitForImageToLoad(page.locator('.landing-template-card img').nth(index)),
     ),
     waitForImageToLoad(page.locator(activeHeroImageSelector)),
@@ -362,7 +398,10 @@ test('loads all reviewed landing visuals at the active responsive breakpoint', a
     }),
   );
 
-  expect(images.every((image) => image.src.includes('/showcase/v1/templates/'))).toBe(true);
+  expect(images.slice(0, 4).every((image) => image.src.includes('/showcase/v1/templates/'))).toBe(
+    true,
+  );
+  expect(images[4]?.src).toContain('/showcase/templates/magnet.png');
   expect(images.every((image) => image.width > 0 && image.height > 0)).toBe(true);
   const expectedHeroAsset =
     testInfo.project.name === 'mobile-2x'
@@ -422,7 +461,7 @@ test('uses the density-appropriate mobile customizer capture on a mobile landing
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await expect(page.locator('.landing-template-card img')).toHaveCount(4);
+  await expect(page.locator('.landing-template-card img')).toHaveCount(5);
   await waitForImageToLoad(page.locator(activeHeroImageSelector));
   const expectedHeroAsset =
     testInfo.project.name === 'mobile-2x' ? 'create-mobile-780' : 'create-mobile-390';

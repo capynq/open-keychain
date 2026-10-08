@@ -26,10 +26,10 @@ test('generates and exports through the production static site', async ({ page }
 test('loads static metadata and privacy page in production', async ({ page }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
   await page.goto('/');
-  await expect(page.locator('.landing-template-card img')).toHaveCount(4);
+  await expect(page.locator('.landing-template-card img')).toHaveCount(5);
   await page.locator('.landing-template-card').last().scrollIntoViewIfNeeded();
   await Promise.all([
-    ...Array.from({ length: 4 }, (_, index) =>
+    ...Array.from({ length: 5 }, (_, index) =>
       waitForImageToLoad(page.locator('.landing-template-card img').nth(index)),
     ),
     waitForImageToLoad(page.locator(activeHeroImageSelector)),

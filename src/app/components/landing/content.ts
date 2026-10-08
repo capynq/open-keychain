@@ -3,14 +3,20 @@ import type { TemplateId } from '../../../domain/keychain/model/types';
 import { templateCreatePath as sharedTemplateCreatePath } from '../../../shared/lib/create-path';
 
 export const HOW_IT_WORKS = ['name', 'shape', 'export'] as const;
-export const SUPPORTED_PRODUCTS = ['keychain', 'articulated', 'nameplate', 'plantLabel'] as const;
+export const SUPPORTED_PRODUCTS = [
+  'keychain',
+  'articulated',
+  'nameplate',
+  'plantLabel',
+  'magnet',
+] as const;
 export const RUN_OPTIONS = ['browser', 'selfHost', 'hosted'] as const;
 export const RUN_ITEMS = [0, 1, 2] as const;
 
 export type TemplateShowcase = {
   id: TemplateId;
   assetPath: string;
-  modernAssetName: string;
+  modernAssetName?: string;
   titleKey: string;
   bodyKey: string;
   altKey: string;
@@ -51,6 +57,13 @@ export const TEMPLATE_SHOWCASE: readonly TemplateShowcase[] = [
     titleKey: 'landing.products.plantLabel.title',
     bodyKey: 'landing.products.plantLabel.body',
     altKey: 'landing.templatePreviewAlt.plantLabel',
+  },
+  {
+    id: 'magnet',
+    assetPath: '/showcase/templates/magnet.png',
+    titleKey: 'landing.products.magnet.title',
+    bodyKey: 'landing.products.magnet.body',
+    altKey: 'landing.templatePreviewAlt.magnet',
   },
 ];
 

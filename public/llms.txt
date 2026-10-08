@@ -1,11 +1,19 @@
 # Open Keychain 3D
 
-> Open Keychain 3D is a browser-based, open-source customizer for printable 3D keychains,
-> nameplates, plant labels, and related small objects.
+> Open Keychain 3D is a free browser-based customizer for five printable templates: name keychain,
+> articulated name, nameplate, plant label, and personalized magnet. The magnet uses a blind rear
+> pocket for a standard disc magnet, which is glued in after printing.
 
-Geometry generation and STL/3MF export run locally in the browser. WebMCP is a progressive,
-native-only enhancement: supported browsers may register tools while `/create` is open. The
-optional API server is not required for the customizer workflow.
+One-off designs and individual exports are free without an account. Geometry and exports run locally
+in the browser. Export options are STL, one-model color-separated 3MF, and merged 3MF. The paid Maker
+plan adds reusable presets and batch tools; individual exports remain free. Names are not sent to the
+server. Optional Google Fonts needs an API key and internet access; built-in fonts work offline. The
+Google Fonts catalog request and selected font file do not include the entered text.
+
+The software is MIT-licensed; commercial use, modification, and distribution are allowed when the
+copyright and license notice are retained. Bundled fonts carry separate SIL Open Font License 1.1
+terms and may not be sold by themselves. WebMCP is a progressive, native-only enhancement in
+supported browsers; the optional API server is not required for the customizer workflow.
 
 ## Product
 
@@ -20,6 +28,8 @@ optional API server is not required for the customizer workflow.
 - [Articulated name](https://open-keychain.com/templates/articulated-name/) — linked articulated letters.
 - [Nameplate](https://open-keychain.com/templates/nameplate/) — a rounded embedded nameplate.
 - [Plant label](https://open-keychain.com/templates/plant-label/) — a printable garden label.
+- Personalized magnet — a custom magnet with a blind rear disc-magnet pocket, available from the
+  customizer template selector.
 
 ## Guides
 
@@ -33,4 +43,6 @@ optional API server is not required for the customizer workflow.
 
 - [Source code](https://github.com/capynq/open-keychain) — the open-source repository.
 - [MIT license](https://github.com/capynq/open-keychain/blob/main/LICENSE) — project license.
+- [Bundled font licenses](https://github.com/capynq/open-keychain/tree/main/public/fonts/licenses) —
+  separate SIL Open Font License notices for included font files.
 - [WebMCP implementation](https://github.com/capynq/open-keychain/blob/main/docs/webmcp.md) — native tool integration and security boundaries.

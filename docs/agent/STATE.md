@@ -1,23 +1,29 @@
 # Agent handoff
 
-## Current work
+## Current state
 
-- Changed local pre-push validation to use changed formatting/lint where safe, typecheck, the whole fast Unit suite, one Build, and required browser smoke. The full geometry matrix no longer runs locally as part of ordinary pushes; explicit full validation and the geometry benchmark remain available.
-- Increased default local validation scheduling to four bounded slots and made Browser consume the verified Build artifact.
-- CI now requires full Unit, all public Browser projects plus hosted workspace coverage, and the complete eight-shard Geometry matrix for non-documentation changes before deployment. Unknown baselines and workflow dispatch remain conservative.
-- Fixed Browser progress accumulation across public and hosted phases and report Vitest test durations from its diagnostics.
-- Protected active temporary cache entries from concurrent pruning; stale abandoned temporary entries are still removed after one hour.
+- Branch `main`, HEAD `e5f0546`; the working tree contains an uncommitted content-accuracy slice.
+- The landing page now promotes all five templates, including the magnet, and describes its blind
+  rear disc-magnet pocket. The offer, exports, privacy, online-font fallback, and MIT/font-license
+  facts are consistent across English, Russian, Ukrainian, README, `llms.txt`, and `ai-catalog.json`.
+- The magnet uses its existing PNG because optimized AVIF/WebP variants are not present. Landing
+  route, deployment, smoke, and performance checks now expect five cards.
+- No commit, push, deployment, or SkipTheCAD correction was made.
 
 ## Validation
 
-- `pnpm validate:changed -- <12 changed implementation/test/workflow files>` passed formatting and lint.
-- `pnpm typecheck` passed.
-- Focused Vitest cache, validation plan, CI workflow, reporter, and runner tests passed: 29 tests across 5 files.
-- `git diff --check` passed.
-- `pnpm validate:bench push 2` did not complete: the sandbox denied localhost preview-port allocation (`listen EPERM`), which stopped Browser and cancelled Unit. Its reported 2.9s/5.5s are failed runs, not valid hook timings. The first attempt also exposed and led to a fix for a concurrent cache-pruning race.
-- The complete Unit, Browser, Geometry, and push suites were not completed in this implementation turn.
+- `pnpm build` passed, including typecheck.
+- `pnpm format:check` and `pnpm lint` passed.
+- `pnpm validate:seo` passed: 11 tests.
+- Desktop and mobile Playwright smoke passed: 6 tests. Focused route/image checks passed: 2 tests.
+- Focused English/Russian/Ukrainian content check passed. Desktop optimized-image/fallback check
+  passed.
+- `git diff --check` passed after the final locale-test assertion update.
+- Live Google Fonts API/catalog and selected-font loading could not be verified: no browser was
+  connected and external DNS was unavailable from the execution environment. UI copy now says
+  online fonts may be unavailable in this build or connection and built-in fonts work offline.
 
-## Repository state and next action
+## Next action
 
-- Branch `main`, HEAD `22a2265`; working tree has 12 modified files for this validation change. No commit or push was performed.
-- Next action: review these changes, then commit separately if authorized. Non-documentation commits will trigger complete CI regression checks before deployment.
+Verify the production Google Fonts catalog and selected-font request in a connected browser; only
+then send the factual SkipTheCAD correction described in the prior task plan.

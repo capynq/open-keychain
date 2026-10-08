@@ -16,14 +16,14 @@ Try the live [Open Keychain 3D printable keychain maker](https://open-keychain.c
 
 ## Highlights
 
-- Generate name keychains, articulated names, nameplates, and plant labels from one short text input.
-- Preview validated geometry in the browser and export STL or 3MF for your slicer.
-- Use the [name keychain](https://open-keychain.com/templates/name-keychain/), [articulated name](https://open-keychain.com/templates/articulated-name/), [nameplate](https://open-keychain.com/templates/nameplate/), or [plant label](https://open-keychain.com/templates/plant-label/) templates.
+- Generate name keychains, articulated names, nameplates, plant labels, and personalized magnets from one short text input.
+- Preview validated geometry in the browser and export STL, color-separated 3MF, or merged 3MF for your slicer.
+- Use the [name keychain](https://open-keychain.com/templates/name-keychain/), [articulated name](https://open-keychain.com/templates/articulated-name/), [nameplate](https://open-keychain.com/templates/nameplate/), or [plant label](https://open-keychain.com/templates/plant-label/) templates. The customizer also includes a magnet with a blind rear pocket for a standard disc magnet.
 - Keep names, local fonts, geometry generation, and exported files on-device in the default local-first workflow.
 
 ## Use it locally
 
-The browser version is free to use and does not require an account. Fonts, geometry generation, preview, and exports run in the browser in the default build.
+One-off designs and individual exports in the browser are free and do not require an account. Geometry, preview, and exports run in the browser in the default build. Paid Maker adds reusable presets and batch tools; individual exports remain free.
 The supported baseline is a modern browser with WebGL and WebAssembly. If WebGL is unavailable or
 lost, editing and validated export remain available while the interactive preview is replaced with
 an accessible message.
@@ -48,8 +48,8 @@ The included catalog works offline. To enable the opt-in Google Fonts browser, s
 `VITE_GOOGLE_FONTS_API_KEY` before starting Vite or building the app. This browser-visible key
 is public by design; restrict it in Google Cloud by HTTP referrer to your production domain and
 local development origins. The app requests only Google family metadata and selected font files,
-never the entered name or preview text. If the key is missing or requests are blocked, the
-customizer keeps using the included fonts.
+never the entered name or preview text. If the key is missing or requests are blocked, online fonts
+are unavailable in that build or connection; the customizer keeps using the included fonts.
 Local TTF/OTF fonts are session-local and may require permission again after reconnecting a file.
 Shared links never embed font bytes: Google and local fonts are replaced with a bundled fallback and
 the recipient is warned so the appearance change is explicit.
@@ -80,8 +80,9 @@ contains only the versioned client contract and mock fixtures needed by the opti
 - Articulated names with linked letters
 - Nameplates for desks, drawers, or shelves
 - Plant labels with a pointed stake
+- Personalized magnets with a blind rear pocket for a standard disc magnet
 
-The customizer exports printable STL and 3MF files. Review the downloaded model in your slicer before printing; Open Keychain does not claim physical-print verification for every printer or material.
+The customizer exports printable STL, color-separated 3MF, and merged 3MF files. Review the downloaded model in your slicer before printing; Open Keychain does not claim physical-print verification for every printer or material.
 
 ## Privacy and hosted Maker workspace
 
@@ -117,6 +118,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for local validation and the direct-main 
 
 ## License and bundled fonts
 
-Open Keychain is released under the [MIT License](LICENSE). The license does not grant trademark
-rights; see [TRADEMARKS.md](TRADEMARKS.md). Bundled fonts retain their own licenses; their notices are
-kept in [`public/fonts/licenses/`](public/fonts/licenses/).
+Open Keychain's MIT License permits commercial use, modification, and distribution of the software
+when the copyright and license notice are included. The license does not grant trademark rights; see
+[`TRADEMARKS.md`](TRADEMARKS.md). Bundled fonts have separate SIL Open Font License 1.1 terms: they
+may be distributed with software but may not be sold by themselves. Notices are kept in
+[`public/fonts/licenses/`](public/fonts/licenses/).
