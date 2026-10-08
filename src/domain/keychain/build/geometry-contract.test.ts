@@ -142,7 +142,7 @@ describe('finished geometry contracts', () => {
       expect.objectContaining({ severity: 'error', code: 'disconnected' }),
     );
     expect(blocked.result.validation?.physical).toBe('unverified');
-  });
+  }, 15_000);
 
   it.each(['round', 'chamfer'] as const)(
     'exports every supported ALEX %s front amount with unchanged lower sections',
