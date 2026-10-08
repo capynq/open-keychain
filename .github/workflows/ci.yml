@@ -99,7 +99,7 @@ jobs:
       fail-fast: false
       max-parallel: 20
       matrix:
-        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -118,7 +118,7 @@ jobs:
           VALIDATION_CONCURRENCY: 4
           MATRIX_CONCURRENCY: 4
           MATRIX_SHARD_INDEX: ${{ matrix.shard }}
-          MATRIX_SHARD_COUNT: 20
+          MATRIX_SHARD_COUNT: 24
           MATRIX_SUMMARY_FILE: artifacts/geometry-summary/shard-${{ matrix.shard }}.json
           VALIDATION_UI: plain
           VALIDATION_CACHE: 0

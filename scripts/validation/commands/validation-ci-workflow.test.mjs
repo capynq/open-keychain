@@ -3,7 +3,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import process from 'node:process';
 import { describe, expect, it } from 'vitest';
 
-import { MATRIX_SHARD_COUNT } from '../../geometry/matrix/matrix-contract';
+import {
+  MATRIX_SHARD_COUNT,
+  MATRIX_SHARD_MAX_PARALLEL,
+} from '../../geometry/matrix/matrix-contract';
 
 describe('required CI deployment gate', () => {
   it('requires browser and geometry suites on conservative workflow dispatch', () => {
@@ -33,7 +36,7 @@ describe('required CI deployment gate', () => {
     expect(workflow).toContain('needs: [quality, production-build]');
     expect(shardIds).toEqual(Array.from({ length: MATRIX_SHARD_COUNT }, (_, index) => index));
     expect(workflow).toContain(`MATRIX_SHARD_COUNT: ${MATRIX_SHARD_COUNT}`);
-    expect(workflow).toContain(`max-parallel: ${MATRIX_SHARD_COUNT}`);
+    expect(workflow).toContain(`max-parallel: ${MATRIX_SHARD_MAX_PARALLEL}`);
     expect(workflow).toContain('pnpm validate:ci:browser');
     expect(workflow).toContain('pnpm validate:ci:geometry');
     expect(workflow).toContain('echo "browser: $BROWSER (required)"');
