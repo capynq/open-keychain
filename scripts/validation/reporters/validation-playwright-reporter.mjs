@@ -29,6 +29,17 @@ export default class ValidationPlaywrightReporter {
   }
   onTestEnd(test, result) {
     this.completed += 1;
+    if (result.status === 'failed' || result.status === 'timedOut') {
+      const errors = result.errors
+        .map((error) => error.message ?? error.value?.message ?? String(error.value ?? error))
+        .filter(Boolean)
+        .join(' | ')
+        .replace(/\s+/g, ' ')
+        .slice(0, 2400);
+      process.stderr.write(
+        `[Playwright failure] ${test.titlePath().join(' › ')}: ${errors || result.status}\n`,
+      );
+    }
     emit('case-completed', {
       name: test.titlePath().join(' › '),
       outcome: result.status,
