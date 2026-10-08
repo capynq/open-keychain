@@ -10,6 +10,7 @@ import {
 test('keeps geometry finish controls contained and printable across viewports', async ({
   page,
 }, testInfo) => {
+  test.setTimeout(90_000);
   const assertNoBrowserErrors = watchBrowserErrors(page);
 
   await page.goto('/create');

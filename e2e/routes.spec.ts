@@ -242,6 +242,9 @@ test('preserves visible Font cards in the taller desktop first viewport', async 
   });
   await page.goto(path, { waitUntil: 'commit' });
   await expect(page.locator('#boot-customizer aside.controls-panel')).toBeVisible();
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+  });
   const readVisibleFontCards = async (root: '#boot-customizer' | '#root') =>
     page.evaluate((selectorRoot) => {
       const panel = document.querySelector(`${selectorRoot} .controls-panel`);

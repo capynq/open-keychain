@@ -48,6 +48,9 @@ export const waitForReadyGeometry = async (page: Page): Promise<void> => {
     timeout: 30_000,
   });
   await expect(liveCustomizer.locator('.status-pill')).toHaveText(/Ready/, { timeout: 30_000 });
+  const rejectedCandidate = liveCustomizer.locator('.candidate-feedback[role="alert"]');
+  const rejection = await rejectedCandidate.allTextContents();
+  expect(rejection, `geometry candidate was rejected: ${rejection.join(' ')}`).toEqual([]);
   await expect(liveCustomizer.locator('.viewer-surface canvas')).toBeVisible();
   await page.evaluate(
     () =>

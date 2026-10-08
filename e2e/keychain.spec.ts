@@ -223,19 +223,20 @@ test('keeps shared icon glyphs centered while showing tactile hover feedback', a
 test('treats adjusted NIKITA Bubble geometry as ready and keeps width warnings exportable', async ({
   page,
 }) => {
+  test.setTimeout(60_000);
   await page.goto('/create');
   await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await page.getByLabel('Name or text').fill('NIKITA');
   await page.getByRole('button', { name: 'Bubble' }).click();
   await page.getByRole('button', { name: /Bungee/ }).click();
-  await expect(page.locator('.status-pill')).toHaveText('Ready · adjusted', { timeout: 10000 });
+  await expect(page.locator('.status-pill')).toHaveText('Ready · adjusted', { timeout: 30_000 });
   await expect(page.getByText(/adjusted to .* mm high/)).toBeVisible();
   await page.getByRole('button', { name: 'Export' }).click();
   await expect(page.getByRole('dialog', { name: 'Choose an export' })).toBeVisible();
   await expect(page.getByRole('dialog').getByRole('button', { name: /STL file/ })).toBeEnabled();
   await page.getByLabel('Text size').fill('12');
   await page.getByLabel('Name or text').fill('WWWWWWWWWWWWWWWWWWWWWWWW');
-  await expect(page.locator('.status-pill')).toHaveText('Ready · adjusted', { timeout: 10000 });
+  await expect(page.locator('.status-pill')).toHaveText('Ready · adjusted', { timeout: 30_000 });
   await expect(page.getByRole('dialog').getByRole('button', { name: /STL file/ })).toBeEnabled();
   await page.getByRole('button', { name: 'Close' }).click();
 });

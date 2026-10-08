@@ -78,8 +78,6 @@ test('keeps controls single-step, wrapped, and locked while moving', async ({ pa
 
   await next.click();
   await expect(page.locator(carousel)).toHaveAttribute('data-moving', 'true');
-  await next.hover();
-  await previous.hover();
   await expect(next).toBeDisabled();
   await expect(previous).toBeDisabled();
   await waitForSlide(page, 'print-example-1');

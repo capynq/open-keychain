@@ -28,7 +28,7 @@
     "test:full": "vitest run",
     "test:fast": "vitest run --exclude src/domain/keychain/build/keychain-builder.contracts.test.ts --exclude src/domain/keychain/build/keychain-builder.styles-fonts.test.ts --exclude src/domain/keychain/build/keychain-builder.magnet-nameplate-plant.test.ts --exclude src/domain/keychain/build/keychain-builder.keyring-articulated.test.ts",
     "test:e2e": "playwright test",
-    "test:e2e:full": "pnpm exec playwright test --workers=2 && pnpm test:e2e:workspace",
+    "test:e2e:full": "pnpm exec playwright test --workers=2 --grep-invert 'reaches the first ready customizer preview within the startup budget|keeps geometry finish controls contained and printable across viewports|treats adjusted NIKITA Bubble geometry as ready and keeps width warnings exportable' && pnpm exec playwright test --workers=1 --grep 'reaches the first ready customizer preview within the startup budget|keeps geometry finish controls contained and printable across viewports|treats adjusted NIKITA Bubble geometry as ready and keeps width warnings exportable' && pnpm test:e2e:workspace",
     "test:e2e:workspace": "VITE_HOSTED_MODE=true PLAYWRIGHT_USE_EXISTING_BUILD=false playwright test e2e/workspace.spec.ts --project=desktop --workers=1",
     "test:e2e:smoke": "PLAYWRIGHT_SMOKE=true playwright test e2e/smoke.spec.ts --project=desktop --project=mobile --workers=2",
     "test:e2e:performance": "PLAYWRIGHT_PERFORMANCE=true playwright test e2e/performance.spec.ts --workers=1",
