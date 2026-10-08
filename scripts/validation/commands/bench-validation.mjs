@@ -7,7 +7,7 @@ const main = async () => {
   if (requested === 'runtime') {
     const child = spawn(
       process.execPath,
-      ['scripts/bench-matrix-runtime.mjs', ...process.argv.slice(3)],
+      ['scripts/geometry/matrix/bench-matrix-runtime.mjs', ...process.argv.slice(3)],
       { stdio: 'inherit', env: process.env },
     );
     const status = await new Promise((resolve, reject) => {
@@ -48,10 +48,14 @@ const main = async () => {
   const timings = [];
   for (let index = 0; index < runs; index += 1) {
     const started = performance.now();
-    const child = spawn(process.execPath, ['scripts/run-validation-gates.mjs', profile], {
-      stdio: 'inherit',
-      env: { ...process.env, VALIDATION_UI: 'plain', VALIDATION_BENCH_RUN: String(index + 1) },
-    });
+    const child = spawn(
+      process.execPath,
+      ['scripts/validation/commands/run-validation-gates.mjs', profile],
+      {
+        stdio: 'inherit',
+        env: { ...process.env, VALIDATION_UI: 'plain', VALIDATION_BENCH_RUN: String(index + 1) },
+      },
+    );
     const status = await new Promise((resolve, reject) => {
       child.once('error', reject);
       child.once('close', resolve);

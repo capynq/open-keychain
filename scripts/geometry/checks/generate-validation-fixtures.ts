@@ -3,10 +3,10 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import { buildKeychain, createWasm } from '../src/domain/keychain/build/keychain-builder';
-import { DEFAULT_PARAMS, type KeychainParams } from '../src/domain/keychain/model/types';
-import { serializeBinaryStl } from '../src/infrastructure/export/stl-serializer';
-import { serializeThreeMf } from '../src/infrastructure/export/three-mf-serializer';
+import { buildKeychain, createWasm } from '../../../src/domain/keychain/build/keychain-builder';
+import { DEFAULT_PARAMS, type KeychainParams } from '../../../src/domain/keychain/model/types';
+import { serializeBinaryStl } from '../../../src/infrastructure/export/stl-serializer';
+import { serializeThreeMf } from '../../../src/infrastructure/export/three-mf-serializer';
 import { VALIDATION_FIXTURES as fixtures } from './validation-fixtures';
 
 const packageJson = JSON.parse(await fs.readFile('package.json', 'utf8')) as { version: string };

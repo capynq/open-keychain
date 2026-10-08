@@ -3,15 +3,17 @@ import { describe, expect, it } from 'vitest';
 import { listMatrixCases, partitionMatrixCasesByShard } from './bench-matrix-cases';
 import {
   EXPECTED_MATRIX_INVALID_COUNT,
+  MATRIX_SHARD_COUNT,
   MATRIX_SHARD_TARGET_MS,
-  validateMatrixShardSummaries,
-  type MatrixShardSummary,
-} from './validate-matrix-shards';
+} from './matrix-contract';
+import { validateMatrixShardSummaries, type MatrixShardSummary } from './validate-matrix-shards';
 
 const fixtureSummaries = (durationMs = 240_000): MatrixShardSummary[] => {
   const cases = listMatrixCases();
-  return Array.from({ length: 8 }, (_, shardIndex) => {
-    const caseIds = partitionMatrixCasesByShard(cases, shardIndex, 8).map((item) => item.id);
+  return Array.from({ length: MATRIX_SHARD_COUNT }, (_, shardIndex) => {
+    const caseIds = partitionMatrixCasesByShard(cases, shardIndex, MATRIX_SHARD_COUNT).map(
+      (item) => item.id,
+    );
     const expectedInvalid = shardIndex === 0 ? EXPECTED_MATRIX_INVALID_COUNT : 0;
     return {
       schema: 'geometry-matrix-summary.v1',
@@ -23,7 +25,7 @@ const fixtureSummaries = (durationMs = 240_000): MatrixShardSummary[] => {
       failed: 0,
       durationsMs: { total: durationMs },
       shardIndex,
-      shardCount: 8,
+      shardCount: MATRIX_SHARD_COUNT,
       caseIds,
     };
   });

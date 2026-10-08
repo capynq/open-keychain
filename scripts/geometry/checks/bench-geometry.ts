@@ -2,17 +2,17 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 
-import { buildKeychain, createWasm } from '../src/domain/keychain/build/keychain-builder';
-import { fontDefinition } from '../src/domain/keychain/fonts/catalog';
+import { buildKeychain, createWasm } from '../../../src/domain/keychain/build/keychain-builder';
+import { fontDefinition } from '../../../src/domain/keychain/fonts/catalog';
 import {
   DEFAULT_PARAMS,
   type KeychainParams,
   type StyleId,
   type TemplateId,
-} from '../src/domain/keychain/model/types';
-import { TEMPLATE_CATALOG } from '../src/domain/keychain/templates/template-builder';
-import { serializeBinaryStl } from '../src/infrastructure/export/stl-serializer';
-import { serializeThreeMf } from '../src/infrastructure/export/three-mf-serializer';
+} from '../../../src/domain/keychain/model/types';
+import { TEMPLATE_CATALOG } from '../../../src/domain/keychain/templates/template-builder';
+import { serializeBinaryStl } from '../../../src/infrastructure/export/stl-serializer';
+import { serializeThreeMf } from '../../../src/infrastructure/export/three-mf-serializer';
 
 const originalFetch = globalThis.fetch;
 globalThis.fetch = (async (input: string | URL) => {

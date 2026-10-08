@@ -30,7 +30,7 @@ jobs:
           node-version: 22
       - name: Classify checkout changes
         id: changes
-        run: node scripts/validation-ci-changes.mjs
+        run: node scripts/validation/commands/validation-ci-changes.mjs
         env:
           VALIDATION_BASE_SHA: ${{ github.event.before }}
 

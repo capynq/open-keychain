@@ -20,6 +20,6 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts', 'scripts/**/*.test.ts', 'scripts/**/*.test.mjs'],
-    reporters: ['default', './scripts/validation-vitest-reporter.mjs'],
+    reporters: ['default', './scripts/validation/reporters/validation-vitest-reporter.mjs'],
   },
 });

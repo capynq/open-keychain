@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import sharp from 'sharp';
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const publicDirectory = resolve(root, 'public');
 
 const assets = [

@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  EXPECTED_MATRIX_CASE_COUNT,
   listMatrixCases,
   partitionMatrixCases,
   partitionMatrixCasesByShard,
   selectMatrixBenchmarkSample,
 } from './bench-matrix-cases';
+import { EXPECTED_MATRIX_CASE_COUNT } from './matrix-contract';
 
 describe('geometry matrix scheduling', () => {
   it('keeps the full supported case count and stable unique IDs', () => {

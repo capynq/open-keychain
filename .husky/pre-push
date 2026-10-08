@@ -1,5 +1,5 @@
 set -e
 
 if command -v pnpm >/dev/null 2>&1; then
-  node scripts/pre-push-changed.mjs
+  node scripts/validation/commands/pre-push-changed.mjs
 fi

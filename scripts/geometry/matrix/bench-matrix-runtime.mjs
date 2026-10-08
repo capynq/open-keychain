@@ -42,7 +42,7 @@ const runtimes = [
     args: [],
   },
 ];
-const parentScript = path.resolve('scripts/bench-matrix-parent.ts');
+const parentScript = path.resolve('scripts/geometry/matrix/bench-matrix-parent.ts');
 const temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), 'open-keychain-matrix-ab-'));
 const expectedRuns = Array.from({ length: runs }, (_, index) =>
   index % 2 === 0 ? ['node', 'bun'] : ['bun', 'node'],

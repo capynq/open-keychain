@@ -1,7 +1,7 @@
 import { appendFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import process from 'node:process';
-import { classifyChangedFiles } from './validation-plan.mjs';
+import { classifyChangedFiles } from '../core/validation-plan.mjs';
 
 const git = (args) => {
   const result = spawnSync('git', args, { encoding: 'utf8' });

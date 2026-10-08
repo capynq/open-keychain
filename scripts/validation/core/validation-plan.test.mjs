@@ -63,6 +63,18 @@ describe('validation gate selection', () => {
     }
   });
 
+  it('classifies reorganized script paths by their responsibility', () => {
+    expect(
+      createGatePlan(['scripts/geometry/matrix/bench-matrix.ts']).map(({ id }) => id),
+    ).toContain('geometry');
+    expect(
+      createGatePlan(['scripts/generators/generate-seo-sitemap.ts']).map(({ id }) => id),
+    ).toContain('build');
+    expect(
+      createGatePlan(['scripts/validation/core/validation-plan.mjs']).map(({ id }) => id),
+    ).toEqual(['format', 'lint', 'typecheck', 'unit', 'build', 'browser', 'geometry']);
+  });
+
   it('runs full required checks in CI and lets the workflow add conditional gates', () => {
     expect(createGatePlan([], 'ci').map(({ id }) => id)).toEqual([
       'format',

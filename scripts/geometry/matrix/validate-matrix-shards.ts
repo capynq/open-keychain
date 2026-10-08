@@ -2,15 +2,13 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { listMatrixCases, partitionMatrixCasesByShard } from './bench-matrix-cases';
 import {
   EXPECTED_MATRIX_CASE_COUNT,
-  listMatrixCases,
-  partitionMatrixCasesByShard,
-} from './bench-matrix-cases';
-
-export const MATRIX_SHARD_COUNT = 8;
-export const MATRIX_SHARD_TARGET_MS = 5 * 60 * 1000;
-export const EXPECTED_MATRIX_INVALID_COUNT = 3;
+  EXPECTED_MATRIX_INVALID_COUNT,
+  MATRIX_SHARD_COUNT,
+  MATRIX_SHARD_TARGET_MS,
+} from './matrix-contract';
 
 export type MatrixShardSummary = {
   schema: 'geometry-matrix-summary.v1';

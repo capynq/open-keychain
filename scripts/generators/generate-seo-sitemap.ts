@@ -2,9 +2,9 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { buildSeoSitemapXml } from '../src/infrastructure/seo/sitemap';
+import { buildSeoSitemapXml } from '../../src/infrastructure/seo/sitemap';
 
-const sitemapPath = fileURLToPath(new URL('../public/sitemap.xml', import.meta.url));
+const sitemapPath = fileURLToPath(new URL('../../public/sitemap.xml', import.meta.url));
 const expected = buildSeoSitemapXml();
 
 if (process.argv.includes('--check')) {

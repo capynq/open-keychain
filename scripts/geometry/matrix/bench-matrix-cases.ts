@@ -1,11 +1,11 @@
-import type { KeychainParams, TemplateId } from '../src/domain/keychain/model/types';
+import type { KeychainParams, TemplateId } from '../../../src/domain/keychain/model/types';
 
 import {
   FONT_CATALOG,
   fontSupportsArticulatedName,
   fontSupportsText,
-} from '../src/domain/keychain/fonts/catalog';
-import { TEMPLATE_CATALOG } from '../src/domain/keychain/templates/template-builder';
+} from '../../../src/domain/keychain/fonts/catalog';
+import { TEMPLATE_CATALOG } from '../../../src/domain/keychain/templates/template-builder';
 
 export const MATRIX_TEXTS = [
   { value: 'A', className: 'short' },
@@ -27,8 +27,6 @@ export type MatrixCase = {
   fontId: string;
   text: (typeof MATRIX_TEXTS)[number];
 };
-
-export const EXPECTED_MATRIX_CASE_COUNT = 4267;
 
 const stableHash = (value: string): number => {
   let hash = 0x811c9dc5;

@@ -1,4 +1,3 @@
-import { Buffer } from 'node:buffer';
 import { execFileSync, spawn } from 'node:child_process';
 import { mkdir, readdir } from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
@@ -7,20 +6,15 @@ import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import {
-  clearValidationCache,
   fingerprintGate,
   pruneValidationCache,
   readSuccessfulResult,
   restoreBuildArtifact,
   saveSuccessfulResult,
 } from './validation-cache.mjs';
-import { ValidationUi, eventFor } from './validation-ui.mjs';
-import { createGatePlan } from './validation-plan.mjs';
-import {
-  collectPushChanges,
-  assertCleanValidationInputs,
-  withCleanValidationWorkspace,
-} from './validation-git.mjs';
+import { ValidationUi, eventFor } from '../reporters/validation-ui.mjs';
+import { findAvailablePort } from './ports.mjs';
+import { validationInputsForGate } from './inputs.mjs';
 
 const ROOT = process.cwd();
 const LOG_DIR = path.join(ROOT, 'artifacts', 'validation-logs');
@@ -35,17 +29,6 @@ const parseConcurrency = (raw) => {
   return Number(value);
 };
 
-const COMMON_INPUTS = [
-  'package.json',
-  'pnpm-lock.yaml',
-  'scripts/run-validation-gates.mjs',
-  'scripts/validation-plan.mjs',
-  'scripts/validation-cache.mjs',
-  'scripts/validation-git.mjs',
-  'scripts/validation-vitest-reporter.mjs',
-  'scripts/validation-playwright-reporter.mjs',
-  'scripts/validate-changed.mjs',
-];
 const terminateProcessTree = (child) => {
   const signal = (name) => {
     try {
@@ -64,75 +47,6 @@ const terminateProcessTree = (child) => {
   forceKill.unref();
   child.once('close', () => clearTimeout(forceKill));
 };
-const isGeometryInput = (file) =>
-  file.startsWith('src/domain/keychain/') ||
-  file.startsWith('src/entities/keychain/') ||
-  file.startsWith('src/infrastructure/geometry/') ||
-  file.startsWith('src/infrastructure/export/') ||
-  file.startsWith('public/fonts/') ||
-  ['public/manifold.wasm', 'public/manifold-v1.wasm'].includes(file) ||
-  file.startsWith('scripts/bench-') ||
-  file.startsWith('scripts/generate-validation-fixtures');
-export const validationInputsForGate = (gate, allInputs, changedFiles = []) => {
-  const config = [...COMMON_INPUTS];
-  if (gate.id.startsWith('format'))
-    return [...new Set([...changedFiles, ...config, 'prettier.config.js'])];
-  if (gate.id.startsWith('lint'))
-    return [...new Set([...changedFiles, ...config, 'eslint.config.js'])];
-  if (gate.id === 'typecheck')
-    return allInputs.filter(
-      (file) =>
-        /\.[cm]?tsx?$/.test(file) ||
-        ['tsconfig.json', 'tsconfig.app.json', 'tsconfig.node.json', ...config].includes(file),
-    );
-  if (gate.id.startsWith('unit'))
-    return allInputs.filter(
-      (file) =>
-        file.startsWith('src/') ||
-        file.startsWith('scripts/') ||
-        file.startsWith('public/') ||
-        file.startsWith('tests/fixtures/') ||
-        ['vitest.config.ts', 'tsconfig.json', ...config].includes(file),
-    );
-  if (gate.id === 'build')
-    return allInputs.filter(
-      (file) =>
-        (file.startsWith('src/') && !/\.(?:test|spec)\.[^.]+$/.test(file)) ||
-        file.startsWith('public/') ||
-        file.startsWith('assets/') ||
-        file.startsWith('.env') ||
-        file === 'index.html' ||
-        [
-          'vite.config.ts',
-          'postcss.config.js',
-          'scripts/seo-sitemap.ts',
-          'scripts/generate-seo-sitemap.ts',
-          ...config,
-        ].includes(file),
-    );
-  if (gate.id === 'browser')
-    return allInputs.filter(
-      (file) =>
-        file.startsWith('e2e/') ||
-        file.startsWith('src/') ||
-        file.startsWith('public/') ||
-        file.startsWith('.env') ||
-        [
-          'index.html',
-          'vite.config.ts',
-          'playwright.config.ts',
-          'playwright.dev-boot.config.ts',
-          ...config,
-        ].includes(file),
-    );
-  if (gate.id === 'geometry')
-    return allInputs.filter(
-      (file) =>
-        isGeometryInput(file) || ['vitest.config.ts', 'tsconfig.json', ...config].includes(file),
-    );
-  return [...new Set([...changedFiles, ...config])];
-};
-
 export const runValidationGates = async (
   inputGates,
   {
@@ -144,6 +58,7 @@ export const runValidationGates = async (
     sha = process.env.VALIDATION_SHA ?? 'working-tree',
     cache = process.env.VALIDATION_CACHE !== '0',
     failFast = profile !== 'ci',
+    selectBrowserPort = findAvailablePort,
   } = {},
 ) => {
   const limit =
@@ -305,16 +220,33 @@ export const runValidationGates = async (
     }
     statusEvent(gate, 'gate-started', { detail: gate.phase ?? gate.name, logPath: gateLog });
     const shell = process.platform === 'win32';
+    const childEnvironment = { ...process.env, ...(gate.env ?? {}) };
+    if (gate.id === 'browser' && !childEnvironment.PLAYWRIGHT_PREVIEW_PORT) {
+      try {
+        childEnvironment.PLAYWRIGHT_PREVIEW_PORT = String(await selectBrowserPort());
+      } catch (error) {
+        const message = `Could not select a local Playwright preview port: ${error.message}`;
+        emit(gate.id, 'diagnostic', { message: `[${gate.name}] ${message}` });
+        const durationMs = Date.now() - startedAt;
+        statusEvent(gate, 'gate-completed', {
+          ok: false,
+          detail: 'preview port allocation failed',
+          durationMs,
+        });
+        return { id: gate.id, ok: false, status: 'failed', durationMs, tail: message };
+      }
+      emit(gate.id, 'diagnostic', {
+        message: `Using isolated Playwright preview port ${childEnvironment.PLAYWRIGHT_PREVIEW_PORT}.`,
+      });
+    }
+    if (['browser', 'geometry'].includes(gate.id) || gate.id.startsWith('unit')) {
+      childEnvironment.VALIDATION_EVENTS = '1';
+      childEnvironment.VALIDATION_GATE_ID = gate.id;
+    }
     const child = spawn(gate.command, gate.args ?? [], {
       cwd: ROOT,
       shell,
-      env: {
-        ...process.env,
-        ...(gate.env ?? {}),
-        ...(['browser', 'geometry'].includes(gate.id) || gate.id.startsWith('unit')
-          ? { VALIDATION_EVENTS: '1', VALIDATION_GATE_ID: gate.id }
-          : {}),
-      },
+      env: childEnvironment,
       stdio: ['ignore', 'pipe', 'pipe'],
       detached: !shell,
     });
@@ -512,139 +444,3 @@ export const runValidationGates = async (
   );
   return Object.assign(values, { results: values, ok: failures.length === 0, partial, logPath });
 };
-
-const parseMode = () => {
-  const mode = process.env.VALIDATION_UI ?? 'auto';
-  if (!['auto', 'tui', 'plain'].includes(mode))
-    throw new Error(`VALIDATION_UI must be auto, tui, or plain (received ${mode}).`);
-  return mode;
-};
-
-const main = async () => {
-  const args = process.argv.slice(2);
-  const command = args[0] ?? 'ci';
-  if (command === 'cache-clear') {
-    await clearValidationCache(ROOT);
-    process.stdout.write('Validation cache cleared.\n');
-    return;
-  }
-  let files;
-  if (command === 'push' || command === 'bench-push') {
-    const input =
-      command === 'push'
-        ? await (async () => {
-            const chunks = [];
-            if (!process.stdin.isTTY) for await (const chunk of process.stdin) chunks.push(chunk);
-            return Buffer.concat(chunks).toString('utf8');
-          })()
-        : '';
-    const executePush = async () => {
-      let changes;
-      if (command === 'push') {
-        await assertCleanValidationInputs({ root: ROOT });
-        changes = collectPushChanges({ hookInput: input, root: ROOT });
-      } else {
-        const working = execFileSync('git', ['diff', '--name-only', '-z', 'HEAD'], {
-          cwd: ROOT,
-          encoding: 'utf8',
-        })
-          .split('\0')
-          .filter(Boolean);
-        const staged = execFileSync('git', ['diff', '--cached', '--name-only', '-z'], {
-          cwd: ROOT,
-          encoding: 'utf8',
-        })
-          .split('\0')
-          .filter(Boolean);
-        const untracked = execFileSync(
-          'git',
-          ['ls-files', '--others', '--exclude-standard', '-z'],
-          {
-            cwd: ROOT,
-            encoding: 'utf8',
-          },
-        )
-          .split('\0')
-          .filter(Boolean);
-        changes = {
-          files: [...new Set([...working, ...staged, ...untracked])].sort(),
-          branch: process.env.VALIDATION_BRANCH ?? 'benchmark',
-          head: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim(),
-          conservative: false,
-        };
-      }
-      files = changes.files;
-      const branch = changes.branch;
-      const sha = changes.head.slice(0, 10);
-      if (('deletedOnly' in changes && changes.deletedOnly) || files.length === 0) {
-        process.stdout.write('No pushed file changes require validation.\n');
-        return;
-      }
-      if (changes.conservative)
-        process.stdout.write('Git baseline unavailable; using conservative full validation.\n');
-      const gates = createGatePlan(files, changes.conservative ? 'full' : 'push');
-      const outcome = await runValidationGates(gates, {
-        files,
-        profile: 'quick',
-        branch,
-        sha,
-        mode: parseMode(),
-      });
-      process.exitCode = outcome.ok ? 0 : 1;
-    };
-    if (command === 'push') {
-      await withCleanValidationWorkspace(
-        {
-          root: ROOT,
-          onCleanup: ({ removedFinderFiles = [], isolatedEnvFiles = [] }) => {
-            if (removedFinderFiles.length)
-              process.stdout.write(`Removed Finder metadata: ${removedFinderFiles.join(', ')}\n`);
-            if (isolatedEnvFiles.length)
-              process.stdout.write(
-                `Temporarily isolated local env files for validation (will restore): ${isolatedEnvFiles.join(', ')}\n`,
-              );
-          },
-        },
-        executePush,
-      );
-    } else await executePush();
-    return;
-  }
-  const profile =
-    command === 'full'
-      ? 'full'
-      : command === 'ci'
-        ? 'ci'
-        : command === 'ci-browser'
-          ? 'ci-browser'
-          : command === 'ci-geometry'
-            ? 'ci-geometry'
-            : command === 'bench-ui'
-              ? 'bench-ui'
-              : command === 'bench-geometry'
-                ? 'bench-geometry'
-                : command === 'bench-docs'
-                  ? 'bench-docs'
-                  : null;
-  if (!profile) throw new Error(`Unknown validation profile: ${command}`);
-  const tracked = (await import('node:child_process'))
-    .execFileSync('git', ['ls-files', '-z'], { encoding: 'utf8' })
-    .split('\0')
-    .filter(Boolean);
-  files = profile === 'ci' || profile === 'full' ? tracked : [];
-  const gates = createGatePlan(files, profile);
-  const outcome = await runValidationGates(gates, {
-    files,
-    profile,
-    mode: parseMode(),
-    failFast: profile !== 'ci',
-  });
-  process.exitCode = outcome.ok ? 0 : 1;
-};
-
-if (process.argv[1]?.endsWith('run-validation-gates.mjs')) {
-  main().catch((error) => {
-    process.stderr.write(`${error.stack ?? error.message}\n`);
-    process.exitCode = 1;
-  });
-}

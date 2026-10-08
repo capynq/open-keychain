@@ -1,0 +1,4 @@
+export const EXPECTED_MATRIX_CASE_COUNT = 4267;
+export const EXPECTED_MATRIX_INVALID_COUNT = 3;
+export const MATRIX_SHARD_COUNT = 8;
+export const MATRIX_SHARD_TARGET_MS = 5 * 60 * 1000;

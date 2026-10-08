@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
-import { customizerBootPlugin } from './scripts/customizer-boot-plugin.ts';
+import { customizerBootPlugin } from './scripts/build/customizer-boot-plugin.ts';
 
 export default defineConfig({
   plugins: [react(), customizerBootPlugin()],

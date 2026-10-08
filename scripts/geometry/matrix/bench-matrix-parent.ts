@@ -9,12 +9,12 @@ import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
 import {
-  EXPECTED_MATRIX_CASE_COUNT,
   listMatrixCases,
   partitionMatrixCases,
   partitionMatrixCasesByShard,
   selectMatrixBenchmarkSample,
 } from './bench-matrix-cases';
+import { EXPECTED_MATRIX_CASE_COUNT } from './matrix-contract';
 
 const boundedInteger = (name: string, fallback: number, maximum: number): number => {
   const raw = process.env[name] ?? String(fallback);

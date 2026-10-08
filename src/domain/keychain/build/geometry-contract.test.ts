@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { validateMesh } from '@/infrastructure/geometry/manifold-utils';
 import { asMesh, manifoldFromMesh } from '@/infrastructure/geometry/manifold-utils';
 
-import { VALIDATION_FIXTURES } from '../../../../scripts/validation-fixtures';
+import { VALIDATION_FIXTURES } from '../../../../scripts/geometry/checks/validation-fixtures';
 import { serializeThreeMf } from '../../../infrastructure/export/three-mf-serializer';
 import { FONT_CATALOG } from '../fonts/catalog';
 import { DEFAULT_PARAMS } from '../model/types';

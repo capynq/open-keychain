@@ -1,7 +1,7 @@
-import type { KeyringPosition } from '../src/domain/keychain/model/keyring-position';
-import type { KeychainParams } from '../src/domain/keychain/model/types';
+import type { KeyringPosition } from '../../../src/domain/keychain/model/keyring-position';
+import type { KeychainParams } from '../../../src/domain/keychain/model/types';
 
-import { KEYRING_POSITIONS } from '../src/domain/keychain/model/keyring-position';
+import { KEYRING_POSITIONS } from '../../../src/domain/keychain/model/keyring-position';
 
 export type ValidationFixture = {
   id: string;

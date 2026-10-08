@@ -1,23 +1,7 @@
-import path from 'node:path';
 import process from 'node:process';
 import { existsSync } from 'node:fs';
-
-const FORMAT_EXTENSIONS = new Set([
-  '.css',
-  '.cjs',
-  '.html',
-  '.js',
-  '.json',
-  '.md',
-  '.mdx',
-  '.mjs',
-  '.scss',
-  '.ts',
-  '.tsx',
-  '.yaml',
-  '.yml',
-]);
-const LINT_EXTENSIONS = new Set(['.cjs', '.js', '.mjs', '.ts', '.tsx']);
+import { FORMAT_EXTENSIONS, LINT_EXTENSIONS, extensionOf } from './file-types.mjs';
+import { isGeometryInput } from './inputs.mjs';
 const ASSET_EXTENSIONS = /\.(?:ttf|otf|woff2?|eot|wasm|png|jpe?g|webp|svg|ico)$/i;
 const SOURCE_ROOTS = ['src/', 'e2e/', 'scripts/', 'public/', 'tools/'];
 const CONSERVATIVE_FILES = new Set([
@@ -38,10 +22,10 @@ const CONSERVATIVE_FILES = new Set([
   '.gitignore',
   '.nvmrc',
   '.node-version',
-  'scripts/validation-plan.mjs',
-  'scripts/run-validation-gates.mjs',
-  'scripts/validation-cache.mjs',
-  'scripts/validation-tui.mjs',
+  'scripts/validation/core/validation-plan.mjs',
+  'scripts/validation/commands/run-validation-gates.mjs',
+  'scripts/validation/core/validation-cache.mjs',
+  'scripts/validation/reporters/validation-ui.mjs',
 ]);
 
 const normalize = (file) => file.replaceAll('\\', '/').replace(/^\.\//, '');
@@ -56,7 +40,6 @@ const matrixWorkerCount = () =>
     boundedConcurrency('MATRIX_CONCURRENCY', 2, 5),
     boundedConcurrency('VALIDATION_CONCURRENCY', 2, 8),
   );
-const extensionOf = (file) => path.posix.extname(file).toLowerCase();
 const isTest = (file) => /\.(?:test|spec)\.[^.]+$/i.test(file);
 const isDocumentation = (file) =>
   !file.startsWith('src/') &&
@@ -67,16 +50,7 @@ const isDocumentation = (file) =>
     file.startsWith('README.') ||
     ['.md', '.mdx', '.txt'].includes(extensionOf(file)));
 
-const isGeometry = (file) =>
-  file.startsWith('src/domain/keychain/') ||
-  file.startsWith('src/entities/keychain/') ||
-  file.startsWith('src/infrastructure/geometry/') ||
-  file.startsWith('public/fonts/') ||
-  file === 'public/manifold.wasm' ||
-  file === 'public/manifold-v1.wasm' ||
-  file.startsWith('scripts/bench-') ||
-  file.startsWith('scripts/generate-validation-fixtures') ||
-  /\.(?:ttf|otf|woff2?|eot|wasm)$/i.test(file);
+const isGeometry = (file) => isGeometryInput(file) || /\.(?:ttf|otf|woff2?|eot|wasm)$/i.test(file);
 
 const isBrowser = (file) => {
   if (isTest(file) && file.startsWith('src/')) return false;
@@ -105,14 +79,16 @@ const isBuildInput = (file) =>
   (file.startsWith('src/') && !isTest(file)) ||
   file.startsWith('public/') ||
   file.startsWith('assets/') ||
+  file.startsWith('scripts/build/') ||
+  file.startsWith('scripts/generators/') ||
   ['vite.config.ts', 'netlify.toml', 'postcss.config.js'].includes(file);
 
 const isConservative = (file) =>
   CONSERVATIVE_FILES.has(file) ||
   file.startsWith('.github/workflows/') ||
   file.startsWith('.husky/') ||
-  file.startsWith('scripts/validation-') ||
-  file.startsWith('scripts/run-validation-');
+  file.startsWith('scripts/validation/') ||
+  file.startsWith('scripts/build/');
 const isUnclassified = (file) =>
   !isDocumentation(file) &&
   !SOURCE_ROOTS.some((root) => file.startsWith(root)) &&

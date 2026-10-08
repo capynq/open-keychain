@@ -4,15 +4,15 @@ import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import readline from 'node:readline';
 
-import { buildKeychain, createWasm } from '../src/domain/keychain/build/keychain-builder';
+import { buildKeychain, createWasm } from '../../../src/domain/keychain/build/keychain-builder';
 import {
   DEFAULT_PARAMS,
   type MeshBuffer,
   type TemplateId,
-} from '../src/domain/keychain/model/types';
-import { TEMPLATE_CATALOG } from '../src/domain/keychain/templates/template-builder';
-import { serializeBinaryStl } from '../src/infrastructure/export/stl-serializer';
-import { serializeThreeMf } from '../src/infrastructure/export/three-mf-serializer';
+} from '../../../src/domain/keychain/model/types';
+import { TEMPLATE_CATALOG } from '../../../src/domain/keychain/templates/template-builder';
+import { serializeBinaryStl } from '../../../src/infrastructure/export/stl-serializer';
+import { serializeThreeMf } from '../../../src/infrastructure/export/three-mf-serializer';
 import { listMatrixCases, type MatrixCase } from './bench-matrix-cases';
 
 const originalFetch = globalThis.fetch;

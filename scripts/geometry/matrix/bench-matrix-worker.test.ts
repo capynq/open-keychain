@@ -10,10 +10,14 @@ describe('matrix worker protocol', () => {
       (candidate) => candidate.id === 'articulated-name/contour/bungee/short',
     );
     expect(item).toBeDefined();
-    const child = spawn(process.execPath, ['--import', 'tsx', 'scripts/bench-matrix.ts'], {
-      env: { ...process.env, MATRIX_WORKER: '1', MATRIX_WORKER_ID: 'test' },
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
+    const child = spawn(
+      process.execPath,
+      ['--import', 'tsx', 'scripts/geometry/matrix/bench-matrix.ts'],
+      {
+        env: { ...process.env, MATRIX_WORKER: '1', MATRIX_WORKER_ID: 'test' },
+        stdio: ['pipe', 'pipe', 'pipe'],
+      },
+    );
     const output: Buffer[] = [];
     const errors: Buffer[] = [];
     child.stdout.on('data', (chunk: Buffer) => output.push(chunk));

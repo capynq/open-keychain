@@ -10,7 +10,7 @@ const smokeRun = process.env.PLAYWRIGHT_SMOKE === 'true';
 const deploymentRun = process.env.PLAYWRIGHT_DEPLOYMENT === 'true';
 
 export default defineConfig({
-  reporter: [['list'], ['./scripts/validation-playwright-reporter.mjs']],
+  reporter: [['list'], ['./scripts/validation/reporters/validation-playwright-reporter.mjs']],
   testDir: './e2e',
   testIgnore: smokeRun
     ? /(deployment|capture|dev-boot)\.spec\.ts/
