@@ -59,6 +59,12 @@ export const PreviewSummary = ({
           </strong>
         </p>
       )}
+      {metrics?.fitsWithinMaximum === undefined && (
+        <p className="summary-fit-status summary-fit-status-placeholder" aria-hidden="true">
+          <span>{t(locale, 'fitsWithinMaximum')}</span>
+          <strong>&nbsp;</strong>
+        </p>
+      )}
       {!neutral && (
         <div className="summary-tags">
           <span>

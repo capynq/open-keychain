@@ -87,18 +87,30 @@ test('keeps geometry finish controls contained and printable across viewports', 
 
   const containment = await finishSettings.evaluate((element) => {
     const parent = element.closest('.controls-panel') ?? element.parentElement;
-    if (!parent) return { contained: false, overflow: true };
+    if (!parent) return { contained: false, overflowCount: 1, overflowDetails: ['missing parent'] };
     const parentRect = parent.getBoundingClientRect();
     const children = [...element.querySelectorAll('label, input, select, svg, p')];
     const overflow = children.filter((child) => {
       const rect = child.getBoundingClientRect();
       return rect.left < parentRect.left - 1 || rect.right > parentRect.right + 1;
     });
-    return { contained: overflow.length === 0, overflow: overflow.length };
+    return {
+      contained: overflow.length === 0,
+      overflowCount: overflow.length,
+      overflowDetails: overflow.map((child) => ({
+        tag: child.tagName,
+        text: child.textContent?.trim(),
+        left: child.getBoundingClientRect().left,
+        right: child.getBoundingClientRect().right,
+        parentLeft: parentRect.left,
+        parentRight: parentRect.right,
+      })),
+    };
   });
-  expect(containment, `geometry finish controls overflowed: ${containment.overflow}`).toEqual({
+  expect(containment, `geometry finish controls overflowed: ${containment.overflowCount}`).toEqual({
     contained: true,
-    overflow: 0,
+    overflowCount: 0,
+    overflowDetails: [],
   });
 
   await prepareForCapture(page);

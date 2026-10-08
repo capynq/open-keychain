@@ -278,10 +278,15 @@
   flex-wrap: wrap;
   gap: 4px 8px;
   min-width: 0;
+  min-height: 24px;
   margin: 8px 0 0;
   color: #626875;
   font-size: 0.8rem;
   overflow-wrap: anywhere;
+}
+
+.summary-fit-status-placeholder {
+  visibility: hidden;
 }
 
 .summary-tags {
@@ -326,5 +331,13 @@
 @media (max-width: 760px) {
   .surface-trigger {
     min-height: 44px;
+  }
+
+  .summary-fit-status {
+    min-height: 56px;
+  }
+
+  .customizer-boot-frame .summary-tags {
+    min-height: 58px;
   }
 }

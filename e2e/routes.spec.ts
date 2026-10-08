@@ -314,7 +314,7 @@ test('keeps the current route visible while the next route chunk is pending', as
   await page.goto('/');
   await page.getByRole('link', { name: 'Start designing' }).first().click();
   await expect.poll(() => chunkRequested).toBe(true);
-  await expect(page).toHaveURL('/create?lang=en');
+  await expect(page).toHaveURL('/create?setup=1&lang=en');
   await expect(page.locator('#root .landing-button-primary')).toBeVisible();
   await expect(page.locator('#root [data-route-skeleton]')).toHaveCount(0);
 

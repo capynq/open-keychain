@@ -445,8 +445,8 @@ p {
 .geometry-finish-profile input {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
+  box-sizing: border-box;
+  margin: 0;
   opacity: 0;
   cursor: pointer;
 }
@@ -1697,6 +1697,34 @@ input[type='range'] {
 @media (max-width: 359px) {
   .font-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 1100px) and (min-height: 1000px) {
+  .controls-panel {
+    --control-section-gap: 6px;
+    --control-subsection-gap: 4px;
+    --control-section-padding: 6px;
+  }
+
+  .control-section-divider {
+    margin-block: 4px;
+  }
+
+  .controls-panel .design-select-card {
+    aspect-ratio: 1.55 / 1;
+  }
+
+  .font-groups {
+    gap: 6px;
+  }
+
+  .font-group > summary {
+    min-height: 16px;
+  }
+
+  .font-grid {
+    gap: 4px;
   }
 }
 

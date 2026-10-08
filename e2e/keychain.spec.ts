@@ -845,18 +845,18 @@ test('keeps the complete articulated shape control set reachable in the scrollab
   await page.goto('/create');
   await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await page.getByRole('button', { name: 'Articulated name' }).click();
+  await waitForReadyGeometry(page);
   const controls = page.locator('.controls-panel');
   const metrics = await controls.evaluate((element) => ({
     clientHeight: element.clientHeight,
     scrollHeight: element.scrollHeight,
   }));
   expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
-  const scrollTop = await controls.evaluate((element) => {
-    element.scrollTop = element.scrollHeight;
-    return element.scrollTop;
-  });
+  const jointAngleControl = page.getByLabel('Max joint angle');
+  await jointAngleControl.scrollIntoViewIfNeeded();
+  await expect(jointAngleControl).toBeInViewport();
+  const scrollTop = await controls.evaluate((element) => element.scrollTop);
   expect(scrollTop).toBeGreaterThan(0);
-  await expect(page.getByLabel('Max joint angle')).toBeInViewport();
 });
 test('keeps the customizer footer in the desktop viewport', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });

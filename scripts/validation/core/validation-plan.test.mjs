@@ -39,7 +39,8 @@ describe('validation gate selection', () => {
   });
 
   it('uses conservative full validation for tooling and lock changes', () => {
-    expect(createGatePlan(['pnpm-lock.yaml']).map(({ id }) => id)).toEqual([
+    const plan = createGatePlan(['pnpm-lock.yaml']);
+    expect(plan.map(({ id }) => id)).toEqual([
       'format',
       'lint',
       'typecheck',
@@ -48,6 +49,7 @@ describe('validation gate selection', () => {
       'browser',
       'geometry',
     ]);
+    expect(plan.find(({ id }) => id === 'browser').args).toEqual(['test:e2e:full']);
   });
 
   it('includes geometry and export contracts for WASM, fonts, exports and deleted paths', () => {

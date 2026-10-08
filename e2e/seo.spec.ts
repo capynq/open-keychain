@@ -223,7 +223,10 @@ test('uses the shared landing shell on SEO pages', async ({ page }) => {
   await page.goto('/ru/templates/nameplate/');
   await expect(page.locator('.landing-topbar')).toBeVisible();
   await expect(page.locator('.landing-footer')).toBeVisible();
-  await expect(page.locator('.landing-header-cta')).toHaveAttribute('href', '/create?lang=ru');
+  await expect(page.locator('.landing-header-cta')).toHaveAttribute(
+    'href',
+    '/create?setup=1&lang=ru',
+  );
   await expect(page.locator('.landing-footer a[href="/privacy"]')).toBeVisible();
 });
 
@@ -248,7 +251,7 @@ test('preserves landing locale on generic customizer CTAs', async ({ page }) => 
   await page.goto('/');
   await selectLocale(page, 'ru');
   await page.locator('.landing-header-cta').click();
-  await expect(page).toHaveURL('/create?lang=ru');
+  await expect(page).toHaveURL('/create?setup=1&lang=ru');
 });
 
 test('preserves locale when opening privacy from an SEO footer', async ({ page }) => {

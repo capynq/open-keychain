@@ -5,7 +5,7 @@ import { selectLocale } from './helpers';
 test('shows the expanded built-in catalog and optional filters', async ({ page }) => {
   await page.goto('/create');
 
-  const fontSection = page.locator('.control-section').filter({ hasText: /^Font\s/ });
+  const fontSection = page.getByTestId('font-browser');
   await expect(fontSection.getByRole('tablist', { name: 'Font source' })).toBeVisible();
   await expect(fontSection.getByRole('tab', { name: 'Built-in' })).toHaveAttribute(
     'aria-selected',
@@ -93,7 +93,7 @@ test('shows the Google Fonts unavailable fallback and keeps built-in fonts avail
   await page.route('https://www.googleapis.com/webfonts/**', (route) => route.abort());
   await page.goto('/create');
 
-  const fontSection = page.locator('.control-section').filter({ hasText: /^Font\s/ });
+  const fontSection = page.getByTestId('font-browser');
   const googleTab = fontSection.getByRole('tab', { name: 'Google Fonts' });
   await googleTab.click();
   await expect(googleTab).toHaveAttribute('aria-selected', 'true');
@@ -123,7 +123,7 @@ test('loads, previews, and selects a mocked Google font without downloading it t
   });
   await page.goto('/create');
 
-  const fontSection = page.locator('.control-section').filter({ hasText: /^Font\s/ });
+  const fontSection = page.getByTestId('font-browser');
   await fontSection.getByRole('tab', { name: 'Built-in' }).focus();
   await page.keyboard.press('ArrowRight');
   await expect(fontSection.getByRole('tab', { name: 'Google Fonts' })).toHaveAttribute(
@@ -148,7 +148,7 @@ test('supports keyboard access for font source, search, and selection controls',
   await page.route('https://www.googleapis.com/webfonts/**', (route) => route.abort());
   await page.goto('/create');
 
-  const fontSection = page.locator('.control-section').filter({ hasText: /^Font\s/ });
+  const fontSection = page.getByTestId('font-browser');
   const googleTab = fontSection.getByRole('tab', { name: 'Google Fonts' });
   await googleTab.focus();
   await page.keyboard.press('Enter');
@@ -174,7 +174,7 @@ test('uses the complete tab keyboard model and exposes pressed choices', async (
   await page.route('https://www.googleapis.com/webfonts/**', (route) => route.abort());
   await page.goto('/create');
 
-  const fontSection = page.locator('.control-section').filter({ hasText: /^Font\s/ });
+  const fontSection = page.getByTestId('font-browser');
   const builtIn = fontSection.getByRole('tab', { name: 'Built-in' });
   const google = fontSection.getByRole('tab', { name: 'Google Fonts' });
   await builtIn.focus();
@@ -215,7 +215,7 @@ test('imports a local font for this session and keeps local-font guidance collap
   });
   await page.goto('/create');
 
-  const fontSection = page.locator('.control-section').filter({ hasText: /^Font\s/ });
+  const fontSection = page.getByTestId('font-browser');
   await fontSection.getByRole('tab', { name: 'Local fonts' }).click();
   const about = fontSection.locator('details.font-local-about');
   await expect(about).not.toHaveAttribute('open', '');
@@ -244,7 +244,7 @@ test('keeps localized control names and touch targets usable', async ({ page }) 
   await expect(page.getByLabel('Ім’я або текст')).toBeVisible();
 
   await selectLocale(page, 'en');
-  const fontSection = page.locator('.control-section').filter({ hasText: /^Font\s/ });
+  const fontSection = page.getByTestId('font-browser');
   const targets = fontSection.locator(
     '.reset-icon-button, .font-source-tabs button, .font-filter-disclosure > summary',
   );

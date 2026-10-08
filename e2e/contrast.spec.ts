@@ -133,57 +133,74 @@ test('keeps landing focus indicators visible against their surfaces', async ({ p
   await page.goto('/');
   await expect(page.locator('.analytics-consent')).toBeVisible();
 
-  const indicators = await page.evaluate((selectors) => {
-    const parseColor = (value: string): [number, number, number] | undefined => {
-      const match = value.match(/rgba?\(([^)]+)\)/);
-      if (!match) return undefined;
-      const channels = match[1].split(',').map((channel) => Number.parseFloat(channel.trim()));
-      return channels.length >= 3 ? (channels.slice(0, 3) as [number, number, number]) : undefined;
-    };
-    const luminance = (color: [number, number, number]): number =>
-      color
-        .map((channel) => channel / 255)
-        .map((channel) =>
-          channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
-        )
-        .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
-    const contrast = (foreground: string, background: string): number => {
-      const foregroundColor = parseColor(foreground);
-      const backgroundColor = parseColor(background);
-      if (!foregroundColor || !backgroundColor) return 0;
-      const foregroundLuminance = luminance(foregroundColor);
-      const backgroundLuminance = luminance(backgroundColor);
-      return (
-        (Math.max(foregroundLuminance, backgroundLuminance) + 0.05) /
-        (Math.min(foregroundLuminance, backgroundLuminance) + 0.05)
-      );
-    };
-    const backgroundFor = (element: Element): string => {
-      for (let current: Element | null = element; current; current = current.parentElement) {
-        const background = getComputedStyle(current).backgroundColor;
-        if (background !== 'rgba(0, 0, 0, 0)' && background !== 'transparent') return background;
-      }
-      return getComputedStyle(document.documentElement).backgroundColor;
-    };
-    return selectors.flatMap((selector) => {
-      const element = document.querySelector<HTMLElement>(selector);
-      if (!element) return [];
-      element.focus();
-      const styles = getComputedStyle(element);
-      const background = backgroundFor(element);
-      return [
-        {
-          selector,
+  const readIndicator = async (selector: string) =>
+    page
+      .locator(selector)
+      .first()
+      .evaluate((element) => {
+        const parseColor = (value: string): [number, number, number] | undefined => {
+          const match = value.match(/rgba?\(([^)]+)\)/);
+          if (!match) return undefined;
+          const channels = match[1].split(',').map((channel) => Number.parseFloat(channel.trim()));
+          return channels.length >= 3
+            ? (channels.slice(0, 3) as [number, number, number])
+            : undefined;
+        };
+        const luminance = (color: [number, number, number]): number =>
+          color
+            .map((channel) => channel / 255)
+            .map((channel) =>
+              channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
+            )
+            .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+        const contrast = (foreground: string, background: string): number => {
+          const foregroundColor = parseColor(foreground);
+          const backgroundColor = parseColor(background);
+          if (!foregroundColor || !backgroundColor) return 0;
+          const foregroundLuminance = luminance(foregroundColor);
+          const backgroundLuminance = luminance(backgroundColor);
+          return (
+            (Math.max(foregroundLuminance, backgroundLuminance) + 0.05) /
+            (Math.min(foregroundLuminance, backgroundLuminance) + 0.05)
+          );
+        };
+        const backgroundFor = (element: Element): string => {
+          for (
+            let current: Element | null = element.parentElement;
+            current;
+            current = current.parentElement
+          ) {
+            const background = getComputedStyle(current).backgroundColor;
+            if (background !== 'rgba(0, 0, 0, 0)' && background !== 'transparent')
+              return background;
+          }
+          return getComputedStyle(document.documentElement).backgroundColor;
+        };
+        const focusedElement = element as HTMLElement;
+        const styles = getComputedStyle(element);
+        const background = backgroundFor(element);
+        return {
+          focusVisible: focusedElement.matches(':focus-visible'),
           outline: styles.outlineColor,
           style: styles.outlineStyle,
           boxShadow: styles.boxShadow,
           ratio: contrast(styles.outlineColor, background),
-        },
-      ];
-    });
-  }, focusSelectors);
+        };
+      });
+
+  const indicators = [];
+  for (const selector of focusSelectors) {
+    const element = page.locator(selector).first();
+    await element.focus();
+    // Exercise keyboard modality so :focus-visible is tested as a user sees it.
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    await expect(element).toBeFocused();
+    indicators.push({ selector, ...(await readIndicator(selector)) });
+  }
 
   for (const indicator of indicators) {
+    expect(indicator.focusVisible, `${indicator.selector} should match :focus-visible`).toBe(true);
     expect(
       indicator.style !== 'none' || indicator.boxShadow !== 'none',
       `${indicator.selector} should expose a focus indicator`,
@@ -205,32 +222,45 @@ test('keeps icon action hover states visually distinct and contrasting', async (
       return { background: styles.backgroundColor, foreground: styles.color };
     });
     await action.hover();
-    const after = await action.evaluate((element) => {
-      const parse = (value: string): [number, number, number] => {
-        const channels = value.match(/rgba?\(([^)]+)\)/)?.[1].split(',') ?? [];
-        return channels.slice(0, 3).map((channel) => Number.parseFloat(channel.trim())) as [
-          number,
-          number,
-          number,
-        ];
-      };
-      const luminance = (value: [number, number, number]): number =>
-        value
-          .map((channel) => channel / 255)
-          .map((channel) =>
-            channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
-          )
-          .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
-      const styles = getComputedStyle(element);
-      const background = luminance(parse(styles.backgroundColor));
-      const foreground = luminance(parse(styles.color));
-      return {
-        background: styles.backgroundColor,
-        foreground: styles.color,
-        ratio:
-          (Math.max(background, foreground) + 0.05) / (Math.min(background, foreground) + 0.05),
-      };
-    });
+    await expect
+      .poll(() =>
+        action.evaluate((element, previous) => {
+          const styles = getComputedStyle(element);
+          return (
+            styles.backgroundColor !== previous.background || styles.color !== previous.foreground
+          );
+        }, before),
+      )
+      .toBe(true);
+    const readHoverState = () =>
+      action.evaluate((element) => {
+        const parse = (value: string): [number, number, number] => {
+          const channels = value.match(/rgba?\(([^)]+)\)/)?.[1].split(',') ?? [];
+          return channels.slice(0, 3).map((channel) => Number.parseFloat(channel.trim())) as [
+            number,
+            number,
+            number,
+          ];
+        };
+        const luminance = (value: [number, number, number]): number =>
+          value
+            .map((channel) => channel / 255)
+            .map((channel) =>
+              channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
+            )
+            .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+        const styles = getComputedStyle(element);
+        const background = luminance(parse(styles.backgroundColor));
+        const foreground = luminance(parse(styles.color));
+        return {
+          background: styles.backgroundColor,
+          foreground: styles.color,
+          ratio:
+            (Math.max(background, foreground) + 0.05) / (Math.min(background, foreground) + 0.05),
+        };
+      });
+    await expect.poll(async () => (await readHoverState()).ratio).toBeGreaterThanOrEqual(3);
+    const after = await readHoverState();
     expect(after.background !== before.background || after.foreground !== before.foreground).toBe(
       true,
     );

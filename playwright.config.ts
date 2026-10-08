@@ -8,15 +8,17 @@ const previewUrl = `http://127.0.0.1:${previewPort}`;
 const useExistingBuild = process.env.PLAYWRIGHT_USE_EXISTING_BUILD === 'true';
 const smokeRun = process.env.PLAYWRIGHT_SMOKE === 'true';
 const deploymentRun = process.env.PLAYWRIGHT_DEPLOYMENT === 'true';
+const hostedRun = process.env.VITE_HOSTED_MODE === 'true';
+const ignoredSpecs = smokeRun
+  ? [/(deployment|capture|dev-boot)\.spec\.ts/]
+  : deploymentRun
+    ? [/(capture|smoke|dev-boot)\.spec\.ts/]
+    : [/(deployment|capture|smoke|dev-boot)\.spec\.ts/];
 
 export default defineConfig({
   reporter: [['list'], ['./scripts/validation/reporters/validation-playwright-reporter.mjs']],
   testDir: './e2e',
-  testIgnore: smokeRun
-    ? /(deployment|capture|dev-boot)\.spec\.ts/
-    : deploymentRun
-      ? /(capture|smoke|dev-boot)\.spec\.ts/
-      : /(deployment|capture|smoke|dev-boot)\.spec\.ts/,
+  testIgnore: hostedRun ? ignoredSpecs : [...ignoredSpecs, /workspace\.spec\.ts/],
   timeout: 30_000,
   use: {
     baseURL: externalBaseUrl ?? previewUrl,

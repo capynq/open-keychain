@@ -184,7 +184,7 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
         required: true,
         workerSlots: 2,
         command: 'pnpm',
-        args: ['test:e2e', '--', '--workers=2'],
+        args: ['test:e2e:full'],
         env: {
           PLAYWRIGHT_USE_EXISTING_BUILD:
             process.env.PLAYWRIGHT_USE_EXISTING_BUILD === 'true' ? 'true' : 'false',
