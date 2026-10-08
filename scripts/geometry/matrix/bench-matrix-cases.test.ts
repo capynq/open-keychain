@@ -6,7 +6,7 @@ import {
   partitionMatrixCasesByShard,
   selectMatrixBenchmarkSample,
 } from './bench-matrix-cases';
-import { EXPECTED_MATRIX_CASE_COUNT } from './matrix-contract';
+import { EXPECTED_MATRIX_CASE_COUNT, MATRIX_SHARD_COUNT } from './matrix-contract';
 
 describe('geometry matrix scheduling', () => {
   it('keeps the full supported case count and stable unique IDs', () => {
@@ -39,15 +39,18 @@ describe('geometry matrix scheduling', () => {
 
   it('distributes the complete matrix deterministically across shards', () => {
     const cases = listMatrixCases();
-    const shards = Array.from({ length: 8 }, (_, index) =>
-      partitionMatrixCasesByShard(cases, index, 8),
+    const shards = Array.from({ length: MATRIX_SHARD_COUNT }, (_, index) =>
+      partitionMatrixCasesByShard(cases, index, MATRIX_SHARD_COUNT),
     );
     const flattened = shards.flat();
     expect(flattened).toHaveLength(cases.length);
     expect(new Set(flattened.map((item) => item.id)).size).toBe(cases.length);
     expect(flattened.map((item) => item.id).sort()).toEqual(cases.map((item) => item.id).sort());
     expect(shards.map((shard) => shard.length)).toEqual(
-      Array.from({ length: 8 }, (_, index) => partitionMatrixCasesByShard(cases, index, 8).length),
+      Array.from(
+        { length: MATRIX_SHARD_COUNT },
+        (_, index) => partitionMatrixCasesByShard(cases, index, MATRIX_SHARD_COUNT).length,
+      ),
     );
     expect(
       Math.max(...shards.map((shard) => shard.length)) -

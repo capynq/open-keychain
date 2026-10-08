@@ -6,6 +6,7 @@ import {
   fontSupportsText,
 } from '../../../src/domain/keychain/fonts/catalog';
 import { TEMPLATE_CATALOG } from '../../../src/domain/keychain/templates/template-builder';
+import { MATRIX_SHARD_COUNT } from './matrix-contract';
 
 export const MATRIX_TEXTS = [
   { value: 'A', className: 'short' },
@@ -77,12 +78,14 @@ export const partitionMatrixCasesByShard = (
   if (
     !Number.isInteger(shardCount) ||
     shardCount < 1 ||
-    shardCount > 12 ||
+    shardCount > MATRIX_SHARD_COUNT ||
     !Number.isInteger(shardIndex) ||
     shardIndex < 0 ||
     shardIndex >= shardCount
   )
-    throw new Error('Matrix shard index/count must identify one shard from 0 to 11 of 1 to 12.');
+    throw new Error(
+      `Matrix shard index/count must identify one shard from 0 to ${MATRIX_SHARD_COUNT - 1} of 1 to ${MATRIX_SHARD_COUNT}.`,
+    );
 
   // Balance each template independently so a shard cannot accidentally receive
   // most of one of the expensive templates just because its IDs hash alike.

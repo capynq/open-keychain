@@ -3,7 +3,9 @@ import { existsSync, readFileSync } from 'node:fs';
 import process from 'node:process';
 import { describe, expect, it } from 'vitest';
 
-describe('direct-main CI deployment gate', () => {
+import { MATRIX_SHARD_COUNT } from '../../geometry/matrix/matrix-contract';
+
+describe('required CI deployment gate', () => {
   it('requires browser and geometry suites on conservative workflow dispatch', () => {
     const result = spawnSync(
       process.execPath,
@@ -23,8 +25,15 @@ describe('direct-main CI deployment gate', () => {
 
   it('requires full browser and geometry suites before deployment and removes the bypass workflow', () => {
     const workflow = readFileSync('.github/workflows/ci.yml', 'utf8');
-    expect(workflow).toContain('required-checks:');
-    expect(workflow).toContain('needs: [required-checks, production-build]');
+    const shardIds = workflow
+      .match(/^\s*shard: \[([^\]]+)\]$/m)?.[1]
+      ?.split(',')
+      .map((shard) => Number(shard.trim()));
+    expect(workflow).toContain('quality:');
+    expect(workflow).toContain('needs: [quality, production-build]');
+    expect(shardIds).toEqual(Array.from({ length: MATRIX_SHARD_COUNT }, (_, index) => index));
+    expect(workflow).toContain(`MATRIX_SHARD_COUNT: ${MATRIX_SHARD_COUNT}`);
+    expect(workflow).toContain(`max-parallel: ${MATRIX_SHARD_COUNT}`);
     expect(workflow).toContain('pnpm validate:ci:browser');
     expect(workflow).toContain('pnpm validate:ci:geometry');
     expect(workflow).toContain('echo "browser: $BROWSER (required)"');

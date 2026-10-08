@@ -39,7 +39,7 @@ describe('geometry shard result aggregation', () => {
       passed: 4264,
       expectedInvalid: 3,
       failed: 0,
-      shardCount: 8,
+      shardCount: MATRIX_SHARD_COUNT,
       elapsedMs: 240_000,
       targetMs: MATRIX_SHARD_TARGET_MS,
     });
@@ -47,7 +47,7 @@ describe('geometry shard result aggregation', () => {
 
   it('rejects missing shards, duplicate cases, and incomplete coverage', () => {
     expect(() => validateMatrixShardSummaries(fixtureSummaries().slice(1))).toThrow(
-      'Expected 8 geometry shard summaries',
+      `Expected ${MATRIX_SHARD_COUNT} geometry shard summaries`,
     );
     const duplicate = fixtureSummaries();
     duplicate[1].caseIds[0] = duplicate[0].caseIds[0];

@@ -97,9 +97,9 @@ jobs:
     if: needs.plan.outputs.needs_geometry == 'true'
     strategy:
       fail-fast: false
-      max-parallel: 8
+      max-parallel: 20
       matrix:
-        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -118,7 +118,7 @@ jobs:
           VALIDATION_CONCURRENCY: 4
           MATRIX_CONCURRENCY: 4
           MATRIX_SHARD_INDEX: ${{ matrix.shard }}
-          MATRIX_SHARD_COUNT: 8
+          MATRIX_SHARD_COUNT: 20
           MATRIX_SUMMARY_FILE: artifacts/geometry-summary/shard-${{ matrix.shard }}.json
           VALIDATION_UI: plain
           VALIDATION_CACHE: 0
@@ -155,7 +155,7 @@ jobs:
       - name: Enforce complete matrix coverage and five-minute target
         run: pnpm validate:matrix:shards artifacts/geometry-summary
 
-  required-checks:
+  quality:
     if: always()
     needs: [plan, validate, browser, geometry-aggregate]
     runs-on: ubuntu-latest
@@ -187,7 +187,7 @@ jobs:
           fi
 
   production-build:
-    needs: required-checks
+    needs: quality
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -215,7 +215,7 @@ jobs:
           retention-days: 1
 
   deploy:
-    needs: [required-checks, production-build]
+    needs: [quality, production-build]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
