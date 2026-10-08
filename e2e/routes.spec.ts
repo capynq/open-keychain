@@ -303,6 +303,11 @@ test('preserves visible Font cards in the taller desktop first viewport', async 
         shellHeight: shell && getComputedStyle(shell).height,
         workspace: rect(workspace),
         panel: rect(panel),
+        panelScrollHeight: (panel as HTMLElement | null)?.scrollHeight,
+        sections: [...(panel?.children ?? [])].map((child) => ({
+          name: child.getAttribute('data-control-group') || child.className,
+          ...child.getBoundingClientRect().toJSON(),
+        })),
         viewportUnits: { vh, dvh },
         cards: [...document.querySelectorAll<HTMLElement>('#boot-customizer .font-card')].map(
           (card) => ({ text: card.textContent?.trim(), ...card.getBoundingClientRect().toJSON() }),
@@ -310,6 +315,17 @@ test('preserves visible Font cards in the taller desktop first viewport', async 
       };
     });
     console.error(`[Tall viewport layout diagnostic] ${JSON.stringify(layout)}`);
+    for (const card of layout.cards) {
+      console.error(
+        `[Tall viewport card] ${JSON.stringify({
+          text: card.text,
+          top: card.top,
+          bottom: card.bottom,
+          height: card.height,
+          width: card.width,
+        })}`,
+      );
+    }
     throw error;
   }
   const bootCards = await readVisibleFontCards('#boot-customizer');
