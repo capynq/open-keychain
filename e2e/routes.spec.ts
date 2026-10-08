@@ -273,12 +273,45 @@ test('preserves visible Font cards in the taller desktop first viewport', async 
         })
         .filter((card) => card.top < visibleBottom && card.bottom > visibleTop);
     }, root);
-  await expect
-    .poll(() => readVisibleFontCards('#boot-customizer'), {
-      message: 'all six boot-frame Font cards should reach the taller viewport',
-      timeout: 10_000,
-    })
-    .toHaveLength(6);
+  try {
+    await expect
+      .poll(() => readVisibleFontCards('#boot-customizer'), {
+        message: 'all six boot-frame Font cards should reach the taller viewport',
+        timeout: 10_000,
+      })
+      .toHaveLength(6);
+  } catch (error) {
+    const layout = await page.evaluate(() => {
+      const shell = document.querySelector('#boot-customizer .app-shell');
+      const workspace = document.querySelector('#boot-customizer .workspace');
+      const panel = document.querySelector('#boot-customizer .controls-panel');
+      const rect = (element: Element | null) => element?.getBoundingClientRect().toJSON();
+      const probe = document.createElement('div');
+      probe.style.cssText = 'position:fixed;height:100vh;width:0;visibility:hidden';
+      document.body.append(probe);
+      const vh = probe.getBoundingClientRect().height;
+      probe.style.height = '100dvh';
+      const dvh = probe.getBoundingClientRect().height;
+      probe.remove();
+      return {
+        innerHeight: window.innerHeight,
+        outerHeight: window.outerHeight,
+        screenHeight: window.screen.height,
+        documentClientHeight: document.documentElement.clientHeight,
+        bootShell: rect(document.querySelector('#boot-shell')),
+        shell: rect(shell),
+        shellHeight: shell && getComputedStyle(shell).height,
+        workspace: rect(workspace),
+        panel: rect(panel),
+        viewportUnits: { vh, dvh },
+        cards: [...document.querySelectorAll<HTMLElement>('#boot-customizer .font-card')].map(
+          (card) => ({ text: card.textContent?.trim(), ...card.getBoundingClientRect().toJSON() }),
+        ),
+      };
+    });
+    console.error(`[Tall viewport layout diagnostic] ${JSON.stringify(layout)}`);
+    throw error;
+  }
   const bootCards = await readVisibleFontCards('#boot-customizer');
   releaseAppEntry?.();
   await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');

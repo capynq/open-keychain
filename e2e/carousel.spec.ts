@@ -103,6 +103,7 @@ test('supports keyboard and horizontal swipe navigation', async ({ page }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
   await page.goto('/');
   const viewport = page.locator(carousel);
+  await expect(page.locator('[data-showcase-control="next"]')).toBeEnabled();
   await viewport.focus();
   await page.keyboard.press('ArrowRight');
   await waitForSlide(page, 'print-example-1');

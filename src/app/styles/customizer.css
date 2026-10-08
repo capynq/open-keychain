@@ -1710,8 +1710,10 @@ input[type='range'] {
 
 @media (min-width: 1100px) and (min-height: 1000px) {
   .app-shell {
-    height: 100vh;
-    min-height: 100vh;
+    position: fixed;
+    inset: 0;
+    height: auto;
+    min-height: 0;
   }
 
   .controls-panel {

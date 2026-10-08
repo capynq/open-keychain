@@ -86,8 +86,8 @@ finishes use separate profiles; text finishing affects only its visible front ed
   sibling margins.
 - On desktop, the Name, Template, and Style sections use 12px vertical padding so
   the boot frame and hydrated controls keep the same first-viewport font choices.
-  At widths of at least 1100px and heights of at least 1000px, size the app shell
-  to the layout viewport and use 6px padding with the compact controls density so
+  At widths of at least 1100px and heights of at least 1000px, anchor the app
+  shell to the viewport and use 6px padding with the compact controls density so
   all six boot-frame Font cards fit in the first viewport. Keep the 16px section
   padding at mobile widths.
 - In Adjustments, separate visible Template details, Style details, and Shape
