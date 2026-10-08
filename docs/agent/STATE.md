@@ -2,20 +2,22 @@
 
 ## Current work
 
-- Fixed the Browser gate failures from the 2026-10-08 pre-push run. Added a full Browser command that runs public E2E coverage and then the hosted workspace against a fresh hosted build.
-- Updated stale E2E selectors and URL expectations; corrected focus-visible, hover-transition, geometry-finish overflow, articulated-control scrolling, and first-render layout checks.
-- Stabilized boot/live preview summary layout and the tall desktop Font viewport. Kept the changes limited to browser validation and the associated presentation behavior.
+- Changed local pre-push validation to use changed formatting/lint where safe, typecheck, the whole fast Unit suite, one Build, and required browser smoke. The full geometry matrix no longer runs locally as part of ordinary pushes; explicit full validation and the geometry benchmark remain available.
+- Increased default local validation scheduling to four bounded slots and made Browser consume the verified Build artifact.
+- CI now requires full Unit, all public Browser projects plus hosted workspace coverage, and the complete eight-shard Geometry matrix for non-documentation changes before deployment. Unknown baselines and workflow dispatch remain conservative.
+- Fixed Browser progress accumulation across public and hosted phases and report Vitest test durations from its diagnostics.
+- Protected active temporary cache entries from concurrent pruning; stale abandoned temporary entries are still removed after one hour.
 
 ## Validation
 
-- `pnpm validate:changed -- <14 changed files>` passed formatting and lint.
-- `pnpm typecheck`, `pnpm build`, and `git diff --check` passed.
-- Full Unit gate passed: 650/650 tests.
-- Full public Browser run passed: 348 passed, 3 skipped. Hosted workspace passed: 2/2.
-- Full Geometry matrix passed: 4,264 passed, 3 expected-invalid, 0 failed, across 4,267 cases.
-- `pnpm validate:push` was attempted but stopped before running gates because this workflow requires a clean tracked worktree. No changes were staged, committed, or pushed.
+- `pnpm validate:changed -- <12 changed implementation/test/workflow files>` passed formatting and lint.
+- `pnpm typecheck` passed.
+- Focused Vitest cache, validation plan, CI workflow, reporter, and runner tests passed: 29 tests across 5 files.
+- `git diff --check` passed.
+- `pnpm validate:bench push 2` did not complete: the sandbox denied localhost preview-port allocation (`listen EPERM`), which stopped Browser and cancelled Unit. Its reported 2.9s/5.5s are failed runs, not valid hook timings. The first attempt also exposed and led to a fix for a concurrent cache-pruning race.
+- The complete Unit, Browser, Geometry, and push suites were not completed in this implementation turn.
 
 ## Repository state and next action
 
-- Branch `main`, HEAD `457dfdc`, six commits ahead of `origin/main`. The worktree contains 14 modified files for the browser validation fixes; no commit or push was performed.
-- Next action: review the completed diff and explicitly authorize a commit before running the pre-push workflow, which requires a clean tracked worktree.
+- Branch `main`, HEAD `22a2265`; working tree has 12 modified files for this validation change. No commit or push was performed.
+- Next action: review these changes, then commit separately if authorized. Non-documentation commits will trigger complete CI regression checks before deployment.

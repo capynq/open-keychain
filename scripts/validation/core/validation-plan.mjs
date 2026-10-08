@@ -1,9 +1,13 @@
 import process from 'node:process';
-import { existsSync } from 'node:fs';
+import os from 'node:os';
 import { FORMAT_EXTENSIONS, LINT_EXTENSIONS, extensionOf } from './file-types.mjs';
 import { isGeometryInput } from './inputs.mjs';
 const ASSET_EXTENSIONS = /\.(?:ttf|otf|woff2?|eot|wasm|png|jpe?g|webp|svg|ico)$/i;
 const SOURCE_ROOTS = ['src/', 'e2e/', 'scripts/', 'public/', 'tools/'];
+const DEFAULT_VALIDATION_CONCURRENCY = Math.min(
+  4,
+  Math.max(1, os.availableParallelism?.() ?? os.cpus().length),
+);
 const CONSERVATIVE_FILES = new Set([
   'package.json',
   'pnpm-lock.yaml',
@@ -37,8 +41,8 @@ const boundedConcurrency = (name, fallback, maximum) => {
 };
 const matrixWorkerCount = () =>
   Math.min(
-    boundedConcurrency('MATRIX_CONCURRENCY', 2, 5),
-    boundedConcurrency('VALIDATION_CONCURRENCY', 2, 8),
+    boundedConcurrency('MATRIX_CONCURRENCY', DEFAULT_VALIDATION_CONCURRENCY, 5),
+    boundedConcurrency('VALIDATION_CONCURRENCY', DEFAULT_VALIDATION_CONCURRENCY, 8),
   );
 const isTest = (file) => /\.(?:test|spec)\.[^.]+$/i.test(file);
 const isDocumentation = (file) =>
@@ -146,9 +150,66 @@ export const classifyChangedFiles = (inputFiles) => {
   };
 };
 
+export const requiresFullCIRegression = (inputFiles, conservative = false) => {
+  const classification = classifyChangedFiles(inputFiles);
+  return conservative || (classification.files.length > 0 && !classification.documentationOnly);
+};
+
 export const createGatePlan = (inputFiles, profile = 'push') => {
   const classification = classifyChangedFiles(inputFiles);
   const { files } = classification;
+  const createFastPushPlan = () => {
+    const gates = [
+      {
+        id: 'format',
+        name: 'Format',
+        required: true,
+        command: 'pnpm',
+        args: ['format:check'],
+      },
+      { id: 'lint', name: 'Lint', required: true, command: 'pnpm', args: ['lint'] },
+      {
+        id: 'typecheck',
+        name: 'Typecheck',
+        required: true,
+        phase: 'TypeScript project check',
+        command: 'pnpm',
+        args: ['typecheck'],
+      },
+      {
+        id: 'unit:fast',
+        name: 'Unit',
+        required: true,
+        workerSlots: 2,
+        command: 'pnpm',
+        args: ['test:fast', '--', '--maxWorkers=2'],
+      },
+      {
+        id: 'build',
+        name: 'Build',
+        required: true,
+        phase: 'Vite production artifact',
+        command: 'pnpm',
+        args: ['build:artifact'],
+        env: { VITE_GOOGLE_FONTS_API_KEY: 'playwright-google-fonts-key' },
+      },
+      {
+        id: 'browser',
+        name: 'Browser smoke',
+        required: true,
+        workerSlots: 2,
+        command: 'pnpm',
+        args: ['test:e2e:smoke'],
+        env: {
+          PLAYWRIGHT_USE_EXISTING_BUILD: 'true',
+          PLAYWRIGHT_SMOKE: 'false',
+          PLAYWRIGHT_DEPLOYMENT: 'false',
+        },
+        dependsOn: ['build'],
+      },
+    ];
+    return gates;
+  };
   if (profile === 'full') {
     return [
       { id: 'format', name: 'Format', required: true, command: 'pnpm', args: ['format:check'] },
@@ -187,7 +248,10 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
         args: ['test:e2e:full'],
         env: {
           PLAYWRIGHT_USE_EXISTING_BUILD:
-            process.env.PLAYWRIGHT_USE_EXISTING_BUILD === 'true' ? 'true' : 'false',
+            process.env.PLAYWRIGHT_USE_EXISTING_BUILD === 'false' ? 'false' : 'true',
+          VITE_HOSTED_MODE: 'false',
+          PLAYWRIGHT_SMOKE: 'false',
+          PLAYWRIGHT_DEPLOYMENT: 'false',
         },
         dependsOn: ['build'],
       },
@@ -242,8 +306,13 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
         name: 'Browser',
         required: true,
         command: 'pnpm',
-        args: ['test:e2e:smoke'],
-        env: { PLAYWRIGHT_USE_EXISTING_BUILD: 'true' },
+        args: ['test:e2e:full'],
+        env: {
+          PLAYWRIGHT_USE_EXISTING_BUILD: 'true',
+          VITE_HOSTED_MODE: 'false',
+          PLAYWRIGHT_SMOKE: 'false',
+          PLAYWRIGHT_DEPLOYMENT: 'false',
+        },
         workerSlots: 2,
       },
     ];
@@ -265,12 +334,14 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
       'push',
     );
   if (profile === 'bench-geometry')
-    return createGatePlan(['src/domain/keychain/build/keychain-builder.ts'], 'push');
+    return createGatePlan(['src/domain/keychain/build/keychain-builder.ts'], 'full').filter(
+      ({ id }) => id === 'geometry',
+    );
   if (profile === 'bench-docs') return createGatePlan(['CONTRIBUTING.md'], 'push');
 
   if (profile !== 'push') throw new Error(`Unknown validation profile: ${profile}`);
   if (files.length === 0) return [];
-  if (classification.conservative) return createGatePlan(files, 'full');
+  if (classification.conservative) return createFastPushPlan();
   if (classification.documentationOnly) {
     return [
       {
@@ -309,28 +380,18 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
       command: 'pnpm',
       args: ['typecheck'],
     });
-  if (
-    files.some(
-      (file) => file.startsWith('src/') || file.startsWith('e2e/') || file.startsWith('scripts/'),
-    )
-  ) {
-    const changedTests = files.filter(isTest);
-    const deleted = files.some((file) => !existsSync(file));
-    const unitArgs =
-      changedTests.length === files.length && !deleted
-        ? ['exec', 'vitest', 'run', '--maxWorkers=2', ...changedTests]
-        : ['test:fast', '--', '--maxWorkers=2'];
+  if (files.some((file) => SOURCE_ROOTS.some((root) => file.startsWith(root)))) {
     gates.push({
       id: 'unit:fast',
       name: 'Unit',
       required: true,
       workerSlots: 2,
       command: 'pnpm',
-      args: unitArgs,
+      args: ['test:fast', '--', '--maxWorkers=2'],
     });
   }
-  if (classification.needsBuild)
-    gates.push({
+  gates.push(
+    {
       id: 'build',
       name: 'Build',
       required: true,
@@ -338,28 +399,20 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
       command: 'pnpm',
       args: ['build:artifact'],
       env: { VITE_GOOGLE_FONTS_API_KEY: 'playwright-google-fonts-key' },
-    });
-  if (classification.needsBrowser)
-    gates.push({
+    },
+    {
       id: 'browser',
-      name: 'Browser',
-      required: false,
+      name: 'Browser smoke',
+      required: true,
       workerSlots: 2,
       command: 'pnpm',
       args: ['test:e2e:smoke'],
-      env: { PLAYWRIGHT_USE_EXISTING_BUILD: classification.needsBuild ? 'true' : 'false' },
-      dependsOn: classification.needsBuild ? ['build'] : [],
-    });
-  if (classification.needsGeometry || classification.needsExport)
-    gates.push({
-      id: 'geometry',
-      name: 'Geometry',
-      required: false,
-      workerSlots: matrixWorkerCount(),
-      command: 'pnpm',
-      args: ['bench:matrix'],
-      env: { MATRIX_CONCURRENCY: String(matrixWorkerCount()) },
-    });
+      env: { PLAYWRIGHT_USE_EXISTING_BUILD: 'true' },
+      dependsOn: ['build'],
+    },
+  );
+  // The complete geometry and export matrix is a CI release gate. The whole fast
+  // unit suite and browser smoke remain local checks for geometry-affecting edits.
   if (classification.needsHosting && !classification.needsBuild)
     gates.push({
       id: 'hosting',

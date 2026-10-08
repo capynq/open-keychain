@@ -19,7 +19,7 @@ import { validationInputsForGate } from './inputs.mjs';
 const ROOT = process.cwd();
 const LOG_DIR = path.join(ROOT, 'artifacts', 'validation-logs');
 const MAX_CONCURRENCY = Math.max(1, Math.min(8, os.availableParallelism?.() ?? os.cpus().length));
-const DEFAULT_CONCURRENCY = Math.min(2, MAX_CONCURRENCY);
+const DEFAULT_CONCURRENCY = Math.min(4, MAX_CONCURRENCY);
 const parseConcurrency = (raw) => {
   const value = raw ?? String(DEFAULT_CONCURRENCY);
   if (!/^[1-9]\d*$/.test(value) || Number(value) > MAX_CONCURRENCY)
@@ -124,6 +124,7 @@ export const runValidationGates = async (
   const results = new Map();
   const running = new Map();
   const slowestCases = [];
+  const browserProgress = new Map();
   let stopping = false;
   let userSkipped = false;
   const emit = (gateId, status, values = {}) => {
@@ -275,7 +276,37 @@ export const runValidationGates = async (
           if (!line.startsWith('\u001e')) continue;
           try {
             const event = JSON.parse(line.slice(1));
-            ui.handle(eventFor(runId, event.gateId ?? gate.id, event.status, event));
+            if (
+              gate.id === 'browser' &&
+              event.status === 'gate-progress' &&
+              typeof event.phase === 'string' &&
+              Number.isFinite(event.total)
+            ) {
+              const phase = browserProgress.get(event.phase) ?? {
+                total: Number(event.total),
+                completed: 0,
+                tests: new Set(),
+              };
+              phase.total = Number(event.total);
+              if (event.detail === 'tests collected')
+                phase.completed = Number(event.completed) || 0;
+              else if (typeof event.testId === 'string') {
+                phase.tests.add(event.testId);
+                phase.completed = phase.tests.size;
+              }
+              browserProgress.set(event.phase, phase);
+              const phases = [...browserProgress.values()];
+              ui.handle(
+                eventFor(runId, event.gateId ?? gate.id, event.status, {
+                  ...event,
+                  completed: phases.reduce((total, current) => total + current.completed, 0),
+                  total: phases.reduce((total, current) => total + current.total, 0),
+                  detail: `${event.phase}: ${event.detail}`,
+                }),
+              );
+            } else {
+              ui.handle(eventFor(runId, event.gateId ?? gate.id, event.status, event));
+            }
             if (event.status === 'case-completed' && Number.isFinite(event.durationMs)) {
               slowestCases.push({
                 gate: event.gateId ?? gate.id,

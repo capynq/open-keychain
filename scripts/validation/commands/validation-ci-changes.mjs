@@ -1,7 +1,7 @@
 import { appendFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import process from 'node:process';
-import { classifyChangedFiles } from '../core/validation-plan.mjs';
+import { requiresFullCIRegression } from '../core/validation-plan.mjs';
 
 const git = (args) => {
   const result = spawnSync('git', args, { encoding: 'utf8' });
@@ -39,13 +39,9 @@ if (conservative || zeroSha) {
       .split('\0')
       .filter(Boolean);
 }
-const classification = classifyChangedFiles(files);
-const needsBrowser = conservative || classification.needsBrowser || classification.conservative;
-const needsGeometry =
-  conservative ||
-  classification.needsGeometry ||
-  classification.needsExport ||
-  classification.conservative;
+const needsFullRegression = requiresFullCIRegression(files, conservative);
+const needsBrowser = needsFullRegression;
+const needsGeometry = needsFullRegression;
 const outputs = {
   needs_browser: String(needsBrowser),
   needs_geometry: String(needsGeometry),

@@ -40,12 +40,13 @@ export default class ValidationVitestReporter {
   }
   onTestCaseResult(testCase) {
     this.completed += 1;
+    const measuredDuration = testCase.diagnostic?.()?.duration;
     emit('case-completed', {
       name: testCase.fullName,
       outcome: testCase.result().state,
-      durationMs: Math.round(
-        performance.now() - (this.started.get(testCase.id) ?? performance.now()),
-      ),
+      durationMs: Number.isFinite(measuredDuration)
+        ? Math.round(measuredDuration)
+        : Math.round(performance.now() - (this.started.get(testCase.id) ?? performance.now())),
       workerId: this.activeWorkerIds.get(testCase.id) ?? `vitest-${++this.nextWorkerId}`,
     });
     this.started.delete(testCase.id);

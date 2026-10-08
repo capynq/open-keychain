@@ -4,7 +4,7 @@ import process from 'node:process';
 import { describe, expect, it } from 'vitest';
 
 describe('direct-main CI deployment gate', () => {
-  it('runs optional browser and geometry suites on conservative workflow dispatch', () => {
+  it('requires browser and geometry suites on conservative workflow dispatch', () => {
     const result = spawnSync(
       process.execPath,
       ['scripts/validation/commands/validation-ci-changes.mjs'],
@@ -21,12 +21,14 @@ describe('direct-main CI deployment gate', () => {
     });
   });
 
-  it('makes the final required-check gate a deploy prerequisite and removes the bypass workflow', () => {
+  it('requires full browser and geometry suites before deployment and removes the bypass workflow', () => {
     const workflow = readFileSync('.github/workflows/ci.yml', 'utf8');
     expect(workflow).toContain('required-checks:');
     expect(workflow).toContain('needs: [required-checks, production-build]');
-    expect(workflow).toContain('echo "browser: not required"');
-    expect(workflow).toContain('echo "geometry: not required"');
+    expect(workflow).toContain('pnpm validate:ci:browser');
+    expect(workflow).toContain('pnpm validate:ci:geometry');
+    expect(workflow).toContain('echo "browser: $BROWSER (required)"');
+    expect(workflow).toContain('echo "geometry: $GEOMETRY (required)"');
     expect(existsSync('.github/workflows/netlify.yml')).toBe(false);
   });
 });

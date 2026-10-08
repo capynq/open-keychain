@@ -268,6 +268,7 @@ export const pruneValidationCache = async ({
   maxAgeMs = 30 * 24 * 60 * 60 * 1000,
   maxBytes = 2 * 1024 ** 3,
 } = {}) => {
+  const temporaryMaxAgeMs = 60 * 60 * 1000;
   const entriesRoot = path.join(cacheRoot(root), 'entries');
   const directories = [];
   const groups = await readdir(entriesRoot, { withFileTypes: true }).catch(() => []);
@@ -276,6 +277,22 @@ export const pruneValidationCache = async ({
     const entries = await readdir(groupPath, { withFileTypes: true }).catch(() => []);
     for (const entry of entries.filter((item) => item.isDirectory())) {
       const directory = path.join(groupPath, entry.name);
+      const temporary = entry.name.match(/^(.+)\.tmp-(\d+)-\d+$/);
+      if (temporary) {
+        const modifiedAt = (await stat(directory).catch(() => undefined))?.mtimeMs ?? 0;
+        const ageMs = Date.now() - modifiedAt;
+        const ownerAlive = (() => {
+          try {
+            process.kill(Number(temporary[2]), 0);
+            return true;
+          } catch (error) {
+            return error.code !== 'ESRCH';
+          }
+        })();
+        if (ownerAlive || ageMs < temporaryMaxAgeMs) continue;
+        await rm(directory, { recursive: true, force: true });
+        continue;
+      }
       let metadata;
       try {
         metadata = JSON.parse(await readFile(path.join(directory, 'metadata.json'), 'utf8'));

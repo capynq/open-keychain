@@ -4,6 +4,12 @@ const emit = (status, values = {}) => {
   if (process.env.VALIDATION_EVENTS === '1')
     process.stdout.write(`\u001e${JSON.stringify({ gateId: 'browser', status, ...values })}\n`);
 };
+const phase =
+  process.env.VITE_HOSTED_MODE === 'true'
+    ? 'hosted workspace'
+    : process.env.PLAYWRIGHT_SMOKE === 'true'
+      ? 'browser smoke'
+      : 'public browser';
 
 export default class ValidationPlaywrightReporter {
   completed = 0;
@@ -11,7 +17,12 @@ export default class ValidationPlaywrightReporter {
   onBegin(_config, suite) {
     this.completed = 0;
     this.total = suite.allTests().length;
-    emit('gate-progress', { completed: 0, total: this.total, detail: 'browser tests collected' });
+    emit('gate-progress', {
+      phase,
+      completed: 0,
+      total: this.total,
+      detail: 'tests collected',
+    });
   }
   onTestBegin(test, result) {
     emit('case-started', { name: test.titlePath().join(' › '), workerId: result.workerIndex });
@@ -23,10 +34,13 @@ export default class ValidationPlaywrightReporter {
       outcome: result.status,
       workerId: result.workerIndex,
       durationMs: result.duration,
+      phase,
     });
     emit('gate-progress', {
       completed: this.completed,
       total: this.total,
+      phase,
+      testId: test.id,
       detail: test.titlePath().join(' › '),
     });
   }

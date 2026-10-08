@@ -57,7 +57,7 @@ jobs:
           VALIDATION_UI: plain
           VALIDATION_CACHE: 0
           PLAYWRIGHT_USE_EXISTING_BUILD: 'true'
-      - name: Upload validation build for browser smoke
+      - name: Upload validation build for full browser coverage
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
         with:
           name: validation-dist
@@ -85,7 +85,7 @@ jobs:
           name: validation-dist
           path: dist
       - run: pnpm exec playwright install --with-deps chromium
-      - name: Browser smoke
+      - name: Full public browser and hosted workspace coverage
         run: pnpm validate:ci:browser
         env:
           VALIDATION_CONCURRENCY: 2

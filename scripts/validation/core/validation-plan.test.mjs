@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import process from 'node:process';
-import { classifyChangedFiles, createGatePlan } from './validation-plan.mjs';
+import {
+  classifyChangedFiles,
+  createGatePlan,
+  requiresFullCIRegression,
+} from './validation-plan.mjs';
 
 describe('validation gate selection', () => {
   it('runs only changed formatting for documentation', () => {
@@ -20,6 +24,7 @@ describe('validation gate selection', () => {
       'browser',
     ]);
     expect(plan.find(({ id }) => id === 'browser').dependsOn).toEqual(['build']);
+    expect(plan.find(({ id }) => id === 'browser').required).toBe(true);
   });
 
   it('typechecks UI stylesheet changes because they can affect component contracts', () => {
@@ -44,12 +49,28 @@ describe('validation gate selection', () => {
       'format',
       'lint',
       'typecheck',
-      'unit',
+      'unit:fast',
       'build',
       'browser',
-      'geometry',
     ]);
-    expect(plan.find(({ id }) => id === 'browser').args).toEqual(['test:e2e:full']);
+    expect(plan.find(({ id }) => id === 'unit:fast').args).toEqual([
+      'test:fast',
+      '--',
+      '--maxWorkers=2',
+    ]);
+    expect(plan.find(({ id }) => id === 'browser').args).toEqual(['test:e2e:smoke']);
+    expect(plan.some(({ id }) => id === 'geometry')).toBe(false);
+  });
+
+  it('runs the whole fast unit suite even when only a test file changed', () => {
+    const plan = createGatePlan(['src/features/customizer/hooks/useQuickSetup.test.ts']);
+    expect(plan.find(({ id }) => id === 'unit:fast').args).toEqual([
+      'test:fast',
+      '--',
+      '--maxWorkers=2',
+    ]);
+    expect(plan.some(({ id }) => id === 'geometry')).toBe(false);
+    expect(plan.find(({ id }) => id === 'browser').dependsOn).toEqual(['build']);
   });
 
   it('includes geometry and export contracts for WASM, fonts, exports and deleted paths', () => {
@@ -61,20 +82,23 @@ describe('validation gate selection', () => {
     ]) {
       const classification = classifyChangedFiles([file]);
       expect(classification.needsGeometry || classification.needsExport).toBe(true);
-      expect(createGatePlan([file]).some(({ id }) => id === 'geometry')).toBe(true);
+      const plan = createGatePlan([file]);
+      expect(plan.some(({ id }) => id === 'unit:fast')).toBe(true);
+      expect(plan.some(({ id }) => id === 'browser')).toBe(true);
+      expect(plan.some(({ id }) => id === 'geometry')).toBe(false);
     }
   });
 
   it('classifies reorganized script paths by their responsibility', () => {
     expect(
       createGatePlan(['scripts/geometry/matrix/bench-matrix.ts']).map(({ id }) => id),
-    ).toContain('geometry');
+    ).not.toContain('geometry');
     expect(
       createGatePlan(['scripts/generators/generate-seo-sitemap.ts']).map(({ id }) => id),
     ).toContain('build');
     expect(
       createGatePlan(['scripts/validation/core/validation-plan.mjs']).map(({ id }) => id),
-    ).toEqual(['format', 'lint', 'typecheck', 'unit', 'build', 'browser', 'geometry']);
+    ).toEqual(['format', 'lint', 'typecheck', 'unit:fast', 'build', 'browser']);
   });
 
   it('runs full required checks in CI and lets the workflow add conditional gates', () => {
@@ -86,7 +110,25 @@ describe('validation gate selection', () => {
       'build',
     ]);
     expect(createGatePlan([], 'ci-browser').map(({ id }) => id)).toEqual(['browser']);
+    expect(createGatePlan([], 'ci-browser')[0].args).toEqual(['test:e2e:full']);
+    expect(createGatePlan([], 'ci-browser')[0].env).toMatchObject({
+      PLAYWRIGHT_USE_EXISTING_BUILD: 'true',
+      VITE_HOSTED_MODE: 'false',
+      PLAYWRIGHT_SMOKE: 'false',
+    });
     expect(createGatePlan([], 'ci-geometry').map(({ id }) => id)).toEqual(['geometry']);
+  });
+
+  it('keeps the explicit local geometry benchmark available', () => {
+    expect(createGatePlan([], 'bench-geometry').map(({ id }) => id)).toEqual(['geometry']);
+  });
+
+  it('requires complete browser and geometry regression gates for code changes in CI', () => {
+    expect(requiresFullCIRegression(['docs/seo.md'])).toBe(false);
+    expect(requiresFullCIRegression(['src/features/customizer/Editor.tsx'])).toBe(true);
+    expect(requiresFullCIRegression(['e2e/customizer.spec.ts'])).toBe(true);
+    expect(requiresFullCIRegression([], true)).toBe(true);
+    expect(requiresFullCIRegression([])).toBe(false);
   });
 
   it('passes geometry workers through while respecting the shared process budget', () => {

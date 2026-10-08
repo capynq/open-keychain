@@ -1,10 +1,12 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, stat, utimes, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import process from 'node:process';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   clearValidationCache,
   fingerprintGate,
+  pruneValidationCache,
   readSuccessfulResult,
   restoreBuildArtifact,
   saveSuccessfulResult,
@@ -111,5 +113,21 @@ describe('local validation cache', () => {
     await clearValidationCache(root);
     expect(await readFile(path.join(root, 'keep.txt'), 'utf8')).toBe('keep');
     expect(await readSuccessfulResult({ root, gateId: 'lint', key })).toMatchObject({ hit: false });
+  });
+
+  it('preserves active cache writes and removes stale temporary entries', async () => {
+    const root = await createRoot();
+    const entries = path.join(validationCacheRoot(root), 'entries', 'build');
+    const active = path.join(entries, `active.tmp-${process.pid}-${Date.now()}`);
+    const stale = path.join(entries, `stale.tmp-99999999-${Date.now()}`);
+    await mkdir(active, { recursive: true });
+    await mkdir(stale, { recursive: true });
+    const hourAgo = new Date(Date.now() - 60 * 60 * 1000 - 1000);
+    await utimes(stale, hourAgo, hourAgo);
+
+    await pruneValidationCache({ root });
+
+    expect((await stat(active)).isDirectory()).toBe(true);
+    await expect(stat(stale)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 });
