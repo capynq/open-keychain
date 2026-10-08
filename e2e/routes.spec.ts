@@ -259,11 +259,13 @@ test('preserves visible Font cards in the taller desktop first viewport', async 
         })
         .filter((card) => card.top < visibleBottom && card.bottom > visibleTop);
     }, root);
+  await expect
+    .poll(() => readVisibleFontCards('#boot-customizer'), {
+      message: 'all six boot-frame Font cards should reach the taller viewport',
+      timeout: 5_000,
+    })
+    .toHaveLength(6);
   const bootCards = await readVisibleFontCards('#boot-customizer');
-  await expect(
-    bootCards.length,
-    'all six boot-frame Font cards should reach the taller viewport',
-  ).toBe(6);
   releaseAppEntry?.();
   await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await expect(await readVisibleFontCards('#root')).toEqual(bootCards);
