@@ -245,6 +245,20 @@ test('preserves visible Font cards in the taller desktop first viewport', async 
   await page.evaluate(async () => {
     await document.fonts.ready;
   });
+  await expect
+    .poll(
+      () =>
+        page
+          .locator('#boot-customizer .controls-panel')
+          .evaluate((panel) =>
+            getComputedStyle(panel).getPropertyValue('--control-section-padding').trim(),
+          ),
+      {
+        message: 'wait for the taller desktop Customizer density styles before measuring',
+        timeout: 10_000,
+      },
+    )
+    .toBe('6px');
   const readVisibleFontCards = async (root: '#boot-customizer' | '#root') =>
     page.evaluate((selectorRoot) => {
       const panel = document.querySelector(`${selectorRoot} .controls-panel`);
@@ -262,7 +276,7 @@ test('preserves visible Font cards in the taller desktop first viewport', async 
   await expect
     .poll(() => readVisibleFontCards('#boot-customizer'), {
       message: 'all six boot-frame Font cards should reach the taller viewport',
-      timeout: 5_000,
+      timeout: 10_000,
     })
     .toHaveLength(6);
   const bootCards = await readVisibleFontCards('#boot-customizer');
