@@ -649,7 +649,7 @@ test('keeps the accepted preview when candidate geometry validation rejects an e
 
   const backingProfile = page.getByRole('radiogroup', { name: 'Text profile', exact: true });
   const chamfer = backingProfile.getByRole('radio', { name: 'Chamfer' });
-  await chamfer.check();
+  await chamfer.click();
   await expect(page.getByRole('alert')).toContainText('Your previous design is kept.');
   await expect(backingProfile.getByRole('radio', { name: 'Sharp', exact: true })).toBeChecked();
   await expect(page.locator('.status-pill:visible').first()).toHaveText(/Ready/);

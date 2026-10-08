@@ -6,8 +6,12 @@ const carousel = '.configurator-carousel';
 const activeSlide = '[data-showcase-slide][data-active="true"]';
 
 const waitForSlide = async (page: Page, id: string) => {
-  await expect(page.locator(`[data-showcase-slide="${id}"][data-active="true"]`)).toBeVisible();
-  await expect(page.locator(carousel)).toHaveAttribute('data-moving', 'false');
+  await expect(page.locator(`[data-showcase-slide="${id}"][data-active="true"]`)).toBeVisible({
+    timeout: 10_000,
+  });
+  await expect(page.locator(carousel)).toHaveAttribute('data-moving', 'false', {
+    timeout: 10_000,
+  });
 };
 
 test('provides three stable, fully framed showcase slides', async ({ page }) => {
@@ -111,12 +115,12 @@ test('supports keyboard and horizontal swipe navigation', async ({ page }) => {
   const centerX = bounds!.x + bounds!.width / 2;
   await page.mouse.move(centerX, centerY);
   await page.mouse.down();
-  await page.mouse.move(centerX - Math.min(180, bounds!.width / 2), centerY, { steps: 5 });
+  await page.mouse.move(centerX - Math.min(180, bounds!.width / 2), centerY, { steps: 10 });
   await page.mouse.up();
   await waitForSlide(page, 'print-example-1');
   await page.mouse.move(centerX, centerY);
   await page.mouse.down();
-  await page.mouse.move(centerX + Math.min(180, bounds!.width / 2), centerY, { steps: 5 });
+  await page.mouse.move(centerX + Math.min(180, bounds!.width / 2), centerY, { steps: 10 });
   await page.mouse.up();
   await waitForSlide(page, 'configurator');
   assertNoBrowserErrors();

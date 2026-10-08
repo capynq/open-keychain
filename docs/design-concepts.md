@@ -84,6 +84,9 @@ finishes use separate profiles; text finishing affects only its visible front ed
   section padding, and 8px around the rule. Use shared spacing tokens for subgroup
   gaps and field stacks; keep ordinary spacing in grid/flex `gap` rules instead of
   sibling margins.
+- On desktop, the Name, Template, and Style sections use 12px vertical padding so
+  the boot frame and hydrated controls keep the same first-viewport font choices.
+  Keep the 16px section padding at mobile widths.
 - In Adjustments, separate visible Template details, Style details, and Shape
   `h3` subcategories with a quiet rule only when another such category precedes
   them. Do not leave rules after Typography or before Print when no detail

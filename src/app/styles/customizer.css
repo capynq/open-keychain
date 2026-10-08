@@ -301,6 +301,14 @@ p {
   padding: var(--control-section-padding) 0;
 }
 
+@media (min-width: 761px) {
+  .controls-panel [data-control-group='name'],
+  .controls-panel [data-control-group='template'],
+  .controls-panel [data-control-group='style'] {
+    padding-block: 12px;
+  }
+}
+
 .control-section-divider {
   width: 100%;
   height: 0;
