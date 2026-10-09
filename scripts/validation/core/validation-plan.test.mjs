@@ -41,6 +41,29 @@ describe('validation gate selection', () => {
       'lint:changed',
       'browser:changed',
     ]);
+    const mixedUiAndBrowser = createCiChangedGatePlan([
+      'src/app/components/landing/TemplatePreviewCard/TemplatePreviewCard.tsx',
+      'e2e/routes.spec.ts',
+    ]);
+    expect(mixedUiAndBrowser.map(({ id }) => id)).toContain('unit:related');
+    expect(mixedUiAndBrowser.map(({ id }) => id)).toContain('browser:changed');
+    expect(mixedUiAndBrowser.map(({ id }) => id)).toContain('browser');
+    const relatedUnit = mixedUiAndBrowser.find(({ id }) => id === 'unit:related');
+    expect(relatedUnit.args).not.toContain('e2e/routes.spec.ts');
+    expect(mixedUiAndBrowser.find(({ id }) => id === 'browser:changed')).toMatchObject({
+      dependsOn: ['build'],
+      env: { PLAYWRIGHT_USE_EXISTING_BUILD: 'true' },
+    });
+    const mixedTestOnly = createCiChangedGatePlan([
+      'e2e/smoke.spec.ts',
+      'scripts/validation/core/validation-plan.test.mjs',
+    ]);
+    expect(mixedTestOnly.map(({ id }) => id)).toEqual([
+      'format:changed',
+      'lint:changed',
+      'unit:changed',
+      'browser:changed',
+    ]);
     const unit = createCiChangedGatePlan(['src/infrastructure/telemetry/telemetry-events.test.ts']);
     expect(unit.map(({ id }) => id)).toEqual(['format:changed', 'lint:changed', 'unit:changed']);
   });

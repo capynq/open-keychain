@@ -213,7 +213,13 @@ export const relatedInputsForCi = (files) => {
     sources: [
       ...new Set(existing.filter((file) => !isTest(file) && /\.(?:[cm]?[jt]sx?)$/i.test(file))),
     ],
-    tests: [...new Set([...existing.filter(isTest), ...mapped])].filter(existsSync),
+    tests: [
+      ...new Set([
+        ...existing.filter((file) => isTest(file) && !file.startsWith('e2e/')),
+        ...mapped,
+      ]),
+    ].filter(existsSync),
+    browserSpecs: existing.filter((file) => isTest(file) && file.startsWith('e2e/')),
   };
 };
 
@@ -255,6 +261,7 @@ export const createCiChangedGatePlan = (inputFiles) => {
   const related = relatedInputsForCi(files);
   const hasRelatedInputs =
     related.sources.some((file) => /\.(?:[cm]?[jt]sx?)$/i.test(file)) || related.tests.length > 0;
+  const changedBrowserSpecs = related.browserSpecs;
   if (!documentationOnly && !testOnly && hasRelatedInputs) {
     add(
       'unit:related',
@@ -270,14 +277,6 @@ export const createCiChangedGatePlan = (inputFiles) => {
       ],
       { workerSlots: 1 },
     );
-  } else if (testOnly && files.some((file) => isTest(file) && file.startsWith('e2e/'))) {
-    const specs = files.filter(
-      (file) => isTest(file) && file.startsWith('e2e/') && existsSync(file),
-    );
-    if (specs.length)
-      add('browser:changed', 'Browser (changed specs)', ['exec', 'playwright', 'test', ...specs], {
-        workerSlots: 1,
-      });
   } else if (testOnly && files.some(isTest)) {
     const tests = files.filter(
       (file) => isTest(file) && existsSync(file) && !file.startsWith('e2e/'),
@@ -295,6 +294,19 @@ export const createCiChangedGatePlan = (inputFiles) => {
     add('build', 'Build', ['build:artifact'], {
       env: { VITE_GOOGLE_FONTS_API_KEY: 'playwright-google-fonts-key' },
     });
+  if (changedBrowserSpecs.length > 0)
+    add(
+      'browser:changed',
+      'Browser (changed specs)',
+      ['exec', 'playwright', 'test', ...changedBrowserSpecs],
+      testOnly
+        ? { workerSlots: 1 }
+        : {
+            workerSlots: 1,
+            env: { PLAYWRIGHT_USE_EXISTING_BUILD: 'true' },
+            dependsOn: ['build'],
+          },
+    );
   if (!documentationOnly && !testOnly && needsBrowser && !needsGeometry)
     add('browser', 'Browser smoke', ['test:e2e:smoke'], {
       workerSlots: 1,
