@@ -2,9 +2,9 @@
 
 ## Current state
 
-- Branch `main` is at `c8bf6ca` locally and on `origin/main`; the change-based CI implementation and validation documentation are pushed.
+- Branch `main` is at `c11bd5e` locally and on `origin/main`; the change-based CI implementation and validation documentation are pushed.
 - Fixed gate selection so changed Playwright specs run directly, even when application code changes in the same push. Vitest related-test selection now excludes `e2e/` specs.
-- PR #47 (`ci/geometry-matrix-runtime`) is an older CI approach that overlaps the current implementation. Its checks passed, but GitHub requires review; it will be closed as superseded after the current `quality` run passes.
+- PR #47 (`ci/geometry-matrix-runtime`) was closed as superseded after the replacement passed `quality`; it required review and was not merged. No open PRs remain.
 
 ## Validation
 
@@ -15,4 +15,4 @@
 
 ## Next action
 
-Commit and push the Playwright gate-selection fix, verify the resulting GitHub `quality` check, then close PR #47 as superseded without bypassing review requirements.
+No remaining action for the CI selection and PR resolution task.
