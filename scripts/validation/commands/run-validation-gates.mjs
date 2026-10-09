@@ -2,7 +2,7 @@ import { Buffer } from 'node:buffer';
 import { execFileSync } from 'node:child_process';
 import process from 'node:process';
 import { clearValidationCache } from '../core/validation-cache.mjs';
-import { createGatePlan } from '../core/validation-plan.mjs';
+import { createCiChangedGatePlan, createGatePlan } from '../core/validation-plan.mjs';
 import {
   collectPushChanges,
   assertCleanValidationInputs,
@@ -118,20 +118,40 @@ export const main = async () => {
           ? 'ci-browser'
           : command === 'ci-geometry'
             ? 'ci-geometry'
-            : command === 'bench-ui'
-              ? 'bench-ui'
-              : command === 'bench-geometry'
-                ? 'bench-geometry'
-                : command === 'bench-docs'
-                  ? 'bench-docs'
-                  : null;
+            : command === 'ci-changed'
+              ? 'ci-changed'
+              : command === 'bench-ui'
+                ? 'bench-ui'
+                : command === 'bench-geometry'
+                  ? 'bench-geometry'
+                  : command === 'bench-docs'
+                    ? 'bench-docs'
+                    : null;
   if (!profile) throw new Error(`Unknown validation profile: ${command}`);
   const tracked = (await import('node:child_process'))
     .execFileSync('git', ['ls-files', '-z'], { encoding: 'utf8' })
     .split('\0')
     .filter(Boolean);
   files = profile === 'ci' || profile === 'full' ? tracked : [];
-  const gates = createGatePlan(files, profile);
+  if (profile === 'ci-changed') {
+    try {
+      files = JSON.parse(process.env.CHANGED_FILES_JSON ?? '[]');
+    } catch {
+      throw new Error('CHANGED_FILES_JSON must contain a JSON array of changed paths.');
+    }
+    if (!Array.isArray(files) || files.some((file) => typeof file !== 'string'))
+      throw new Error('CHANGED_FILES_JSON must contain a JSON array of changed paths.');
+  }
+  const gates =
+    profile === 'ci-changed' ? createCiChangedGatePlan(files) : createGatePlan(files, profile);
+  if (profile === 'ci-changed') {
+    if (!gates.some((gate) => gate.id.startsWith('unit')))
+      process.stdout.write('Unit: not selected (no related test files found for this change).\n');
+    if (!gates.some((gate) => gate.id.startsWith('browser')))
+      process.stdout.write('Browser: not selected for this change.\n');
+    if (!gates.some((gate) => gate.id === 'geometry'))
+      process.stdout.write('Full Geometry matrix: not selected; run pnpm validate:full locally.\n');
+  }
   const outcome = await runValidationGates(gates, {
     files,
     profile,

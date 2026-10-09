@@ -50,6 +50,7 @@
     "validate:push": "node scripts/validation/commands/run-validation-gates.mjs push",
     "validate:full": "node scripts/validation/commands/run-validation-gates.mjs full",
     "validate:ci": "node scripts/validation/commands/run-validation-gates.mjs ci",
+    "validate:ci:changed": "node scripts/validation/commands/run-validation-gates.mjs ci-changed",
     "validate:ci:browser": "node scripts/validation/commands/run-validation-gates.mjs ci-browser",
     "validate:ci:geometry": "node scripts/validation/commands/run-validation-gates.mjs ci-geometry",
     "validate:bench": "node scripts/validation/commands/bench-validation.mjs",

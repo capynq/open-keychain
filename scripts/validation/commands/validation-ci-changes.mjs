@@ -1,7 +1,7 @@
 import { appendFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import process from 'node:process';
-import { requiresFullCIRegression } from '../core/validation-plan.mjs';
+import { createCiChangedGatePlan } from '../core/validation-plan.mjs';
 
 const git = (args) => {
   const result = spawnSync('git', args, { encoding: 'utf8' });
@@ -34,19 +34,23 @@ if (conservative || zeroSha) {
   if (exists.status !== 0 || ancestor.status !== 0) {
     files = git(['ls-files', '-z']).split('\0').filter(Boolean);
     conservative = true;
-  } else
-    files = git(['diff', '--name-only', '-z', '--no-renames', base, 'HEAD'])
+  } else {
+    const entries = git(['diff', '--name-status', '-z', '--no-renames', base, 'HEAD'])
       .split('\0')
       .filter(Boolean);
+    files = [];
+    for (let index = 0; index + 1 < entries.length; index += 2) {
+      if (!/^[A-Z][0-9]*$/.test(entries[index]))
+        throw new Error(`Unexpected git diff status entry: ${entries[index]}`);
+      files.push(entries[index + 1]);
+    }
+  }
 }
-const needsFullRegression = requiresFullCIRegression(files, conservative);
-const needsBrowser = needsFullRegression;
-const needsGeometry = needsFullRegression;
 const outputs = {
-  needs_browser: String(needsBrowser),
-  needs_geometry: String(needsGeometry),
   conservative: String(conservative),
   changed_count: String(files.length),
+  changed_files: JSON.stringify(files),
+  needs_browser: String(createCiChangedGatePlan(files).some(({ id }) => id.startsWith('browser'))),
 };
 process.stdout.write(`${JSON.stringify({ ...outputs, files })}\n`);
 if (process.env.GITHUB_OUTPUT)

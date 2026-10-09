@@ -43,6 +43,7 @@ test('selects modern landing images while preserving lazy PNG fallbacks', async 
   await expect(templateImages).toHaveCount(5);
   await expect(templateImages.first()).toHaveAttribute('loading', 'lazy');
   await expect(templateImages.first()).toHaveAttribute('decoding', 'async');
+  await templateImages.last().scrollIntoViewIfNeeded();
   await expect
     .poll(() =>
       templateImages.last().evaluate((element) => (element as HTMLImageElement).currentSrc),

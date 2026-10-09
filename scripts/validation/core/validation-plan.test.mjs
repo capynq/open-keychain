@@ -2,11 +2,98 @@ import { describe, expect, it } from 'vitest';
 import process from 'node:process';
 import {
   classifyChangedFiles,
+  createCiChangedGatePlan,
   createGatePlan,
   requiresFullCIRegression,
 } from './validation-plan.mjs';
 
 describe('validation gate selection', () => {
+  it('selects only formatting for documentation and focused tests/build for geometry', () => {
+    expect(createCiChangedGatePlan(['docs/geometry-roadmap.md']).map(({ id }) => id)).toEqual([
+      'format:changed',
+    ]);
+    const geometry = createCiChangedGatePlan(['src/domain/keychain/build/keychain-builder.ts']);
+    expect(geometry.map(({ id }) => id)).toContain('unit:related');
+    expect(geometry.map(({ id }) => id)).toContain('typecheck');
+    expect(geometry.map(({ id }) => id)).toContain('build');
+    expect(geometry.map(({ id }) => id)).not.toContain('browser');
+    expect(geometry.map(({ id }) => id)).not.toContain('geometry');
+    expect(geometry.find(({ id }) => id === 'unit:related').args).toContain(
+      'src/domain/keychain/build/keychain-builder.keyring-articulated.test.ts',
+    );
+  });
+
+  it('selects UI smoke, direct changed Playwright specs, and changed unit tests', () => {
+    const ui = createCiChangedGatePlan([
+      'src/features/customizer/components/ControlsPanel/ControlsPanel.tsx',
+    ]);
+    expect(ui.map(({ id }) => id)).toEqual([
+      'format:changed',
+      'lint:changed',
+      'typecheck',
+      'unit:related',
+      'build',
+      'browser',
+    ]);
+    const browserSpec = createCiChangedGatePlan(['e2e/smoke.spec.ts']);
+    expect(browserSpec.map(({ id }) => id)).toEqual([
+      'format:changed',
+      'lint:changed',
+      'browser:changed',
+    ]);
+    const unit = createCiChangedGatePlan(['src/infrastructure/telemetry/telemetry-events.test.ts']);
+    expect(unit.map(({ id }) => id)).toEqual(['format:changed', 'lint:changed', 'unit:changed']);
+  });
+
+  it('maps export, bundled font, and WASM changes to their owning Unit coverage', () => {
+    const cases = [
+      [
+        'src/infrastructure/export/three-mf-serializer.ts',
+        'src/infrastructure/export/three-mf-serializer.ts',
+      ],
+      [
+        'src/domain/keychain/fonts/google-provider.ts',
+        'src/domain/keychain/fonts/google-provider.test.ts',
+      ],
+      ['public/fonts/custom.woff2', 'src/domain/keychain/fonts/catalog.test.ts'],
+      ['public/manifold.wasm', 'src/domain/keychain/build/keychain-builder.contracts.test.ts'],
+    ];
+    for (const [changed, ownerTest] of cases) {
+      const plan = createCiChangedGatePlan([changed]);
+      expect(plan.map(({ id }) => id)).toContain('unit:related');
+      expect(plan.find(({ id }) => id === 'unit:related').args).toContain(ownerTest);
+      expect(plan.map(({ id }) => id)).not.toContain('browser');
+      expect(plan.map(({ id }) => id)).not.toContain('geometry');
+    }
+  });
+
+  it('uses a cost-first fallback for unknown paths and keeps deleted/renamed paths classifiable', () => {
+    expect(createCiChangedGatePlan(['unknown-area/config.toml']).map(({ id }) => id)).toEqual([
+      'format',
+      'lint',
+      'typecheck',
+      'build',
+    ]);
+    const deleted = createCiChangedGatePlan(['src/domain/keychain/build/removed-builder.ts']);
+    expect(deleted.map(({ id }) => id)).toContain('typecheck');
+    expect(deleted.map(({ id }) => id)).toContain('build');
+    expect(createCiChangedGatePlan(['src/old.ts', 'src/new.ts']).map(({ id }) => id)).toContain(
+      'typecheck',
+    );
+  });
+
+  it('runs validation and workflow owner tests without unrelated typecheck/build gates', () => {
+    for (const file of [
+      'scripts/validation/core/validation-plan.mjs',
+      '.github/workflows/ci.yml',
+    ]) {
+      const plan = createCiChangedGatePlan([file]);
+      expect(plan.map(({ id }) => id)).toContain('unit:related');
+      expect(plan.map(({ id }) => id)).not.toContain('typecheck');
+      expect(plan.map(({ id }) => id)).not.toContain('build');
+    }
+  });
+
   it('runs only changed formatting for documentation', () => {
     expect(createGatePlan(['docs/seo.md', 'README.md']).map(({ id }) => id)).toEqual([
       'format:changed',

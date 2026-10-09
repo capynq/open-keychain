@@ -28,8 +28,7 @@ supported browsers; the optional API server is not required for the customizer w
 - [Articulated name](https://open-keychain.com/templates/articulated-name/) — linked articulated letters.
 - [Nameplate](https://open-keychain.com/templates/nameplate/) — a rounded embedded nameplate.
 - [Plant label](https://open-keychain.com/templates/plant-label/) — a printable garden label.
-- Personalized magnet — a custom magnet with a blind rear disc-magnet pocket, available from the
-  customizer template selector.
+- [Personalized magnet](https://open-keychain.com/create?template=magnet&lang=en) — a custom rear-pocket magnet.
 
 ## Guides
 
@@ -43,6 +42,5 @@ supported browsers; the optional API server is not required for the customizer w
 
 - [Source code](https://github.com/capynq/open-keychain) — the open-source repository.
 - [MIT license](https://github.com/capynq/open-keychain/blob/main/LICENSE) — project license.
-- [Bundled font licenses](https://github.com/capynq/open-keychain/tree/main/public/fonts/licenses) —
-  separate SIL Open Font License notices for included font files.
+- [Bundled font licenses](https://github.com/capynq/open-keychain/tree/main/public/fonts/licenses) — separate SIL Open Font License notices.
 - [WebMCP implementation](https://github.com/capynq/open-keychain/blob/main/docs/webmcp.md) — native tool integration and security boundaries.

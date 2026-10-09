@@ -579,7 +579,7 @@ test('publishes crawler metadata and route-aware canonical URLs', async ({ page 
   await selectLocale(page, 'ru');
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     'content',
-    /Создавайте бесплатные/,
+    /Создавайте бесплатно/,
   );
 
   await page.goto('/create');

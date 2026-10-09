@@ -1,4 +1,5 @@
 import process from 'node:process';
+import { existsSync } from 'node:fs';
 import os from 'node:os';
 import { FORMAT_EXTENSIONS, LINT_EXTENSIONS, extensionOf } from './file-types.mjs';
 import { isGeometryInput } from './inputs.mjs';
@@ -153,6 +154,154 @@ export const classifyChangedFiles = (inputFiles) => {
 export const requiresFullCIRegression = (inputFiles, conservative = false) => {
   const classification = classifyChangedFiles(inputFiles);
   return conservative || (classification.files.length > 0 && !classification.documentationOnly);
+};
+
+export const relatedInputsForCi = (files) => {
+  const existing = files.filter((file) => existsSync(file));
+  const dynamicMappings = new Map([
+    [
+      'src/domain/keychain/build/keychain-builder.ts',
+      [
+        'src/domain/keychain/build/keychain-builder.contracts.test.ts',
+        'src/domain/keychain/build/keychain-builder.styles-fonts.test.ts',
+        'src/domain/keychain/build/keychain-builder.magnet-nameplate-plant.test.ts',
+        'src/domain/keychain/build/keychain-builder.keyring-articulated.test.ts',
+      ],
+    ],
+    [
+      'src/infrastructure/geometry/geometry-client.ts',
+      ['src/infrastructure/geometry/geometry-client.test.ts'],
+    ],
+    [
+      'src/infrastructure/geometry/geometry-worker.ts',
+      ['src/infrastructure/geometry/geometry-client.test.ts'],
+    ],
+    ['public/manifold.wasm', ['src/domain/keychain/build/keychain-builder.contracts.test.ts']],
+    ['public/manifold-v1.wasm', ['src/domain/keychain/build/keychain-builder.contracts.test.ts']],
+    [
+      'public/fonts/',
+      [
+        'src/domain/keychain/fonts/catalog.test.ts',
+        'src/domain/keychain/fonts/google-provider.test.ts',
+        'src/domain/keychain/fonts/local-provider.test.ts',
+      ],
+    ],
+    [
+      'src/domain/keychain/fonts/',
+      [
+        'src/domain/keychain/fonts/catalog.test.ts',
+        'src/domain/keychain/fonts/google-provider.test.ts',
+        'src/domain/keychain/fonts/local-provider.test.ts',
+      ],
+    ],
+    [
+      'scripts/validation/',
+      [
+        'scripts/validation/core/validation-plan.test.mjs',
+        'scripts/validation/commands/validation-ci-workflow.test.mjs',
+        'scripts/validation/core/runner.test.mjs',
+      ],
+    ],
+    ['.github/workflows/', ['scripts/validation/commands/validation-ci-workflow.test.mjs']],
+  ]);
+  const mapped = files.flatMap((file) =>
+    [...dynamicMappings].flatMap(([boundary, tests]) =>
+      file === boundary || (boundary.endsWith('/') && file.startsWith(boundary)) ? tests : [],
+    ),
+  );
+  return {
+    sources: [
+      ...new Set(existing.filter((file) => !isTest(file) && /\.(?:[cm]?[jt]sx?)$/i.test(file))),
+    ],
+    tests: [...new Set([...existing.filter(isTest), ...mapped])].filter(existsSync),
+  };
+};
+
+export const createCiChangedGatePlan = (inputFiles) => {
+  const {
+    files,
+    documentationOnly,
+    needsFormat,
+    needsLint,
+    needsTypecheck,
+    needsBuild,
+    needsBrowser,
+    needsGeometry,
+    conservative,
+  } = classifyChangedFiles(inputFiles);
+  const normalized = files.map(normalize);
+  if (!normalized.length) return [];
+  const testOnly = normalized.every(isTest);
+  const unknown = normalized.some(isUnclassified);
+  const toolingOnly = normalized.every(
+    (file) => file.startsWith('scripts/validation/') || file.startsWith('.github/workflows/'),
+  );
+  const gates = [];
+  const add = (id, name, args, options = {}) =>
+    gates.push({ id, name, required: true, command: 'pnpm', args, ...options });
+  if (unknown) {
+    add('format', 'Format', ['format:check']);
+    add('lint', 'Lint', ['lint']);
+  } else if (needsFormat)
+    add('format:changed', 'Format', ['validate:changed', '--format-only', '--', ...files]);
+  if (!unknown && needsLint)
+    add('lint:changed', 'Lint', ['validate:changed', '--lint-only', '--', ...files]);
+  if (
+    !documentationOnly &&
+    !testOnly &&
+    (needsTypecheck || unknown || (conservative && !toolingOnly))
+  )
+    add('typecheck', 'Typecheck', ['typecheck']);
+  const related = relatedInputsForCi(files);
+  const hasRelatedInputs =
+    related.sources.some((file) => /\.(?:[cm]?[jt]sx?)$/i.test(file)) || related.tests.length > 0;
+  if (!documentationOnly && !testOnly && hasRelatedInputs) {
+    add(
+      'unit:related',
+      'Unit (related)',
+      [
+        'exec',
+        'node',
+        'scripts/validation/commands/run-related-tests.mjs',
+        '--source',
+        ...related.sources,
+        '--test',
+        ...related.tests,
+      ],
+      { workerSlots: 1 },
+    );
+  } else if (testOnly && files.some((file) => isTest(file) && file.startsWith('e2e/'))) {
+    const specs = files.filter(
+      (file) => isTest(file) && file.startsWith('e2e/') && existsSync(file),
+    );
+    if (specs.length)
+      add('browser:changed', 'Browser (changed specs)', ['exec', 'playwright', 'test', ...specs], {
+        workerSlots: 1,
+      });
+  } else if (testOnly && files.some(isTest)) {
+    const tests = files.filter(
+      (file) => isTest(file) && existsSync(file) && !file.startsWith('e2e/'),
+    );
+    if (tests.length)
+      add('unit:changed', 'Unit (changed tests)', ['exec', 'vitest', 'run', ...tests], {
+        workerSlots: 1,
+      });
+  }
+  if (
+    !documentationOnly &&
+    !testOnly &&
+    (needsBuild || needsBrowser || needsGeometry || unknown || (conservative && !toolingOnly))
+  )
+    add('build', 'Build', ['build:artifact'], {
+      env: { VITE_GOOGLE_FONTS_API_KEY: 'playwright-google-fonts-key' },
+    });
+  if (!documentationOnly && !testOnly && needsBrowser && !needsGeometry)
+    add('browser', 'Browser smoke', ['test:e2e:smoke'], {
+      workerSlots: 1,
+      env: { PLAYWRIGHT_USE_EXISTING_BUILD: 'true' },
+      dependsOn: ['build'],
+    });
+  return gates;
 };
 
 export const createGatePlan = (inputFiles, profile = 'push') => {

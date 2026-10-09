@@ -222,7 +222,7 @@ export const runValidationGates = async (
     statusEvent(gate, 'gate-started', { detail: gate.phase ?? gate.name, logPath: gateLog });
     const shell = process.platform === 'win32';
     const childEnvironment = { ...process.env, ...(gate.env ?? {}) };
-    if (gate.id === 'browser' && !childEnvironment.PLAYWRIGHT_PREVIEW_PORT) {
+    if (gate.id.startsWith('browser') && !childEnvironment.PLAYWRIGHT_PREVIEW_PORT) {
       try {
         childEnvironment.PLAYWRIGHT_PREVIEW_PORT = String(await selectBrowserPort());
       } catch (error) {
@@ -240,7 +240,7 @@ export const runValidationGates = async (
         message: `Using isolated Playwright preview port ${childEnvironment.PLAYWRIGHT_PREVIEW_PORT}.`,
       });
     }
-    if (['browser', 'geometry'].includes(gate.id) || gate.id.startsWith('unit')) {
+    if (gate.id.startsWith('browser') || gate.id === 'geometry' || gate.id.startsWith('unit')) {
       childEnvironment.VALIDATION_EVENTS = '1';
       childEnvironment.VALIDATION_GATE_ID = gate.id;
     }
@@ -341,6 +341,10 @@ export const runValidationGates = async (
     });
     await new Promise((resolve) => logStream.end(resolve));
     const durationMs = Date.now() - startedAt;
+    if (gate.id === 'unit:related' && result.status === 78) {
+      statusEvent(gate, 'gate-skipped', { detail: 'no statically related tests selected' });
+      return { id: gate.id, ok: true, status: 'skipped', durationMs, tail };
+    }
     if (gate.skipRequested) {
       statusEvent(gate, 'gate-skipped');
       return { id: gate.id, ok: true, status: 'skipped', durationMs, tail };
