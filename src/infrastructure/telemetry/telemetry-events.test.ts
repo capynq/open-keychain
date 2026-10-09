@@ -7,7 +7,7 @@ import { sanitizePostHogEvent, sanitizeProperties } from './events';
 describe('analytics event properties', () => {
   it('keeps low-cardinality scalar properties and removes undefined values', () => {
     expect(
-      sanitizeProperties('geometry_ready', {
+      sanitizeProperties('page_view', {
         locale: 'en',
         template: 'name-keychain',
         count: 2,
@@ -55,6 +55,51 @@ describe('analytics event properties', () => {
         option_id: 'custom',
       }),
     ).toEqual({ family: 'keyring_opening', option_id: 'custom' });
+  });
+
+  it('accepts only fixed environment markers and bounded attempt metadata', () => {
+    expect(
+      sanitizeProperties('export_completed', {
+        environment: 'production',
+        internal_traffic: true,
+        design_id: '8fbad08e-7287-4a03-8be5-56ddfec47839',
+        export_attempt_id: '7e76c249-8b61-465c-8b5f-b687d7284d44',
+        duration_ms: 523,
+        app_version: 'abcdef0123456',
+        outcome: 'success',
+        name: 'ALEX',
+        width: 80,
+      }),
+    ).toEqual({
+      environment: 'production',
+      internal_traffic: true,
+      design_id: '8fbad08e-7287-4a03-8be5-56ddfec47839',
+      export_attempt_id: '7e76c249-8b61-465c-8b5f-b687d7284d44',
+      duration_ms: 523,
+      app_version: 'abcdef0123456',
+      outcome: 'success',
+    });
+    expect(
+      sanitizeProperties('export_failed', {
+        environment: 'staging',
+        internal_traffic: 'yes',
+        export_attempt_id: 'ALEX 80mm',
+        duration_ms: Number.POSITIVE_INFINITY,
+        app_version: 'local',
+        error_code: 'ALEX not manifold',
+      }),
+    ).toEqual({});
+    expect(
+      sanitizeProperties('export_failed', {
+        export_attempt_id: '7e76c249-8b61-465c-8b5f-b687d7284d44',
+        outcome: 'error',
+        error_code: 'timeout',
+      }),
+    ).toEqual({
+      export_attempt_id: '7e76c249-8b61-465c-8b5f-b687d7284d44',
+      outcome: 'error',
+      error_code: 'timeout',
+    });
   });
 
   it('keeps only SDK route URLs and removes identifying or high-detail SDK metadata', () => {

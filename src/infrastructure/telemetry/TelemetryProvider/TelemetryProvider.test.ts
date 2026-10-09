@@ -128,9 +128,14 @@ describe('AnalyticsProvider consent and startup', () => {
     posthogMock.client.__loaded = true;
     await act(async () => initConfig?.loaded?.());
 
-    expect(posthogMock.client.capture).toHaveBeenCalledWith('setup_step_viewed', {
-      step: 'review',
-    });
+    expect(posthogMock.client.capture).toHaveBeenCalledWith(
+      'setup_step_viewed',
+      expect.objectContaining({
+        step: 'review',
+        environment: expect.stringMatching(/^(development|preview)$/),
+        internal_traffic: true,
+      }),
+    );
   });
 
   it('does not initialize or send events if consent is declined during SDK loading', async () => {

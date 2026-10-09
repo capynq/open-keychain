@@ -3,7 +3,19 @@ import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
 import { customizerBootPlugin } from './scripts/build/customizer-boot-plugin.ts';
 
+const appEnvironment =
+  process.env.CONTEXT === 'production'
+    ? 'production'
+    : process.env.NODE_ENV === 'development'
+      ? 'development'
+      : 'preview';
+const appVersion = process.env.GITHUB_SHA ?? process.env.VITE_APP_VERSION ?? '';
+
 export default defineConfig({
+  define: {
+    __OPEN_KEYCHAIN_ENV__: JSON.stringify(appEnvironment),
+    __OPEN_KEYCHAIN_VERSION__: JSON.stringify(appVersion),
+  },
   plugins: [react(), customizerBootPlugin()],
   cacheDir: process.env.OPEN_KEYCHAIN_VITE_CACHE_DIR,
   resolve: {

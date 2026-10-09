@@ -22,6 +22,12 @@ export type ExportActionsState = {
   clearStatus: () => void;
 };
 
+const exportErrorCode = (message: string): 'timeout' | 'worker_failed' | 'export_failed' => {
+  if (/timed out/i.test(message)) return 'timeout';
+  if (/worker/i.test(message)) return 'worker_failed';
+  return 'export_failed';
+};
+
 type ExportSource = {
   clientRef: MutableRefObject<GeometryClient | undefined>;
   result: GeometryResult | undefined;
@@ -37,6 +43,7 @@ export const useExportActions = ({
   appearanceOverrides,
   exportAllowed = true,
   allowDisconnected = false,
+  designId,
 }: {
   geometry: ExportSource;
   params: KeychainParams;
@@ -45,6 +52,7 @@ export const useExportActions = ({
   appearanceOverrides?: PrintAppearanceOverrides;
   exportAllowed?: boolean;
   allowDisconnected?: boolean;
+  designId: string;
 }): ExportActionsState => {
   const disconnectedOnly = Boolean(
     geometry.result &&
@@ -70,10 +78,19 @@ export const useExportActions = ({
   ): Promise<void> => {
     if (!exportAllowed || geometry.current === false || downloading) return;
     lastRequest.current = { format, mode, appearanceOverrides: requestedAppearanceOverrides };
+    const attemptId = crypto.randomUUID();
+    const startedAt = performance.now();
+
     setDownloading(true);
     setStatus('exporting');
     setError(undefined);
-    track('export_started', { format, mode, template: params.templateId });
+    track('export_started', {
+      format,
+      mode,
+      template: params.templateId,
+      export_attempt_id: attemptId,
+      design_id: designId,
+    });
     try {
       const file = await geometry.clientRef.current?.export(
         params,
@@ -92,14 +109,32 @@ export const useExportActions = ({
       anchor.download = file.filename;
       anchor.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-      track('export_completed', { format, mode, template: params.templateId });
+      track('export_completed', {
+        format,
+        mode,
+        template: params.templateId,
+        export_attempt_id: attemptId,
+        design_id: designId,
+        duration_ms: Math.round(performance.now() - startedAt),
+        outcome: 'success',
+      });
       setStatus('success');
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : 'The file could not be created.';
 
       setError(message);
       setStatus('error');
-      track('export_failed', { format, mode, template: params.templateId, category: 'export' });
+      track('export_failed', {
+        format,
+        mode,
+        template: params.templateId,
+        category: 'export',
+        export_attempt_id: attemptId,
+        design_id: designId,
+        duration_ms: Math.round(performance.now() - startedAt),
+        outcome: 'error',
+        error_code: exportErrorCode(message),
+      });
     } finally {
       setDownloading(false);
     }

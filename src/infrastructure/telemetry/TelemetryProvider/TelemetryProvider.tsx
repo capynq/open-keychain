@@ -11,7 +11,19 @@ import {
 import { AnalyticsContext, type AnalyticsConsent } from '../telemetry-context';
 import './TelemetryProvider.module.css';
 
+declare const __OPEN_KEYCHAIN_ENV__: 'development' | 'preview' | 'production';
+declare const __OPEN_KEYCHAIN_VERSION__: string;
+const BUILD_ENV: 'development' | 'preview' | 'production' =
+  typeof __OPEN_KEYCHAIN_ENV__ === 'undefined'
+    ? import.meta.env.DEV
+      ? 'development'
+      : 'preview'
+    : __OPEN_KEYCHAIN_ENV__;
+const BUILD_VERSION =
+  typeof __OPEN_KEYCHAIN_VERSION__ === 'undefined' ? '' : __OPEN_KEYCHAIN_VERSION__;
+
 const CONSENT_KEY = 'open-keychain.analytics-consent';
+const INTERNAL_TRAFFIC_KEY = 'open-keychain.internal-traffic';
 const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY as string | undefined;
 const POSTHOG_HOST =
   (import.meta.env.VITE_POSTHOG_HOST as string | undefined) || 'https://cabinet.open-keychain.com';
@@ -53,6 +65,16 @@ const readConsent = (): AnalyticsConsent => {
 };
 
 let captureConsent: AnalyticsConsent = readConsent();
+
+const readInternalTraffic = (): boolean => {
+  if (typeof window === 'undefined' || BUILD_ENV !== 'production')
+    return BUILD_ENV !== 'production';
+  try {
+    return window.localStorage.getItem(INTERNAL_TRAFFIC_KEY) === 'true';
+  } catch {
+    return false;
+  }
+};
 
 const syncPostHogConsent = (): void => {
   const client = posthogClient;
@@ -157,7 +179,14 @@ export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
     (event: AnalyticsEvent, properties: AnalyticsProperties = {}): void => {
       if (consent !== 'accepted' || captureConsent !== 'accepted' || !POSTHOG_KEY) return;
       try {
-        const safeProperties = sanitizeProperties(event, properties);
+        const safeProperties = sanitizeProperties(event, {
+          ...properties,
+          environment: BUILD_ENV,
+          internal_traffic: readInternalTraffic(),
+          app_version: /^[a-f0-9]{7,40}$/i.test(BUILD_VERSION)
+            ? BUILD_VERSION.toLowerCase()
+            : undefined,
+        });
         if (!posthogClient?.__loaded || posthogClient.has_opted_out_capturing()) {
           if (pendingEvents.length < MAX_PENDING_EVENTS)
             pendingEvents.push({ event, properties: safeProperties });

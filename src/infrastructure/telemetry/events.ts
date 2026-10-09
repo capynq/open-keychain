@@ -10,6 +10,7 @@ export type AnalyticsEvent =
   | 'start_designing'
   | 'language_changed'
   | 'template_selected'
+  | 'customizer_opened'
   | 'geometry_ready'
   | 'geometry_error'
   | 'export_started'
@@ -34,13 +35,21 @@ export type AnalyticsProperties = Record<string, string | number | boolean | und
 
 const SAFE_PROPERTY_KEYS = new Set([
   'category',
+  'app_version',
   'count',
   'cta',
   'enabled',
+  'environment',
+  'error_code',
+  'export_attempt_id',
   'family',
   'format',
+  'design_id',
+  'duration_ms',
+  'outcome',
   'from',
   'locale',
+  'internal_traffic',
   'mode',
   'ok',
   'option_id',
@@ -53,6 +62,7 @@ const SAFE_PROPERTY_KEYS = new Set([
   'status',
   'step',
   'template',
+  'geometry_attempt_id',
   'to',
 ]);
 
@@ -76,6 +86,46 @@ const CUSTOMIZER_OPTION_IDS: Record<string, ReadonlySet<string>> = {
 };
 
 const EVENT_PROPERTY_KEYS: Partial<Record<AnalyticsEvent, ReadonlySet<string>>> = {
+  customizer_opened: new Set(['design_id']),
+  geometry_ready: new Set([
+    'template',
+    'locale',
+    'design_id',
+    'geometry_attempt_id',
+    'duration_ms',
+    'outcome',
+  ]),
+  geometry_error: new Set([
+    'template',
+    'locale',
+    'category',
+    'design_id',
+    'geometry_attempt_id',
+    'duration_ms',
+    'outcome',
+    'error_code',
+  ]),
+  export_started: new Set(['format', 'mode', 'template', 'export_attempt_id', 'design_id']),
+  export_completed: new Set([
+    'format',
+    'mode',
+    'template',
+    'export_attempt_id',
+    'design_id',
+    'duration_ms',
+    'outcome',
+  ]),
+  export_failed: new Set([
+    'format',
+    'mode',
+    'template',
+    'category',
+    'export_attempt_id',
+    'design_id',
+    'duration_ms',
+    'outcome',
+    'error_code',
+  ]),
   customizer_option_changed: new Set(['family', 'option_id']),
   setup_step_viewed: new Set(['step']),
   setup_step_completed: new Set(['step']),
@@ -83,6 +133,9 @@ const EVENT_PROPERTY_KEYS: Partial<Record<AnalyticsEvent, ReadonlySet<string>>> 
 };
 
 const SAFE_KEY = /^[a-z][a-z0-9_]*$/;
+const SAFE_ID = /^[a-z0-9_-]{1,64}$/;
+const ERROR_CODES = new Set(['timeout', 'geometry_failed', 'export_failed', 'worker_failed']);
+const CONTEXT_PROPERTY_KEYS = new Set(['environment', 'internal_traffic', 'app_version']);
 
 export const sanitizeProperties = (
   event: AnalyticsEvent,
@@ -101,7 +154,7 @@ export const sanitizeProperties = (
         }
 
         const eventKeys = EVENT_PROPERTY_KEYS[event];
-        if (eventKeys) {
+        if (eventKeys && !CONTEXT_PROPERTY_KEYS.has(key)) {
           if (!eventKeys.has(key)) return false;
           if (key === 'step') return typeof value === 'string' && SETUP_STEPS.has(value);
           if (key === 'family')
@@ -116,6 +169,20 @@ export const sanitizeProperties = (
             );
           }
         }
+        if (key === 'environment')
+          return value === 'development' || value === 'preview' || value === 'production';
+        if (key === 'internal_traffic') return typeof value === 'boolean';
+        if (key === 'format') return value === 'stl' || value === '3mf';
+        if (key === 'mode') return value === 'separate-colors' || value === 'merged';
+        if (key === 'duration_ms')
+          return (
+            typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 600_000
+          );
+        if (key === 'app_version')
+          return typeof value === 'string' && /^[a-f0-9]{7,40}$/.test(value);
+        if (key === 'error_code') return typeof value === 'string' && ERROR_CODES.has(value);
+        if (key === 'outcome') return value === 'success' || value === 'error';
+        if (key.endsWith('_id')) return typeof value === 'string' && SAFE_ID.test(value);
 
         return true;
       })

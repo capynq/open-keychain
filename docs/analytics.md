@@ -17,13 +17,17 @@ and deploy because `VITE_*` values are embedded in the bundle.
 
 The app sends pseudonymous, coarse product events only after consent: page/landing views, language changes, template selection, generation success/failure, export start/completion/failure, surface preset changes, and the primary call-to-action. In the Customizer, setup-step views/completions/abandonment use fixed step IDs. Option changes use only bundled font IDs, font category IDs, keyring position/opening preset IDs, and base/text finish profile IDs. Names, exact dimensions, slider values, colors, query strings, generated geometry, and exported files are not sent.
 
+The app owns page-view events: landing routes emit `landing_view`; other routes emit `page_view`. PostHog automatic page capture stays disabled, so SPA navigation does not create a second page-view event. Customizer entry, geometry completion/failure, and export start/completion/failure include random short-lived attempt/design IDs, bounded durations, fixed outcomes, and allowlisted error codes. A completed export means the file was created and the browser download was invoked, not that it was written to disk.
+
+Every app-generated event passed through `track` includes a fixed `environment` value (`development`, `preview`, or `production`) and an `internal_traffic` boolean. Development and preview are marked internal automatically. For a production QA browser, set `localStorage.setItem('open-keychain.internal-traffic', 'true')` before the next event; remove that key to reset it. This marker is local to that browser and is not based on email, identity, or design content. The build includes a Git SHA as `app_version` when CI supplies `GITHUB_SHA`.
+
 SEO pages and indexable customizer entry points are rendered by the same React application and emit
 `seo_page_view`, `seo_cta_clicked`, and `seo_language_changed` after consent. Customizer entry points
 use `page_type: app`; `page_id` is the stable template ID or `create`. Their complete property allowlist is
 `page_type`, `page_id`, `locale`, `cta`, `from`, and `to`; page-view events also use a sanitized route
 identifier. Names, raw query strings, geometry, and exported files are never included.
 
-PostHog autocapture, page capture, page-leave capture, web-vitals/performance capture, client-side console-log capture, campaign/referrer persistence, cookies, and session replay are explicitly disabled in the client configuration. The PostHog project's console-log setting is independent and can enable capture on its own; a live project check on 2026-10-07 confirmed it remains enabled, so it must be switched off before treating logs as disabled. A `before_send` scrub keeps URL routes while removing query strings and fragments, and strips campaign/search attribution, referrers, raw user agents, viewport dimensions, and any GeoIP properties from event and person-property payloads. Server-side IP enrichment remains controlled by the PostHog project. The activity remains pseudonymous PostHog activity; disabling session recording does not make event activity fully anonymous.
+PostHog autocapture, page capture, page-leave capture, web-vitals/performance capture, client-side console-log capture, campaign/referrer persistence, cookies, and session replay are disabled in the client configuration. The live project settings inspected on 2026-10-08 still enable project-level console-log, performance, and session-recording capture; keep session recording disabled in the client and do not describe the project as privacy-aligned until these project settings are switched off and independently rechecked. A `before_send` scrub keeps URL routes while removing query strings and fragments, and strips campaign/search attribution, referrers, raw user agents, viewport dimensions, and any GeoIP properties from event and person-property payloads. Server-side IP enrichment remains controlled by the PostHog project. The activity remains pseudonymous PostHog activity; disabling session recording does not make event activity fully anonymous.
 
 ## Customizer feedback survey
 
@@ -35,8 +39,12 @@ while capture is disabled and after opt-out. The rating-and-reason widget is the
 do not add another prompt until this one has impressions and the action data identifies a specific
 friction point.
 
-The survey is live. PostHog's survey page provides its response results. Add a Survey Results widget
-to the existing **Open Keychain Activation** dashboard when dashboard widget creation is available
-through the connected PostHog interface.
+Verify the survey's live status, targeting, impression count, and response flow in PostHog before
+reporting it as operational. The last checked dashboard does not yet contain a Survey Results
+widget; add one to **Open Keychain Activation** after its status and consent-gated browser delivery
+have been verified. On 2026-10-08 it was active with zero impressions, dismissals, or responses.
+Its generated internal-targeting flag was inactive and did not resolve as a project feature flag;
+do not enable or replace it until its intended targeting is identified. The survey is currently
+English-only (`translations` is unset).
 
 Visitors can decline analytics and can review the policy at `/privacy`.

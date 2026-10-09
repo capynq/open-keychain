@@ -1,6 +1,6 @@
 import type { Location } from 'react-router';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import type { Locale } from '../../infrastructure/i18n/config';
 import type { useAnalytics } from '../../infrastructure/telemetry';
@@ -31,7 +31,11 @@ export const useAppAnalytics = ({
   normalizedPath,
   track,
 }: AppPageAnalyticsOptions): void => {
+  const lastTrackedLocationKey = useRef<string | undefined>(undefined);
+
   useEffect(() => {
+    if (consent !== 'accepted' || lastTrackedLocationKey.current === location.key) return;
+    lastTrackedLocationKey.current = location.key;
     track(normalizedPath === '/' ? 'landing_view' : 'page_view', {
       locale: displayLocale,
       path: analyticsPath,
@@ -58,6 +62,7 @@ export const useAppAnalytics = ({
     consent,
     displayLocale,
     location.pathname,
+    location.key,
     normalizedPath,
     track,
   ]);

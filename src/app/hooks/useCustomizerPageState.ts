@@ -64,7 +64,10 @@ export const useCustomizerPageState = (
       setSkipRequestKey(undefined);
     },
   }));
-  const { track } = useAnalytics();
+  const { consent, track } = useAnalytics();
+  const [designId, setDesignId] = useState(() => crypto.randomUUID());
+  const lastOpenedDesignId = useRef<string | undefined>(undefined);
+  const geometryClock = useRef<{ paramsKey: string; startedAt: number } | undefined>(undefined);
   const customizer = useCustomizerParams(initialParams, candidateCallbacks);
   const geometryInputSignature = JSON.stringify([
     customizer.acceptedParams,
@@ -82,6 +85,13 @@ export const useCustomizerPageState = (
     customizer.selectedSubtitleFont,
     skipRequestKey,
   );
+  const {
+    busy: geometryBusy,
+    current: geometryIsCurrent,
+    error: geometryError,
+    paramsKey: geometryParamsKey,
+    result: geometryResult,
+  } = geometry;
 
   useEffect(() => {
     geometryRef.current = geometry;
@@ -125,6 +135,7 @@ export const useCustomizerPageState = (
     appearanceOverrides,
     exportAllowed: canExport,
     allowDisconnected: disconnectedExportAcknowledged,
+    designId,
   });
   const openExport = (): void => {
     if (canExport) setExportOpen(true);
@@ -141,6 +152,7 @@ export const useCustomizerPageState = (
   useEffect(() => {
     if (routeInputKey === lastRouteInputKey.current) return;
     lastRouteInputKey.current = routeInputKey;
+    setDesignId(crypto.randomUUID());
 
     customizer.setParams(normalizeParams({ ...DEFAULT_PARAMS, ...initialParams }));
     setAppearanceOverrides(initialAppearanceOverrides ?? { version: 1 });
@@ -150,6 +162,13 @@ export const useCustomizerPageState = (
   const activeStyle = STYLE_CATALOG.find((style) => style.id === customizer.acceptedParams.styleId);
   const lastTemplate = useRef(customizer.acceptedParams.templateId);
   const lastGeometryError = useRef<string | undefined>(undefined);
+  const lastGeometryReadyId = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (consent !== 'accepted' || lastOpenedDesignId.current === designId) return;
+    lastOpenedDesignId.current = designId;
+    track('customizer_opened', { design_id: designId });
+  }, [consent, designId, track]);
 
   useEffect(() => {
     if (lastTemplate.current !== customizer.acceptedParams.templateId) {
@@ -159,21 +178,63 @@ export const useCustomizerPageState = (
   }, [customizer.acceptedParams.templateId, locale, track]);
 
   useEffect(() => {
-    if (geometry.result?.printable) {
-      track('geometry_ready', { template: customizer.acceptedParams.templateId, locale });
+    if (geometryBusy) {
+      if (geometryClock.current?.paramsKey !== geometryParamsKey)
+        geometryClock.current = { paramsKey: geometryParamsKey, startedAt: performance.now() };
+      return;
     }
-    if (geometry.error && geometry.error !== lastGeometryError.current) {
+    if (
+      geometryIsCurrent &&
+      geometryResult &&
+      geometryResult.generationId !== lastGeometryReadyId.current
+    ) {
+      const elapsed =
+        geometryClock.current?.paramsKey === geometryParamsKey
+          ? Math.round(performance.now() - geometryClock.current.startedAt)
+          : undefined;
+      const attemptId = crypto.randomUUID();
+
+      track('geometry_ready', {
+        template: customizer.acceptedParams.templateId,
+        locale,
+        design_id: designId,
+        geometry_attempt_id: attemptId,
+        duration_ms: elapsed ?? geometryResult.timings?.workerComputeMs,
+        outcome: 'success',
+      });
+      lastGeometryReadyId.current = geometryResult.generationId;
+
+      geometryClock.current = undefined;
+    }
+    const geometryErrorKey = geometryError ? `${geometryParamsKey}:${geometryError}` : undefined;
+    if (geometryError && geometryErrorKey !== lastGeometryError.current) {
+      const elapsed =
+        geometryClock.current?.paramsKey === geometryParamsKey
+          ? Math.round(performance.now() - geometryClock.current.startedAt)
+          : undefined;
+
       track('geometry_error', {
         template: customizer.acceptedParams.templateId,
         locale,
         category: 'generation',
+        design_id: designId,
+        geometry_attempt_id: crypto.randomUUID(),
+        duration_ms: elapsed,
+        outcome: 'error',
+        error_code: /timed out/i.test(geometryError) ? 'timeout' : 'geometry_failed',
       });
-      lastGeometryError.current = geometry.error;
+
+      geometryClock.current = undefined;
+      lastGeometryError.current = geometryErrorKey;
     }
   }, [
     customizer.acceptedParams.templateId,
-    geometry.error,
-    geometry.result?.printable,
+    designId,
+    geometryBusy,
+    geometryError,
+    geometryIsCurrent,
+    geometryParamsKey,
+    geometryResult,
     locale,
     track,
   ]);
