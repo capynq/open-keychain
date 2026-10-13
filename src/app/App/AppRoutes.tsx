@@ -1,6 +1,8 @@
 import { Suspense, useLayoutEffect, type ReactNode } from 'react';
 import { Navigate, Route, Routes, type Location } from 'react-router';
 
+import type { SeoCtaTrack } from '@/pages/seo/model/types';
+
 import { resolveSeoRoute } from '@/features/seo';
 import { SeoPage } from '@/pages/seo/SeoPage';
 
@@ -34,7 +36,7 @@ export type AppRoutesProps = {
   normalizedPath: string;
   displayLocale: Locale;
   onLocaleChange: (locale: Locale) => void;
-  onSeoCtaClick: (locale: Locale, cta: string) => void;
+  onSeoCtaClick: SeoCtaTrack;
   onSeoLocaleChange: (locale: Locale) => void;
 };
 

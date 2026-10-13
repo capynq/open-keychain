@@ -67,6 +67,7 @@ export const useCustomizerPageState = (
   const { consent, track } = useAnalytics();
   const [designId, setDesignId] = useState(() => crypto.randomUUID());
   const lastOpenedDesignId = useRef<string | undefined>(undefined);
+  const lastValidationErrorRequestId = useRef<number | undefined>(undefined);
   const geometryClock = useRef<{ paramsKey: string; startedAt: number } | undefined>(undefined);
   const customizer = useCustomizerParams(initialParams, candidateCallbacks);
   const geometryInputSignature = JSON.stringify([
@@ -138,7 +139,12 @@ export const useCustomizerPageState = (
     designId,
   });
   const openExport = (): void => {
-    if (canExport) setExportOpen(true);
+    if (!canExport || exportOpen) return;
+    track('export_dialog_opened', {
+      template: customizer.acceptedParams.templateId,
+      design_id: designId,
+    });
+    setExportOpen(true);
   };
   const lastRouteInputKey = useRef(routeInputKey);
 
@@ -221,6 +227,7 @@ export const useCustomizerPageState = (
         geometry_attempt_id: crypto.randomUUID(),
         duration_ms: elapsed,
         outcome: 'error',
+        operation: 'preview',
         error_code: /timed out/i.test(geometryError) ? 'timeout' : 'geometry_failed',
       });
 
@@ -238,6 +245,32 @@ export const useCustomizerPageState = (
     locale,
     track,
   ]);
+
+  useEffect(() => {
+    const feedback = customizer.candidateFeedback;
+    if (
+      feedback?.status !== 'rejected' ||
+      feedback.requestId === lastValidationErrorRequestId.current
+    ) {
+      return;
+    }
+    lastValidationErrorRequestId.current = feedback.requestId;
+    const diagnostic = feedback.diagnostic ?? '';
+
+    track('geometry_error', {
+      locale,
+      design_id: designId,
+      geometry_attempt_id: crypto.randomUUID(),
+      outcome: 'error',
+      category: 'generation',
+      operation: 'validation',
+      error_code: /timed out/i.test(diagnostic)
+        ? 'timeout'
+        : /worker/i.test(diagnostic)
+          ? 'worker_failed'
+          : 'geometry_failed',
+    });
+  }, [customizer.candidateFeedback, designId, locale, track]);
 
   const randomize = (): void => {
     if (randomizing) return;
