@@ -1,4 +1,4 @@
-import type { SeoDispatcherProps } from './model/types';
+import type { SeoCtaClick, SeoDispatcherProps } from './model/types';
 
 import { SeoGuidePage, SeoHomePage, SeoHubPage, SeoTemplatePage } from './SeoPageLoaders';
 
@@ -8,6 +8,16 @@ export const SeoPage = ({
   onLocaleChange,
   resetKey = route.path,
 }: SeoDispatcherProps) => {
+  const pageId =
+    route.kind === 'template'
+      ? route.templateId
+      : route.kind === 'guide'
+        ? route.guideSlug
+        : route.kind;
+  const handleCtaClick: SeoCtaClick | undefined = onCtaClick
+    ? (locale, cta) => onCtaClick(locale, cta, route.kind, pageId)
+    : undefined;
+
   switch (route.kind) {
     case 'home':
       return (
@@ -15,7 +25,7 @@ export const SeoPage = ({
           resetKey={resetKey}
           locale={route.locale}
           route={route}
-          onCtaClick={onCtaClick}
+          onCtaClick={handleCtaClick}
           onLocaleChange={onLocaleChange}
         />
       );
@@ -25,7 +35,7 @@ export const SeoPage = ({
           resetKey={resetKey}
           locale={route.locale}
           route={route}
-          onCtaClick={onCtaClick}
+          onCtaClick={handleCtaClick}
           onLocaleChange={onLocaleChange}
         />
       );
@@ -35,7 +45,7 @@ export const SeoPage = ({
           resetKey={resetKey}
           locale={route.locale}
           route={route}
-          onCtaClick={onCtaClick}
+          onCtaClick={handleCtaClick}
           onLocaleChange={onLocaleChange}
         />
       );
@@ -46,7 +56,7 @@ export const SeoPage = ({
           resetKey={resetKey}
           locale={route.locale}
           route={route}
-          onCtaClick={onCtaClick}
+          onCtaClick={handleCtaClick}
           onLocaleChange={onLocaleChange}
         />
       );

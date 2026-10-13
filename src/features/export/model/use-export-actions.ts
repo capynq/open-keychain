@@ -129,6 +129,7 @@ export const useExportActions = ({
         mode,
         template: params.templateId,
         category: 'export',
+        operation: 'export',
         export_attempt_id: attemptId,
         design_id: designId,
         duration_ms: Math.round(performance.now() - startedAt),
