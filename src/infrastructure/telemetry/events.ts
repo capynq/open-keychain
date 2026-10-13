@@ -13,6 +13,7 @@ export type AnalyticsEvent =
   | 'customizer_opened'
   | 'geometry_ready'
   | 'geometry_error'
+  | 'export_dialog_opened'
   | 'export_started'
   | 'export_completed'
   | 'export_failed'
@@ -51,6 +52,7 @@ const SAFE_PROPERTY_KEYS = new Set([
   'locale',
   'internal_traffic',
   'mode',
+  'operation',
   'ok',
   'option_id',
   'page_id',
@@ -99,12 +101,14 @@ const EVENT_PROPERTY_KEYS: Partial<Record<AnalyticsEvent, ReadonlySet<string>>> 
     'template',
     'locale',
     'category',
+    'operation',
     'design_id',
     'geometry_attempt_id',
     'duration_ms',
     'outcome',
     'error_code',
   ]),
+  export_dialog_opened: new Set(['template', 'design_id']),
   export_started: new Set(['format', 'mode', 'template', 'export_attempt_id', 'design_id']),
   export_completed: new Set([
     'format',
@@ -120,6 +124,7 @@ const EVENT_PROPERTY_KEYS: Partial<Record<AnalyticsEvent, ReadonlySet<string>>> 
     'mode',
     'template',
     'category',
+    'operation',
     'export_attempt_id',
     'design_id',
     'duration_ms',
@@ -130,6 +135,9 @@ const EVENT_PROPERTY_KEYS: Partial<Record<AnalyticsEvent, ReadonlySet<string>>> 
   setup_step_viewed: new Set(['step']),
   setup_step_completed: new Set(['step']),
   setup_step_backed_out: new Set(['step']),
+  seo_page_view: new Set(['page_type', 'page_id', 'locale', 'path']),
+  seo_cta_clicked: new Set(['page_type', 'page_id', 'locale', 'cta']),
+  seo_language_changed: new Set(['from', 'to']),
 };
 
 const SAFE_KEY = /^[a-z][a-z0-9_]*$/;
@@ -171,6 +179,18 @@ export const sanitizeProperties = (
         }
         if (key === 'environment')
           return value === 'development' || value === 'preview' || value === 'production';
+        if (key === 'operation') {
+          if (event === 'geometry_error') return value === 'preview' || value === 'validation';
+          if (event === 'export_failed') return value === 'export';
+          return false;
+        }
+        if (key === 'page_type')
+          return ['app', 'home', 'template', 'guide', 'templates', 'guides'].includes(
+            String(value),
+          );
+        if (key === 'locale' || key === 'from' || key === 'to')
+          return value === 'en' || value === 'ru' || value === 'uk';
+        if (key === 'cta') return typeof value === 'string' && SAFE_ID.test(value);
         if (key === 'internal_traffic') return typeof value === 'boolean';
         if (key === 'format') return value === 'stl' || value === '3mf';
         if (key === 'mode') return value === 'separate-colors' || value === 'merged';

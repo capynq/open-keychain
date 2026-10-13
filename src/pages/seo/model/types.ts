@@ -1,10 +1,17 @@
-import type { SeoRoute } from '@/features/seo';
+import type { SeoPageKind, SeoRoute } from '@/features/seo';
 
 import type { Locale } from '../../../infrastructure/i18n/config';
 
 export type Faq = { question: string; answer: string };
 
 export type SeoCtaClick = (locale: Locale, cta: string) => void;
+
+export type SeoCtaTrack = (
+  locale: Locale,
+  cta: string,
+  pageType: SeoPageKind,
+  pageId: string,
+) => void;
 
 export type SeoLocaleChange = (locale: Locale) => void;
 
@@ -17,7 +24,7 @@ export type SeoPageProps = {
 export type SeoDispatcherProps = {
   route: SeoRoute;
   resetKey?: string;
-  onCtaClick?: SeoCtaClick;
+  onCtaClick?: SeoCtaTrack;
   onLocaleChange?: SeoLocaleChange;
 };
 

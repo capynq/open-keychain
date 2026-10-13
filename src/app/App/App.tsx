@@ -1,7 +1,12 @@
 import { startTransition, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 
-import { detectInitialLocale, resolveAppSeoUrl, resolveDisplayLocale } from '@/features/seo';
+import {
+  detectInitialLocale,
+  resolveAppSeoUrl,
+  resolveDisplayLocale,
+  type SeoPageKind,
+} from '@/features/seo';
 
 import { type Locale } from '../../infrastructure/i18n/config';
 import { setLocale } from '../../infrastructure/i18n/utils';
@@ -25,8 +30,8 @@ const createSeoCtaHandler =
     currentLocale: Locale,
     setActiveLocale: LocaleSetter,
   ) =>
-  (ctaLocale: Locale, cta: string): void => {
-    track('seo_cta_clicked', { locale: ctaLocale, cta });
+  (ctaLocale: Locale, cta: string, pageType: SeoPageKind, pageId: string): void => {
+    track('seo_cta_clicked', { locale: ctaLocale, cta, page_type: pageType, page_id: pageId });
     if (ctaLocale === currentLocale) return;
     setActiveLocale(ctaLocale);
     void setLocale(ctaLocale);
