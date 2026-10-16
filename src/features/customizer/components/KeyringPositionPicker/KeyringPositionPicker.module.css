@@ -7,8 +7,8 @@
 
 .picker legend {
   margin-bottom: 8px;
-  color: #626875;
-  font-size: 0.875rem;
+  color: var(--workshop-text-muted);
+  font-size: var(--workshop-font-label);
   font-weight: 700;
 }
 
@@ -41,9 +41,12 @@
   position: absolute;
   z-index: 1;
   display: grid;
+  /* Keep the target at 44 CSS px when browser text is enlarged. A rem-scaled
+     target becomes 88px at 200% and makes the right/bottom anchors overlap. */
   width: 44px;
   height: 44px;
   min-width: 44px;
+  min-height: 44px;
   gap: 0;
   place-items: center;
   box-sizing: border-box;
@@ -70,7 +73,7 @@
   height: 24px;
   place-items: center;
   box-sizing: border-box;
-  border: 2px solid #626875;
+  border: 2px solid var(--workshop-text-muted);
   border-radius: 50%;
   background: transparent;
   transition:
@@ -85,13 +88,13 @@
   box-sizing: border-box;
   border: 1.5px solid currentColor;
   border-radius: 50%;
-  color: #626875;
+  color: var(--workshop-text-muted);
   background: transparent;
 }
 
 .option:hover .marker {
   transform: scale(1.1);
-  border-color: #bd806b;
+  border-color: var(--workshop-accent-hover);
 }
 
 .option:active .marker {
@@ -99,21 +102,21 @@
 }
 
 .option:has(input:checked) .marker {
-  border-color: #bf563f;
-  background: #bf563f;
+  border-color: var(--workshop-accent-control);
+  background: var(--workshop-accent-control);
 }
 
 .option:has(input:checked) .hole {
-  color: #bf563f;
+  color: var(--workshop-accent-control);
 }
 
 .option:has(input:focus-visible) {
-  outline: 2px solid #ef815e;
+  outline: 2px solid var(--workshop-accent);
   outline-offset: 1px;
 }
 
 .option:has(input:focus-visible) .marker {
-  border-color: #bf563f;
+  border-color: var(--workshop-accent-control);
 }
 
 .visuallyHidden {
@@ -130,7 +133,7 @@
 
 .selectedPosition {
   margin: 6px 0 0;
-  color: #303545;
+  color: var(--workshop-text);
   font-size: 0.82rem;
   font-weight: 700;
   line-height: 1.3;

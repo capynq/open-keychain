@@ -9,6 +9,16 @@ import {
   wasm,
 } from './keychain-builder-test-helpers';
 
+const meshZBounds = (mesh: { positions: Float32Array }) => {
+  let min = Number.POSITIVE_INFINITY;
+  let max = Number.NEGATIVE_INFINITY;
+  for (let index = 2; index < mesh.positions.length; index += 3) {
+    min = Math.min(min, mesh.positions[index]);
+    max = Math.max(max, mesh.positions[index]);
+  }
+  return { min, max };
+};
+
 describe('magnet, nameplate and plant label', () => {
   it('builds every magnet style with a blind rear pocket and no keyring', async () => {
     for (const styleId of [
@@ -81,26 +91,29 @@ describe('magnet, nameplate and plant label', () => {
     expect(topology(exportMesh!).connected).toBe(true);
     expect(result.solidCount).toBe(1);
     expect(result.dimensions.widthMm).toBeLessThanOrEqual(120.1);
-    const baseMaxZ = Math.max(
-      ...Array.from(
-        { length: result.baseMesh.positions.length / 3 },
-        (_, index) => result.baseMesh.positions[index * 3 + 2],
-      ),
+    const baseBounds = meshZBounds(result.baseMesh);
+    const reliefBounds = meshZBounds(result.reliefMesh);
+    const exportBounds = meshZBounds(exportMesh!);
+    expect(baseBounds.min).toBeGreaterThanOrEqual(-0.001);
+    expect(exportBounds.min).toBeGreaterThanOrEqual(-0.001);
+    expect(reliefBounds.min).toBeGreaterThanOrEqual(baseBounds.max - 0.15);
+    expect(reliefBounds.max - baseBounds.max).toBeGreaterThan(0.2);
+  }, 30000);
+
+  it('keeps the default Nameplate on the plate bottom while retaining a raised cap', async () => {
+    const { result, exportMesh } = await buildKeychain(
+      wasm,
+      { ...DEFAULT_PARAMS, templateId: 'nameplate' },
+      true,
     );
-    const reliefMinZ = Math.min(
-      ...Array.from(
-        { length: result.reliefMesh.positions.length / 3 },
-        (_, index) => result.reliefMesh.positions[index * 3 + 2],
-      ),
-    );
-    const reliefMaxZ = Math.max(
-      ...Array.from(
-        { length: result.reliefMesh.positions.length / 3 },
-        (_, index) => result.reliefMesh.positions[index * 3 + 2],
-      ),
-    );
-    expect(reliefMinZ).toBeGreaterThanOrEqual(baseMaxZ - 0.15);
-    expect(reliefMaxZ - baseMaxZ).toBeGreaterThan(0.2);
+    expect(result.printable, JSON.stringify(result.issues)).toBe(true);
+    expect(exportMesh).toBeDefined();
+    const baseBounds = meshZBounds(result.baseMesh);
+    const reliefBounds = meshZBounds(result.reliefMesh);
+    expect(baseBounds.min).toBeGreaterThanOrEqual(-0.001);
+    expect(meshZBounds(exportMesh!).min).toBeGreaterThanOrEqual(-0.001);
+    expect(reliefBounds.max).toBeGreaterThan(baseBounds.max + 0.2);
+    expect(topology(exportMesh!).connected).toBe(true);
   }, 30000);
 
   it('keeps every Nameplate text component embedded while the top lift changes', async () => {
@@ -113,17 +126,22 @@ describe('magnet, nameplate and plant label', () => {
       nameplateEmbedMm: 1.8,
       reliefDepthMm: 0.6,
     });
-    const high = await buildKeychain(wasm, {
-      ...DEFAULT_PARAMS,
-      templateId: 'nameplate',
-      fontId: 'nunito',
-      text: 'ALEX',
-      nameplateTiltDeg: 90,
-      nameplateEmbedMm: 1.8,
-      reliefDepthMm: 2,
-    });
+    const high = await buildKeychain(
+      wasm,
+      {
+        ...DEFAULT_PARAMS,
+        templateId: 'nameplate',
+        fontId: 'nunito',
+        text: 'ALEX',
+        nameplateTiltDeg: 90,
+        nameplateEmbedMm: 1.8,
+        reliefDepthMm: 2,
+      },
+      true,
+    );
     expect(low.result.printable, JSON.stringify(low.result.issues)).toBe(true);
     expect(high.result.printable, JSON.stringify(high.result.issues)).toBe(true);
+    expect(meshZBounds(high.exportMesh!).min).toBeGreaterThanOrEqual(-0.001);
     expect(high.result.dimensions.thicknessMm).toBeGreaterThan(low.result.dimensions.thicknessMm);
   }, 30000);
 

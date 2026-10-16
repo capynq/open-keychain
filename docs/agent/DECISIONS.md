@@ -1,5 +1,23 @@
 # Open Keychain decisions
 
+## Preview geometry and export geometry have separate cache entries
+
+**Status:** active
+
+**Decision:** Preview and candidate validation build the same validated model without tessellating
+the additional export mesh. Export requests build/cache exportable geometry on demand. Preview and
+exportable entries share one bounded memory budget but use distinct quality keys.
+
+**Rationale:** Initial preview previously built export data that the renderer did not consume.
+The standalone same-host benchmark showed negligible warm wall-time benefit; this is removal of
+unneeded export work, not evidence of a large startup speedup. Local timings now separate WASM
+wait, worker build/response preparation, client cloning/round trip, Viewer import/init, and draw.
+
+**Consequences:** Preview entries must never satisfy export requests. Preserve validation,
+connectivity, font identities, final export quality, and client cache buffer isolation. Keep client
+cloning because returned typed arrays remain mutable; remove it only with an explicit ownership
+contract and supporting measurements. Do not change raster quality without a browser trace.
+
 ## Design choices stay contextual and range controls share one section
 
 **Status:** active
@@ -367,3 +385,83 @@ aspect; capture readiness includes a completed resize render.
 
 **Evidence:** User decisions on 2026-10-05, ALEX/Nunito 0.6/0.8 mm reproduction, native generation
 regressions, and focused responsive wizard/color captures.
+
+## Inspection magnification and shared Workshop roles
+
+- Use lens magnification (0.25–4×, initial 1×) independently of the safe full-model camera fit.
+  Close-up cropping is intentional; do not weaken fitted-camera geometry safety to enable it.
+  Retain angle, magnification, and relative pan through refinements; template changes and Fit clear
+  zoom/pan, and only Home also restores the home angle. Pan is bounded and available above 1×.
+- Keep Backing strength and Text strength nested in their own finish groups with their feedback.
+  Preserve independent verified amounts, Custom state, Pro precision, and Sharp behavior.
+- Centralize visual roles under `src/shared/constants/design/` in separate palette, typography,
+  dimensions, and Workshop composition files; retain the legacy token entry/aliases. Migrate
+  Workshop first, preserving public visual systems and user-selected model/material colors as data.
+
+## Font pages and default preset recognition
+
+The Simple font picker now uses fixed pages of three compatible bundled fonts, with scroll snap,
+visible current-page dots, and per-target browsing. This supersedes the random suggestion/history
+presentation. Browsing never changes fonts; the full chooser remains available. Keep Style directly
+below Templates in a connected group, ahead of hardware. Match Balanced backing thickness to the
+existing 2.4 mm domain default and Balanced Heart to 22/1.6 mm rather than changing domain defaults
+or selecting an approximate preset. Preserve genuinely unmatched values as Custom. Shared motion
+roles live beside the other design constants; respond to interaction and respect reduced motion.
+The setup remains focused, transactional, and without a preselected size for new designs.
+
+## Scrollport interaction gutters
+
+Scrollable Workshop cards reserve shared block/inline gutters inside the clipping boundary for
+hover lift, shadows, selection borders, and external focus rings. Font pages own border-box padding
+so their full-viewport stride remains unchanged; template/style rails share the gutter tokens.
+Do not substitute z-index or removed/inset focus feedback for adequate layout space. Horizontal
+scrolling also affects vertical overflow computation, so audit every clipping ancestor.
+
+## Simple fonts extend on explicit request
+
+Use a matching Plus card after the final font to append batches of nine compatible online fonts, grouped into
+three-card pages, without reordering earlier pages or changing the selected font. Reuse the existing
+Google Fonts provider/cache, font metadata registry, shared preview-face loader, and transactional
+selection path. Do not auto-fetch catalog metadata on scroll or persist discovery preferences.
+Deduplicate normalized family names and respect articulated/script restrictions. Retain a search
+escape route when loading fails or suggestions end, and keep the active page dot visible without
+unbounded dot rows. Share preview loading with the full font browser; preload only current/next
+Simple pages and guard superseded selection/target changes.
+
+## Font discovery is an inline card
+
+The More fonts action shares the font-card visual role and occupies the next free slot on the last
+page; add a page only if the font page is full. It is a native button rather than a radio option.
+Loading/retry retain its size and Plus icon; exhausted/restricted states use a Search card. Move the
+action to the new end after appending without repacking old partial pages. Page counts/dots derive
+from displayed pages, while preview loading and append focus retain the underlying font pages.
+
+## 2026-10-16 — Allowlisted, consent-gated portfolio referrals
+
+- Recognize only `utm_source=portfolio&utm_medium=referral&utm_campaign=projects`, with one value
+  per parameter. Emit only the fixed event context `acquisition_source: portfolio`; never raw
+  campaign values, referrers, click IDs, or person attribution properties.
+- Retain the recognized marker in memory before consent to survive SPA navigation. Store only
+  the fixed marker in tab session storage after acceptance, reuse it across refreshes in that tab,
+  and clear it plus queued events on decline. Storage failures fall back to memory.
+- Keep SDK campaign/referrer collection disabled and retain URL/query and attribution scrubbing.
+  This is a narrow exception for the explicitly authorized portfolio source, rather than enabling
+  broad acquisition tracking. Measure consented production activation/export events with existing
+  pseudonymous IDs; no identity linking, new dashboard, or production mutation is included.
+
+## 2026-10-16 — Category-led starts and offline font discovery
+
+The starting carousel contains all compatible fonts in saved setup categories; absent categories use
+Calligraphic/Handwritten/Rounded. A selected provider variant occupies its existing family card.
+The Plus card prechecks configured/online/provider state, falls back to random unseen, unselected
+bundled/available-local fonts with category variety, and disappears when both sources are exhausted.
+This supersedes the previous Retry/Search terminal-card behavior; Find a specific font remains below.
+Both carousel scrollbars stay hidden, and the centered page-dot strip is capped at 16rem while
+retaining 44px touch targets. Preserve old pages and focus recovery when removing the action.
+
+## Font page dots wrap instead of scrolling
+
+Keep the compact centered dot list capped at 16rem and wrap all page buttons into visible rows.
+Do not clip or horizontally scroll page buttons, and remove automatic dot-strip scrolling. Retain
+44px touch targets and focus-visible feedback. Font cards still swipe with their scrollbar hidden.
+This supersedes the earlier horizontally scrolling dot-strip choice.

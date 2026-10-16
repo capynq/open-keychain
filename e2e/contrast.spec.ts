@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { waitForReadyGeometry } from './helpers';
+
 type ContrastAudit = {
   selector: string;
   foreground: string;
@@ -265,5 +267,44 @@ test('keeps icon action hover states visually distinct and contrasting', async (
       true,
     );
     expect(after.ratio).toBeGreaterThanOrEqual(3);
+  }
+});
+
+test('keeps preview zoom percentages opaque and highly readable', async ({ page }) => {
+  await page.goto('/create');
+  await waitForReadyGeometry(page);
+  const readout = page.locator('.viewer-zoom-readout');
+  await expect(readout).toHaveText('100%');
+  const surface = page.locator('.viewer-surface');
+  for (const [key, expected] of [
+    ['-', '25%'],
+    ['+', '400%'],
+  ] as const) {
+    await surface.focus();
+    for (let step = 0; step < 30; step += 1) await surface.press(key);
+    await expect(readout).toHaveText(expected);
+    const audit = await readout.evaluate((element) => {
+      const style = getComputedStyle(element);
+      const parse = (color: string) => color.match(/[\d.]+/g)!.map(Number);
+      const foreground = parse(style.color);
+      const background = parse(style.backgroundColor);
+      const luminance = (channels: number[]) =>
+        channels
+          .slice(0, 3)
+          .map((channel) => {
+            const value = channel / 255;
+            return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+          })
+          .reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0);
+      const values = [luminance(foreground), luminance(background)].sort((a, b) => a - b);
+      return {
+        ratio: (values[1] + 0.05) / (values[0] + 0.05),
+        alpha: background[3] ?? 1,
+        opacity: style.opacity,
+      };
+    });
+    expect(audit.alpha).toBe(1);
+    expect(audit.opacity).toBe('1');
+    expect(audit.ratio).toBeGreaterThanOrEqual(7);
   }
 });

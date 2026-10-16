@@ -11,10 +11,10 @@
   display: flex;
   min-width: 0;
   gap: 9px;
-  padding: 6px 8px 10px;
+  padding: var(--workshop-rail-gutter-block) var(--workshop-rail-gutter-inline);
   overflow-x: auto;
   overflow-y: hidden;
-  scroll-padding-inline: 8px;
+  scroll-padding-inline: var(--workshop-rail-gutter-inline);
   scroll-snap-type: x proximity;
   scrollbar-color: #c9a08f transparent;
   scrollbar-width: thin;
@@ -23,28 +23,28 @@
 :global(.design-card-rail-shell::after) {
   position: absolute;
   z-index: 1;
-  top: 6px;
+  top: var(--workshop-rail-gutter-block);
   right: 0;
-  bottom: 10px;
+  bottom: var(--workshop-rail-gutter-block);
   width: 68px;
   content: '';
   pointer-events: none;
   opacity: 0;
-  background: linear-gradient(270deg, #f6f4ef, transparent);
+  background: linear-gradient(270deg, var(--workshop-surface-muted), transparent);
   transition: opacity 0.16s ease;
 }
 
 :global(.design-card-rail-shell::before) {
   position: absolute;
   z-index: 1;
-  top: 6px;
-  bottom: 10px;
+  top: var(--workshop-rail-gutter-block);
+  bottom: var(--workshop-rail-gutter-block);
   left: 0;
   width: 68px;
   content: '';
   pointer-events: none;
   opacity: 0;
-  background: linear-gradient(90deg, #f6f4ef, transparent);
+  background: linear-gradient(90deg, var(--workshop-surface-muted), transparent);
   transition: opacity 0.16s ease;
 }
 
@@ -72,7 +72,7 @@
   background: #c95134;
   color: #fff;
   box-shadow:
-    0 4px 10px #30354524,
+    0 4px 10px var(--workshop-text-14),
     inset 0 1px 0 #ffffff40;
   opacity: 0;
   pointer-events: none;
@@ -110,14 +110,14 @@
   background: #ad432e;
   color: #fff;
   box-shadow:
-    0 6px 14px #30354530,
+    0 6px 14px var(--workshop-text-16),
     inset 0 1px 0 #ffffff40;
   transform: translateY(calc(-50% - 1px)) scale(1);
 }
 
 :global(.design-card-rail-shell .design-card-rail-next.icon-button:focus-visible),
 :global(.design-card-rail-shell .design-card-rail-previous.icon-button:focus-visible) {
-  outline: 3px solid #303545;
+  outline: 3px solid var(--workshop-text);
   outline-offset: 2px;
 }
 
@@ -139,7 +139,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     overflow: visible;
-    padding: 5px;
+    padding: var(--workshop-rail-gutter-inline);
   }
   :global(.design-card-rail-shell .design-card-rail-next.icon-button),
   :global(.design-card-rail-shell .design-card-rail-previous.icon-button) {

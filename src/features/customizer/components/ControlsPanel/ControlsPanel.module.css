@@ -1,3 +1,19 @@
 .root {
   min-width: 0;
+  container: simple-controls / inline-size;
+}
+
+.designGroup {
+  display: grid;
+  min-width: 0;
+  gap: 0;
+}
+
+.designGroup > :global(.control-section) + :global(.control-section) {
+  padding-block-start: var(--control-space-4);
+  border-block-start: 1px solid var(--workshop-border-subtle);
+}
+
+.designGroup > :global(.control-section):first-child {
+  padding-block-end: var(--control-space-4);
 }

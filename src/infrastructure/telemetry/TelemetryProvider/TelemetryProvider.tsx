@@ -8,6 +8,7 @@ import {
   type AnalyticsEvent,
   type AnalyticsProperties,
 } from '../events';
+import { readPortfolioReferral, type AcquisitionSource } from '../referral';
 import { AnalyticsContext, type AnalyticsConsent } from '../telemetry-context';
 import './TelemetryProvider.module.css';
 
@@ -65,6 +66,34 @@ const readConsent = (): AnalyticsConsent => {
 };
 
 let captureConsent: AnalyticsConsent = readConsent();
+const REFERRAL_KEY = 'open-keychain.acquisition-source';
+
+const readAcquisitionSource = (): AcquisitionSource | undefined => {
+  if (typeof window === 'undefined' || captureConsent === 'declined') return undefined;
+  const source = readPortfolioReferral(window.location.search);
+  if (source || captureConsent !== 'accepted') return source;
+  try {
+    return window.sessionStorage.getItem(REFERRAL_KEY) === 'portfolio' ? 'portfolio' : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+// Before consent, retain only the fixed marker in memory across SPA navigation.
+let acquisitionSource = readAcquisitionSource();
+
+const syncReferralConsent = (): void => {
+  if (captureConsent === 'declined') acquisitionSource = undefined;
+  try {
+    if (captureConsent === 'accepted' && acquisitionSource === 'portfolio') {
+      window.sessionStorage.setItem(REFERRAL_KEY, 'portfolio');
+    } else {
+      window.sessionStorage.removeItem(REFERRAL_KEY);
+    }
+  } catch {
+    // Tracking can still use the in-memory marker when session storage is blocked.
+  }
+};
 
 const readInternalTraffic = (): boolean => {
   if (typeof window === 'undefined' || BUILD_ENV !== 'production')
@@ -152,11 +181,13 @@ export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
   const [consent, setConsentState] = useState<AnalyticsConsent>(readConsent);
 
   useEffect(() => {
+    syncReferralConsent();
     if (consent === 'accepted') void configurePostHog();
   }, [consent]);
 
   const setConsent = useCallback((nextConsent: Exclude<AnalyticsConsent, 'unknown'>): void => {
     captureConsent = nextConsent;
+    syncReferralConsent();
     try {
       window.localStorage.setItem(CONSENT_KEY, nextConsent);
     } catch {
@@ -181,6 +212,7 @@ export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
       try {
         const safeProperties = sanitizeProperties(event, {
           ...properties,
+          acquisition_source: acquisitionSource,
           environment: BUILD_ENV,
           internal_traffic: readInternalTraffic(),
           app_version: /^[a-f0-9]{7,40}$/i.test(BUILD_VERSION)

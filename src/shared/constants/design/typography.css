@@ -1,0 +1,11 @@
+:root {
+  --workshop-font-body: 1rem;
+  --workshop-font-label: 0.875rem;
+  --workshop-font-description: 0.8125rem;
+  --workshop-font-meta: 0.75rem;
+  --workshop-font-section: 1rem;
+  --workshop-font-group: 0.875rem;
+  --workshop-font-nested: 0.75rem;
+  --workshop-font-card-title: 0.875rem;
+  --workshop-font-card-description: 0.8125rem;
+}

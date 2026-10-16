@@ -1,6 +1,5 @@
 import { useLocation, useNavigate } from 'react-router';
 
-import { CustomizerFooter } from '@/app/components/CustomizerFooter/CustomizerFooter';
 import { CustomizerNavigationHeader } from '@/app/components/CustomizerNavigationHeader/CustomizerNavigationHeader';
 import { CustomizerWorkspace } from '@/app/components/CustomizerWorkspace/CustomizerWorkspace';
 import { QuickSetupDialog } from '@/app/components/QuickSetupDialog/QuickSetupDialog';
@@ -61,7 +60,7 @@ export const CustomizerPage = ({
   });
 
   return (
-    <main className="app-shell" aria-label="Customizer">
+    <main className="app-shell customizer-app-shell" aria-label="Customizer">
       <CustomizerNavigationHeader
         locale={locale}
         onLocaleChange={onLocaleChange}
@@ -168,7 +167,6 @@ export const CustomizerPage = ({
         acceptedMetrics={acceptedMetrics}
         acceptedText={state.customizer.acceptedParams.text}
       />
-      <CustomizerFooter locale={locale} />
       <ExportDialog
         locale={locale}
         open={state.exportOpen}

@@ -54,6 +54,9 @@ export const PreviewPanel = ({
 }: PreviewPanelProps) => {
   const [Viewer, setViewer] = useState<ViewerComponent | undefined>(undefined);
   const [viewerUnavailable, setViewerUnavailable] = useState(false);
+  const [mountedAt] = useState(() => performance.now());
+  const [viewerImportMs, setViewerImportMs] = useState<number>();
+  const [firstDrawMs, setFirstDrawMs] = useState<number>();
   const [renderedGenerationId, setRenderedGenerationId] = useState<number>();
   const [renderTimings, setRenderTimings] = useState<
     (ViewerRenderTimings & { generationId: number }) | undefined
@@ -61,10 +64,14 @@ export const PreviewPanel = ({
 
   useEffect(() => {
     let active = true;
+    const importStartedAt = performance.now();
 
     import('../../../features/preview/components/Viewer/Viewer')
       .then(({ Viewer: loadedViewer }) => {
-        if (active) setViewer(() => loadedViewer);
+        if (active) {
+          setViewerImportMs(performance.now() - importStartedAt);
+          setViewer(() => loadedViewer);
+        }
       })
       .catch(() => {
         if (active) setViewerUnavailable(true);
@@ -79,8 +86,9 @@ export const PreviewPanel = ({
     (generationId: number, timings?: ViewerRenderTimings): void => {
       setRenderedGenerationId(generationId);
       setRenderTimings(timings ? { generationId, ...timings } : undefined);
+      setFirstDrawMs((previous) => previous ?? performance.now() - mountedAt);
     },
-    [],
+    [mountedAt],
   );
   const onViewerUnavailable = useCallback((): void => {
     setViewerUnavailable(true);
@@ -114,6 +122,15 @@ export const PreviewPanel = ({
       data-rendered-generation-id={renderedGenerationId ?? ''}
       data-geometry-worker-compute-ms={geometry.result?.timings?.workerComputeMs ?? ''}
       data-geometry-cache-lookup-ms={geometry.result?.timings?.workerCacheLookupMs ?? ''}
+      data-geometry-wasm-wait-ms={geometry.result?.timings?.wasmWaitMs ?? ''}
+      data-geometry-response-preparation-ms={
+        geometry.result?.timings?.workerResponsePreparationMs ?? ''
+      }
+      data-geometry-client-clone-ms={geometry.result?.timings?.clientCacheCloneMs ?? ''}
+      data-geometry-client-round-trip-ms={geometry.result?.timings?.clientRoundTripMs ?? ''}
+      data-viewer-import-ms={viewerImportMs ?? ''}
+      data-viewer-initialization-ms={currentRenderTimings?.initializationMs ?? ''}
+      data-preview-first-draw-ms={firstDrawMs ?? ''}
       data-viewer-mesh-setup-ms={currentRenderTimings?.meshSetupMs ?? ''}
       data-viewer-draw-submit-ms={currentRenderTimings?.drawSubmitMs ?? ''}
       data-model-ready={
@@ -130,6 +147,7 @@ export const PreviewPanel = ({
         {Viewer ? (
           <Viewer
             result={geometry.result}
+            templateId={modelInfo.templateId}
             appearance={
               geometry.result
                 ? applyPrintAppearanceOverrides(geometry.result.appearance, appearanceOverrides)

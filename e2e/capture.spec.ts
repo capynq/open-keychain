@@ -269,3 +269,43 @@ for (const style of stylePreviews) {
     assertNoBrowserErrors();
   });
 }
+
+test('captures proportional ultra-wide Customizer controls', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'capture-desktop', 'Ultra-wide layout is a desktop surface.');
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/create');
+  await waitForReadyGeometry(page);
+  const measure = () =>
+    page.locator('.workspace').evaluate((workspace) => ({
+      gap: Number.parseFloat(getComputedStyle(workspace).columnGap),
+      width: workspace.getBoundingClientRect().width,
+      sidebar: workspace.querySelector('aside')!.getBoundingClientRect().width,
+    }));
+  const laptop = await measure();
+  await page.setViewportSize({ width: 3440, height: 1440 });
+  await prepareForCapture(page);
+  const wide = await measure();
+  expect(wide.sidebar).toBeGreaterThan(laptop.sidebar);
+  expect(wide.width).toBeLessThanOrEqual(1850);
+  expect(Math.abs(wide.gap - laptop.gap)).toBeLessThanOrEqual(1);
+  const captions = await page.locator('#root .design-select-card').evaluateAll((cards) =>
+    cards.map((card) => {
+      const bounds = card.getBoundingClientRect();
+      const caption = card.querySelector('.design-select-card-copy')!.getBoundingClientRect();
+      return {
+        title: card.textContent,
+        bottomOverflow: caption.bottom - bounds.bottom,
+        topOverflow: bounds.top - caption.top,
+      };
+    }),
+  );
+  for (const caption of captions) {
+    expect(caption.bottomOverflow, caption.title ?? '').toBeLessThanOrEqual(1);
+    expect(caption.topOverflow, caption.title ?? '').toBeLessThanOrEqual(1);
+  }
+  await assertVisibleModel(page);
+  await page.screenshot({
+    path: testInfo.outputPath('customizer-ultra-wide.png'),
+    animations: 'disabled',
+  });
+});

@@ -17,6 +17,8 @@ const cameraViews = [
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem('open-keychain.analytics-consent', 'declined');
+    // This suite exercises the complete precision editor; Simple has its own workflow coverage.
+    localStorage.setItem('open-keychain:editor-mode', 'pro');
   });
 });
 
@@ -191,7 +193,6 @@ test('keeps shared icon glyphs centered while showing tactile hover feedback', a
   await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10000 });
   const buttons = [
-    page.getByRole('button', { name: 'Export' }),
     page.getByRole('button', { name: 'Share' }),
     page.getByRole('button', { name: 'Randomize' }),
   ];
@@ -846,7 +847,7 @@ test('keeps the complete articulated shape control set reachable in the scrollab
   await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await page.getByRole('button', { name: 'Articulated name' }).click();
   await waitForReadyGeometry(page);
-  const controls = page.locator('.controls-panel');
+  const controls = page.locator('aside.controls-panel');
   const metrics = await controls.evaluate((element) => ({
     clientHeight: element.clientHeight,
     scrollHeight: element.scrollHeight,
@@ -858,27 +859,20 @@ test('keeps the complete articulated shape control set reachable in the scrollab
   const scrollTop = await controls.evaluate((element) => element.scrollTop);
   expect(scrollTop).toBeGreaterThan(0);
 });
-test('keeps the customizer footer in the desktop viewport', async ({ page }) => {
+test('uses the desktop space for scrollable controls without a customizer footer', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/create');
-  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
-  await expect(page.locator('.status-pill')).toHaveText('Ready to print', { timeout: 10000 });
-
-  const pageState = await page.evaluate(() => {
-    const footer = document.querySelector('.customizer-footer')!.getBoundingClientRect();
-    const controls = document.querySelector('.controls-panel')!;
-    return {
-      footerTop: footer.top,
-      footerBottom: footer.bottom,
-      viewportHeight: window.innerHeight,
-      controlsClientHeight: controls.clientHeight,
-      controlsScrollHeight: controls.scrollHeight,
-    };
-  });
-  expect(pageState.footerTop).toBeGreaterThanOrEqual(0);
-  expect(pageState.footerBottom).toBeLessThanOrEqual(pageState.viewportHeight);
-  expect(pageState.controlsScrollHeight).toBeGreaterThan(pageState.controlsClientHeight);
-  await expect(page.locator('.customizer-footer')).toBeInViewport();
+  await waitForReadyGeometry(page);
+  await expect(page.locator('.customizer-footer')).toHaveCount(0);
+  const controls = page.locator('aside.controls-panel');
+  const metrics = await controls.evaluate((element) => ({
+    clientHeight: element.clientHeight,
+    scrollHeight: element.scrollHeight,
+  }));
+  expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
+  await expect(page.locator('.viewer')).toBeInViewport();
   expect(await page.evaluate(() => window.scrollY)).toBe(0);
 });
 test('keeps the preview prominent and touch targets comfortable at 390 px', async ({ page }) => {

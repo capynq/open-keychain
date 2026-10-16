@@ -259,7 +259,7 @@ export const QuickSetupDialog = ({
               </span>
               <span className={styles.progressDots} aria-hidden="true">
                 {steps.map((_, index) => (
-                  <i key={index} data-complete={index <= step} />
+                  <i key={index} data-complete={index < step} data-current={index === step} />
                 ))}
               </span>
             </div>

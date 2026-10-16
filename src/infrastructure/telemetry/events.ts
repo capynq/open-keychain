@@ -35,6 +35,7 @@ export type AnalyticsEvent =
 export type AnalyticsProperties = Record<string, string | number | boolean | undefined>;
 
 const SAFE_PROPERTY_KEYS = new Set([
+  'acquisition_source',
   'category',
   'app_version',
   'count',
@@ -143,7 +144,12 @@ const EVENT_PROPERTY_KEYS: Partial<Record<AnalyticsEvent, ReadonlySet<string>>> 
 const SAFE_KEY = /^[a-z][a-z0-9_]*$/;
 const SAFE_ID = /^[a-z0-9_-]{1,64}$/;
 const ERROR_CODES = new Set(['timeout', 'geometry_failed', 'export_failed', 'worker_failed']);
-const CONTEXT_PROPERTY_KEYS = new Set(['environment', 'internal_traffic', 'app_version']);
+const CONTEXT_PROPERTY_KEYS = new Set([
+  'acquisition_source',
+  'environment',
+  'internal_traffic',
+  'app_version',
+]);
 
 export const sanitizeProperties = (
   event: AnalyticsEvent,
@@ -177,6 +183,7 @@ export const sanitizeProperties = (
             );
           }
         }
+        if (key === 'acquisition_source') return value === 'portfolio';
         if (key === 'environment')
           return value === 'development' || value === 'preview' || value === 'production';
         if (key === 'operation') {
@@ -282,7 +289,12 @@ const sanitizePostHogProperties = (
 ): CaptureResult['properties'] => {
   const properties = { ...source };
   for (const [key, value] of Object.entries(properties)) {
-    if (OMIT_SDK_PROPERTIES.has(key) || key.startsWith('$geoip_') || isAttributionProperty(key)) {
+    if (
+      OMIT_SDK_PROPERTIES.has(key) ||
+      key.startsWith('$geoip_') ||
+      isAttributionProperty(key) ||
+      (key === 'acquisition_source' && value !== 'portfolio')
+    ) {
       delete properties[key];
       continue;
     }

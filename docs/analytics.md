@@ -32,6 +32,27 @@ included.
 
 PostHog autocapture, page capture, page-leave capture, web-vitals/performance capture, client-side console-log capture, campaign/referrer persistence, cookies, and session replay are disabled in the client configuration. The live project settings inspected on 2026-10-08 still enable project-level console-log, performance, and session-recording capture; keep session recording disabled in the client and do not describe the project as privacy-aligned until these project settings are switched off and independently rechecked. A `before_send` scrub keeps URL routes while removing query strings and fragments, and strips campaign/search attribution, referrers, raw user agents, viewport dimensions, and any GeoIP properties from event and person-property payloads. Server-side IP enrichment remains controlled by the PostHog project. The activity remains pseudonymous PostHog activity; disabling session recording does not make event activity fully anonymous.
 
+## Portfolio referrals
+
+The portfolio links to
+`https://open-keychain.com/?utm_source=portfolio&utm_medium=referral&utm_campaign=projects`.
+Only that exact combination (with one value per parameter) produces the fixed event property
+`acquisition_source: portfolio`; other query values are never copied into telemetry. Extra query
+parameters are ignored and remain excluded from event URLs. Automatic campaign/referrer capture
+stays disabled, and raw UTM values are still removed by `before_send`.
+
+Before consent, only the recognized fixed marker is retained in memory so SPA navigation does not
+lose it; no referral storage or analytics transmission occurs. After acceptance, the marker is
+stored in session storage for this tab and attached to every app-generated event, including queued
+events, geometry outcomes, and exports. It survives navigation and refresh in the same tab, but is
+not a persistent person property or first-touch profile. Declining consent clears the marker and
+queued events. Blocked storage falls back to memory, which does not survive refresh.
+
+In PostHog, filter the activation funnel `landing_view → start_designing → geometry_ready →
+export_completed` by `acquisition_source = portfolio`, `environment = production`, and
+`internal_traffic = false`. This measures consenting visitors only. Existing event names and
+pseudonymous identity remain unchanged; no new dashboard or production configuration is created.
+
 ## Customizer feedback survey
 
 The Customizer feedback widget is configured in PostHog project `251074` and targets the `/create`

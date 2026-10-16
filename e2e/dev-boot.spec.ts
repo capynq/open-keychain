@@ -10,8 +10,8 @@ test('serves the Customizer boot variants only on development Customizer routes'
     expect(response?.status(), route).toBe(200);
     await expect(page.locator('template[data-customizer-boot]')).toHaveCount(18);
     await expect(page.locator('#boot-customizer .customizer-topbar')).toBeVisible();
-    await expect(page.locator('#boot-customizer .controls-panel')).toBeVisible();
-    await expect(page.locator('link[data-customizer-boot-style]')).toHaveCount(13);
+    await expect(page.locator('#boot-customizer aside.controls-panel')).toBeVisible();
+    await expect(page.locator('link[data-customizer-boot-style]')).toHaveCount(16);
   }
 
   const landingResponse = await page.goto('/', { waitUntil: 'domcontentloaded' });
@@ -39,7 +39,7 @@ test('renders the requested locale and template before the React entry loads', a
     expect(response?.status()).toBe(200);
     await expect(page.locator('template[data-customizer-boot]')).toHaveCount(18);
     await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
-    await expect(page.locator('link[data-customizer-boot-style]')).toHaveCount(13);
+    await expect(page.locator('link[data-customizer-boot-style]')).toHaveCount(16);
     await expect(
       page.locator('#boot-customizer [data-testid="template-card-magnet"]'),
     ).toHaveAttribute('aria-pressed', 'true');

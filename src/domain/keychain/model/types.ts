@@ -4,6 +4,7 @@ import type { ModelFeature } from './model-feature';
 import { normalizeEdgeFinish } from './edge-finish';
 import { KEYRING_POSITIONS, type KeyringPosition } from './keyring-position';
 import { KEYRING_PRESETS, type KeyringOpeningShape, type KeyringPresetId } from './keyring-presets';
+import { reconcileDependentParameterValues } from './parameter-constraints';
 
 export type StyleId =
   'plain' | 'contour' | 'capsule' | 'soft-tag' | 'bubble' | 'arch' | 'ribbon' | 'heart-split';
@@ -219,7 +220,10 @@ export const ARTICULATED_PRINT_APPEARANCE: PrintAppearance = {
   base: { name: 'Structural letters and connectors', color: '#E7E2DA' },
   relief: { name: 'Decorative letter caps', color: '#D94A52' },
 };
+export type GeometryParameterLimits = Partial<Record<'cornerRadiusMm' | 'stakeShoulderMm', number>>;
+
 export type GeometryResult = {
+  parameterLimits?: GeometryParameterLimits;
   generationId: number;
   baseMesh: MeshBuffer;
   reliefMesh: MeshBuffer;
@@ -396,7 +400,16 @@ export const validateGeometryResult = (result: GeometryResult): boolean => {
     (!result.magnetPocket || magnetPocketValid(result.magnetPocket)) &&
     (!result.edgeFinish || edgeFinishValid(result.edgeFinish)) &&
     (!result.textFinishLimits || textFinishLimitsValid(result.textFinishLimits)) &&
-    (!result.baseFinishLimits || baseFinishLimitsValid(result.baseFinishLimits))
+    (!result.baseFinishLimits || baseFinishLimitsValid(result.baseFinishLimits)) &&
+    (!result.parameterLimits ||
+      (isRecord(result.parameterLimits) &&
+        Object.entries(result.parameterLimits).every(
+          ([key, value]) =>
+            ['cornerRadiusMm', 'stakeShoulderMm'].includes(key) &&
+            typeof value === 'number' &&
+            Number.isFinite(value) &&
+            value >= 0,
+        )))
   );
 };
 export type WorkerRequest =
@@ -785,6 +798,18 @@ export const normalizeParams = (params: KeychainParams): NormalizedParams => {
   normalized.textEdgeFinish = finish.textStyle;
   return normalized;
 };
+
+/** Reconcile affected control values before normalizing a proposed editor change. */
+export const reconcileCandidateParams = (
+  previous: KeychainParams,
+  candidate: KeychainParams,
+): KeychainParams => {
+  const changedKeys = (Object.keys(candidate) as (keyof KeychainParams)[]).filter(
+    (key) => !Object.is(previous[key], candidate[key]),
+  );
+  return reconcileDependentParameterValues(normalizeParams(candidate), changedKeys);
+};
+
 export const clamp = (value: number, min: number, max: number): number => {
   return Math.min(max, Math.max(min, value));
 };

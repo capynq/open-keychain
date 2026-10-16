@@ -76,6 +76,11 @@ right gap and vertical offset did not regenerate because the clicked values equa
 defaults. Chamfered edge values then triggered the actual failure. The parameter registry documents
 dependencies, but the browser suite lacks a catalog-wide control-effect contract.
 
+**2026-10-16 progress:** Three Luna audits and focused fixes are recorded in
+`PARAMETER-AUDIT.md`: usable slot/radius/notch ranges, dependent-value reconciliation, measured
+Nameplate/Plant caps, and full-build default finish endpoint regressions. The reported default
+finish slider rejection was not reproduced; exact browser state and exhaustive matrix remain open.
+
 **Desired outcome:** Add registry-driven tests for every active geometric control at representative
 safe minimum/default/maximum values, plus pairwise coverage for known dependent and high-risk
 combinations. Compare a geometry fingerprint or affected measurement, then check finite meshes,
@@ -245,3 +250,27 @@ topology/export, visual-capture, and physical-print gates.
 Additional animation, microcopy, or ornament is not committed work. Consider it only when it makes a
 selection, geometry update, disclosure, progress state, success, or recovery materially clearer and
 still respects reduced motion.
+
+### Confirmed — finish Simple presets and inspection acceptance
+
+Keep the incomplete Simple editor work visible: 63 complete Minimal/Bold/Playful recipes with actual
+thumbnails and atomic application, exhaustive parameter/compatibility coverage, browser cold/warm
+comparative startup traces. The user authorized full software validation on 2026-10-16 and the
+unit/browser/geometry gates passed; do not treat the remaining product work as implemented. Add Simple font dot/swipe/resize/target-switch
+coverage and favorite/script/articulated filtering coverage. Inspection acceptance must
+cover 0.25–4× wheel/pinch/buttons, bounded pan, fit/home/named views, keyboard modifiers, retained
+camera state after refinements/resizing, and template-change fitting. Workshop constants now exist;
+public/profile token migration is a later slice, preserving their visual systems.
+
+### Confirmed — inline font discovery acceptance after visual approval
+
+Verify the More fonts continuation with a mocked delayed provider: no request before click, batches
+of nine in stable three-card pages, family deduplication, selected external font visibility, target/
+script/template refiltering, and retries/exhaustion/offline recovery. Add delayed font-face context
+race coverage for both Simple and the full chooser, including unmount and switching away/back.
+Inspect compact wrapping page dots with every page visible, keyboard focus after append/exhaustion, hover gutters,
+resize, mobile, and reduced motion. Cover all fonts from setup categories/default category selection,
+Google configuration/offline/failure prechecks, randomized unselected local fallback, family-variant
+collisions, and removal of the plus card after both sources are exhausted. Pure pagination and preview-loader regression sources exist; browser/hook checks and full software gates passed on 2026-10-16, including deferred-provider
+ABA coverage and offline browser discovery. Real-device gestures and broader combination coverage
+remain follow-up work; use the final evidence in STATE rather than the earlier four-test subset.

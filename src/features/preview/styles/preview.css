@@ -6,7 +6,7 @@
   flex-direction: column;
   overflow: hidden;
   border-radius: 22px;
-  background: #293141;
+  background: var(--workshop-surface-dark);
   box-shadow:
     0 20px 45px #262d3b1c,
     inset 0 0 0 1px #ffffff8c;
@@ -36,7 +36,7 @@
   gap: 5px;
   padding: 5px 8px;
   border-top: 1px solid #ffffff26;
-  background: #293141;
+  background: var(--workshop-surface-dark);
 }
 
 .viewer-toolbar button {
@@ -48,9 +48,9 @@
   min-height: 36px;
   padding: 0;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--workshop-radius-pill);
   background: transparent;
-  color: #f8f5ee;
+  color: var(--workshop-text-on-dark);
   cursor: pointer;
 }
 
@@ -69,7 +69,7 @@
 .viewer-toolbar button.active {
   outline: none;
   background: #f7f1e7;
-  color: #9a3d31;
+  color: var(--workshop-accent-strong);
 }
 
 .viewer-toolbar button:active:not(:disabled) {
@@ -81,7 +81,7 @@
 }
 
 .viewer-toolbar button:focus-visible {
-  box-shadow: 0 0 0 2px #ef815e;
+  box-shadow: 0 0 0 2px var(--workshop-accent);
 }
 .toolbar-divider {
   width: 1px;
@@ -97,9 +97,9 @@
   left: 12px;
   margin: 0;
   padding: 6px 9px;
-  border-radius: 999px;
-  background: #293141b8;
-  color: #f8f5ee;
+  border-radius: var(--workshop-radius-pill);
+  background: var(--workshop-surface-dark-72);
+  color: var(--workshop-text-on-dark);
   font-size: 10px;
   font-weight: 700;
 }
@@ -130,13 +130,13 @@
   border: 1px solid #d98b69;
   border-radius: 50%;
   background: #fbe5d8;
-  color: #9a3d31;
+  color: var(--workshop-accent-strong);
   font-size: 16px;
   font-weight: 900;
 }
 
 .viewer-unavailable strong {
-  color: #293141;
+  color: var(--workshop-surface-dark);
   font-size: 14px;
 }
 
@@ -163,7 +163,7 @@
   padding: 8px 10px;
   border: 1px solid #ded9d0;
   border-radius: 12px;
-  background: #fffdf8;
+  background: var(--workshop-surface);
   color: #4e5260;
   font-size: 10px;
 }
@@ -190,12 +190,12 @@
   width: 30px;
   height: 30px;
   padding: 3px;
-  border: 2px solid #fffdf8;
-  border-radius: 999px;
+  border: 2px solid var(--workshop-surface);
+  border-radius: var(--workshop-radius-pill);
   background: transparent;
   box-shadow:
     0 0 0 1px #c9c4bb,
-    0 2px 5px #3035451f;
+    0 2px 5px var(--workshop-text-12);
   cursor: pointer;
 }
 
@@ -204,12 +204,12 @@
 }
 .appearance-control input[type='color']::-webkit-color-swatch {
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--workshop-radius-pill);
 }
 
 .appearance-control input[type='color']::-moz-color-swatch {
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--workshop-radius-pill);
 }
 
 .appearance-control button,
@@ -232,19 +232,19 @@
   min-width: 36px;
   min-height: 36px;
   padding: 0;
-  border-radius: 999px;
+  border-radius: var(--workshop-radius-pill);
 }
 
 .appearance-control .reset-icon-button:hover,
 .appearance-controls > .reset-icon-button:hover {
-  border-color: #ef815e;
+  border-color: var(--workshop-accent);
   background: #fff7ef;
-  color: #9a3d31;
+  color: var(--workshop-accent-strong);
 }
 
 .appearance-control .reset-icon-button:focus-visible,
 .appearance-controls > .reset-icon-button:focus-visible {
-  outline: 2px solid #9a3d31;
+  outline: 2px solid var(--workshop-accent-strong);
   outline-offset: -2px;
 }
 
@@ -252,21 +252,21 @@
 .appearance-control button:focus-visible,
 .appearance-controls > button:hover,
 .appearance-controls > button:focus-visible {
-  border-color: #ef815e;
-  color: #9a3d31;
+  border-color: var(--workshop-accent);
+  color: var(--workshop-accent-strong);
 }
 
 .appearance-control button:focus-visible,
 .appearance-controls > button:focus-visible,
 .appearance-control input[type='color']:focus-visible {
-  outline: 2px solid #ef815e;
+  outline: 2px solid var(--workshop-accent);
   outline-offset: 2px;
 }
 
 .appearance-control input[type='color']:focus-visible {
   box-shadow:
     0 0 0 1px #c9c4bb,
-    0 0 0 4px #ef815e44;
+    0 0 0 4px var(--workshop-accent-27);
 }
 
 @media (max-width: 760px) {
@@ -293,8 +293,8 @@
   .viewer-toolbar button {
     width: 44px;
     height: 44px;
-    min-width: 44px;
-    min-height: 44px;
+    min-width: var(--workshop-touch-target);
+    min-height: var(--workshop-touch-target);
     flex: 0 0 44px;
   }
 
@@ -302,8 +302,8 @@
   .appearance-controls > .reset-icon-button {
     width: 44px;
     height: 44px;
-    min-width: 44px;
-    min-height: 44px;
+    min-width: var(--workshop-touch-target);
+    min-height: var(--workshop-touch-target);
   }
   .viewer-caption {
     bottom: 10px;
@@ -332,4 +332,16 @@
   .viewer-toolbar button:active:not(:disabled) {
     transform: none;
   }
+}
+
+.viewer-zoom-readout {
+  min-width: 42px;
+  padding: 4px 6px;
+  border-radius: var(--workshop-radius-control);
+  background: var(--workshop-surface-dark);
+  color: var(--workshop-text-on-dark);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
 }

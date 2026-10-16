@@ -60,4 +60,33 @@ describe('randomizeParams', () => {
 
     expect(result).toMatchObject({ status: 'exhausted', params: DEFAULT_PARAMS, attempts: 2 });
   });
+  it.each(['nameplate', 'plant-label'] as const)(
+    'revalidates measured caps before accepting %s',
+    async (templateId) => {
+      const candidates: number[] = [];
+      const key = templateId === 'nameplate' ? 'cornerRadiusMm' : 'stakeShoulderMm';
+      const result = await randomizeWithValidation(
+        { ...DEFAULT_PARAMS, templateId, cornerRadiusMm: 12, stakeShoulderMm: 8 },
+        async (candidate) => {
+          candidates.push(candidate[key]);
+          return { printable: true, parameterLimits: { [key]: 2 } };
+        },
+        { templates: [templateId], randomizeShape: false, random: () => 0 },
+      );
+      expect(candidates).toHaveLength(2);
+      expect(result.status).toBe('accepted');
+      expect(result.params[key]).toBe(2);
+    },
+  );
+
+  it('does not commit a corrected random design that fails revalidation', async () => {
+    let requests = 0;
+    const result = await randomizeWithValidation(
+      { ...DEFAULT_PARAMS, templateId: 'plant-label', stakeShoulderMm: 8 },
+      async () =>
+        ++requests === 1 ? { printable: true, parameterLimits: { stakeShoulderMm: 2 } } : false,
+      { templates: ['plant-label'], randomizeShape: false, random: () => 0, attempts: 1 },
+    );
+    expect(result.status).toBe('exhausted');
+  });
 });

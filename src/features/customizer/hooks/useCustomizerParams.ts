@@ -29,11 +29,13 @@ import {
 import {
   DEFAULT_PARAMS,
   normalizeParams,
+  reconcileCandidateParams,
   type KeychainParams,
   type TemplateId,
 } from '../../../domain/keychain/model/types';
 import { STYLE_CATALOG } from '../../../domain/keychain/styles/style-builder';
 import { TEMPLATE_CATALOG } from '../../../domain/keychain/templates/template-builder';
+import { reconcileGeometryParameterLimits } from '../model/geometry-parameter-limits';
 import {
   randomizeParams,
   randomizeWithValidation,
@@ -86,7 +88,8 @@ export const useCustomizerParams = (
   googleFonts: FontDefinition[];
   googleLoading: boolean;
   googleError: string | undefined;
-  loadGoogleFonts: () => Promise<void>;
+  googleFontsConfigured: boolean;
+  loadGoogleFonts: () => Promise<FontDefinition[] | undefined>;
   localFonts: LocalFontRecord[];
   importLocalFonts: (files: FileList | File[]) => Promise<void>;
   pickLocalFonts: () => Promise<void>;
@@ -154,17 +157,32 @@ export const useCustomizerParams = (
       apiKey: import.meta.env.VITE_GOOGLE_FONTS_API_KEY,
     }),
   );
-  const loadGoogleFonts = async (): Promise<void> => {
-    if (googleLoading) return;
+  const googleRequestRef = useRef<Promise<FontDefinition[] | undefined> | undefined>(undefined);
+  const loadGoogleFonts = (): Promise<FontDefinition[] | undefined> => {
+    if (googleRequestRef.current) return googleRequestRef.current;
     setGoogleLoading(true);
     setGoogleError(undefined);
-    try {
-      setGoogleFonts(await provider.list());
-    } catch (error) {
-      setGoogleError(error instanceof Error ? error.message : 'Google Fonts are unavailable.');
-    } finally {
-      setGoogleLoading(false);
-    }
+    const request = (async () => {
+      try {
+        const fonts = await provider.list();
+
+        setGoogleFonts(fonts);
+        return fonts;
+      } catch (error) {
+        setGoogleError(error instanceof Error ? error.message : 'Google Fonts are unavailable.');
+        return undefined;
+      } finally {
+        setGoogleLoading(false);
+      }
+    })();
+
+    googleRequestRef.current = request;
+    void request
+      .finally(() => {
+        if (googleRequestRef.current === request) googleRequestRef.current = undefined;
+      })
+      .catch(() => undefined);
+    return request;
   };
   const allFonts = useMemo(
     () => [
@@ -247,7 +265,7 @@ export const useCustomizerParams = (
   ): void => {
     let normalized: KeychainParams;
     try {
-      normalized = normalizeParams(candidate);
+      normalized = normalizeParams(reconcileCandidateParams(acceptedParamsRef.current, candidate));
     } catch (error) {
       const requestId = ++candidateRequestId.current;
       if (validationTimer.current !== undefined) window.clearTimeout(validationTimer.current);
@@ -297,8 +315,15 @@ export const useCustomizerParams = (
 
     validationTimer.current = window.setTimeout(() => {
       void validate(normalized, font, subtitleFont)
-        .then((result) => {
+        .then(async (result) => {
           if (requestId !== candidateRequestId.current) return;
+          // Revalidate the actual applied values when new text changes geometry-dependent limits.
+          const corrected = reconcileGeometryParameterLimits(normalized, result.parameterLimits);
+          if (corrected !== normalized) {
+            normalized = normalizeParams(corrected);
+            result = await validate(normalized, font, subtitleFont);
+            if (requestId !== candidateRequestId.current) return;
+          }
           const accepted =
             result.printable && !result.issues.some((issue) => issue.severity === 'error');
           if (accepted) {
@@ -673,6 +698,7 @@ export const useCustomizerParams = (
     googleFonts,
     googleLoading,
     googleError,
+    googleFontsConfigured: Boolean(import.meta.env.VITE_GOOGLE_FONTS_API_KEY?.trim()),
     loadGoogleFonts,
     localFonts,
     importLocalFonts,

@@ -25,11 +25,11 @@
   max-height: min(800px, calc(100dvh - 32px));
   min-width: 0;
   overflow: hidden;
-  border: 1px solid #d7c8bd;
+  border: 1px solid var(--workshop-border);
   border-radius: 24px;
-  background: #fffdf8;
-  color: #303545;
-  box-shadow: 0 24px 70px #3035452e;
+  background: var(--workshop-surface);
+  color: var(--workshop-text);
+  box-shadow: 0 24px 70px var(--workshop-text-25);
   animation: setup-in 320ms cubic-bezier(0.22, 1.15, 0.36, 1);
 }
 .header {
@@ -49,8 +49,8 @@
   align-items: center;
   gap: 12px 20px;
   margin-bottom: 14px;
-  font-size: 0.75rem;
-  min-height: 44px;
+  font-size: var(--workshop-font-meta);
+  min-height: var(--workshop-touch-target);
   padding-right: 60px;
   color: #6e727d;
 }
@@ -67,8 +67,8 @@
   background: #eee9e1;
 }
 .progressDots i[data-complete='true'] {
-  background: #bf563f;
-  border-color: #bf563f;
+  background: var(--workshop-accent-control);
+  border-color: var(--workshop-accent-control);
 }
 .headingLine {
   display: flex;
@@ -78,7 +78,7 @@
 }
 .headingLine > svg {
   flex: none;
-  color: #bf563f;
+  color: var(--workshop-accent-control);
   margin-top: 5px;
   width: 28px;
   height: 28px;
@@ -99,14 +99,14 @@
   display: inline-grid;
   place-items: center;
   width: 44px;
-  min-width: 44px;
-  min-height: 44px;
+  min-width: var(--workshop-touch-target);
+  min-height: var(--workshop-touch-target);
   flex: none;
   padding: 0;
   border: 1px solid #e0d4cc;
   border-radius: 50%;
-  background: #fffdf9;
-  color: #626875;
+  background: var(--workshop-surface-control);
+  color: var(--workshop-text-muted);
   cursor: pointer;
   transition:
     background 120ms,
@@ -130,7 +130,7 @@
   padding: 24px 28px 28px;
 }
 .stepFrame {
-  animation: step-in 220ms cubic-bezier(0.22, 1.15, 0.36, 1);
+  animation: step-in var(--workshop-motion-reveal) var(--workshop-ease);
 }
 .stepContent {
   display: grid;
@@ -141,8 +141,8 @@
   display: grid;
   gap: 8px;
   min-width: 0;
-  color: #626875;
-  font-size: 0.875rem;
+  color: var(--workshop-text-muted);
+  font-size: var(--workshop-font-label);
 }
 .field input,
 .customSize input {
@@ -150,17 +150,17 @@
   width: 100%;
   min-width: 0;
   min-height: 48px;
-  border: 1px solid #d7c8bd;
+  border: 1px solid var(--workshop-border);
   border-radius: 12px;
   padding: 10px 12px;
-  background: #fffdf9;
+  background: var(--workshop-surface-control);
   color: #1f2430;
   font: inherit;
 }
 .help {
   margin: 0;
   color: #6e727d;
-  font-size: 0.875rem;
+  font-size: var(--workshop-font-label);
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
@@ -173,8 +173,8 @@
 }
 .sizes legend {
   margin-bottom: 8px;
-  color: #626875;
-  font-size: 0.875rem;
+  color: var(--workshop-text-muted);
+  font-size: var(--workshop-font-label);
   font-weight: 700;
 }
 .sizeGrid {
@@ -193,10 +193,10 @@
   min-width: 0;
   min-height: 108px;
   padding: 18px 8px 12px;
-  border: 1px solid #d7c8bd;
+  border: 1px solid var(--workshop-border);
   border-radius: 14px;
-  background: #fffdf9;
-  color: #303545;
+  background: var(--workshop-surface-control);
+  color: var(--workshop-text);
   cursor: pointer;
   transition:
     background 120ms,
@@ -209,20 +209,20 @@
   width: 14px;
   height: 14px;
   margin: 0;
-  accent-color: #bf563f;
+  accent-color: var(--workshop-accent-control);
 }
 .sizeOption strong {
-  font-size: 0.875rem;
+  font-size: var(--workshop-font-label);
 }
 .sizeOption > span {
   text-align: center;
-  font-size: 0.72rem;
+  font-size: var(--workshop-font-description);
   line-height: 1.4;
   min-width: 0;
   overflow-wrap: anywhere;
 }
 .sizeCube {
-  color: #626875;
+  color: var(--workshop-text-muted);
   width: 26px;
   height: 26px;
 }
@@ -244,15 +244,15 @@
 }
 .sizeOption:has(input:checked),
 .customOption:has(input:checked) {
-  border-color: #bf563f;
-  background: #fff2ec;
+  border-color: var(--workshop-accent-control);
+  background: var(--workshop-selected-surface);
 }
 .choiceCard:has(input:checked) {
-  border-color: #bf563f;
-  background: #fff2ec;
+  border-color: var(--workshop-accent-control);
+  background: var(--workshop-selected-surface);
 }
 .sizeOption:has(input:checked) .sizeCube {
-  color: #bf563f;
+  color: var(--workshop-accent-control);
 }
 .customOption {
   display: flex;
@@ -260,16 +260,16 @@
   gap: 10px;
   margin-top: 12px;
   padding: 10px 14px;
-  min-height: 44px;
+  min-height: var(--workshop-touch-target);
   box-sizing: border-box;
-  border: 1px solid #d7c8bd;
+  border: 1px solid var(--workshop-border);
   border-radius: 12px;
-  background: #fffdf9;
+  background: var(--workshop-surface-control);
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: var(--workshop-font-label);
 }
 .customOption input {
-  accent-color: #bf563f;
+  accent-color: var(--workshop-accent-control);
   flex: none;
 }
 .customSize {
@@ -283,8 +283,8 @@
   display: grid;
   gap: 7px;
   min-width: 0;
-  color: #626875;
-  font-size: 0.875rem;
+  color: var(--workshop-text-muted);
+  font-size: var(--workshop-font-label);
 }
 .favoriteGrid {
   display: flex;
@@ -298,16 +298,16 @@
   flex-wrap: wrap;
   flex: 0 1 auto;
   gap: 8px;
-  min-width: 44px;
+  min-width: var(--workshop-touch-target);
   max-width: 100%;
-  min-height: 44px;
+  min-height: var(--workshop-touch-target);
   padding: 8px 36px 8px 10px;
   box-sizing: border-box;
-  border: 1px solid #d7c8bd;
+  border: 1px solid var(--workshop-border);
   border-radius: 13px;
-  background: #fffdf9;
-  color: #303545;
-  font-size: 0.875rem;
+  background: var(--workshop-surface-control);
+  color: var(--workshop-text);
+  font-size: var(--workshop-font-label);
   cursor: pointer;
   transition:
     background 120ms,
@@ -322,14 +322,14 @@
   margin: 0;
   border: 1px solid #b9a69c;
   border-radius: 6px;
-  background: #fffdf9;
+  background: var(--workshop-surface-control);
   appearance: none;
   cursor: pointer;
   transform: translateY(-50%);
 }
 .choiceCard input:checked {
-  border-color: #bf563f;
-  background: #bf563f;
+  border-color: var(--workshop-accent-control);
+  background: var(--workshop-accent-control);
 }
 .choiceCheck {
   position: absolute;
@@ -338,7 +338,7 @@
   width: 18px;
   height: 18px;
   pointer-events: none;
-  color: #fffdf9;
+  color: var(--workshop-surface-control);
   opacity: 0;
   transform: translateY(-50%);
 }
@@ -348,7 +348,7 @@
 .categorySpecimen {
   display: inline-block;
   min-width: 2ch;
-  color: #bf563f;
+  color: var(--workshop-accent-control);
   font-size: 1.2rem;
   line-height: 1;
   white-space: nowrap;
@@ -369,45 +369,8 @@
 }
 .colorGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
   gap: 14px;
-}
-.colorField {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 44px;
-  align-items: center;
-  gap: 14px;
-  min-width: 0;
-  border: 1px solid #d7c8bd;
-  border-radius: 16px;
-  padding: 18px;
-  background: #fffdf9;
-  font-size: 0.875rem;
-}
-.colorField label {
-  grid-column: 1/-1;
-  overflow-wrap: anywhere;
-}
-.colorField input {
-  width: 64px;
-  max-width: 100%;
-  height: 64px;
-  border: 1px solid #d7c8bd;
-  border-radius: 50%;
-  padding: 4px;
-  background: #fffdf8;
-  cursor: pointer;
-}
-.colorField code {
-  grid-column: 1/-1;
-  grid-row: 3;
-  font-size: 0.8rem;
-  color: #626875;
-  overflow-wrap: anywhere;
-}
-.colorField .resetButton {
-  grid-column: 2;
-  grid-row: 2;
 }
 .reviewList {
   display: grid;
@@ -429,12 +392,12 @@
   min-width: 0;
 }
 .reviewRow strong {
-  font-size: 0.875rem;
+  font-size: var(--workshop-font-label);
   overflow-wrap: anywhere;
 }
 .reviewRow span {
   color: #6e727d;
-  font-size: 0.875rem;
+  font-size: var(--workshop-font-label);
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
@@ -453,13 +416,13 @@
   flex: none;
   width: 24px;
   height: 24px;
-  border: 1px solid #d7c8bd;
+  border: 1px solid var(--workshop-border);
   border-radius: 50%;
 }
 .error {
   margin: 14px 0 0;
   color: #a23c2d;
-  font-size: 0.875rem;
+  font-size: var(--workshop-font-label);
   line-height: 1.45;
 }
 .actions {
@@ -494,8 +457,8 @@
 }
 .primary {
   flex: 1 1 12rem;
-  border: 1px solid #bf563f;
-  background: #bf563f;
+  border: 1px solid var(--workshop-accent-control);
+  background: var(--workshop-accent-control);
   color: #fff;
 }
 .primary:disabled,
@@ -504,9 +467,9 @@
   cursor: default;
 }
 .secondary {
-  border: 1px solid #d7c8bd;
-  background: #fffdf9;
-  color: #303545;
+  border: 1px solid var(--workshop-border);
+  background: var(--workshop-surface-control);
+  color: var(--workshop-text);
 }
 .close:not(:disabled):hover,
 .iconButton:hover,
@@ -515,7 +478,7 @@
 .choiceCard:hover,
 .customOption:hover,
 .secondary:not(:disabled):hover {
-  background: #fff2ec;
+  background: var(--workshop-selected-surface);
 }
 .primary:not(:disabled):not([aria-disabled='true']):hover {
   background: #a74432;
@@ -533,13 +496,13 @@
 .actions button:focus-visible,
 .iconButton:focus-visible,
 .resetButton:focus-visible {
-  outline: 2px solid #bf563f;
+  outline: 2px solid var(--workshop-accent-control);
   outline-offset: 3px;
 }
 .sizeOption:has(input:focus-visible),
 .customOption:has(input:focus-visible),
 .choiceCard:has(input:focus-visible) {
-  outline: 2px solid #bf563f;
+  outline: 2px solid var(--workshop-accent-control);
   outline-offset: 3px;
 }
 .sizeOption input:focus-visible,
@@ -575,13 +538,10 @@
     display: flex;
     padding: 8px 36px 8px 10px;
     gap: 8px;
-    min-height: 44px;
+    min-height: var(--workshop-touch-target);
   }
   .choiceCard input {
     right: 10px;
-  }
-  .colorGrid {
-    grid-template-columns: 1fr;
   }
 }
 @media (max-width: 380px) {
@@ -659,4 +619,66 @@
 .colorField input::-moz-color-swatch {
   border: 0;
   border-radius: 50%;
+}
+
+/* Give setup the same tactile response as the editor without moving its chrome. */
+.progressDots i {
+  transition:
+    width var(--workshop-motion-control) var(--workshop-ease),
+    background-color var(--workshop-motion-control) var(--workshop-ease),
+    border-color var(--workshop-motion-control) var(--workshop-ease);
+}
+
+.progressDots i[data-current='true'] {
+  width: 24px;
+  border-radius: var(--workshop-radius-pill);
+  border-color: var(--workshop-accent-control);
+  background: var(--workshop-accent-control);
+}
+
+.sizeOption,
+.customOption,
+.choiceCard,
+.reviewRow,
+.field input,
+.customSize input {
+  transition:
+    background-color var(--workshop-motion-control) var(--workshop-ease),
+    border-color var(--workshop-motion-control) var(--workshop-ease),
+    box-shadow var(--workshop-motion-control) var(--workshop-ease),
+    transform var(--workshop-motion-control) var(--workshop-ease);
+}
+
+.sizeCube,
+.categorySpecimen,
+.choiceCheck {
+  transition:
+    color var(--workshop-motion-control) var(--workshop-ease),
+    opacity var(--workshop-motion-control) var(--workshop-ease);
+}
+
+.field input:hover,
+.customSize input:hover {
+  border-color: var(--workshop-accent-hover);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sizeOption:hover,
+  .choiceCard:hover {
+    transform: translateY(var(--workshop-hover-lift));
+    border-color: var(--workshop-accent-hover);
+    box-shadow: 0 4px 10px var(--workshop-text-8);
+  }
+}
+
+.sizeOption:active,
+.choiceCard:active,
+.customOption:active {
+  transform: scale(var(--workshop-press-scale));
+}
+
+.reviewRow:has(button:hover),
+.reviewRow:has(button:focus-visible) {
+  background: var(--workshop-surface-subtle);
+  border-color: var(--workshop-accent-hover);
 }

@@ -569,6 +569,7 @@ const buildKeychainGeometry = async (
       rearRecesses: style.rearRecesses ?? [],
       throughCuts: style.throughCuts ?? [],
       magnetPocket: style.magnetPocket,
+      parameterLimits: style.parameterLimits,
       reliefDepthMm: style.reliefDepthMm,
       widthMm: (bounds.max[0] - bounds.min[0]) / MANIFOLD_SCALE,
       heightMm: (bounds.max[1] - bounds.min[1]) / MANIFOLD_SCALE,
@@ -916,6 +917,7 @@ const buildKeychainGeometry = async (
     appearance: DEFAULT_PRINT_APPEARANCE,
     textFinishLimits: limits,
     baseFinishLimits: backingFinishLimits,
+    parameterLimits: styled.parameterLimits,
     edgeFinish: {
       style: baseFinishStyle,
       textStyle: textFinishStyle,

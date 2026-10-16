@@ -5,6 +5,37 @@ import { describe, expect, it } from 'vitest';
 import { sanitizePostHogEvent, sanitizeProperties } from './events';
 
 describe('analytics event properties', () => {
+  it('allows only the fixed referral on page and event-specific payloads', () => {
+    for (const event of ['landing_view', 'geometry_ready', 'export_completed'] as const) {
+      expect(sanitizeProperties(event, { acquisition_source: 'portfolio' })).toEqual({
+        acquisition_source: 'portfolio',
+      });
+      expect(
+        sanitizeProperties(event, { acquisition_source: 'PRIVATE', utm_source: 'portfolio' }),
+      ).toEqual({});
+    }
+  });
+
+  it('keeps only the fixed referral through the final SDK scrub', () => {
+    const event: CaptureResult = {
+      uuid: 'event-id',
+      event: 'export_completed',
+      properties: {
+        acquisition_source: 'portfolio',
+        utm_source: 'portfolio',
+        $current_url: 'https://open-keychain.com/?utm_source=portfolio&name=PRIVATE',
+      },
+      $set: { acquisition_source: 'PRIVATE' },
+      $set_once: { acquisition_source: 'PRIVATE' },
+    };
+    expect(sanitizePostHogEvent(event)).toEqual({
+      ...event,
+      properties: { acquisition_source: 'portfolio', $current_url: 'https://open-keychain.com/' },
+      $set: {},
+      $set_once: {},
+    });
+  });
+
   it('keeps low-cardinality scalar properties and removes undefined values', () => {
     expect(
       sanitizeProperties('page_view', {

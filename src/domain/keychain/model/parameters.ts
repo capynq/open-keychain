@@ -1,3 +1,8 @@
+import {
+  DEPENDENT_PARAMETER_RANGES,
+  dependentParameterRange,
+  type DependentParameter,
+} from './parameter-constraints';
 import { DEFAULT_PARAMS, type KeychainParams, type TemplateId } from './types';
 export type ParameterRange = {
   min: number;
@@ -57,24 +62,24 @@ export const PARAMETER_RANGES = {
   edgeInsetMm: { min: 0.8, max: 4, step: 0.1, unit: 'mm' },
   letterSpacingMm: { min: 0, max: 8, step: 0.1, unit: 'mm' },
   holeDiameterMm: { min: 3, max: 7, step: 0.1, unit: 'mm' },
-  keyringSlotLengthMm: { min: 3, max: 14, step: 0.5, unit: 'mm' },
+  keyringSlotLengthMm: DEPENDENT_PARAMETER_RANGES.keyringSlotLengthMm,
   connectorWidthMm: { min: 1.4, max: 3, step: 0.1, unit: 'mm' },
   jointClearanceMm: { min: 0.2, max: 0.6, step: 0.05, unit: 'mm' },
   mechanicalGapMm: { min: 0.4, max: 1.5, step: 0.1, unit: 'mm' },
   maxJointAngleDeg: { min: 15, max: 50, step: 1, unit: '°' },
-  cornerRadiusMm: { min: 1.5, max: 12, step: 0.5, unit: 'mm' },
+  cornerRadiusMm: DEPENDENT_PARAMETER_RANGES.cornerRadiusMm,
   stakeLengthMm: { min: 24, max: 100, step: 1, unit: 'mm' },
   nameplateTiltDeg: { min: 0, max: 90, step: 1, unit: '°' },
   nameplateEmbedMm: { min: 0.2, max: 1.8, step: 0.1, unit: 'mm' },
-  reliefHaloMm: { min: 0, max: 2, step: 0.1, unit: 'mm' },
-  ringOffsetMm: { min: -3, max: 3, step: 0.1, unit: 'mm' },
+  reliefHaloMm: DEPENDENT_PARAMETER_RANGES.reliefHaloMm,
+  ringOffsetMm: DEPENDENT_PARAMETER_RANGES.ringOffsetMm,
   bubbleLobeMm: { min: 0, max: 4, step: 0.1, unit: 'mm' },
   tagTailMm: { min: 0, max: 4, step: 0.1, unit: 'mm' },
   archCurveMm: { min: 0, max: 6, step: 0.1, unit: 'mm' },
   stakeShoulderMm: { min: 0, max: 8, step: 0.1, unit: 'mm' },
-  jointBossMm: { min: 0, max: 3, step: 0.1, unit: 'mm' },
+  jointBossMm: DEPENDENT_PARAMETER_RANGES.jointBossMm,
   ribbonTailMm: { min: 6, max: 24, step: 0.5, unit: 'mm' },
-  ribbonNotchMm: { min: 1, max: 10, step: 0.5, unit: 'mm' },
+  ribbonNotchMm: DEPENDENT_PARAMETER_RANGES.ribbonNotchMm,
   heartSizeMm: { min: 12, max: 32, step: 0.5, unit: 'mm' },
   heartBorderMm: { min: 1.2, max: 4, step: 0.1, unit: 'mm' },
   heartLeftGapMm: { min: -6, max: 12, step: 0.1, unit: 'mm' },
@@ -420,19 +425,25 @@ export const parameterRange = (
   params: KeychainParams,
   parameter: ShapeParameter,
 ): ParameterRange => {
-  if (parameter === 'reliefHaloMm') {
-    const range = PARAMETER_RANGES.reliefHaloMm;
-    return { ...range, max: Math.min(range.max, Math.max(range.min, params.paddingMm)) };
-  }
-  if (parameter === 'ringOffsetMm') {
-    const range = PARAMETER_RANGES.ringOffsetMm;
-    const limit = Math.max(0.5, Math.min(3, params.textSizeMm * 0.2));
-    return { ...range, min: -limit, max: limit };
-  }
-  if (parameter === 'jointBossMm') {
-    const range = PARAMETER_RANGES.jointBossMm;
-    return { ...range, max: Math.min(range.max, Math.max(0, params.connectorWidthMm * 0.75)) };
-  }
+  if (
+    [
+      'reliefHaloMm',
+      'ringOffsetMm',
+      'jointBossMm',
+      'keyringSlotLengthMm',
+      'ribbonNotchMm',
+    ].includes(parameter)
+  )
+    return dependentParameterRange(
+      params,
+      parameter as DependentParameter,
+      PARAMETER_RANGES[parameter],
+    );
+  if (
+    parameter === 'cornerRadiusMm' &&
+    (params.templateId === 'magnet' || params.styleId === 'ribbon')
+  )
+    return dependentParameterRange(params, parameter, PARAMETER_RANGES[parameter]);
   if (parameter === 'heartBorderMm') {
     const range = PARAMETER_RANGES.heartBorderMm;
     return { ...range, max: Math.max(range.min, Math.min(range.max, params.heartSizeMm * 0.2)) };

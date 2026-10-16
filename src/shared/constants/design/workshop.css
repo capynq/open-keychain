@@ -1,0 +1,14 @@
+:root {
+  --workshop-control-height: max(var(--workshop-touch-target), 2.625rem);
+  --workshop-control-space-1: var(--workshop-space-1);
+  --workshop-control-space-2: var(--workshop-space-2);
+  --workshop-control-space-3: var(--workshop-space-3);
+  --workshop-control-space-4: var(--workshop-space-4);
+  --workshop-control-space-5: var(--workshop-space-5);
+  --workshop-control-space-6: var(--workshop-space-6);
+  --workshop-panel-padding: var(--workshop-space-5);
+  --workshop-field-radius: var(--workshop-radius-control);
+  --workshop-card-gap: var(--workshop-space-3);
+  --workshop-section-gap: var(--workshop-space-4);
+  --workshop-group-gap: var(--workshop-space-3);
+}

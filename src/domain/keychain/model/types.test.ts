@@ -21,6 +21,7 @@ import {
   geometryConstraintsFor,
   keyringMetrics,
   normalizeParams,
+  reconcileCandidateParams,
   ringWallMm,
   sanitizeFilename,
   applyPrintAppearanceOverrides,
@@ -424,6 +425,66 @@ describe('keychain parameters', () => {
         keyringSlotLengthMm: 4,
       }).keyringSlotLengthMm,
     ).toBe(6);
+  });
+  it('reconciles dependent values only when an editor candidate changes their dependency', () => {
+    const haloState = normalizeParams({
+      ...DEFAULT_PARAMS,
+      paddingMm: 2,
+      reliefHaloMm: 2,
+    });
+    expect(reconcileCandidateParams(haloState, { ...haloState, paddingMm: 1.2 }).reliefHaloMm).toBe(
+      1.2,
+    );
+    expect(reconcileCandidateParams(haloState, haloState).reliefHaloMm).toBe(2);
+
+    const offsetState = normalizeParams({ ...DEFAULT_PARAMS, textSizeMm: 20, ringOffsetMm: 3 });
+    expect(
+      reconcileCandidateParams(offsetState, { ...offsetState, textSizeMm: 12 }).ringOffsetMm,
+    ).toBe(2.4);
+
+    const articulatedState = normalizeParams({
+      ...DEFAULT_PARAMS,
+      templateId: 'articulated-name',
+      connectorWidthMm: 3,
+      jointBossMm: 2.2,
+    });
+    expect(
+      reconcileCandidateParams(articulatedState, {
+        ...articulatedState,
+        connectorWidthMm: 1.4,
+      }).jointBossMm,
+    ).toBe(1);
+
+    const ribbonState = normalizeParams({
+      ...DEFAULT_PARAMS,
+      templateId: 'magnet',
+      styleId: 'ribbon',
+      ribbonTailMm: 12,
+      ribbonNotchMm: 8,
+    });
+    expect(
+      reconcileCandidateParams(ribbonState, { ...ribbonState, ribbonTailMm: 6 }).ribbonNotchMm,
+    ).toBe(4.5);
+
+    const slotState = normalizeParams({
+      ...DEFAULT_PARAMS,
+      keyringOpeningShape: 'slot',
+      holeDiameterMm: 5,
+      keyringSlotLengthMm: 5,
+    });
+    expect(
+      reconcileCandidateParams(slotState, { ...slotState, holeDiameterMm: 6 }).keyringSlotLengthMm,
+    ).toBe(6);
+
+    const magnetState = normalizeParams({
+      ...DEFAULT_PARAMS,
+      templateId: 'magnet',
+      styleId: 'plain',
+      cornerRadiusMm: 4,
+    });
+    expect(
+      reconcileCandidateParams(magnetState, { ...magnetState, cornerRadiusMm: 12 }).cornerRadiusMm,
+    ).toBe(5);
   });
   it.each(KEYRING_POSITIONS)('preserves the %s keyring position', (keyringPosition) => {
     expect(normalizeParams({ ...DEFAULT_PARAMS, keyringPosition }).keyringPosition).toBe(

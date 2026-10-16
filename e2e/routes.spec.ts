@@ -165,12 +165,16 @@ test('renders the real Customizer frame before React and hands off without a lay
       const bounds = panel.getBoundingClientRect();
       const visibleTop = Math.max(bounds.top, 0);
       const visibleBottom = Math.min(bounds.bottom, window.innerHeight);
-      return [...panel.querySelectorAll<HTMLElement>('.font-card')]
+      return [
+        ...panel.querySelectorAll<HTMLElement>(
+          '[data-testid="simple-font-picker"] label:has(input[type="radio"])',
+        ),
+      ]
         .map((card) => {
           const { x, y, width, height, top, bottom } = card.getBoundingClientRect();
           return {
             name: card.textContent?.trim(),
-            selected: card.getAttribute('aria-pressed'),
+            selected: card.querySelector<HTMLInputElement>('input')?.checked,
             x,
             y,
             width,
@@ -179,7 +183,13 @@ test('renders the real Customizer frame before React and hands off without a lay
             bottom,
           };
         })
-        .filter((card) => card.top < visibleBottom && card.bottom > visibleTop);
+        .filter(
+          (card) =>
+            card.top < visibleBottom &&
+            card.bottom > visibleTop &&
+            Math.min(card.x + card.width, bounds.right) - Math.max(card.x, bounds.left) >=
+              card.width * 0.95,
+        );
     }, root);
 
   await expect(page.locator('#boot-customizer')).toHaveAttribute('aria-hidden', 'true');
@@ -256,7 +266,7 @@ test('selects known boot URL variants and stays neutral for restored designs', a
         /keychain|nameplate|label|магнит|табличк/i,
       );
       await expect(
-        page.locator('#boot-customizer .font-browser [aria-pressed="true"]'),
+        page.locator('#boot-customizer [data-testid="simple-font-picker"] input:checked'),
       ).toHaveCount(0);
     }
   }
@@ -285,18 +295,28 @@ test('preserves visible Font cards in the taller desktop first viewport', async 
       const bounds = panel.getBoundingClientRect();
       const visibleTop = Math.max(bounds.top, 0);
       const visibleBottom = Math.min(bounds.bottom, window.innerHeight);
-      return [...panel.querySelectorAll<HTMLElement>('.font-card')]
+      return [
+        ...panel.querySelectorAll<HTMLElement>(
+          '[data-testid="simple-font-picker"] label:has(input[type="radio"])',
+        ),
+      ]
         .map((card) => {
           const { x, y, width, height, top, bottom } = card.getBoundingClientRect();
           return { text: card.textContent?.trim(), x, y, width, height, top, bottom };
         })
-        .filter((card) => card.top < visibleBottom && card.bottom > visibleTop);
+        .filter(
+          (card) =>
+            card.top < visibleBottom &&
+            card.bottom > visibleTop &&
+            Math.min(card.x + card.width, bounds.right) - Math.max(card.x, bounds.left) >=
+              card.width * 0.95,
+        );
     }, root);
   const bootCards = await readVisibleFontCards('#boot-customizer');
   await expect(
     bootCards.length,
-    'all six boot-frame Font cards should reach the taller viewport',
-  ).toBe(6);
+    'the first three font suggestions should reach the taller viewport',
+  ).toBe(3);
   releaseAppEntry?.();
   await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await expect(await readVisibleFontCards('#root')).toEqual(bootCards);
@@ -374,7 +394,7 @@ test('keeps source navigation in footers, not headers', async ({ page }) => {
   ).toHaveCount(0);
   await expect(
     page.locator('footer a[href="https://github.com/capynq/open-keychain"]'),
-  ).toHaveCount(1);
+  ).toHaveCount(0);
 });
 
 test('loads all reviewed landing visuals at the active responsive breakpoint', async ({

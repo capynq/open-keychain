@@ -1,19 +1,80 @@
 # Agent handoff
 
-## Current state
+## Current checkpoint — 2026-10-16
 
-- Branch `main` is at `70b3552` locally and on `origin/main`; the change-based CI implementation and validation documentation are pushed.
-- Fixed gate selection so changed Playwright specs run directly, even when application code changes in the same push. Vitest related-test selection now excludes `e2e/` specs.
-- PR #47 (`ci/geometry-matrix-runtime`) was closed as superseded after the replacement passed `quality`; it required review and was not merged. Client Dependabot PRs #49, #50, and #51 were merged on 2026-10-12 as `4281ad7`, `c9032cf`, and `70b3552`. Their fresh `quality` checks passed; PR-only Netlify build/deploy jobs were skipped. The local client checkout is fast-forwarded to `70b3552`, and `pnpm install --frozen-lockfile` installed the merged dependency versions.
-- The private service queue was resolved in its separate repository: schema fix PR #10 and dependency PRs #8, #11 (successor to closed PR #9), #3, and #7 merged. Final service dependencies were installed in an isolated service worktree; no private service code or dependency changes were brought into this public checkout.
+- Branch `main`, based on `ddba30e`. The user authorized committing the current changes and
+  explicitly said not to push. This checkpoint and the accumulated UX, geometry, referral, test,
+  docs and capture changes are included in that requested commit. No push or manual deployment.
+- Locked dependencies installed successfully. Use the existing project runner for repeat checks;
+  do not repeat the 44-minute geometry matrix for documentation, asset, or narrow CSS-only edits.
 
-## Validation
+## Implemented and reviewed
 
-- `pnpm validate:full` passed all gates: typecheck, build, lint, format, Unit (661 tests), Browser (354 tests), and Geometry (4,267 cases).
-- Focused CI planner and workflow tests passed: 21/21.
-- Mixed UI and E2E planner inspection selected `browser:changed` separately from `unit:related` and retained Browser smoke.
-- `git diff --check` passed.
+- Simple/Pro modes, compatible parameter presets, native font chooser, category-led three-font
+  pages, wrapping page dots, sequential discovery animation, Plus discovery with provider checks
+  and offline fallback, shared preview-face loading, exhaustion/focus recovery, and contextual Pro
+  scrolling/focus. Font discovery uses request tokens, including A → B → A safety.
+- Shared solid color squares, independent resets, connected Template/Style group, independent
+  backing/text finishes and strengths, aligned Pro sliders, bigger labelled Export, removed
+  Customizer footer, shared Workshop tokens, and proportional ultra-wide workspace scaling.
+- Safe-fit-independent 0.25–4× inspection zoom and bounded pan; camera retention and fit/home
+  behavior. Zoom readout has an opaque contrast pair (11.98:1). Nameplate hidden roots are clipped
+  to the plate bottom. Preview/validation worker requests omit export meshes and separate cache
+  quality from export; startup timings remain local diagnostics.
+- Shared step-aligned parameter constraints fix slot length, magnet/ribbon radius, ribbon notch,
+  halo, ring offset and joint boss dependencies. Measured Nameplate radius/Plant shoulder caps
+  reconcile and revalidate manual/random candidates. Initial/restored requested values preserve
+  the approved compatibility policy until edited. Stale caps do not constrain pending geometry.
+- Regression review fixed 320px/enlarged-text picker-target overlap and tall-desktop caption
+  clipping. Caption height is content-driven; ultra-wide containment is tested. Independent source
+  reviews found no remaining scoped blocker after async/randomization/stale-cap fixes.
+- EN/RU/UK setup copy names the keyring opening and hole position, identifies model size limits,
+  and calls the font choices categories. Pro font controls identify the name/subtitle text target.
+
+## Validation actually run
+
+| Check                          | Outcome                                                                                                   |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| Full unit suite                | 65 files / 721 tests passed                                                                               |
+| Full geometry/export matrix    | 4,267 cases: 4,264 valid, 3 expected-invalid, 0 unexpected failures; 43m56s                               |
+| Full public browser matrix     | 375 passed / 3 skipped; desktop, mobile, mobile-2x                                                        |
+| Hosted workspace mocks         | 2 passed                                                                                                  |
+| Development boot/handoff       | 6 passed                                                                                                  |
+| Dedicated performance          | 12 passed; startup, idle rendering, repeated edit timing across all viewports                             |
+| Smoke                          | 9 passed across all viewports                                                                             |
+| Responsive captures            | Desktop/mobile/mobile-2x plus ultra-wide reviewed; 4 passed / 2 desktop-only skips                        |
+| Late ultra-wide CSS correction | Caption capture passed; tall font visibility + boot/live parity: 2 passed                                 |
+| Static/build                   | Format/lint/typecheck and production builds passed before final documentation refresh; final checks below |
+| Locale clarification follow-up | All locale JSON parses with matching top-level keys; Prettier passes; 5 focused Quick Setup tests pass    |
+
+- Initial browser failures were obsolete selectors/expectations and consent-panel interception in
+  isolated workflow tests; consent-specific coverage remains intact. Parallel commands briefly
+  shared/deleted trace files; subsequent commands use isolated output directories. Final browser
+  gate is green. Logs live under ignored `artifacts/validation-logs/`.
+- Default ALEX/Nunito backing/text maxima pass both full builds and real browser End-key tests,
+  including unequal/symmetric backing amounts. The original user-observed rejection was not
+  reproduced; do not claim its specific root cause was fixed. Ask for exact state if it recurs.
+- PrusaSlicer is not installed. These software checks do not establish physical-print readiness.
+
+## Portfolio referrals
+
+- Exact allowlisted portfolio campaign maps to fixed `acquisition_source: portfolio` after consent.
+  Before consent it stays only in memory; consented tab session storage survives refresh; decline
+  clears it. Raw UTM/referrer/person capture remains disabled and scrubbed. EN/RU/UK consent copy
+  and focused tests are included. Full unit validation above includes this slice.
+- After deployment, verify a consented production referral and filter activation by portfolio,
+  production environment and non-internal traffic. No live PostHog mutation was performed.
+
+## Remaining product planning
+
+- Keep the 63 complete starting-look recipes/thumbnails and exhaustive parameter disposition
+  matrix in the plan; they are not implemented by this checkpoint. Real-device gesture testing,
+  comparative cold/warm startup traces, and physical printing remain separate acceptance work.
+- Public/profile token migration stays a later slice. See `PLAN.md`, `BACKLOG.md`, and
+  `PARAMETER-AUDIT.md` for remaining scope and limitations.
 
 ## Next action
 
-No remaining client dependency PRs are open. Continue any private-service dependency work only in its separate repository and keep it out of this public checkout.
+Verify the resulting commit and clean working-tree status. Do not push; the current user instruction
+explicitly limits authorization to a local commit. The validated public preview is running at
+http://127.0.0.1:4193 (owned session `62485`).

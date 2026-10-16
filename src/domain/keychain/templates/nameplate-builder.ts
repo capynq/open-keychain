@@ -126,7 +126,12 @@ export const buildNameplate = (
     baseThickness - embedDepth - carrierRotatedBounds.max[2],
   ]);
   deleteGeometry([carrierRawText, carrierCentered, carrierRotated]);
-  const carrierBounds = carrier.boundingBox();
+  // The carrier is only a hidden support. Keep it inside the finished plate so
+  // rotation cannot move its lower edge below the printable bottom (or its
+  // upper edge through the plate top).
+  const clippedCarrier = carrier.intersect(plate);
+  carrier.delete();
+  const carrierBounds = clippedCarrier.boundingBox();
   let tiltedText: Manifold | undefined;
   let model: Manifold | undefined;
   let textInsidePlateFootprint = false;
@@ -180,10 +185,16 @@ export const buildNameplate = (
           Math.round((params.subtitleReliefDepthMm ?? params.reliefDepthMm) * MANIFOLD_SCALE),
         )
       : undefined;
-    const candidateText = candidateSubtitle
+    const untrimmedCandidateText = candidateSubtitle
       ? regularizeFinishedSolid(wasm, wasm.Manifold.union([candidateMain, candidateSubtitle]), 1)
       : candidateMain;
     if (candidateSubtitle) candidateSubtitle.delete();
+    // The quadratic tilt can pull the roots below the plate's bottom even
+    // though the unrotated extrusion starts at a positive depth. Trim that
+    // leakage before checking embedding and constructing the final union.
+    const candidateText = untrimmedCandidateText.trimByPlane([0, 0, 1], plateBounds.min[2]);
+    untrimmedCandidateText.delete();
+    if (untrimmedCandidateText !== candidateMain) candidateMain.delete();
     const candidateBounds = candidateText.boundingBox();
     const candidateInsidePlateFootprint = [carrierBounds, candidateBounds].every(
       (bounds) =>
@@ -203,8 +214,11 @@ export const buildNameplate = (
     });
     deleteGeometry(candidateParts);
     const candidateHasVisibleCap = candidateBounds.max[2] > baseThickness + 300;
-    const candidateCarrierEmbedded = carrierBounds.max[2] <= baseThickness - 100;
-    const candidateUnion = wasm.Manifold.union([plate, carrier, candidateText]);
+    const candidateCarrierEmbedded =
+      carrierBounds.min[2] >= plateBounds.min[2] - tolerance &&
+      carrierBounds.max[2] <= plateBounds.max[2] + tolerance &&
+      carrierBounds.max[2] <= baseThickness - 100;
+    const candidateUnion = wasm.Manifold.union([plate, clippedCarrier, candidateText]);
     const candidateModel = regularizeFinishedSolid(wasm, candidateUnion.simplify(15), 1);
     candidateUnion.delete();
     const candidateComponents = candidateModel.decompose();
@@ -225,7 +239,6 @@ export const buildNameplate = (
       hasVisibleCap = candidateHasVisibleCap;
       connected = candidateConnected;
       carrierFullyEmbedded = candidateCarrierEmbedded;
-      if (candidateMain !== candidateText) candidateMain.delete();
       break;
     }
     if (attempt === 12) {
@@ -236,16 +249,15 @@ export const buildNameplate = (
       hasVisibleCap = candidateHasVisibleCap;
       connected = candidateConnected;
       carrierFullyEmbedded = candidateCarrierEmbedded;
-      if (candidateMain !== candidateText) candidateMain.delete();
     } else {
       candidateText.delete();
-      if (candidateMain !== candidateText) candidateMain.delete();
       candidateModel.delete();
     }
   }
   if (!tiltedText || !model) throw new Error('Nameplate geometry did not produce a text carrier.');
   const bounds = model.boundingBox();
   const textSolidBounds = tiltedText.boundingBox();
+  const modelAbovePlateBottom = bounds.min[2] >= plateBounds.min[2] - tolerance;
   const hasEmbedding =
     carrierFullyEmbedded && textSolidBounds.min[2] < baseThickness - 100 && everyTextPartEmbedded;
   if (!textInsidePlateFootprint)
@@ -255,7 +267,7 @@ export const buildNameplate = (
       message:
         'The tilted inscription extends beyond the nameplate. Increase padding or reduce the tilt.',
     });
-  if (!hasEmbedding || !hasVisibleCap)
+  if (!hasEmbedding || !hasVisibleCap || !modelAbovePlateBottom)
     issues.push({
       severity: 'error',
       code: 'nameplate-embedding',
@@ -276,7 +288,7 @@ export const buildNameplate = (
   const trimmedVisibleText = tiltedText.trimByPlane([0, 0, 1], baseThickness - 100);
   const visibleText = trimmedVisibleText.simplify(20);
   trimmedVisibleText.delete();
-  const foundation = wasm.Manifold.union([plate, carrier]);
+  const foundation = wasm.Manifold.union([plate, clippedCarrier]);
   const partition = partitionMaterialSolids(foundation, visibleText, model);
   foundation.delete();
   const baseMesh = asMesh(partition.base);
@@ -288,6 +300,7 @@ export const buildNameplate = (
     textInsidePlateFootprint &&
     hasEmbedding &&
     hasVisibleCap &&
+    modelAbovePlateBottom &&
     finiteBounds(bounds) &&
     validateMesh(baseMesh) &&
     validateMesh(reliefMesh);
@@ -308,6 +321,7 @@ export const buildNameplate = (
     issues,
     printable,
     appearance: DEFAULT_PRINT_APPEARANCE,
+    parameterLimits: styled.parameterLimits,
     textFinishLimits: limits,
     baseFinishLimits: backingFinishLimits,
     edgeFinish: {
@@ -333,7 +347,7 @@ export const buildNameplate = (
       partition.base,
       visibleText,
       tiltedText,
-      carrier,
+      clippedCarrier,
       plate,
       styled.backing,
       styled.relief,

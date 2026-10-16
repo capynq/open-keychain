@@ -106,6 +106,12 @@ if (process.env.PLAYWRIGHT_PERFORMANCE === 'true') {
   }, testInfo) => {
     await page.goto('/create');
     await waitForReadyGeometry(page);
+    await page
+      .locator('#root')
+      .getByTestId('editor-mode')
+      .getByText('Pro', { exact: true })
+      .click();
+    await waitForReadyGeometry(page);
 
     const preview = page.locator('.preview-panel[data-model-ready="true"]');
     const textSize = page

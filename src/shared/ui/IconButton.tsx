@@ -10,8 +10,10 @@ export type IconButtonProps = Omit<
   action?: string;
   busy?: boolean;
   icon: LucideIcon;
+  iconSize?: number;
   label: string;
   motion?: 'none' | 'nudge' | 'rotate' | 'scale';
+  showLabel?: boolean;
 };
 
 /** Shared icon action with an accessible label and stable behavior hooks. */
@@ -20,14 +22,18 @@ export const IconButton = ({
   busy = false,
   className,
   icon: Icon,
+  iconSize = 19,
   label,
   motion = 'none',
+  showLabel = false,
   ...buttonProps
 }: IconButtonProps) => (
   <button
     {...buttonProps}
     type={buttonProps.type ?? 'button'}
-    className={[styles.root, 'icon-button', className].filter(Boolean).join(' ')}
+    className={[styles.root, showLabel && styles.withLabel, 'icon-button', className]
+      .filter(Boolean)
+      .join(' ')}
     aria-label={label}
     aria-busy={busy || undefined}
     title={label}
@@ -36,6 +42,7 @@ export const IconButton = ({
     data-icon-motion={motion}
     data-tooltip={label}
   >
-    <Icon aria-hidden="true" focusable="false" size={19} strokeWidth={2} />
+    <Icon aria-hidden="true" focusable="false" size={iconSize} strokeWidth={2} />
+    {showLabel && <span className={styles.label}>{label}</span>}
   </button>
 );

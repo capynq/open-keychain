@@ -4,6 +4,7 @@ import type { KeyringOpeningShape } from '../model/keyring-presets';
 import type {
   EdgeFinish,
   GeometryConstraints,
+  GeometryParameterLimits,
   PrintProfile,
   StyleId,
   TemplateId,
@@ -78,6 +79,7 @@ export type StyleInput = {
   magnetPocketPlacement?: 'center' | 'upper' | 'lower' | 'left' | 'right';
 };
 export type StyleBuild = {
+  parameterLimits?: GeometryParameterLimits;
   backing: CrossSection;
   relief: CrossSection;
   subtitle?: CrossSection;

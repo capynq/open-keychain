@@ -1,0 +1,66 @@
+.group {
+  display: grid;
+  min-width: 0;
+  gap: var(--workshop-group-gap);
+  padding: var(--workshop-space-4);
+  border: 1px solid var(--workshop-border-subtle);
+  border-radius: var(--workshop-radius-panel);
+  background: var(--workshop-surface-subtle);
+}
+
+.group :global(.geometry-finish-heading) h4 {
+  margin: 0;
+  color: var(--workshop-text);
+  font-size: calc(var(--workshop-font-group) * var(--customizer-scale, 1));
+}
+
+.strength {
+  min-width: 0;
+  padding-inline-start: var(--workshop-space-4);
+  border-inline-start: 2px solid var(--workshop-border);
+}
+
+.strength legend {
+  color: var(--workshop-text-muted);
+  font-size: calc(var(--workshop-font-description) * var(--customizer-scale, 1));
+}
+
+.strength {
+  animation: strength-reveal var(--workshop-motion-reveal) var(--workshop-ease);
+}
+
+@keyframes strength-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .strength {
+    animation: none;
+  }
+}
+
+/* Pro shares the full-width alignment of adjacent precision controls. */
+.pro .group {
+  gap: var(--control-subsection-gap);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.pro .group + .group {
+  padding-block-start: var(--control-section-gap);
+  border-block-start: 1px solid var(--workshop-border-subtle);
+}
+
+.pro .strength {
+  padding-inline-start: 0;
+  border-inline-start: 0;
+}

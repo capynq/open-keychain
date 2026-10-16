@@ -43,6 +43,23 @@ describe('AnalyticsProvider consent and startup', () => {
   let AnalyticsProvider: ComponentType<{ children: ReactNode }>;
   let AnalyticsContext: Context<AnalyticsContextValue | undefined>;
 
+  const campaign = '?utm_source=portfolio&utm_medium=referral&utm_campaign=projects';
+  const referralKey = 'open-keychain.acquisition-source';
+
+  const reloadProvider = async () => {
+    vi.resetModules();
+    ({ AnalyticsProvider } = await import('./TelemetryProvider'));
+    ({ AnalyticsContext } = await import('../telemetry-context'));
+  };
+
+  const makeSdkReady = async () => {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      posthogMock.client.__loaded = true;
+      initConfig?.loaded?.();
+    });
+  };
+
   const renderProvider = async () => {
     const Probe = () => {
       const analytics = useContext(AnalyticsContext);
@@ -64,9 +81,22 @@ describe('AnalyticsProvider consent and startup', () => {
           {
             'data-testid': 'track',
             onClick: () =>
-              analytics?.track('setup_step_viewed', { step: 'review', name: 'ALEX', width: 80 }),
+              analytics?.track('setup_step_viewed', {
+                step: 'review',
+                name: 'ALEX',
+                width: 80,
+                acquisition_source: 'forged',
+              }),
           },
           'track',
+        ),
+        createElement(
+          'button',
+          {
+            'data-testid': 'export',
+            onClick: () => analytics?.track('export_completed', { format: 'stl' }),
+          },
+          'export',
         ),
       );
     };
@@ -94,6 +124,8 @@ describe('AnalyticsProvider consent and startup', () => {
       initConfig = config as InitConfig;
     });
     window.localStorage.removeItem('open-keychain.analytics-consent');
+    window.sessionStorage.clear();
+    window.history.replaceState(null, '', '/');
 
     ({ AnalyticsProvider } = await import('./TelemetryProvider'));
     ({ AnalyticsContext } = await import('../telemetry-context'));
@@ -105,6 +137,7 @@ describe('AnalyticsProvider consent and startup', () => {
   afterEach(() => {
     act(() => root.unmount());
     container.remove();
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
   });
@@ -166,5 +199,123 @@ describe('AnalyticsProvider consent and startup', () => {
     expect(posthogMock.client.opt_out_capturing).toHaveBeenCalledOnce();
     expect(posthogMock.client.reset).toHaveBeenCalledOnce();
     expect(posthogMock.client.capture).not.toHaveBeenCalled();
+  });
+
+  it('keeps the fixed referral in memory before consent, then tags queued and export events', async () => {
+    window.history.replaceState(null, '', `/${campaign}&name=PRIVATE`);
+    await reloadProvider();
+    await renderProvider();
+    await click('track');
+    expect(window.sessionStorage.getItem(referralKey)).toBeNull();
+    expect(posthogMock.client.init).not.toHaveBeenCalled();
+    expect(posthogMock.client.capture).not.toHaveBeenCalled();
+
+    // The router can leave the landing URL before the visitor accepts analytics.
+    window.history.replaceState(null, '', '/create');
+    await click('accept');
+    await click('track');
+    expect(window.sessionStorage.getItem(referralKey)).toBe('portfolio');
+    expect(posthogMock.client.capture).not.toHaveBeenCalled();
+    await makeSdkReady();
+    await click('export');
+
+    expect(posthogMock.client.capture).toHaveBeenCalledWith(
+      'setup_step_viewed',
+      expect.objectContaining({ step: 'review', acquisition_source: 'portfolio' }),
+    );
+    expect(posthogMock.client.capture).toHaveBeenCalledWith(
+      'export_completed',
+      expect.objectContaining({ format: 'stl', acquisition_source: 'portfolio' }),
+    );
+    expect(JSON.stringify(posthogMock.client.capture.mock.calls)).not.toMatch(
+      /PRIVATE|utm_|forged/,
+    );
+  });
+
+  it('restores a consented referral on a refresh without campaign parameters', async () => {
+    window.localStorage.setItem('open-keychain.analytics-consent', 'accepted');
+    window.sessionStorage.setItem(referralKey, 'portfolio');
+    window.history.replaceState(null, '', '/create');
+    await reloadProvider();
+    await renderProvider();
+    await makeSdkReady();
+    await click('export');
+    expect(posthogMock.client.capture).toHaveBeenCalledWith(
+      'export_completed',
+      expect.objectContaining({ acquisition_source: 'portfolio' }),
+    );
+  });
+
+  it.each([undefined, 'PRIVATE'])(
+    'does not attribute direct visits or invalid stored markers: %s',
+    async (stored) => {
+      window.localStorage.setItem('open-keychain.analytics-consent', 'accepted');
+      if (stored) window.sessionStorage.setItem(referralKey, stored);
+      await reloadProvider();
+      await renderProvider();
+      await makeSdkReady();
+      await click('track');
+      expect(posthogMock.client.capture).toHaveBeenCalledOnce();
+      expect(posthogMock.client.capture.mock.calls[0]?.[1]).not.toHaveProperty(
+        'acquisition_source',
+      );
+      expect(window.sessionStorage.getItem(referralKey)).toBeNull();
+    },
+  );
+
+  it('clears referral and queued events on decline and does not resurrect them on acceptance', async () => {
+    window.history.replaceState(null, '', `/${campaign}`);
+    await reloadProvider();
+    await renderProvider();
+    await click('accept');
+    await click('track');
+    await click('decline');
+    expect(window.sessionStorage.getItem(referralKey)).toBeNull();
+    await makeSdkReady();
+    expect(posthogMock.client.capture).not.toHaveBeenCalled();
+
+    await click('accept');
+    await click('export');
+    expect(posthogMock.client.capture).toHaveBeenCalledOnce();
+    expect(posthogMock.client.capture.mock.calls[0]?.[1]).not.toHaveProperty('acquisition_source');
+  });
+
+  it('honors stored declined consent even on a tagged arrival', async () => {
+    window.localStorage.setItem('open-keychain.analytics-consent', 'declined');
+    window.sessionStorage.setItem(referralKey, 'portfolio');
+    window.history.replaceState(null, '', `/${campaign}`);
+    await reloadProvider();
+    await renderProvider();
+    await click('track');
+    expect(window.sessionStorage.getItem(referralKey)).toBeNull();
+    expect(posthogMock.client.init).not.toHaveBeenCalled();
+    expect(posthogMock.client.capture).not.toHaveBeenCalled();
+  });
+
+  it('continues with an in-memory referral when browser storage is blocked', async () => {
+    window.history.replaceState(null, '', `/${campaign}`);
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    await reloadProvider();
+    await renderProvider();
+    await click('accept');
+    await makeSdkReady();
+    await click('track');
+    expect(posthogMock.client.capture).toHaveBeenCalledWith(
+      'setup_step_viewed',
+      expect.objectContaining({ acquisition_source: 'portfolio' }),
+    );
+    await click('decline');
+    posthogMock.client.capture.mockClear();
+    await click('accept');
+    await click('track');
+    expect(posthogMock.client.capture.mock.calls[0]?.[1]).not.toHaveProperty('acquisition_source');
   });
 });

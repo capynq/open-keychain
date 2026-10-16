@@ -1,0 +1,21 @@
+:root {
+  --workshop-space-1: 0.25rem;
+  --workshop-space-2: 0.375rem;
+  --workshop-space-3: 0.5rem;
+  --workshop-space-4: 0.75rem;
+  --workshop-space-5: 1rem;
+  --workshop-space-6: 1.25rem;
+  --workshop-radius-control: 0.6875rem;
+  --workshop-radius-panel: 1rem;
+  --workshop-radius-pill: 999px;
+  --workshop-touch-target: 2.75rem;
+  --workshop-image-card-min-width: 10rem;
+  --workshop-image-card-min-height: 11rem;
+  --workshop-font-card-min-width: 7.5rem;
+  --workshop-font-card-min-height: 8rem;
+  --workshop-option-card-min-width: 6.5rem;
+  --workshop-option-card-min-height: 7rem;
+  --workshop-rail-gutter-block: 1rem;
+  --workshop-rail-gutter-inline: 0.5rem;
+  --workshop-image-card-caption-offset: 2rem;
+}

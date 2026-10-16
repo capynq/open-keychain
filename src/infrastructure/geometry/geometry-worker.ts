@@ -62,7 +62,7 @@ const fontKey = async (font: Parameters<typeof buildKeychain>[3]): Promise<strin
   return stableStringify({ ...metadata, byteDigest: byteIdentity });
 };
 const cacheKey = async (
-  quality: 'exportable' | 'validation',
+  quality: 'preview' | 'exportable',
   request: Extract<WorkerRequest, { type: 'generate' | 'validate' | 'export' }>,
 ): Promise<string> =>
   Promise.all([
@@ -70,6 +70,9 @@ const cacheKey = async (
     fontKey(fontForBuild(request.subtitleFontDefinition)),
   ]).then(
     ([primaryFontKey, subtitleFontKey]) =>
+      // Keep preview/validation meshes separate from exportable meshes. The
+      // shared bounded cache may hold both, but an incomplete preview result
+      // must never satisfy an export request.
       `${quality}|${stableStringify(request.params)}|${primaryFontKey}|${subtitleFontKey}`,
   );
 const responseResult = (result: BuiltGeometry['result']) => ({
@@ -96,10 +99,12 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       await getWasm();
       return;
     }
+    const wasmStartedAt = performance.now();
     const wasm = await getWasm();
+    const wasmWaitMs = performance.now() - wasmStartedAt;
     if (request.type === 'generate' || request.type === 'validate') {
       const startedAt = performance.now();
-      const key = await cacheKey('exportable', request);
+      const key = await cacheKey('preview', request);
       const cached = finalCache.get(key);
       const cacheHit = cached !== undefined;
       const built =
@@ -107,7 +112,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         (await buildKeychain(
           wasm,
           request.params,
-          true,
+          false,
           fontForBuild(request.fontDefinition),
           request.subtitleFontDefinition ? fontForBuild(request.subtitleFontDefinition) : undefined,
         ));
@@ -119,7 +124,13 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         finalCache.set(key, built);
       }
       const { result } = built;
+      const preparationStartedAt = performance.now();
       const output = responseResult(result);
+      output.timings = {
+        ...output.timings,
+        wasmWaitMs,
+        workerResponsePreparationMs: performance.now() - preparationStartedAt,
+      };
       if (cacheHit) {
         output.timings = {
           ...output.timings,

@@ -67,8 +67,9 @@ Publish the resulting `dist/` directory on a static host such as Netlify. The re
 
 SEO pages are rendered by the React application and use the same consent-gated analytics as the
 customizer. After opt-in, analytics sends coarse page, setup-step, selected catalog-option, and export
-metadata; names, exact dimensions, query strings, campaign/search attribution, geometry, and exported
-files are never included. Set `VITE_POSTHOG_KEY` (and
+metadata, plus the fixed source `portfolio` for the allowlisted portfolio referral after consent.
+Names, exact dimensions, raw query strings, arbitrary campaign/search attribution, geometry, and
+exported files are never included. Set `VITE_POSTHOG_KEY` (and
 optionally `VITE_POSTHOG_HOST`) at build time to enable it. See [`docs/analytics.md`](docs/analytics.md).
 
 The official hosted account and subscription service is operated separately. This public repository

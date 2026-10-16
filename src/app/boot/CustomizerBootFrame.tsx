@@ -1,4 +1,3 @@
-import { CustomizerFooter } from '@/app/components/CustomizerFooter/CustomizerFooter';
 import { CustomizerNavigationHeader } from '@/app/components/CustomizerNavigationHeader/CustomizerNavigationHeader';
 import { PreviewPanel } from '@/app/components/PreviewPanel/PreviewPanel';
 import {
@@ -52,7 +51,7 @@ export const CustomizerBootFrame = ({
   };
 
   return (
-    <main className="app-shell customizer-boot-frame" aria-label="Customizer">
+    <main className="app-shell customizer-app-shell customizer-boot-frame" aria-label="Customizer">
       <CustomizerNavigationHeader
         locale={locale}
         onLocaleChange={noop}
@@ -84,7 +83,6 @@ export const CustomizerBootFrame = ({
           neutralSummary={neutral}
         />
       </div>
-      <CustomizerFooter locale={locale} />
     </main>
   );
 };

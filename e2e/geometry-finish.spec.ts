@@ -7,12 +7,19 @@ import {
   watchBrowserErrors,
 } from './helpers';
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('open-keychain.analytics-consent', 'declined');
+  });
+});
+
 test('keeps geometry finish controls contained and printable across viewports', async ({
   page,
 }, testInfo) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
 
   await page.goto('/create');
+  await page.locator('#root').getByTestId('editor-mode').getByText('Pro', { exact: true }).click();
   await page.getByLabel('Name or text').fill('CAPSULE');
   await page.getByRole('button', { name: 'Capsule' }).click();
 
@@ -125,3 +132,38 @@ test('keeps geometry finish controls contained and printable across viewports', 
   await waitForReadyGeometry(page);
   assertNoBrowserErrors();
 });
+
+for (const profile of ['Chamfered', 'Rounded']) {
+  test(`accepts the displayed backing and text maxima for ${profile}`, async ({ page }) => {
+    await page.goto('/create');
+    await page
+      .locator('#root')
+      .getByTestId('editor-mode')
+      .getByText('Pro', { exact: true })
+      .click();
+    await waitForReadyGeometry(page);
+    const finish = page.getByTestId('geometry-finish-settings');
+    await finish
+      .getByRole('radiogroup', { name: 'Backing profile', exact: true })
+      .getByRole('radio', { name: profile, exact: true })
+      .check();
+    await waitForReadyGeometry(page);
+    const top = page.getByLabel('Backing top edge', { exact: true });
+    const maximum = await top.getAttribute('max');
+    await top.press('End');
+    await waitForReadyGeometry(page);
+    await expect(top).toHaveValue(maximum!);
+    await expect(page.locator('.candidate-feedback-rejected')).toHaveCount(0);
+    await finish
+      .getByRole('radiogroup', { name: 'Text profile', exact: true })
+      .getByRole('radio', { name: profile, exact: true })
+      .check();
+    await waitForReadyGeometry(page);
+    const text = page.getByRole('slider', { name: 'Edge amount', exact: true });
+    const textMaximum = await text.getAttribute('max');
+    await text.press('End');
+    await waitForReadyGeometry(page);
+    await expect(text).toHaveValue(textMaximum!);
+    await expect(page.locator('.candidate-feedback-rejected')).toHaveCount(0);
+  });
+}

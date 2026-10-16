@@ -26,9 +26,12 @@ const developmentBootStyles = [
   '/src/features/preview/styles/preview.css',
   '/src/app/boot/CustomizerBootFrame.css',
   '/src/app/components/CustomizerNavigationHeader/CustomizerNavigationHeader.module.css',
-  '/src/app/components/CustomizerFooter/CustomizerFooter.module.css',
   '/src/app/components/PreviewPanel/PreviewPanel.module.css',
   '/src/features/customizer/components/ControlsPanel/ControlsPanel.module.css',
+  '/src/features/customizer/components/ControlsPanel/AppearanceControls.module.css',
+  '/src/features/customizer/components/ControlsPanel/SimpleOptions.module.css',
+  '/src/features/customizer/components/ControlsPanel/SimpleFontCarousel.module.css',
+  '/src/shared/ui/ColorControl.module.css',
   '/src/features/customizer/components/DesignCardRail/DesignCardRail.module.css',
   '/src/features/customizer/components/DesignSelectCard/DesignSelectCard.module.css',
 ];

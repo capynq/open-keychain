@@ -86,7 +86,7 @@ export class GeometryClient {
     | undefined;
   private readonly pendingGeometry = new Map<
     number,
-    { resolve: (result: GeometryResult) => void; reject: (error: Error) => void }
+    { resolve: (result: GeometryResult) => void; reject: (error: Error) => void; startedAt: number }
   >();
   private readonly pendingExports = new Map<
     number,
@@ -97,7 +97,7 @@ export class GeometryClient {
   >();
   private readonly pendingValidations = new Map<
     number,
-    { resolve: (result: GeometryResult) => void; reject: (error: Error) => void }
+    { resolve: (result: GeometryResult) => void; reject: (error: Error) => void; startedAt: number }
   >();
   private disposed = false;
   private workerFailed = false;
@@ -131,7 +131,7 @@ export class GeometryClient {
     const cached = cacheable ? this.resultCache.get(cacheKey) : undefined;
     if (cached) return Promise.resolve(cloneResult(cached, requestId));
     const promise = new Promise<GeometryResult>((resolve, reject) => {
-      this.pendingGeometry.set(requestId, { resolve, reject });
+      this.pendingGeometry.set(requestId, { resolve, reject, startedAt: performance.now() });
     });
     if (this.activePreviewRequestId !== undefined) {
       const stale = this.pendingGeometry.get(this.activePreviewRequestId);
@@ -208,7 +208,7 @@ export class GeometryClient {
     const cached = cacheable ? this.resultCache.get(cacheKey) : undefined;
     if (cached) return Promise.resolve(cloneResult(cached, requestId));
     const promise = new Promise<GeometryResult>((resolve, reject) => {
-      this.pendingValidations.set(requestId, { resolve, reject });
+      this.pendingValidations.set(requestId, { resolve, reject, startedAt: performance.now() });
     });
     if (cacheable) this.validationCacheKeys.set(requestId, cacheKey);
     try {
@@ -280,7 +280,13 @@ export class GeometryClient {
           pending.reject(new Error('Geometry worker returned an invalid result.'));
         } else {
           const cacheKey = this.previewCacheKeys.get(response.requestId);
+          const cloneStartedAt = performance.now();
           if (cacheKey) this.resultCache.set(cacheKey, cloneResult(result, 0));
+          result.timings = {
+            ...result.timings,
+            clientCacheCloneMs: performance.now() - cloneStartedAt,
+            clientRoundTripMs: performance.now() - pending.startedAt,
+          };
           pending.resolve(result);
         }
         this.pendingGeometry.delete(response.requestId);
@@ -310,7 +316,13 @@ export class GeometryClient {
           pending.reject(new Error('Geometry worker returned an invalid validation result.'));
         else {
           const cacheKey = this.validationCacheKeys.get(response.requestId);
+          const cloneStartedAt = performance.now();
           if (cacheKey) this.resultCache.set(cacheKey, cloneResult(result, 0));
+          result.timings = {
+            ...result.timings,
+            clientCacheCloneMs: performance.now() - cloneStartedAt,
+            clientRoundTripMs: performance.now() - pending.startedAt,
+          };
           pending.resolve(result);
         }
       }

@@ -300,12 +300,19 @@ test('walks through six focused steps and applies accepted keyring, colors, and 
   await expect(page.getByRole('button', { name: /reset colors/i })).toHaveCount(0);
   await expect(appearance.locator('[data-testid="sidebar-color-field"]')).toHaveCount(2);
   await expect(appearance.locator('input[type="color"]')).toHaveCount(2);
-  await expect(appearance.locator('input[type="color"]').first()).toHaveCSS('width', '44px');
-  await expect(appearance.locator('input[type="color"]').first()).toHaveCSS('height', '44px');
-  await expect(appearance.locator('code').first()).toHaveText('#123456');
-  await expect(appearance.locator('code').nth(1)).toHaveText('#FEDCBA');
-  await expect(page.locator('.font-group')).toHaveCount(1);
-  await expect(page.locator('.font-group').getByRole('heading')).toHaveText('Calligraphic');
+  const baseSwatch = appearance.locator('[class*="swatch"]').first();
+  const swatchSize = await baseSwatch.evaluate((element) => {
+    const { width, height } = element.getBoundingClientRect();
+    return { width, height };
+  });
+  expect(swatchSize.width).toBeGreaterThanOrEqual(44);
+  expect(swatchSize.height).toBe(swatchSize.width);
+  await expect(appearance.locator('[class*="swatch"] strong').first()).toHaveText('#123456');
+  await expect(appearance.locator('[class*="swatch"] strong').nth(1)).toHaveText('#FEDCBA');
+  await expect(page.getByTestId('simple-font-picker')).toBeVisible();
+  await expect(
+    page.getByTestId('simple-font-picker').locator('input[type="radio"]:checked'),
+  ).toHaveCount(1);
   await expect(page.getByTestId('template-card-name-keychain')).toHaveAttribute(
     'aria-pressed',
     'true',
@@ -330,7 +337,7 @@ test('walks through six focused steps and applies accepted keyring, colors, and 
   await dialog.getByRole('button', { name: 'Start designing' }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByLabel('Base color', { exact: true })).toHaveValue('#334455');
-  await expect(page.locator('.font-group')).toHaveCount(10);
+  await expect(page.getByTestId('simple-font-picker')).toBeVisible();
   assertNoBrowserErrors();
 });
 
@@ -379,6 +386,7 @@ test('restores legacy backing and text finishes from a shared design', async ({ 
       .getByRole('radiogroup', { name: 'Text profile', exact: true })
       .getByRole('radio', { name: 'Chamfered', exact: true }),
   ).toBeChecked();
+  await page.locator('#root').getByTestId('editor-mode').getByText('Pro', { exact: true }).click();
   await expect(page.getByLabel('Backing top edge')).toHaveValue('0.6');
   await expect(page.getByLabel('Backing bottom edge')).toHaveValue('0');
   await expect(page.getByRole('slider', { name: 'Edge amount', exact: true })).toHaveValue('0.2');
@@ -473,7 +481,7 @@ test('keeps rejected setup drafts without committing colors or font preferences'
   await dialog.getByRole('button', { name: 'Start designing' }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByLabel('Base color', { exact: true })).toHaveValue('#123456');
-  await expect(page.locator('.font-group')).toHaveCount(1);
+  await expect(page.getByTestId('simple-font-picker')).toBeVisible();
 });
 
 for (const locale of ['en', 'ru', 'uk']) {
@@ -534,6 +542,7 @@ test('direct and shared Customizer entry stays free of an automatic setup dialog
   await waitForReadyGeometry(page);
   await expect(setup(page)).toHaveCount(0);
   await expect(page.getByLabel('Name or text')).toHaveValue('MIRA');
+  await page.locator('#root').getByTestId('editor-mode').getByText('Pro', { exact: true }).click();
   await expect(page.getByLabel('Edge amount')).toHaveValue('0.2');
   await page.getByRole('button', { name: 'Open quick setup' }).click();
   await setup(page).getByRole('button', { name: 'Close', exact: true }).click();
@@ -572,13 +581,10 @@ test('keeps sidebar colors balanced at narrow enlarged text', async ({ page }) =
     expect(await field.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
       true,
     );
-    const swatch = field.locator('input[type="color"]');
-    expect(
-      await swatch.evaluate((element) => {
-        const style = getComputedStyle(element);
-        return [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft];
-      }),
-    ).toEqual(['4px', '4px', '4px', '4px']);
+    const swatch = field.locator('[class*="swatch"]').first();
+    const frame = await swatch.evaluate((element) => getComputedStyle(element).boxShadow);
+    expect(frame).toContain('inset');
+    expect(frame).toContain('4px');
   }
 });
 
@@ -593,10 +599,26 @@ test('keeps setup, export and share together in the header', async ({ page }) =>
   const buttons = actions.locator('button');
   await expect(buttons).toHaveCount(3);
   const bounds = await Promise.all((await buttons.all()).map((button) => button.boundingBox()));
-  expect(bounds.every((bound) => bound && Math.abs(bound.y - bounds[0]!.y) < 1)).toBe(true);
   expect(
-    await page.locator('.topbar').evaluate((element) => element.scrollWidth <= element.clientWidth),
+    bounds.every(
+      (bound) =>
+        bound && Math.abs(bound.y + bound.height / 2 - (bounds[0]!.y + bounds[0]!.height / 2)) < 1,
+    ),
   ).toBe(true);
+  const headerLayout = await page.locator('.topbar').evaluate((element) => ({
+    scrollWidth: element.scrollWidth,
+    clientWidth: element.clientWidth,
+    columns: getComputedStyle(element).gridTemplateColumns,
+    children: [...element.children].map((child) => ({
+      className: child.className,
+      left: child.getBoundingClientRect().left,
+      right: child.getBoundingClientRect().right,
+      width: child.getBoundingClientRect().width,
+    })),
+  }));
+  expect(headerLayout.scrollWidth, JSON.stringify(headerLayout)).toBeLessThanOrEqual(
+    headerLayout.clientWidth,
+  );
   await actions.getByRole('button', { name: 'Open quick setup' }).click();
   await expect(setup(page)).toBeVisible();
 });

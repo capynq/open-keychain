@@ -37,6 +37,9 @@ export const CustomizerWorkspace = ({
         onAppearanceChange={state.setAppearanceOverrides}
         baseColor={state.geometry.result?.appearance.base.color}
         reliefColor={state.geometry.result?.appearance.relief.color}
+        parameterLimits={
+          state.geometry.current === false ? undefined : state.geometry.result?.parameterLimits
+        }
         baseFinishLimits={state.geometry.result?.baseFinishLimits}
         textFinishLimits={state.geometry.result?.textFinishLimits}
       />

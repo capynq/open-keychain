@@ -1,48 +1,88 @@
 .workspace {
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(min(100%, 360px), clamp(360px, 29vw, 460px)) minmax(0, 1fr);
-  gap: clamp(30px, 4vw, 64px);
+  grid-template-columns: minmax(0, var(--customizer-sidebar-width)) minmax(0, 1fr);
+  gap: clamp(var(--workshop-space-6), 2.4vw, 2rem);
   flex: 1 1 0;
   height: auto;
   overflow: hidden;
-  padding: 18px clamp(30px, 4vw, 64px);
+  padding: var(--workshop-space-6) clamp(var(--workshop-space-6), 3vw, 3rem);
+}
+.customizer-app-shell {
+  --customizer-scale: 1;
+  --customizer-sidebar-width: 420px;
+}
+
+@media (min-width: 1800px) {
+  .customizer-app-shell {
+    --customizer-scale: 1.08;
+    --customizer-sidebar-width: 454px;
+  }
+}
+
+@media (min-width: 2400px) {
+  .customizer-app-shell {
+    --customizer-scale: 1.15;
+    --customizer-sidebar-width: 483px;
+  }
+}
+
+@media (min-width: 3200px) {
+  .customizer-app-shell {
+    --customizer-scale: 1.25;
+    --customizer-sidebar-width: 525px;
+  }
+}
+
+.customizer-app-shell .workspace > .controls-panel {
+  max-width: none;
+  box-sizing: border-box;
+}
+
+@media (min-width: 901px) {
+  .customizer-app-shell .workspace {
+    width: 100%;
+    max-width: calc(1480px * var(--customizer-scale));
+    box-sizing: border-box;
+    margin-inline: auto;
+  }
+
+  .customizer-app-shell .workspace > .preview-panel {
+    max-width: calc(920px * var(--customizer-scale));
+    justify-self: start;
+  }
+
+  .customizer-app-shell .viewer-wrap {
+    height: clamp(280px, calc(100dvh - 360px), calc(500px * var(--customizer-scale)));
+    max-height: min(calc(500px * var(--customizer-scale)), calc(100% - 90px));
+  }
+
+  .customizer-app-shell .preview-heading .preview-title {
+    font-size: calc(0.75rem * var(--customizer-scale));
+  }
 }
 
 .customizer-topbar {
   position: sticky;
   z-index: 10;
   top: 0;
-  background: #f6f4efed;
-  box-shadow: 0 5px 18px #30354512;
+  background: color-mix(in srgb, var(--workshop-surface-muted) 93%, transparent);
+  box-shadow: 0 5px 18px color-mix(in srgb, var(--workshop-text-strong) 7%, transparent);
   backdrop-filter: blur(12px);
 }
 
-.customizer-footer {
-  display: flex;
-  flex: 0 0 auto;
-  width: 100%;
-  box-sizing: border-box;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin: 0;
-  padding: 14px clamp(24px, 4vw, 64px) 20px;
-  border-top: 1px solid #dfddd6;
-  background: #fffdf8;
-  color: #707580;
-  font-size: 10px;
+.customizer-topbar .icon-button {
+  min-width: var(--workshop-touch-target);
+  min-height: var(--workshop-touch-target);
 }
 
-.customizer-footer a {
-  color: #303545;
-  font-weight: 800;
-  text-decoration: none;
-}
-
-.customizer-footer a:hover,
-.customizer-footer a:focus-visible {
-  color: #bf563f;
+.customizer-topbar .topbar-export-actions .export-header-button {
+  width: auto;
+  height: auto;
+  min-width: 52px;
+  min-height: 52px;
+  padding-inline: 14px;
+  gap: 8px;
 }
 
 .workspace > * {
@@ -68,24 +108,60 @@
   scrollbar-gutter: stable both-edges;
   scrollbar-color: #c9a08f transparent;
   scrollbar-width: thin;
-  --control-space-1: 4px;
-  --control-space-2: 6px;
-  --control-space-3: 8px;
-  --control-space-4: 12px;
-  --control-space-5: 16px;
+  --control-space-1: var(--workshop-control-space-1);
+  --control-space-2: var(--workshop-control-space-2);
+  --control-space-3: var(--workshop-control-space-3);
+  --control-space-4: var(--workshop-control-space-4);
+  --control-space-5: var(--workshop-control-space-5);
+  --control-space-6: var(--workshop-control-space-6);
   --control-section-gap: var(--control-space-4);
   --control-subsection-gap: var(--control-space-3);
   --control-section-padding: var(--control-space-5);
-  --field-control-height: 42px;
-  --field-radius: 11px;
-  --field-border: #d7c8bd;
-  --field-surface: #fffdf9;
-  --field-focus-ring: #ef815e;
+  --field-control-height: var(--workshop-control-height);
+  --field-radius: var(--workshop-field-radius);
+  --field-border: var(--workshop-border);
+  --field-surface: var(--workshop-surface-control);
+  --field-focus-ring: var(--workshop-accent);
   --field-label-control-gap: var(--control-space-2);
   --field-label-value-gap: var(--control-space-3);
-  --field-label-color: #626875;
-  --field-value-color: #1f2430;
+  --field-label-color: var(--workshop-text-muted);
+  --field-value-color: var(--workshop-text-strong);
   --field-muted-color: #7a6e68;
+  font-size: calc(var(--workshop-font-body) * var(--customizer-scale));
+}
+
+/* Keep the sidebar, type and fields on one scale without zooming the page. */
+.customizer-app-shell .controls-panel {
+  --control-space-1: calc(var(--workshop-space-1) * var(--customizer-scale));
+  --control-space-2: calc(var(--workshop-space-2) * var(--customizer-scale));
+  --control-space-3: calc(var(--workshop-space-3) * var(--customizer-scale));
+  --control-space-4: calc(var(--workshop-space-4) * var(--customizer-scale));
+  --control-space-5: calc(var(--workshop-space-5) * var(--customizer-scale));
+  --field-control-height: max(var(--workshop-touch-target), calc(2.625rem * var(--customizer-scale)));
+}
+
+.customizer-app-shell .controls-panel .control-section > h2,
+.customizer-app-shell .controls-panel .section-heading h2 {
+  font-size: calc(var(--workshop-font-section) * var(--customizer-scale));
+}
+
+.customizer-app-shell .controls-panel .control-subsection > h3,
+.customizer-app-shell .controls-panel .section-heading h3 {
+  font-size: calc(var(--workshop-font-group) * var(--customizer-scale));
+}
+
+.customizer-app-shell .controls-panel .control-subsection > h4,
+.customizer-app-shell .controls-panel .section-heading h4 {
+  font-size: calc(var(--workshop-font-nested) * var(--customizer-scale));
+}
+
+.customizer-app-shell .controls-panel .font-card > span {
+  font-size: calc(var(--workshop-font-body) * var(--customizer-scale));
+}
+
+.customizer-app-shell .controls-panel .font-card small,
+.customizer-app-shell .controls-panel .design-select-card strong {
+  font-size: calc(var(--workshop-font-description) * var(--customizer-scale));
 }
 
 .font-show-all {
@@ -349,7 +425,7 @@ p {
 .control-subsection > h3,
 .section-heading h3 {
   margin: 0;
-  color: #454955;
+  color: var(--workshop-text-control);
   font-size: 14px;
   font-weight: 750;
   letter-spacing: 0.01em;
@@ -1478,30 +1554,6 @@ input[type='range'] {
     padding-block: 12px;
   }
 
-  .control-section {
-    --control-section-gap: 8px;
-    --field-control-height: 36px;
-    padding-block: 8px;
-  }
-
-  .choice-card,
-  .font-card {
-    min-height: 40px;
-  }
-
-  .style-swatch {
-    flex-basis: 24px;
-    height: 18px;
-  }
-
-  .font-card > span {
-    font-size: 13px;
-  }
-
-  input[type='range'] {
-    height: 13px;
-  }
-
   .viewer-wrap {
     max-height: calc(100% - 62px);
   }
@@ -1584,15 +1636,6 @@ input[type='range'] {
     gap: 36px;
   }
 
-  .customizer-footer {
-    width: 100%;
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 5px;
-    padding-inline: 18px;
-    padding-bottom: 28px;
-  }
-
   .controls-panel {
     max-width: none;
     height: auto;
@@ -1611,7 +1654,6 @@ input[type='range'] {
 
   .control-section {
     --control-section-gap: 12px;
-    --field-control-height: 44px;
     padding: 16px 0;
   }
 
@@ -1694,6 +1736,38 @@ input[type='range'] {
   }
 }
 
+@media (max-width: 600px) {
+  .topbar {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'brand'
+      'export'
+      'actions';
+  }
+
+  .topbar-export-actions,
+  .topbar-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .topbar-export-actions .export-header-button {
+    width: auto;
+  }
+
+  .topbar-export-actions .icon-button,
+  .topbar-actions .icon-button {
+    min-width: 48px;
+    min-height: 48px;
+  }
+
+  .topbar-export-actions .export-header-button {
+    min-width: 52px;
+    min-height: 52px;
+  }
+}
+
 @media (max-width: 359px) {
   .font-grid {
     grid-template-columns: 1fr;
@@ -1712,7 +1786,8 @@ input[type='range'] {
   }
 
   .controls-panel .design-select-card {
-    aspect-ratio: 1.55 / 1;
+    --workshop-image-card-caption-offset: 0;
+    grid-template-rows: minmax(4rem, 1fr) auto;
   }
 
   .font-groups {
@@ -1728,12 +1803,39 @@ input[type='range'] {
   }
 }
 
-@media (max-width: 380px) {
-  .customizer-topbar {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      'brand'
-      'export'
-      'actions';
+/* Workshop responses are tied to interaction, never ambient motion. */
+.controls-panel .geometry-finish-profile,
+.controls-panel .font-target-switch button,
+.controls-panel .font-source-tabs button,
+.controls-panel :is(input[type='text'], input:not([type]), select) {
+  transition:
+    border-color var(--workshop-motion-control) var(--workshop-ease),
+    background-color var(--workshop-motion-control) var(--workshop-ease),
+    color var(--workshop-motion-fast) var(--workshop-ease),
+    box-shadow var(--workshop-motion-control) var(--workshop-ease),
+    transform var(--workshop-motion-control) var(--workshop-ease);
+}
+
+.controls-panel .font-target-switch button:hover {
+  background: var(--workshop-selected-surface);
+}
+
+.controls-panel :is(input[type='text'], input:not([type]), select):hover:not(:disabled) {
+  border-color: var(--workshop-accent-hover);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .controls-panel .geometry-finish-profile:hover:not(:has(input:disabled)) {
+    transform: translateY(var(--workshop-hover-lift));
+    box-shadow: 0 4px 10px var(--workshop-text-8);
   }
+}
+
+.controls-panel .geometry-finish-profile:active:not(:has(input:disabled)) {
+  transform: scale(var(--workshop-press-scale));
+}
+
+/* Leave breathing room when contextual Simple actions reveal their Pro destination. */
+.controls-panel .adjustment-settings :is(h2, h3) {
+  scroll-margin-block-start: var(--control-space-4);
 }

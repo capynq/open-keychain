@@ -9,7 +9,7 @@ import { asMesh, manifoldFromMesh } from '@/infrastructure/geometry/manifold-uti
 import { VALIDATION_FIXTURES } from '../../../../scripts/geometry/checks/validation-fixtures';
 import { serializeThreeMf } from '../../../infrastructure/export/three-mf-serializer';
 import { FONT_CATALOG } from '../fonts/catalog';
-import { DEFAULT_PARAMS } from '../model/types';
+import { DEFAULT_PARAMS, normalizeParams } from '../model/types';
 import * as textFinish from './edge-finish';
 import { buildKeychain, createWasm } from './keychain-builder';
 
@@ -147,51 +147,143 @@ describe('finished geometry contracts', () => {
   it.each(['round', 'chamfer'] as const)(
     'exports every supported ALEX %s front amount with unchanged lower sections',
     async (textEdgeFinish) => {
-      const params = { ...DEFAULT_PARAMS, text: 'ALEX' };
-      const sharp = await buildKeychain(wasm, params, true);
-      const initial = await buildKeychain(wasm, { ...params, textEdgeFinish, textEdgeMm: 0.2 });
-      const maximum =
-        textEdgeFinish === 'round'
-          ? initial.result.textFinishLimits!.roundMaxMm
-          : initial.result.textFinishLimits!.chamferMaxMm;
-      expect(maximum).toBe(0.8);
-      const sharpRelief = manifoldFromMesh(wasm, sharp.result.reliefMesh);
-      const originalLower = sharpRelief.slice((params.baseThicknessMm + 0.1) * 1000);
-      try {
-        for (const textEdgeMm of [0.2, 0.4, 0.6, 0.8]) {
-          const finished = await buildKeychain(
-            wasm,
-            { ...params, textEdgeFinish, textEdgeMm },
-            true,
-          );
-          expect(finished.result.printable, JSON.stringify(finished.result.issues)).toBe(true);
-          expect(finished.result.solidCount).toBe(1);
-          expect(validateMesh(finished.exportMesh!)).toBe(true);
-          expect(finished.result.dimensions).toEqual(sharp.result.dimensions);
-          const relief = manifoldFromMesh(wasm, finished.result.reliefMesh);
-          const lower = relief.slice((params.baseThicknessMm + 0.1) * 1000);
-          try {
-            // Float32 export reconstruction adds sub-micron signed noise, not a changed contour.
-            expect(
-              Math.abs(lower.area() - originalLower.area()) / originalLower.area(),
-            ).toBeLessThan(1e-7);
-          } finally {
-            lower.delete();
-            relief.delete();
-          }
-          expect(finished.result.edgeFinish).toMatchObject({
-            style: 'sharp',
-            topMm: 0,
-            bottomMm: 0,
-          });
+      for (const subtitle of ['', 'AVATAR']) {
+        const params = { ...DEFAULT_PARAMS, text: 'ALEX', subtitle };
+        const sharp = await buildKeychain(wasm, params, true);
+        const initial = await buildKeychain(wasm, {
+          ...params,
+          textEdgeFinish,
+          textEdgeMm: 0.2,
+        }).catch((error: unknown) => (error instanceof Error ? error : new Error(String(error))));
+        if (initial instanceof Error) {
+          expect(initial.message).toContain('Text edge is too large');
+          const unavailableMaximum =
+            textEdgeFinish === 'round'
+              ? sharp.result.textFinishLimits!.roundMaxMm
+              : sharp.result.textFinishLimits!.chamferMaxMm;
+          expect(unavailableMaximum).toBe(0);
+          continue;
         }
-      } finally {
-        originalLower.delete();
-        sharpRelief.delete();
+        const maximum =
+          textEdgeFinish === 'round'
+            ? initial.result.textFinishLimits!.roundMaxMm
+            : initial.result.textFinishLimits!.chamferMaxMm;
+        expect(maximum).toBeGreaterThanOrEqual(0.2);
+        if (!subtitle) expect(maximum).toBe(0.8);
+        const sharpRelief = manifoldFromMesh(wasm, sharp.result.reliefMesh);
+        const originalLower = sharpRelief.slice((params.baseThicknessMm + 0.1) * 1000);
+        try {
+          for (let textEdgeMm = 0.2; textEdgeMm <= maximum + 1e-8; textEdgeMm += 0.2) {
+            textEdgeMm = Number(textEdgeMm.toFixed(1));
+            const finished = await buildKeychain(
+              wasm,
+              { ...params, textEdgeFinish, textEdgeMm },
+              true,
+            );
+            expect(finished.result.printable, JSON.stringify(finished.result.issues)).toBe(true);
+            expect(finished.result.solidCount).toBe(1);
+            expect(validateMesh(finished.exportMesh!)).toBe(true);
+            expect(finished.result.dimensions).toEqual(sharp.result.dimensions);
+            const relief = manifoldFromMesh(wasm, finished.result.reliefMesh);
+            const lower = relief.slice((params.baseThicknessMm + 0.1) * 1000);
+            try {
+              // Float32 export reconstruction adds sub-micron signed noise, not a changed contour.
+              expect(
+                Math.abs(lower.area() - originalLower.area()) / originalLower.area(),
+              ).toBeLessThan(1e-7);
+            } finally {
+              lower.delete();
+              relief.delete();
+            }
+            expect(finished.result.edgeFinish).toMatchObject({
+              style: 'sharp',
+              topMm: 0,
+              bottomMm: 0,
+            });
+          }
+        } finally {
+          originalLower.delete();
+          sharpRelief.delete();
+        }
       }
     },
     30000,
   );
+
+  it.each(['round', 'chamfer'] as const)(
+    'keeps the assembled default ALEX model printable at maximum backing %s with zero or real bottom edge',
+    async (edgeFinish) => {
+      const params = { ...DEFAULT_PARAMS, text: 'ALEX', fontId: 'nunito' };
+      const seed = await buildKeychain(wasm, {
+        ...params,
+        edgeFinish,
+        topEdgeMm: 0.2,
+        bottomEdgeMm: 0.2,
+      });
+      const maximum =
+        edgeFinish === 'round'
+          ? seed.result.baseFinishLimits!.roundMaxMm
+          : seed.result.baseFinishLimits!.chamferMaxMm;
+      expect(maximum).toBeGreaterThanOrEqual(0.2);
+
+      for (const bottomEdgeMm of new Set([0, 0.2, maximum])) {
+        const built = await buildKeychain(
+          wasm,
+          { ...params, edgeFinish, topEdgeMm: maximum, bottomEdgeMm },
+          true,
+        );
+        expect(
+          built.result.printable,
+          `${edgeFinish}, top=${maximum}, bottom=${bottomEdgeMm}: ${JSON.stringify(built.result.issues)}`,
+        ).toBe(true);
+        expect(built.result.solidCount).toBe(1);
+        expect(built.result.validation?.connectivity).toBe('connected');
+        expect(validateMesh(built.exportMesh!)).toBe(true);
+      }
+    },
+    30000,
+  );
+
+  it('caps a narrow Nameplate corner radius to its generated plate bounds', async () => {
+    const params = {
+      ...DEFAULT_PARAMS,
+      templateId: 'nameplate' as const,
+      text: 'I',
+      paddingMm: 5,
+      edgeInsetMm: 5,
+      cornerRadiusMm: 12,
+    };
+    const geometry = await buildKeychain(wasm, params);
+    const maximum = geometry.result.parameterLimits?.cornerRadiusMm;
+    expect(Number.isFinite(maximum)).toBe(true);
+    expect(maximum).toBeLessThan(12);
+    const applied = Math.max(1.5, Math.floor((Math.min(12, maximum!) + 1e-8) / 0.5) * 0.5);
+    const candidate = normalizeParams({ ...params, cornerRadiusMm: applied });
+    expect(candidate.cornerRadiusMm).toBeLessThanOrEqual(maximum! + 1e-8);
+    const capped = await buildKeychain(wasm, candidate);
+    expect(capped.result.printable, JSON.stringify(capped.result.issues)).toBe(true);
+    expect(capped.result.parameterLimits?.cornerRadiusMm).toBeCloseTo(maximum!);
+  });
+
+  it('caps a Plant-label stake shoulder to its generated foundation width', async () => {
+    const params = {
+      ...DEFAULT_PARAMS,
+      templateId: 'plant-label' as const,
+      text: 'BASIL',
+      stakeShoulderMm: 8,
+    };
+    const geometry = await buildKeychain(wasm, params);
+    const maximum = geometry.result.parameterLimits?.stakeShoulderMm;
+    expect(Number.isFinite(maximum)).toBe(true);
+    expect(maximum).toBeGreaterThanOrEqual(0);
+    expect(maximum).toBeLessThanOrEqual(8);
+    const applied = Math.floor((Math.min(8, maximum!) + 1e-8) / 0.1) * 0.1;
+    const candidate = normalizeParams({ ...params, stakeShoulderMm: applied });
+    expect(candidate.stakeShoulderMm).toBeLessThanOrEqual(maximum! + 1e-8);
+    const capped = await buildKeychain(wasm, candidate);
+    expect(capped.result.printable, JSON.stringify(capped.result.issues)).toBe(true);
+    expect(capped.result.parameterLimits?.stakeShoulderMm).toBeCloseTo(maximum!);
+  });
 
   it('rejects externally supplied amounts beyond a thin inscription limit', async () => {
     const params = { ...DEFAULT_PARAMS, fontId: 'marck-script', fontWeightMm: 0, text: 'thin' };

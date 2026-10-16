@@ -7,8 +7,8 @@
 
 .picker legend {
   margin-bottom: 8px;
-  color: #626875;
-  font-size: 0.875rem;
+  color: var(--workshop-text-muted);
+  font-size: var(--workshop-font-label);
   font-weight: 700;
 }
 
@@ -28,28 +28,28 @@
   min-height: 62px;
   box-sizing: border-box;
   padding: 8px 10px;
-  border: 1px solid #d7c8bd;
+  border: 1px solid var(--workshop-border);
   border-radius: 12px;
-  background: #fffdf9;
-  color: #303545;
+  background: var(--workshop-surface-control);
+  color: var(--workshop-text);
   cursor: pointer;
 }
 
 .picker .option:has(input:checked) {
-  border-color: #bf563f;
-  background: #fff2ec;
+  border-color: var(--workshop-accent-control);
+  background: var(--workshop-selected-surface);
 }
 
 .picker .option:hover {
-  border-color: #bd806b;
+  border-color: var(--workshop-accent-hover);
 }
 
 .picker .option:active {
-  background: #f9e7de;
+  background: var(--workshop-accent-active-surface);
 }
 
 .picker .option:has(input:focus-visible) {
-  outline: 2px solid #ef815e;
+  outline: 2px solid var(--workshop-accent);
   outline-offset: 2px;
 }
 
@@ -66,15 +66,15 @@
   appearance: none;
   border: 1.5px solid #8d909b;
   border-radius: 50%;
-  background: #fffdf9;
+  background: var(--workshop-surface-control);
   cursor: pointer;
   transform: translateY(-50%);
 }
 
 .picker .option input:checked {
-  border-color: #bf563f;
-  background: #bf563f;
-  box-shadow: inset 0 0 0 3px #fffdf9;
+  border-color: var(--workshop-accent-control);
+  background: var(--workshop-accent-control);
+  box-shadow: inset 0 0 0 3px var(--workshop-surface-control);
 }
 
 .picker .option input:focus-visible {
@@ -90,7 +90,7 @@
   border: 1px solid #e5dbd2;
   border-radius: 50%;
   background: #f5f1eb;
-  color: #626875;
+  color: var(--workshop-text-muted);
   transition:
     background 120ms,
     border-color 120ms,
@@ -100,13 +100,13 @@
 .icon,
 .slot {
   flex: none;
-  color: #626875;
+  color: var(--workshop-text-muted);
 }
 
 .picker .option:has(input:checked) .iconWell {
   border-color: #efc1ae;
-  background: #fffdf9;
-  color: #bf563f;
+  background: var(--workshop-surface-control);
+  color: var(--workshop-accent-control);
 }
 
 .copy {

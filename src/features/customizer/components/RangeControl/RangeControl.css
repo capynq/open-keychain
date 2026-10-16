@@ -32,7 +32,7 @@
 
 @media (max-width: 760px) {
   .range-control {
-    min-height: 44px;
+    min-height: var(--workshop-touch-target);
   }
 
   .control-label {

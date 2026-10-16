@@ -1,4 +1,4 @@
-import { ZoomIn, ZoomOut } from 'lucide-react';
+import { Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -10,9 +10,16 @@ import type { Locale } from '../../../../infrastructure/i18n/config';
 
 import { t } from '../../../../infrastructure/i18n/utils';
 import {
+  clampInspectionPan,
+  INSPECTION_ZOOM_STEP,
+  inspectionPanFrame,
+  panToTargetOffset,
+  scaleInspectionZoom,
+  type InspectionPan,
+} from '../../camera/inspection';
+import {
   applyCameraPose,
   fittedCameraPose,
-  MIN_CAMERA_DISTANCE_SCALE,
   MIN_CAMERA_NEAR,
   modelBounds,
   viewDefinition,
@@ -28,12 +35,14 @@ type ViewerProps = {
   appearance?: PrintAppearance;
   surfacePreset?: SurfacePresetId;
   locale?: Locale;
+  templateId?: string;
   onRendered?: (generationId: number, timings?: ViewerRenderTimings) => void;
   onUnavailable?: () => void;
 };
 export type ViewerRenderTimings = {
   meshSetupMs: number;
   drawSubmitMs: number;
+  initializationMs?: number;
 };
 type ViewerState = {
   camera: THREE.PerspectiveCamera;
@@ -44,14 +53,17 @@ type ViewerState = {
   grid: THREE.GridHelper;
   platform: THREE.Mesh;
   key: THREE.DirectionalLight;
-  zoomScale: number;
+  inspectionZoom: number;
+  inspectionPan: InspectionPan;
+  fitTarget: THREE.Vector3;
+  panRight: THREE.Vector3;
+  panUp: THREE.Vector3;
+  panHalfWidth: number;
+  panHalfHeight: number;
   displayOffsetZ: number;
   invalidate?: () => void;
 };
-const DEFAULT_ZOOM_SCALE = 0.65;
-const MIN_ZOOM_SCALE = MIN_CAMERA_DISTANCE_SCALE;
-const ZOOM_IN_FACTOR = 0.72;
-const MAX_ZOOM_SCALE = 3.2;
+const DEFAULT_INSPECTION_ZOOM = 1;
 const SURFACE_SIZE = 1800;
 const disposeChildren = (group: THREE.Group): void => {
   while (group.children.length) {
@@ -95,10 +107,13 @@ const fitViewer = (
   state: ViewerState,
   result: GeometryResult,
   selected: ViewId | 'custom',
-  resetZoom = true,
-  onZoomScaleChange?: (scale: number) => void,
+  resetInspection = false,
+  onInspectionChange?: (zoom: number, pan: InspectionPan) => void,
 ): void => {
-  if (resetZoom) state.zoomScale = DEFAULT_ZOOM_SCALE;
+  if (resetInspection) {
+    state.inspectionZoom = DEFAULT_INSPECTION_ZOOM;
+    state.inspectionPan = { x: 0, y: 0 };
+  }
   const center = new THREE.Vector3(...result.dimensions.centerMm);
 
   center.z += state.displayOffsetZ;
@@ -113,16 +128,31 @@ const fitViewer = (
       ? state.camera.position.clone().sub(state.controls.target).normalize()
       : viewDefinition(selected).direction;
   const up = selected === 'custom' ? state.camera.up : viewDefinition(selected).up;
-  const fitted = fittedCameraPose(state.camera, bounds, direction, up, state.zoomScale);
+  const inspectionZoom = state.inspectionZoom;
+
+  state.camera.zoom = DEFAULT_INSPECTION_ZOOM;
+  state.camera.updateProjectionMatrix();
+  const fitted = fittedCameraPose(state.camera, bounds, direction, up, 1);
   const pose = fitted.pose;
 
-  state.zoomScale = fitted.scale;
-  onZoomScaleChange?.(state.zoomScale);
-
   applyCameraPose(state.camera, pose);
-  state.controls.target.copy(pose.target);
+  state.camera.zoom = inspectionZoom;
+  state.camera.updateProjectionMatrix();
+  state.controls.enablePan = inspectionZoom > DEFAULT_INSPECTION_ZOOM;
+  const panOffset = panToTargetOffset(state.inspectionPan, bounds, state.camera, pose.up);
+
+  state.fitTarget.copy(pose.target);
+  const frame = inspectionPanFrame(bounds, direction, pose.up);
+
+  state.panRight.copy(frame.right);
+  state.panUp.copy(frame.up);
+  state.panHalfWidth = frame.halfWidth;
+  state.panHalfHeight = frame.halfHeight;
+  state.camera.position.add(panOffset);
+  state.controls.target.copy(pose.target).add(panOffset);
   state.controls.cursor.copy(pose.target);
   state.controls.update();
+  onInspectionChange?.(state.inspectionZoom, state.inspectionPan);
 };
 const syncPlatform = (state: ViewerState, result: GeometryResult | undefined): void => {
   if (!result || !state.platform.visible) return;
@@ -145,6 +175,7 @@ export const Viewer = ({
   appearance = result?.appearance,
   surfacePreset = 'matte',
   locale = 'en',
+  templateId,
   onRendered,
   onUnavailable,
 }: ViewerProps) => {
@@ -159,11 +190,14 @@ export const Viewer = ({
   );
   const onRenderedRef = useRef(onRendered);
   const onUnavailableRef = useRef(onUnavailable);
+  const initializationMsRef = useRef<number | undefined>(undefined);
 
   const activeViewRef = useRef<ViewId | 'custom'>('home');
+  const templateIdRef = useRef(templateId);
 
   const [activeView, setActiveView] = useState<ViewId | 'custom'>('home');
-  const [zoomScale, setZoomScale] = useState(DEFAULT_ZOOM_SCALE);
+  const [inspectionZoom, setInspectionZoom] = useState(DEFAULT_INSPECTION_ZOOM);
+  const [, setInspectionPan] = useState<InspectionPan>({ x: 0, y: 0 });
   const [previewCapability, setPreviewCapability] = useState<'available' | 'unavailable'>(
     'available',
   );
@@ -186,7 +220,11 @@ export const Viewer = ({
       if (!state || !result) return;
       activeViewRef.current = id;
       setActiveView(id);
-      fitViewer(state, result, id, true, setZoomScale);
+      state.inspectionPan = { x: 0, y: 0 };
+      fitViewer(state, result, id, id === 'home', (zoom, pan) => {
+        setInspectionZoom(zoom);
+        setInspectionPan(pan);
+      });
       state.invalidate?.();
     },
     [result],
@@ -196,20 +234,55 @@ export const Viewer = ({
     const state = stateRef.current;
     const current = resultRef.current;
     if (!state || !current) return;
-    state.zoomScale = THREE.MathUtils.clamp(
-      state.zoomScale * factor,
-      MIN_ZOOM_SCALE,
-      MAX_ZOOM_SCALE,
-    );
-    fitViewer(state, current, activeViewRef.current, false);
-    setZoomScale(state.zoomScale);
+    state.inspectionZoom = scaleInspectionZoom(state.inspectionZoom, factor);
+    if (state.inspectionZoom <= DEFAULT_INSPECTION_ZOOM) state.inspectionPan = { x: 0, y: 0 };
+    state.controls.enablePan = state.inspectionZoom > DEFAULT_INSPECTION_ZOOM;
+    state.camera.zoom = state.inspectionZoom;
+    state.camera.updateProjectionMatrix();
+    if (state.inspectionZoom <= DEFAULT_INSPECTION_ZOOM)
+      fitViewer(state, current, activeViewRef.current, false);
+    setInspectionZoom(state.inspectionZoom);
     state.invalidate?.();
     setActiveView(activeViewRef.current);
+  }, []);
+
+  const resetInspection = useCallback((resetAngle = false) => {
+    const state = stateRef.current;
+    const current = resultRef.current;
+    if (!state || !current) return;
+    state.inspectionZoom = DEFAULT_INSPECTION_ZOOM;
+    state.inspectionPan = { x: 0, y: 0 };
+    state.controls.enablePan = false;
+    fitViewer(state, current, resetAngle ? 'home' : 'custom', resetAngle, (zoom, pan) => {
+      setInspectionZoom(zoom);
+      setInspectionPan(pan);
+    });
+    if (resetAngle) {
+      activeViewRef.current = 'home';
+      setActiveView('home');
+    }
+    state.invalidate?.();
+  }, []);
+
+  const panBy = useCallback((x: number, y: number) => {
+    const state = stateRef.current;
+    const current = resultRef.current;
+    if (!state || !current || state.inspectionZoom <= DEFAULT_INSPECTION_ZOOM) return;
+    state.inspectionPan = clampInspectionPan({
+      x: state.inspectionPan.x + x,
+      y: state.inspectionPan.y + y,
+    });
+    fitViewer(state, current, activeViewRef.current, false, (zoom, pan) => {
+      setInspectionZoom(zoom);
+      setInspectionPan(pan);
+    });
+    state.invalidate?.();
   }, []);
 
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return undefined;
+    const initializationStartedAt = performance.now();
     const scene = new THREE.Scene();
 
     scene.background = new THREE.Color('#eee8df');
@@ -257,23 +330,71 @@ export const Viewer = ({
     controls.enableRotate = true;
     controls.cursor.set(0, 0, 0);
     controls.minTargetRadius = 0;
-    controls.maxTargetRadius = 0;
     controls.touches.ONE = THREE.TOUCH.ROTATE;
-    controls.touches.TWO = THREE.TOUCH.ROTATE;
+    controls.touches.TWO = THREE.TOUCH.PAN;
     controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
     controls.mouseButtons.MIDDLE = THREE.MOUSE.ROTATE;
-    controls.mouseButtons.RIGHT = THREE.MOUSE.ROTATE;
+    controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
+    const handleWheel = (event: WheelEvent): void => {
+      if (event.ctrlKey || event.metaKey) return;
+      event.preventDefault();
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? host.clientHeight : 1;
+      const factor = Math.exp(-event.deltaY * unit * 0.0015);
+
+      viewerState.inspectionZoom = scaleInspectionZoom(viewerState.inspectionZoom, factor);
+      if (viewerState.inspectionZoom <= DEFAULT_INSPECTION_ZOOM)
+        viewerState.inspectionPan = { x: 0, y: 0 };
+      viewerState.controls.enablePan = viewerState.inspectionZoom > DEFAULT_INSPECTION_ZOOM;
+      camera.zoom = viewerState.inspectionZoom;
+      camera.updateProjectionMatrix();
+      const current = resultRef.current;
+      if (viewerState.inspectionZoom <= DEFAULT_INSPECTION_ZOOM && current)
+        fitViewer(viewerState, current, activeViewRef.current, false);
+      setInspectionZoom(viewerState.inspectionZoom);
+      invalidate();
+    };
+    let pinchDistance: number | undefined;
+    const handleTouchStart = (event: TouchEvent): void => {
+      if (event.touches.length === 2) {
+        const dx = event.touches[0].clientX - event.touches[1].clientX;
+        const dy = event.touches[0].clientY - event.touches[1].clientY;
+
+        pinchDistance = Math.hypot(dx, dy);
+      }
+    };
+    const handleTouchMove = (event: TouchEvent): void => {
+      if (event.touches.length !== 2 || pinchDistance === undefined) return;
+      const dx = event.touches[0].clientX - event.touches[1].clientX;
+      const dy = event.touches[0].clientY - event.touches[1].clientY;
+      const nextDistance = Math.max(1, Math.hypot(dx, dy));
+
+      viewerState.inspectionZoom = scaleInspectionZoom(
+        viewerState.inspectionZoom,
+        nextDistance / pinchDistance,
+      );
+      if (viewerState.inspectionZoom <= DEFAULT_INSPECTION_ZOOM)
+        viewerState.inspectionPan = { x: 0, y: 0 };
+      viewerState.controls.enablePan = viewerState.inspectionZoom > DEFAULT_INSPECTION_ZOOM;
+      pinchDistance = nextDistance;
+      camera.zoom = viewerState.inspectionZoom;
+      camera.updateProjectionMatrix();
+      const current = resultRef.current;
+      if (viewerState.inspectionZoom <= DEFAULT_INSPECTION_ZOOM && current)
+        fitViewer(viewerState, current, activeViewRef.current, false);
+      setInspectionZoom(viewerState.inspectionZoom);
+      invalidate();
+    };
+    const handleTouchEnd = (): void => {
+      pinchDistance = undefined;
+    };
+
+    renderer.domElement.addEventListener('wheel', handleWheel, { passive: false });
+    renderer.domElement.addEventListener('touchstart', handleTouchStart, { passive: true });
+    renderer.domElement.addEventListener('touchmove', handleTouchMove, { passive: true });
+    renderer.domElement.addEventListener('touchend', handleTouchEnd, { passive: true });
     controls.addEventListener('start', () => {
       activeViewRef.current = 'custom';
       setActiveView('custom');
-      const current = resultRef.current;
-      if (current && stateRef.current) {
-        const target = new THREE.Vector3(...current.dimensions.centerMm);
-
-        target.z += stateRef.current.displayOffsetZ;
-        stateRef.current.controls.target.copy(target);
-        stateRef.current.controls.cursor.copy(target);
-      }
     });
     const group = new THREE.Group();
 
@@ -328,7 +449,13 @@ export const Viewer = ({
       grid,
       platform,
       key,
-      zoomScale: DEFAULT_ZOOM_SCALE,
+      inspectionZoom: DEFAULT_INSPECTION_ZOOM,
+      inspectionPan: { x: 0, y: 0 },
+      fitTarget: new THREE.Vector3(),
+      panRight: new THREE.Vector3(1, 0, 0),
+      panUp: new THREE.Vector3(0, 1, 0),
+      panHalfWidth: 1,
+      panHalfHeight: 1,
       displayOffsetZ: 0,
     };
     const resize = () => {
@@ -339,7 +466,11 @@ export const Viewer = ({
       camera.aspect = width / Math.max(height, 1);
       camera.updateProjectionMatrix();
       const current = resultRef.current;
-      if (current) fitViewer(viewerState, current, activeViewRef.current, false, setZoomScale);
+      if (current)
+        fitViewer(viewerState, current, activeViewRef.current, false, (zoom, pan) => {
+          setInspectionZoom(zoom);
+          setInspectionPan(pan);
+        });
       invalidate();
     };
     const resizeObserver = new ResizeObserver(resize);
@@ -367,7 +498,11 @@ export const Viewer = ({
         onRenderedRef.current?.(
           current.generationId,
           pendingTimings && drawSubmitMs !== undefined
-            ? { meshSetupMs: pendingTimings.meshSetupMs, drawSubmitMs }
+            ? {
+                meshSetupMs: pendingTimings.meshSetupMs,
+                drawSubmitMs,
+                initializationMs: initializationMsRef.current,
+              }
             : undefined,
         );
         if (pendingTimings) pendingRenderTimingsRef.current = undefined;
@@ -376,12 +511,63 @@ export const Viewer = ({
     const invalidate = () => {
       if (frame === 0) frame = requestAnimationFrame(render);
     };
-    const handleControlsChange = () => invalidate();
+    const handleControlsChange = () => {
+      const current = resultRef.current;
+      if (current) {
+        const center = new THREE.Vector3(...current.dimensions.centerMm);
+
+        center.z += viewerState.displayOffsetZ;
+        const frame = inspectionPanFrame(
+          modelBounds(
+            current.dimensions.widthMm,
+            current.dimensions.heightMm,
+            current.dimensions.thicknessMm,
+            center,
+          ),
+          camera.position.clone().sub(controls.target),
+          camera.up,
+        );
+
+        viewerState.panRight.copy(frame.right);
+        viewerState.panUp.copy(frame.up);
+        viewerState.panHalfWidth = frame.halfWidth;
+        viewerState.panHalfHeight = frame.halfHeight;
+      }
+      const delta = viewerState.controls.target.clone().sub(viewerState.fitTarget);
+
+      viewerState.inspectionPan = clampInspectionPan({
+        x: delta.dot(viewerState.panRight) / viewerState.panHalfWidth,
+        y: delta.dot(viewerState.panUp) / viewerState.panHalfHeight,
+      });
+      if (viewerState.inspectionZoom <= DEFAULT_INSPECTION_ZOOM) {
+        viewerState.inspectionPan = { x: 0, y: 0 };
+        viewerState.camera.position.sub(delta);
+        viewerState.controls.target.copy(viewerState.fitTarget);
+      } else {
+        const boundedTarget = viewerState.fitTarget
+          .clone()
+          .addScaledVector(
+            viewerState.panRight,
+            viewerState.inspectionPan.x * viewerState.panHalfWidth,
+          )
+          .addScaledVector(
+            viewerState.panUp,
+            viewerState.inspectionPan.y * viewerState.panHalfHeight,
+          );
+        const correction = boundedTarget.clone().sub(viewerState.controls.target);
+
+        viewerState.controls.target.copy(boundedTarget);
+        viewerState.camera.position.add(correction);
+      }
+      setInspectionPan(viewerState.inspectionPan);
+      invalidate();
+    };
 
     controls.addEventListener('change', handleControlsChange);
     viewerState.invalidate = invalidate;
     stateRef.current = viewerState;
     resize();
+    initializationMsRef.current = performance.now() - initializationStartedAt;
     invalidate();
 
     return () => {
@@ -389,6 +575,10 @@ export const Viewer = ({
       resizeObserver.disconnect();
       controls.removeEventListener('change', handleControlsChange);
       controls.dispose();
+      renderer.domElement.removeEventListener('wheel', handleWheel);
+      renderer.domElement.removeEventListener('touchstart', handleTouchStart);
+      renderer.domElement.removeEventListener('touchmove', handleTouchMove);
+      renderer.domElement.removeEventListener('touchend', handleTouchEnd);
       disposeChildren(group);
       floor.geometry.dispose();
       (floor.material as THREE.Material).dispose();
@@ -420,7 +610,6 @@ export const Viewer = ({
     state.displayOffsetZ = state.platform.visible ? 3.72 : 0;
     state.group.position.z = state.displayOffsetZ;
     syncPlatform(state, result);
-    const selected = activeViewRef.current;
     const maxDimension = Math.max(
       result.dimensions.widthMm,
       result.dimensions.heightMm,
@@ -435,13 +624,22 @@ export const Viewer = ({
     state.key.shadow.camera.near = 0.1;
     state.key.shadow.camera.far = Math.max(300, maxDimension * 4);
     state.key.shadow.camera.updateProjectionMatrix();
-    fitViewer(state, result, selected, false, setZoomScale);
+    if (templateIdRef.current !== templateId) {
+      templateIdRef.current = templateId;
+      state.inspectionZoom = DEFAULT_INSPECTION_ZOOM;
+      state.inspectionPan = { x: 0, y: 0 };
+      state.controls.enablePan = false;
+    }
+    fitViewer(state, result, activeViewRef.current, false, (zoom, pan) => {
+      setInspectionZoom(zoom);
+      setInspectionPan(pan);
+    });
     pendingRenderTimingsRef.current = {
       generationId: result.generationId,
       meshSetupMs: performance.now() - meshSetupStartedAt,
     };
     state.invalidate?.();
-  }, [result]);
+  }, [result, templateId]);
 
   useEffect(() => {
     const state = stateRef.current;
@@ -543,7 +741,10 @@ export const Viewer = ({
       state.floor.position.set(center.x, center.y, preset.platform ? -3.72 : -0.08);
       state.grid.position.set(center.x, center.y, preset.platform ? -3.7 : -0.06);
       syncPlatform(state, current);
-      fitViewer(state, current, activeViewRef.current, false, setZoomScale);
+      fitViewer(state, current, activeViewRef.current, false, (zoom, pan) => {
+        setInspectionZoom(zoom);
+        setInspectionPan(pan);
+      });
     }
     state.invalidate?.();
   }, [surfacePreset]);
@@ -552,12 +753,42 @@ export const Viewer = ({
       className={`${styles.root} viewer`}
       aria-label="Interactive 3D preview"
       data-view={activeView}
-      data-zoom-scale={zoomScale.toFixed(3)}
+      data-zoom-scale={inspectionZoom.toFixed(3)}
       data-surface={surfacePreset}
       data-render-mode="on-demand"
       data-preview-capability={previewCapability}
     >
-      <div className="viewer-surface" ref={hostRef}>
+      <div
+        className="viewer-surface"
+        ref={hostRef}
+        tabIndex={0}
+        aria-label={t(locale, 'viewerInstructions')}
+        onKeyDown={(event) => {
+          if (event.ctrlKey || event.metaKey || event.altKey) return;
+          if (event.key === '+' || event.key === '=') {
+            event.preventDefault();
+            zoomBy(INSPECTION_ZOOM_STEP);
+          } else if (event.key === '-' || event.key === '_') {
+            event.preventDefault();
+            zoomBy(1 / INSPECTION_ZOOM_STEP);
+          } else if (event.key === 'ArrowLeft') {
+            event.preventDefault();
+            panBy(-0.08, 0);
+          } else if (event.key === 'ArrowRight') {
+            event.preventDefault();
+            panBy(0.08, 0);
+          } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            panBy(0, 0.08);
+          } else if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            panBy(0, -0.08);
+          } else if (event.key.toLowerCase() === 'f') {
+            event.preventDefault();
+            resetInspection(false);
+          }
+        }}
+      >
         {previewCapability === 'unavailable' ? (
           <div className="viewer-unavailable" role="status">
             <span className="viewer-unavailable-icon" aria-hidden="true">
@@ -591,7 +822,7 @@ export const Viewer = ({
           aria-label={t(locale, 'zoomOut')}
           title={t(locale, 'zoomOut')}
           disabled={previewCapability === 'unavailable'}
-          onClick={() => zoomBy(1.22)}
+          onClick={() => zoomBy(1 / INSPECTION_ZOOM_STEP)}
         >
           <ZoomOut aria-hidden="true" focusable="false" size={18} strokeWidth={2} />
         </button>
@@ -600,9 +831,21 @@ export const Viewer = ({
           aria-label={t(locale, 'zoomIn')}
           title={t(locale, 'zoomIn')}
           disabled={previewCapability === 'unavailable'}
-          onClick={() => zoomBy(ZOOM_IN_FACTOR)}
+          onClick={() => zoomBy(INSPECTION_ZOOM_STEP)}
         >
           <ZoomIn aria-hidden="true" focusable="false" size={18} strokeWidth={2} />
+        </button>
+        <span className="viewer-zoom-readout" aria-live="polite">
+          {Math.round(inspectionZoom * 100)}%
+        </span>
+        <button
+          type="button"
+          aria-label={t(locale, 'fitView')}
+          title={t(locale, 'fitView')}
+          disabled={previewCapability === 'unavailable'}
+          onClick={() => resetInspection(false)}
+        >
+          <Maximize2 aria-hidden="true" focusable="false" size={18} strokeWidth={2} />
         </button>
       </div>
     </div>

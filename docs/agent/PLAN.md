@@ -2,6 +2,65 @@
 
 ## Current objective
 
+### Active — Simple and Pro editor modes
+
+Make Simple the default, with a few understandable icon-led choices for each meaningful parameter
+or coupled group. Preserve the existing precise editor in Pro and remember mode locally without
+changing design values. Support both individual choices and three complete starting looks for each
+of the 21 supported template/style contexts (including the two templates without style selectors).
+Complete looks apply shape, compatible bundled fonts, and colors while preserving text, supported
+subtitle, selected size limits, hardware, and print calibration.
+
+The refined controls are implemented and regression-checked: solid color squares shared with setup,
+paged font carousel, a full shared font chooser that keeps Simple mode, conditional effect
+strengths, larger header actions, no page footer, and bounded proportional ultra-wide layout.
+Nameplate now clips hidden support/text roots to the plate bottom; worker previews no longer build
+export meshes. Startup phases have local diagnostics. Static type/lint checks and a standalone
+geometry benchmark are recorded in `STATE.md`. Browser startup/idle budgets pass; comparative
+improvement across real devices is not established.
+
+Review keychain, Heart, Nameplate, and Articulated name layouts before expanding the visual pattern.
+Complete look recipes and actual generated thumbnails are not implemented yet. The user authorized
+full regression on 2026-10-16: updated browser coverage, full unit/geometry/browser gates, performance,
+smoke and development boot checks passed. Responsive captures were inspected; exact evidence is in
+`STATE.md`. Continue remaining recipes and disposition coverage as a separate slice. Current evidence and the exact next action are in
+`STATE.md`.
+
+### Implemented — inspection and Workshop consistency
+
+The viewer uses safe full-model fitting with separate 0.25–4× lens magnification. Buttons, wheel,
+pinch, and focused keyboard shortcuts control inspection; right-drag/two-finger pan is bounded
+while magnified. Refining dimensions, font, and finishes retains angle, zoom, and relative pan.
+Fit clears magnification/pan and retains angle; Home also restores the home angle. Template changes
+fit the new model while keeping the viewing angle; named views retain zoom and recenter pan.
+
+Backing and text finishes are separate quiet groups; each non-Sharp profile reveals its own nested,
+explicitly named strength controls and candidate feedback. Precise Pro values and verified geometry
+limits remain independent.
+
+Workshop visual values now live in `src/shared/constants/design/` as separate palette, typography,
+dimensions, and composition files. `src/app/styles/tokens.css` remains the compatibility entry.
+Customizer, setup, preview, and export consume shared roles; public/reference/profile migration is
+later work. Comfortable type roles use 16/14/13/12 px at the default root size, with adaptive card
+heights, wrapping copy, and natural-width font chips.
+
+Software inspection regressions and responsive/localized checks passed. Real-device touch gesture
+acceptance and comparative startup measurements remain separate from the completed software gates.
+
+### Next — complete looks, coverage, and startup evidence
+
+- Build 63 complete look recipes: Minimal, Bold, and Playful for each of 21 supported contexts.
+  Generate actual model thumbnails; atomically apply compatible bundled fonts, colors, and shape
+  while preserving customer text, supported subtitle, hardware, size limits, and print calibration.
+- Finish the parameter disposition/compatibility matrix; every parameter must have an intentional
+  Simple preset, coupled control, Pro-only home, or a documented applicability exclusion.
+- Measure browser cold/warm navigation-to-first-draw and constrained devices before choosing more
+  startup optimizations. Current warm worker measurements show negligible improvement.
+- After Workshop approval, extend shared visual roles to other routes while preserving the Maker
+  Editorial, Reference, and Workshop systems.
+
+### Continuing — Customizer coherence
+
 Make the Customizer predictable across every template and style: related choices must read as one
 coherent workflow, every visible control must have an understandable effect, and a failed geometry
 candidate must never leave the controls describing a different design from the preview.
@@ -167,3 +226,31 @@ hosted internals into this repository.
 Editable artwork/feature UI, SVG import, complex-script shaping, a unified outline-margin control,
 articulated swept-motion checks, arbitrary constructive-geometry manufacturing checks, and new
 templates/styles remain documented possibilities, not active commitments.
+
+### Latest refinement — connected choices and font pagination
+
+Style now follows Templates in a connected group before hardware. Simple fonts use fixed compatible
+pages of three with scroll snap and accessible current-page dots; the full browser remains available.
+Balanced backing thickness matches the 2.4 mm domain default, and the Balanced Heart pair matches
+22/1.6 mm. Shared motion tokens drive interactive responses in the editor and setup modal, with
+reduced-motion alternatives. Fresh setup still requires deliberate size selection. These changes
+passed the focused default/carousel/browser regression gates; real-device acceptance remains separate.
+
+### Implemented — inline Simple font discovery, acceptance pending
+
+The font carousel ends with a matching Plus card in the next available slot (or a new page if full). Explicit loading appends up to nine compatible online fonts in
+new pages while preserving earlier pages and text/geometry; it reuses the Google provider/cache and
+full chooser. Preview files load only for current/next pages. Retry/exhaustion/template restrictions
+retain existing choices. Session discoveries and independent target positions do not add persisted
+preferences. Include selected external fonts, normalized-family deduplication, compatibility changes,
+append stability, stale async handling, loading/retry/offline, dot scrolling, and keyboard focus in
+the next approved validation/capture pass.
+
+### Latest refinement — category-led starts and offline fallback
+
+All fonts from setup categories form the initial carousel; Calligraphic/Handwritten/Rounded are the
+fallback categories. More fonts prechecks provider availability and appends random unseen local
+choices if online loading cannot supply fonts. Hide the action after both sources are exhausted;
+retain the persistent full chooser. The page controls are centered/compact and wrap to show every page without scrolling.
+The 2026-10-16 validation covers mocked provider/offline recovery, async races and existing software
+gates. Preserve remaining real-device and complete-look work in the backlog.

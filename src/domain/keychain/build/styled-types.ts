@@ -1,8 +1,9 @@
 import type { CrossSection } from '../../../infrastructure/geometry/manifold-types';
-import type { MagnetPocketMetadata } from '../model/types';
+import type { GeometryParameterLimits, MagnetPocketMetadata } from '../model/types';
 
 export type StandardStyledGeometry = {
   kind: 'standard';
+  parameterLimits?: GeometryParameterLimits;
   scale: number;
   rawText: CrossSection;
   relief: CrossSection;

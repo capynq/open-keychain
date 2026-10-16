@@ -7,7 +7,7 @@
   display: grid;
   place-items: center;
   padding: 20px;
-  background: #20243399;
+  background: var(--workshop-text-strong-60);
 }
 
 .export-modal {
@@ -17,9 +17,9 @@
   border: 1px solid #d5d0c7;
   border-radius: 16px;
   padding: 20px;
-  background: #fffdf8;
-  color: #303545;
-  box-shadow: 0 24px 70px #20243355;
+  background: var(--workshop-surface);
+  color: var(--workshop-text);
+  box-shadow: 0 24px 70px var(--workshop-text-34);
 }
 
 .export-modal-heading {
@@ -48,19 +48,19 @@
   min-width: 36px;
   min-height: 36px;
   border: 1px solid #d5d0c7;
-  border-radius: 999px;
+  border-radius: var(--workshop-radius-pill);
   background: #fff;
-  color: #303545;
+  color: var(--workshop-text);
 }
 
 .modal-close:hover,
 .modal-close:focus-visible {
-  border-color: #ef815e;
+  border-color: var(--workshop-accent);
 }
 
 .export-modal-copy {
   margin: 12px 0 16px;
-  color: #777b87;
+  color: var(--workshop-text-subtle);
   font-size: 12px;
   line-height: 1.4;
 }
@@ -229,7 +229,7 @@
   min-width: 36px;
   min-height: 36px;
   padding: 0;
-  border-radius: 999px;
+  border-radius: var(--workshop-radius-pill);
 }
 
 .export-choice-grid {
@@ -245,18 +245,18 @@
   border: 1px solid #dfddd6;
   border-radius: 10px;
   background: #fbfaf6;
-  color: #303545;
+  color: var(--workshop-text);
   text-align: left;
 }
 
 .export-choice-grid button:hover:not(:disabled),
 .export-choice-grid button:focus-visible {
-  border-color: #ef815e;
-  background: #fff9f2;
+  border-color: var(--workshop-accent);
+  background: var(--workshop-surface-subtle);
 }
 
 .export-choice-grid button:focus-visible {
-  outline: 2px solid #ef815e;
+  outline: 2px solid var(--workshop-accent);
   outline-offset: 1px;
 }
 
@@ -270,7 +270,7 @@
 }
 
 .export-choice-grid small {
-  color: #777b87;
+  color: var(--workshop-text-subtle);
   font-size: 10px;
 }
 
@@ -279,7 +279,7 @@
   .export-inline-state .icon-button {
     width: 44px;
     height: 44px;
-    min-width: 44px;
-    min-height: 44px;
+    min-width: var(--workshop-touch-target);
+    min-height: var(--workshop-touch-target);
   }
 }

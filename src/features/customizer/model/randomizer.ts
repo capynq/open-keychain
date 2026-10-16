@@ -12,11 +12,13 @@ import {
 } from '../../../domain/keychain/model/parameters';
 import {
   normalizeParams,
+  reconcileCandidateParams,
   type KeychainParams,
   type TemplateId,
   type GeometryResult,
 } from '../../../domain/keychain/model/types';
 import { TEMPLATE_CATALOG } from '../../../domain/keychain/templates/template-builder';
+import { reconcileGeometryParameterLimits } from './geometry-parameter-limits';
 
 /** A source returning a value in [0, 1). Injectable so random designs are testable. */
 export type RandomSource = () => number;
@@ -115,11 +117,14 @@ export const randomizeParams = (
       };
     }
   }
-  return normalizeParams(next);
+  return normalizeParams(reconcileCandidateParams(current, next));
 };
 
 export type RandomizeValidationResult =
-  boolean | { printable: boolean } | Pick<GeometryResult, 'printable' | 'issues'> | GeometryResult;
+  | boolean
+  | { printable: boolean; parameterLimits?: GeometryResult['parameterLimits'] }
+  | Pick<GeometryResult, 'printable' | 'issues'>
+  | GeometryResult;
 export type RandomizeValidation = (candidate: KeychainParams) => Promise<RandomizeValidationResult>;
 
 export type RandomizeTransaction = {
@@ -137,9 +142,16 @@ export const randomizeWithValidation = async (
 ): Promise<RandomizeTransaction> => {
   const attempts = Math.max(1, Math.min(12, options.attempts ?? 6));
   for (let index = 0; index < attempts; index += 1) {
-    const candidate = randomizeParams(current, options);
+    let candidate = randomizeParams(current, options);
     try {
-      const result = await validate(candidate);
+      let result = await validate(candidate);
+      if (typeof result !== 'boolean' && 'parameterLimits' in result) {
+        const corrected = reconcileGeometryParameterLimits(candidate, result.parameterLimits);
+        if (corrected !== candidate) {
+          candidate = normalizeParams(corrected);
+          result = await validate(candidate);
+        }
+      }
       const accepted =
         typeof result === 'boolean'
           ? result

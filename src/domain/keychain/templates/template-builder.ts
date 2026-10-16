@@ -624,7 +624,14 @@ const nameplateStyle = (wasm: GeometryWasm, input: StyleInput): StyleBuild => {
     Math.min(input.cornerRadius ?? 4000, Math.min(width, height) / 2 - border - 250),
   );
   const plate = roundedRect(wasm, width, height, radius);
-  return { backing: plate, relief: input.text, subtitle: input.subtitle };
+  return {
+    backing: plate,
+    relief: input.text,
+    subtitle: input.subtitle,
+    parameterLimits: {
+      cornerRadiusMm: Math.max(1.5, Math.min(width, height) / 2000 - border / 1000 - 0.25),
+    },
+  };
 };
 const plantFoundation = (
   wasm: GeometryWasm,
@@ -786,6 +793,7 @@ const plantLabelStyle = (wasm: GeometryWasm, input: StyleInput, styleId: StyleId
   subtitleFootprint?.delete();
   return {
     backing: joined,
+    parameterLimits: { stakeShoulderMm: Math.max(0, (8500 - foundationWidth * 0.18) / 1000) },
     relief: labelText,
     subtitle: labelSubtitle,
     reliefDepthMm: Math.min(2, Math.max(0.6, input.reliefDepth ?? 0.7)),

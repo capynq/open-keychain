@@ -1,9 +1,14 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { selectLocale } from './helpers';
 
+const selectProMode = async (page: Page): Promise<void> => {
+  await page.locator('#root').getByTestId('editor-mode').getByText('Pro', { exact: true }).click();
+};
+
 test('shows the expanded built-in catalog and optional filters', async ({ page }) => {
   await page.goto('/create');
+  await selectProMode(page);
 
   const fontSection = page.getByTestId('font-browser');
   await expect(fontSection.getByRole('tablist', { name: 'Font source' })).toBeVisible();
@@ -37,6 +42,7 @@ test('synchronizes primary and secondary font targets with subtitle compatibilit
   page,
 }) => {
   await page.goto('/create');
+  await selectProMode(page);
   const customizer = page.locator('main[aria-label="Customizer"]:not(.customizer-boot-frame)');
   const browser = customizer.getByTestId('font-browser');
   const shape = customizer.getByTestId('font-settings');
@@ -92,6 +98,7 @@ test('shows the Google Fonts unavailable fallback and keeps built-in fonts avail
 }) => {
   await page.route('https://www.googleapis.com/webfonts/**', (route) => route.abort());
   await page.goto('/create');
+  await selectProMode(page);
 
   const fontSection = page.getByTestId('font-browser');
   const googleTab = fontSection.getByRole('tab', { name: 'Google Fonts' });
@@ -122,6 +129,7 @@ test('loads, previews, and selects a mocked Google font without downloading it t
     return route.fulfill({ path: 'public/fonts/nunito.ttf', contentType: 'font/ttf' });
   });
   await page.goto('/create');
+  await selectProMode(page);
 
   const fontSection = page.getByTestId('font-browser');
   await fontSection.getByRole('tab', { name: 'Built-in' }).focus();
@@ -147,6 +155,7 @@ test('supports keyboard access for font source, search, and selection controls',
 }) => {
   await page.route('https://www.googleapis.com/webfonts/**', (route) => route.abort());
   await page.goto('/create');
+  await selectProMode(page);
 
   const fontSection = page.getByTestId('font-browser');
   const googleTab = fontSection.getByRole('tab', { name: 'Google Fonts' });
@@ -173,6 +182,7 @@ test('supports keyboard access for font source, search, and selection controls',
 test('uses the complete tab keyboard model and exposes pressed choices', async ({ page }) => {
   await page.route('https://www.googleapis.com/webfonts/**', (route) => route.abort());
   await page.goto('/create');
+  await selectProMode(page);
 
   const fontSection = page.getByTestId('font-browser');
   const builtIn = fontSection.getByRole('tab', { name: 'Built-in' });
@@ -214,6 +224,7 @@ test('imports a local font for this session and keeps local-font guidance collap
     });
   });
   await page.goto('/create');
+  await selectProMode(page);
 
   const fontSection = page.getByTestId('font-browser');
   await fontSection.getByRole('tab', { name: 'Local fonts' }).click();
@@ -235,6 +246,7 @@ test('imports a local font for this session and keeps local-font guidance collap
 test('keeps localized control names and touch targets usable', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/create');
+  await selectProMode(page);
 
   await expect(page.getByLabel('Name or text')).toBeVisible();
   await selectLocale(page, 'ru');
@@ -263,8 +275,9 @@ test('keeps localized control names and touch targets usable', async ({ page }) 
 test('keeps the preview first at tablet width without horizontal overflow', async ({ page }) => {
   await page.setViewportSize({ width: 900, height: 720 });
   await page.goto('/create');
+  await selectProMode(page);
   await expect(page.locator('.preview-panel')).toBeVisible();
-  await expect(page.locator('.controls-panel')).toBeVisible();
+  await expect(page.locator('aside.controls-panel')).toBeVisible();
 
   const layout = await page.evaluate(() => {
     const preview = document.querySelector('.preview-panel')!.getBoundingClientRect();
