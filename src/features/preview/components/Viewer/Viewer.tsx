@@ -1,5 +1,5 @@
 import { Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -7,6 +7,7 @@ import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
 
 import type { GeometryResult, PrintAppearance } from '../../../../domain/keychain/model/types';
 import type { Locale } from '../../../../infrastructure/i18n/config';
+import type { PhotoCaptureApi } from '../../model/photo-capture';
 
 import { t } from '../../../../infrastructure/i18n/utils';
 import {
@@ -27,6 +28,7 @@ import {
   type ViewId,
 } from '../../camera/views';
 import { CameraViewIcon } from './CameraViewIcon';
+import { createSurfaceMaterials, type SurfaceMaterials } from './surface-materials';
 import styles from './Viewer.module.css';
 import '../../styles/preview.css';
 export type SurfacePresetId = 'matte' | 'graph' | 'dark' | 'wood' | 'metal';
@@ -38,6 +40,8 @@ type ViewerProps = {
   templateId?: string;
   onRendered?: (generationId: number, timings?: ViewerRenderTimings) => void;
   onUnavailable?: () => void;
+  toolbarAction?: ReactNode;
+  onPhotoCaptureChange?: (capture: PhotoCaptureApi | undefined) => void;
 };
 export type ViewerRenderTimings = {
   meshSetupMs: number;
@@ -52,6 +56,8 @@ type ViewerState = {
   floor: THREE.Mesh;
   grid: THREE.GridHelper;
   platform: THREE.Mesh;
+  platformBaseMaterial: THREE.MeshStandardMaterial;
+  surfaceMaterials?: SurfaceMaterials;
   key: THREE.DirectionalLight;
   inspectionZoom: number;
   inspectionPan: InspectionPan;
@@ -65,6 +71,8 @@ type ViewerState = {
 };
 const DEFAULT_INSPECTION_ZOOM = 1;
 const SURFACE_SIZE = 1800;
+const BOARD_THICKNESS = 5.2;
+const BOARD_DISPLAY_OFFSET = BOARD_THICKNESS + 0.2;
 const disposeChildren = (group: THREE.Group): void => {
   while (group.children.length) {
     const child = group.children[0];
@@ -123,6 +131,7 @@ const fitViewer = (
     result.dimensions.thicknessMm,
     center,
   );
+  if (state.platform.visible) bounds.expandByVector(new THREE.Vector3(18, 18, 5));
   const direction =
     selected === 'custom'
       ? state.camera.position.clone().sub(state.controls.target).normalize()
@@ -156,18 +165,18 @@ const fitViewer = (
 };
 const syncPlatform = (state: ViewerState, result: GeometryResult | undefined): void => {
   if (!result || !state.platform.visible) return;
-  const width = Math.max(32, result.dimensions.widthMm + 24);
-  const depth = Math.max(28, result.dimensions.heightMm + 24);
-  const thickness = 3.6;
-  const radius = Math.min(5, Math.min(width, depth) * 0.16);
+  const width = Math.max(40, result.dimensions.widthMm + 36);
+  const depth = Math.max(36, result.dimensions.heightMm + 36);
+  const radius = Math.min(7, Math.min(width, depth) * 0.16);
 
   state.platform.geometry.dispose();
-  state.platform.geometry = new RoundedBoxGeometry(width, depth, thickness, 5, radius);
+  state.platform.geometry = new RoundedBoxGeometry(width, depth, BOARD_THICKNESS, 8, radius);
   state.platform.position.set(
     result.dimensions.centerMm[0],
     result.dimensions.centerMm[1],
-    -thickness / 2,
+    -BOARD_THICKNESS / 2,
   );
+  state.platform.castShadow = true;
   state.platform.receiveShadow = true;
 };
 export const Viewer = ({
@@ -178,6 +187,8 @@ export const Viewer = ({
   templateId,
   onRendered,
   onUnavailable,
+  onPhotoCaptureChange,
+  toolbarAction,
 }: ViewerProps) => {
   const hostRef = useRef<HTMLDivElement>(null);
 
@@ -190,6 +201,7 @@ export const Viewer = ({
   );
   const onRenderedRef = useRef(onRendered);
   const onUnavailableRef = useRef(onUnavailable);
+  const onPhotoCaptureChangeRef = useRef(onPhotoCaptureChange);
   const initializationMsRef = useRef<number | undefined>(undefined);
 
   const activeViewRef = useRef<ViewId | 'custom'>('home');
@@ -213,6 +225,10 @@ export const Viewer = ({
   useEffect(() => {
     onUnavailableRef.current = onUnavailable;
   }, [onUnavailable]);
+
+  useEffect(() => {
+    onPhotoCaptureChangeRef.current = onPhotoCaptureChange;
+  }, [onPhotoCaptureChange]);
 
   const setView = useCallback(
     (id: ViewId) => {
@@ -419,6 +435,11 @@ export const Viewer = ({
 
     rim.position.set(64, 32, 48);
     scene.add(rim);
+    const platformBaseMaterial = new THREE.MeshStandardMaterial({
+      color: '#a87850',
+      roughness: 0.68,
+      metalness: 0,
+    });
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(SURFACE_SIZE, SURFACE_SIZE),
       new THREE.MeshStandardMaterial({ color: '#eee8df', roughness: 0.92, metalness: 0 }),
@@ -433,10 +454,7 @@ export const Viewer = ({
     grid.position.z = -0.06;
     grid.visible = false;
     scene.add(grid);
-    const platform = new THREE.Mesh(
-      new RoundedBoxGeometry(1, 1, 1, 3, 0.2),
-      new THREE.MeshStandardMaterial({ color: '#a87850', roughness: 0.68, metalness: 0 }),
-    );
+    const platform = new THREE.Mesh(new RoundedBoxGeometry(1, 1, 1, 3, 0.2), platformBaseMaterial);
 
     platform.visible = false;
     scene.add(platform);
@@ -448,6 +466,7 @@ export const Viewer = ({
       floor,
       grid,
       platform,
+      platformBaseMaterial,
       key,
       inspectionZoom: DEFAULT_INSPECTION_ZOOM,
       inspectionPan: { x: 0, y: 0 },
@@ -563,9 +582,108 @@ export const Viewer = ({
       invalidate();
     };
 
+    const capturePreview = async (longEdge: number): Promise<Blob> => {
+      if (
+        !resultRef.current ||
+        stateRef.current !== viewerState ||
+        renderer.getContext().isContextLost()
+      )
+        throw new Error('The 3D preview is not available.');
+      if (
+        !Number.isInteger(longEdge) ||
+        longEdge < 1 ||
+        longEdge > renderer.capabilities.maxTextureSize
+      )
+        throw new Error('The selected image size is not supported.');
+
+      const aspect = camera.aspect;
+      const width = Math.max(1, Math.round(longEdge * Math.min(aspect, 1)));
+      const height = Math.max(1, Math.round(longEdge / Math.max(aspect, 1)));
+      const photoCamera = camera.clone();
+
+      photoCamera.aspect = width / height;
+      photoCamera.updateProjectionMatrix();
+      const target = new THREE.WebGLRenderTarget(width, height, {
+        format: THREE.RGBAFormat,
+        type: THREE.UnsignedByteType,
+        samples: Math.min(4, renderer.capabilities.maxSamples),
+        depthBuffer: true,
+        stencilBuffer: false,
+      });
+
+      target.texture.colorSpace = THREE.SRGBColorSpace;
+      target.texture.generateMipmaps = false;
+      const previousTarget = renderer.getRenderTarget();
+      const previousViewport = renderer.getViewport(new THREE.Vector4());
+      const previousScissor = renderer.getScissor(new THREE.Vector4());
+      const previousScissorTest = renderer.getScissorTest();
+
+      try {
+        try {
+          renderer.setRenderTarget(target);
+          renderer.setViewport(0, 0, width, height);
+          renderer.setScissorTest(false);
+          renderer.clear(true, true, true);
+          renderer.render(scene, photoCamera);
+        } finally {
+          renderer.setRenderTarget(previousTarget);
+          renderer.setViewport(previousViewport);
+          renderer.setScissor(previousScissor);
+          renderer.setScissorTest(previousScissorTest);
+        }
+        const pixels = new Uint8Array(width * height * 4);
+
+        await renderer.readRenderTargetPixelsAsync(target, 0, 0, width, height, pixels);
+        const rowLength = width * 4;
+        const rowBuffer = new Uint8Array(rowLength);
+        for (let row = 0; row < Math.floor(height / 2); row += 1) {
+          const top = row * rowLength;
+          const bottom = (height - row - 1) * rowLength;
+
+          rowBuffer.set(pixels.subarray(top, top + rowLength));
+          pixels.copyWithin(top, bottom, bottom + rowLength);
+          pixels.set(rowBuffer, bottom);
+        }
+        const canvas = document.createElement('canvas');
+
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Canvas 2D is unavailable.');
+        context.putImageData(
+          new ImageData(new Uint8ClampedArray(pixels.buffer), width, height),
+          0,
+          0,
+        );
+        return await new Promise<Blob>((resolve, reject) => {
+          canvas.toBlob(
+            (blob) => (blob ? resolve(blob) : reject(new Error('Image encoding failed.'))),
+            'image/png',
+          );
+        });
+      } finally {
+        target.dispose();
+      }
+    };
+
     controls.addEventListener('change', handleControlsChange);
     viewerState.invalidate = invalidate;
     stateRef.current = viewerState;
+    let captureQueue = Promise.resolve();
+    const captureApi: PhotoCaptureApi = {
+      maxTextureSize: renderer.capabilities.maxTextureSize,
+      capture: (options) => {
+        const task = captureQueue.then(() => capturePreview(options));
+
+        captureQueue = task.then(
+          () => undefined,
+          () => undefined,
+        );
+        return task;
+      },
+    };
+
+    onPhotoCaptureChangeRef.current?.(captureApi);
     resize();
     initializationMsRef.current = performance.now() - initializationStartedAt;
     invalidate();
@@ -575,6 +693,7 @@ export const Viewer = ({
       resizeObserver.disconnect();
       controls.removeEventListener('change', handleControlsChange);
       controls.dispose();
+      onPhotoCaptureChangeRef.current?.(undefined);
       renderer.domElement.removeEventListener('wheel', handleWheel);
       renderer.domElement.removeEventListener('touchstart', handleTouchStart);
       renderer.domElement.removeEventListener('touchmove', handleTouchMove);
@@ -585,7 +704,8 @@ export const Viewer = ({
       grid.geometry.dispose();
       (grid.material as THREE.Material).dispose();
       platform.geometry.dispose();
-      (platform.material as THREE.Material).dispose();
+      platformBaseMaterial.dispose();
+      viewerState.surfaceMaterials?.dispose();
       renderer.dispose();
       renderer.domElement.removeEventListener('webglcontextlost', handleContextLost);
       renderer.domElement.remove();
@@ -605,9 +725,17 @@ export const Viewer = ({
     state.group.add(makeMesh(result.reliefMesh, result.appearance.relief.color, 0.3));
     const center = new THREE.Vector3(...result.dimensions.centerMm);
 
-    state.floor.position.set(center.x, center.y, state.platform.visible ? -3.72 : -0.08);
-    state.grid.position.set(center.x, center.y, state.platform.visible ? -3.7 : -0.06);
-    state.displayOffsetZ = state.platform.visible ? 3.72 : 0;
+    state.floor.position.set(
+      center.x,
+      center.y,
+      state.platform.visible ? -BOARD_DISPLAY_OFFSET : -0.08,
+    );
+    state.grid.position.set(
+      center.x,
+      center.y,
+      state.platform.visible ? -BOARD_DISPLAY_OFFSET + 0.02 : -0.06,
+    );
+    state.displayOffsetZ = state.platform.visible ? BOARD_DISPLAY_OFFSET : 0;
     state.group.position.z = state.displayOffsetZ;
     syncPlatform(state, result);
     const maxDimension = Math.max(
@@ -699,25 +827,34 @@ export const Viewer = ({
         platformColor: '#555b65',
       },
       wood: {
-        background: '#d8d0c4',
-        roughness: 0.82,
+        background: '#ded5c8',
+        roughness: 0.72,
         metalness: 0,
-        grid: true,
+        grid: false,
         platform: true,
         floor: true,
-        platformColor: '#9a6746',
+        platformColor: '#e3d3b7',
       },
       metal: {
-        background: '#d4d8dc',
-        roughness: 0.48,
-        metalness: 0.32,
-        grid: true,
+        background: '#c7cdd1',
+        roughness: 0.44,
+        metalness: 0.68,
+        grid: false,
         platform: true,
         floor: true,
-        platformColor: '#6e7781',
+        platformColor: '#d5dadd',
       },
     };
     const preset = presets[surfacePreset];
+    const texturedBoard = surfacePreset === 'wood' || surfacePreset === 'metal';
+
+    if (texturedBoard) {
+      state.surfaceMaterials ??= createSurfaceMaterials();
+      state.platform.material =
+        surfacePreset === 'wood' ? state.surfaceMaterials.oak : state.surfaceMaterials.metal;
+    } else {
+      state.platform.material = state.platformBaseMaterial;
+    }
 
     state.scene.background = new THREE.Color(preset.background);
     floorMaterial.color.set(preset.background);
@@ -729,17 +866,23 @@ export const Viewer = ({
     const platformMaterial = state.platform.material as THREE.MeshStandardMaterial;
 
     platformMaterial.color.set(preset.platformColor);
-    platformMaterial.roughness = preset.roughness;
-    platformMaterial.metalness = preset.metalness;
+    if (!texturedBoard) {
+      platformMaterial.roughness = preset.roughness;
+      platformMaterial.metalness = preset.metalness;
+    }
     const current = resultRef.current;
 
-    state.displayOffsetZ = preset.platform ? 3.72 : 0;
+    state.displayOffsetZ = preset.platform ? BOARD_DISPLAY_OFFSET : 0;
     state.group.position.z = state.displayOffsetZ;
     if (current) {
       const center = new THREE.Vector3(...current.dimensions.centerMm);
 
-      state.floor.position.set(center.x, center.y, preset.platform ? -3.72 : -0.08);
-      state.grid.position.set(center.x, center.y, preset.platform ? -3.7 : -0.06);
+      state.floor.position.set(center.x, center.y, preset.platform ? -BOARD_DISPLAY_OFFSET : -0.08);
+      state.grid.position.set(
+        center.x,
+        center.y,
+        preset.platform ? -BOARD_DISPLAY_OFFSET + 0.02 : -0.06,
+      );
       syncPlatform(state, current);
       fitViewer(state, current, activeViewRef.current, false, (zoom, pan) => {
         setInspectionZoom(zoom);
@@ -755,6 +898,9 @@ export const Viewer = ({
       data-view={activeView}
       data-zoom-scale={inspectionZoom.toFixed(3)}
       data-surface={surfacePreset}
+      data-board-material={
+        surfacePreset === 'wood' ? 'oak' : surfacePreset === 'metal' ? 'brushed-metal' : 'none'
+      }
       data-render-mode="on-demand"
       data-preview-capability={previewCapability}
     >
@@ -802,51 +948,54 @@ export const Viewer = ({
         )}
       </div>
       <div className="viewer-toolbar" aria-label="Preview camera views">
-        {VIEW_DEFINITIONS.map((view) => (
+        <div className="viewer-toolbar-controls">
+          {VIEW_DEFINITIONS.map((view) => (
+            <button
+              type="button"
+              key={view.id}
+              className={activeView === view.id ? 'active' : ''}
+              aria-label={t(locale, view.id === 'home' ? 'home' : view.id)}
+              aria-pressed={activeView === view.id}
+              title={t(locale, view.id === 'home' ? 'home' : view.id)}
+              disabled={previewCapability === 'unavailable'}
+              onClick={() => setView(view.id)}
+            >
+              <CameraViewIcon icon={view.icon} />
+            </button>
+          ))}
+          <span className="toolbar-divider" aria-hidden="true" />
           <button
             type="button"
-            key={view.id}
-            className={activeView === view.id ? 'active' : ''}
-            aria-label={t(locale, view.id === 'home' ? 'home' : view.id)}
-            aria-pressed={activeView === view.id}
-            title={t(locale, view.id === 'home' ? 'home' : view.id)}
+            aria-label={t(locale, 'zoomOut')}
+            title={t(locale, 'zoomOut')}
             disabled={previewCapability === 'unavailable'}
-            onClick={() => setView(view.id)}
+            onClick={() => zoomBy(1 / INSPECTION_ZOOM_STEP)}
           >
-            <CameraViewIcon icon={view.icon} />
+            <ZoomOut aria-hidden="true" focusable="false" size={18} strokeWidth={2} />
           </button>
-        ))}
-        <span className="toolbar-divider" aria-hidden="true" />
-        <button
-          type="button"
-          aria-label={t(locale, 'zoomOut')}
-          title={t(locale, 'zoomOut')}
-          disabled={previewCapability === 'unavailable'}
-          onClick={() => zoomBy(1 / INSPECTION_ZOOM_STEP)}
-        >
-          <ZoomOut aria-hidden="true" focusable="false" size={18} strokeWidth={2} />
-        </button>
-        <button
-          type="button"
-          aria-label={t(locale, 'zoomIn')}
-          title={t(locale, 'zoomIn')}
-          disabled={previewCapability === 'unavailable'}
-          onClick={() => zoomBy(INSPECTION_ZOOM_STEP)}
-        >
-          <ZoomIn aria-hidden="true" focusable="false" size={18} strokeWidth={2} />
-        </button>
-        <span className="viewer-zoom-readout" aria-live="polite">
-          {Math.round(inspectionZoom * 100)}%
-        </span>
-        <button
-          type="button"
-          aria-label={t(locale, 'fitView')}
-          title={t(locale, 'fitView')}
-          disabled={previewCapability === 'unavailable'}
-          onClick={() => resetInspection(false)}
-        >
-          <Maximize2 aria-hidden="true" focusable="false" size={18} strokeWidth={2} />
-        </button>
+          <button
+            type="button"
+            aria-label={t(locale, 'zoomIn')}
+            title={t(locale, 'zoomIn')}
+            disabled={previewCapability === 'unavailable'}
+            onClick={() => zoomBy(INSPECTION_ZOOM_STEP)}
+          >
+            <ZoomIn aria-hidden="true" focusable="false" size={18} strokeWidth={2} />
+          </button>
+          <span className="viewer-zoom-readout" aria-live="polite">
+            {Math.round(inspectionZoom * 100)}%
+          </span>
+          <button
+            type="button"
+            aria-label={t(locale, 'fitView')}
+            title={t(locale, 'fitView')}
+            disabled={previewCapability === 'unavailable'}
+            onClick={() => resetInspection(false)}
+          >
+            <Maximize2 aria-hidden="true" focusable="false" size={18} strokeWidth={2} />
+          </button>
+        </div>
+        {toolbarAction && <div className="viewer-toolbar-photo">{toolbarAction}</div>}
       </div>
     </div>
   );

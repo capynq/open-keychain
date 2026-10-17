@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { strFromU8, unzipSync } from 'fflate';
 import { readFile } from 'node:fs/promises';
+import sharp from 'sharp';
 
 import { waitForReadyGeometry } from './helpers';
 import { selectLocale } from './helpers';
@@ -326,7 +327,7 @@ test('uses a native export dialog with contained focus, Escape, backdrop close, 
 
   await dialog.getByRole('button', { name: 'Close' }).focus();
   await page.keyboard.press('Shift+Tab');
-  await expect(dialog.locator('.export-choice-grid button').last()).toBeFocused();
+  await expect(dialog.locator('.export-choice-grid button:not(:disabled)').last()).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
   await expect(exportButton).toBeFocused();
@@ -337,6 +338,45 @@ test('uses a native export dialog with contained focus, Escape, backdrop close, 
   await expect(dialog).toBeHidden();
   await expect(exportButton).toBeFocused();
 });
+
+test('downloads the current preview from three simple photo resolution cards', async ({ page }) => {
+  await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
+  await expect(page.locator('.status-pill')).toHaveText('Ready to print', { timeout: 10000 });
+  await page.getByRole('button', { name: 'Top view' }).click();
+  await page.getByRole('button', { name: 'Zoom in' }).click();
+  const viewer = page.locator('.viewer');
+  const zoom = await viewer.getAttribute('data-zoom-scale');
+  await page
+    .locator('.viewer-toolbar-photo')
+    .getByRole('button', { name: 'Photo', exact: true })
+    .click();
+  const choices = page.getByRole('group', { name: 'Photo resolution' });
+  await expect(choices.getByRole('button')).toHaveCount(3);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  for (const resolution of [1024, 2048, 4096]) {
+    const choice = choices.getByRole('button', { name: new RegExp(`${resolution} px`) });
+    await expect(choices.getByRole('button', { name: /1024 px/ })).toBeEnabled();
+    if (resolution === 4096 && (await choice.isDisabled())) continue;
+    await expect(choice).toBeEnabled();
+    const pending = page.waitForEvent('download');
+    await choice.click();
+    const download = await pending;
+    expect(download.suggestedFilename()).toBe(`keychain-photo-${resolution}.png`);
+    const photoPath = await download.path();
+    expect(photoPath).toBeTruthy();
+    const metadata = await sharp(photoPath!).metadata();
+    expect(metadata.format).toBe('png');
+    expect(Math.max(metadata.width!, metadata.height!)).toBe(resolution);
+    await expect(viewer).toHaveAttribute('data-view', 'top');
+    await expect(viewer).toHaveAttribute('data-zoom-scale', zoom!);
+  }
+  for (const locale of ['ru', 'uk'] as const) {
+    await selectLocale(page, locale);
+    await expect(page.getByRole('button', { name: 'Фото', exact: true })).toBeVisible();
+  }
+});
+
 test('exports the selected base and raised-text colors as named 3MF volumes', async ({ page }) => {
   await page.goto('/create');
   await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');

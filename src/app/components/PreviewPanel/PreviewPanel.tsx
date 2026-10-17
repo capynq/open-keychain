@@ -1,4 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { Camera } from 'lucide-react';
+import { useCallback, useEffect, useId, useState } from 'react';
+
+import { IconButton } from '@/shared/ui/IconButton';
 
 import type {
   GeometryResult,
@@ -10,12 +13,14 @@ import type {
   ViewerRenderTimings,
   Viewer as ViewerComponentExport,
 } from '../../../features/preview/components/Viewer/Viewer';
+import type { PhotoCaptureApi } from '../../../features/preview/model/photo-capture';
 import type { PreviewStatus } from '../../../features/preview/model/preview-status';
 import type { Locale } from '../../../infrastructure/i18n/config';
 
 import { applyPrintAppearanceOverrides } from '../../../domain/keychain/model/types';
 import { t } from '../../../infrastructure/i18n/utils';
 import styles from './PreviewPanel.module.css';
+import { PreviewPhoto } from './PreviewPhoto';
 import { PreviewSummary } from './PreviewSummary';
 import { SurfacePopover } from './SurfacePopover';
 
@@ -51,6 +56,9 @@ export const PreviewPanel = ({
   onSurfaceChange,
   onSurfaceReset,
 }: PreviewPanelProps) => {
+  const [photoOpen, setPhotoOpen] = useState(false);
+  const photoChoicesId = useId();
+  const [photoCapture, setPhotoCapture] = useState<PhotoCaptureApi>();
   const [Viewer, setViewer] = useState<ViewerComponent | undefined>(undefined);
   const [viewerUnavailable, setViewerUnavailable] = useState(false);
   const [mountedAt] = useState(() => performance.now());
@@ -156,6 +164,26 @@ export const PreviewPanel = ({
             locale={locale}
             onRendered={onViewerRendered}
             onUnavailable={onViewerUnavailable}
+            onPhotoCaptureChange={setPhotoCapture}
+            toolbarAction={
+              <IconButton
+                action="preview-photo"
+                className={photoOpen ? 'active' : undefined}
+                icon={Camera}
+                label={t(locale, 'photoButton')}
+                motion="none"
+                aria-expanded={photoOpen}
+                aria-controls={photoChoicesId}
+                disabled={
+                  !photoCapture ||
+                  pendingPreview ||
+                  viewerUnavailable ||
+                  !!geometry.error ||
+                  !geometry.result
+                }
+                onClick={() => setPhotoOpen((previous) => !previous)}
+              />
+            }
           />
         ) : viewerLoadFailed ? (
           <div className="viewer viewer--unavailable">
@@ -191,6 +219,13 @@ export const PreviewPanel = ({
           </div>
         )}
       </div>
+      <PreviewPhoto
+        open={photoOpen}
+        choicesId={photoChoicesId}
+        locale={locale}
+        captureApi={photoCapture}
+        disabled={pendingPreview || viewerUnavailable || !!geometry.error || !geometry.result}
+      />
       <PreviewSummary locale={locale} geometry={geometry} status={status} exportOpen={exportOpen} />
     </section>
   );

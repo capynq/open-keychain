@@ -144,6 +144,9 @@
   "export3mfMerged": "3MF · merged object",
   "export3mfMergedDescription": "Combine all printable shells into one merged 3MF object.",
   "exportUnavailable": "Export is unavailable until the model is printable.",
+  "photoPreparing": "Preparing photo…",
+  "photoCaptureFailed": "Could not render this image. Choose a smaller size and try again.",
+  "photoDownloaded": "Image downloaded.",
   "exporting": "Preparing your download…",
   "exportCompleted": "Download ready.",
   "exportFailed": "We couldn't create that file. Try again.",
@@ -915,5 +918,8 @@
   "simpleEffectstrong": "Strong",
   "simpleEffectlightDescription": "A subtle softened edge",
   "simpleEffectmediumDescription": "A clearly softened edge",
-  "simpleEffectstrongDescription": "A more pronounced edge"
+  "simpleEffectstrongDescription": "A more pronounced edge",
+  "photoButton": "Photo",
+  "photoResolution": "Photo resolution",
+  "photoPixels": "{resolution} px"
 }

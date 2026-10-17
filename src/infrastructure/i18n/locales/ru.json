@@ -144,6 +144,9 @@
   "export3mfMerged": "3MF · единый объект",
   "export3mfMergedDescription": "Объединить все печатные оболочки в один объект 3MF.",
   "exportUnavailable": "Экспорт недоступен, пока модель не готова к печати.",
+  "photoPreparing": "Подготовка фото…",
+  "photoCaptureFailed": "Не удалось создать изображение. Выберите меньший размер и повторите попытку.",
+  "photoDownloaded": "Изображение скачано.",
   "exporting": "Подготовка загрузки…",
   "exportCompleted": "Загрузка готова.",
   "exportFailed": "Не удалось создать файл. Попробуйте ещё раз.",
@@ -910,5 +913,8 @@
   "simpleEffectstrong": "Сильная",
   "simpleEffectlightDescription": "Слегка смягчённый край",
   "simpleEffectmediumDescription": "Заметно смягчённый край",
-  "simpleEffectstrongDescription": "Более выраженная обработка края"
+  "simpleEffectstrongDescription": "Более выраженная обработка края",
+  "photoButton": "Фото",
+  "photoResolution": "Разрешение фото",
+  "photoPixels": "{resolution} пкс"
 }

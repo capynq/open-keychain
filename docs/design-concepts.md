@@ -16,6 +16,11 @@ repeated landing-page persuasion.
 alive: selected choices, regenerated preview, progress, and print states show what
 changed. Make comes first; precision and manufacturing controls are contextual.
 
+Photo capture uses an icon button at the far right of the view/zoom toolbar, separated from the
+scrolling camera controls. It reveals large 1024, 2048, and 4096 px resolution cards below the preview.
+Choosing a card downloads a PNG of the current camera, zoom, surface, and aspect ratio. Use the
+preview's existing camera controls to frame the image.
+
 New-design entry offers an optional focused Workshop setup: **Name & size → Keyring position →
 Opening → Font styles → Colors → Review**. The two keyring steps appear only for supported templates.
 Template selection and precision controls stay in the editor. No size is selected

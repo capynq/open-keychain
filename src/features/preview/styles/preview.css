@@ -39,6 +39,31 @@
   background: var(--workshop-surface-dark);
 }
 
+.viewer-toolbar-controls {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  align-items: center;
+  justify-content: safe center;
+  gap: inherit;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 3px;
+}
+
+.viewer-toolbar-controls::-webkit-scrollbar {
+  display: none;
+}
+
+.viewer-toolbar-photo {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  margin-inline-start: auto;
+  padding: 3px 3px 3px 12px;
+  border-inline-start: 1px solid var(--workshop-border-dark);
+}
+
 .viewer-toolbar button {
   display: grid;
   place-items: center;
@@ -283,11 +308,12 @@
     flex-basis: 54px;
     gap: 2px;
     padding: 5px;
-    justify-content: flex-start;
-    overflow-x: auto;
-    scrollbar-width: none;
+    overflow: visible;
   }
-  .viewer-toolbar::-webkit-scrollbar {
+  .viewer-toolbar-controls {
+    justify-content: flex-start;
+  }
+  .viewer-toolbar-controls::-webkit-scrollbar {
     display: none;
   }
   .viewer-toolbar button {

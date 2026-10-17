@@ -2,23 +2,27 @@
 
 ## Current checkpoint — 2026-10-17
 
-- Branch `main`, HEAD `5e72341`; the worktree contains the Customizer Workshop refresh awaiting the
-  user-authorized local commit. Do not push.
-- Export choices now use icon-led cards in a native dialog; print facts use accepted geometry
-  metrics and the preview surface picker uses Lucide. Export formats and geometry are unchanged.
-- Prior handoff reported `pnpm typecheck`, `pnpm lint`, and `pnpm build` passing. This run passed
-  formatting, focused ESLint, `git diff --check`, and five focused desktop browser checks for
-  localized export, dialog keyboard behavior, and print facts. A broader two-spec run had 35
-  passes and 14 failures in additional flows; those failures were not confirmed against a clean
-  baseline.
-- The user approved the visual direction. The native dialog test now checks `::backdrop`, explicit
-  focus wrapping, Escape, and focus return. Print-facts labels wrap at narrow widths and 200% text.
+- Branch `main`, HEAD `decf07c` (`style(customizer): refresh export and preview summary`). The
+  approved Workshop refresh is committed locally. The photo/board changes are uncommitted; no push.
+- Latest user direction replaces the rejected Photo mode modal and scale slider with a Photo button
+  at the far right of the view/zoom toolbar, separated from scrolling camera controls, and large
+  1024/2048/4096 px cards below the preview. Each card downloads a PNG using the current
+  preview camera, zoom, scene, and aspect ratio. Capture uses a cloned camera and immediately
+  restores the renderer target before asynchronous pixel readback. Export is back to its three
+  print-format choices; page/workspace capture plumbing and unused modal/localization code removed.
+- Oak and brushed-metal boards retain the shared scene lights. The extra room environment was
+  removed after brightness feedback; material/background values are subdued. Geometry is unchanged.
+- Shared token validation and locale-key parity guards remain. Resolution-download browser coverage
+  replaces the obsolete modal tests. Browser gates/tracked capture updates await visual approval.
+- This revision passed production build/typecheck, focused ESLint, formatting, diff checking, and
+  both contract test files (3 tests). UI browser tests have not run for this revision.
+  The local preview is at `http://127.0.0.1:5194/create` (session `50149`); connected CUA browsers were
+  unavailable.
 
 ## Next action
 
-Commit only this Workshop refresh locally as `style(customizer): refresh export and preview
-summary`, then implement Photo mode and realistic oak/satin-metal boards as a separate change. Do
-not push.
+Review the simplified Photo button/resolution cards, then run focused browser coverage and update
+responsive captures after visual approval. Keep this slice uncommitted; do not push.
 
 ## Current checkpoint — 2026-10-16
 
