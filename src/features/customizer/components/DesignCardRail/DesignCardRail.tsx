@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { activationMotion, navigationMotion, type MotionIntent } from '@/shared/lib/motion';
 import { IconButton } from '@/shared/ui/IconButton';
 
 import styles from './DesignCardRail.module.css';
@@ -65,17 +66,16 @@ export const DesignCardRail = ({
     };
   }, [updateScrollState]);
 
-  const scrollByCardStep = (direction: -1 | 1): void => {
+  const scrollByCardStep = (direction: -1 | 1, intent: MotionIntent): void => {
     const rail = railRef.current;
     if (!rail) return;
 
     const firstCard = rail.firstElementChild;
     const cardStep = firstCard ? firstCard.getBoundingClientRect().width + 9 : 0;
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     rail.scrollBy({
       left: direction * Math.max(cardStep, rail.clientWidth * 0.75),
-      behavior: reducedMotion ? 'auto' : 'smooth',
+      behavior: navigationMotion(intent),
     });
   };
 
@@ -98,7 +98,7 @@ export const DesignCardRail = ({
         icon={ChevronLeft}
         label={previousLabel}
         motion="nudge"
-        onClick={() => scrollByCardStep(-1)}
+        onClick={(event) => scrollByCardStep(-1, activationMotion(event))}
         disabled={scrollState === 'top' || scrollState === 'none'}
         tabIndex={scrollState === 'middle' || scrollState === 'bottom' ? 0 : -1}
         aria-hidden={scrollState === 'top' || scrollState === 'none'}
@@ -109,7 +109,7 @@ export const DesignCardRail = ({
         icon={ChevronRight}
         label={nextLabel}
         motion="nudge"
-        onClick={() => scrollByCardStep(1)}
+        onClick={(event) => scrollByCardStep(1, activationMotion(event))}
         disabled={scrollState === 'bottom'}
         tabIndex={scrollState === 'none' ? -1 : 0}
         aria-hidden={scrollState === 'none'}

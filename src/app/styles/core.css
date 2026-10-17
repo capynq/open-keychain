@@ -265,6 +265,7 @@
   font-weight: 900;
   letter-spacing: -0.03em;
   text-decoration: none;
+  transition: color var(--workshop-motion-control) var(--workshop-ease);
 }
 
 .brand-mark:visited {
@@ -312,10 +313,10 @@
   font-size: 12px;
   font-weight: 800;
   text-decoration: none;
+  transition: color var(--workshop-motion-control) var(--workshop-ease);
 }
 
-.header-profile-link:hover,
-.header-profile-link:focus-visible {
+.header-profile-link:hover {
   color: #bf563f;
 }
 
@@ -336,36 +337,37 @@
   cursor: pointer;
   font: inherit;
   transition:
-    border-color 0.12s ease,
-    background-color 0.12s ease,
-    color 0.12s ease,
-    box-shadow 0.12s ease,
-    transform 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
+    border-color var(--workshop-motion-control) var(--workshop-ease),
+    background-color var(--workshop-motion-control) var(--workshop-ease),
+    color var(--workshop-motion-control) var(--workshop-ease),
+    transform var(--workshop-motion-control) var(--workshop-ease-hover);
 }
 
-.icon-button:hover:not(:disabled) {
-  border-color: #ef815e;
-  background: #fff7ef;
-  color: #9a3d31;
-  box-shadow: 0 4px 12px #3035451c;
-  transform: translateY(-1px);
-}
+@media (hover: hover) and (pointer: fine) {
+  .icon-button:hover:not(:disabled) {
+    border-color: #ef815e;
+    background: #fff7ef;
+    color: #9a3d31;
+    box-shadow: 0 4px 12px #3035451c;
+    transform: translateY(-1px);
+  }
 
-.icon-button[data-icon-motion='nudge']:hover:not(:disabled) > svg {
-  transform: scale(1.06);
-}
+  .icon-button[data-icon-motion='nudge']:hover:not(:disabled) > svg {
+    transform: scale(1.06);
+  }
 
-.icon-button[data-icon-motion='rotate']:hover:not(:disabled) > svg {
-  transform: rotate(14deg) scale(1.03);
-}
+  .icon-button[data-icon-motion='rotate']:hover:not(:disabled) > svg {
+    transform: rotate(14deg) scale(1.03);
+  }
 
-.icon-button[data-icon-motion='scale']:hover:not(:disabled) > svg {
-  transform: scale(1.08);
+  .icon-button[data-icon-motion='scale']:hover:not(:disabled) > svg {
+    transform: scale(1.08);
+  }
 }
 
 .icon-button > svg {
   transform-origin: center;
-  transition: transform 0.12s ease;
+  transition: transform var(--workshop-motion-control) var(--workshop-ease-hover);
 }
 
 .icon-button:focus-visible {
@@ -375,6 +377,8 @@
 }
 
 .icon-button:active:not(:disabled) {
+  transition-duration: var(--workshop-motion-fast);
+  transition-timing-function: var(--workshop-ease);
   transform: scale(0.97);
 }
 
@@ -437,6 +441,7 @@
   font-size: 11px;
   font-weight: 800;
   padding: 6px 9px;
+  transition: border-color var(--workshop-motion-control) var(--workshop-ease);
 }
 
 .account-button:hover,
@@ -569,6 +574,10 @@
   font: inherit;
   font-size: 11px;
   font-weight: 800;
+  transition:
+    background-color var(--workshop-motion-control) var(--workshop-ease),
+    border-color var(--workshop-motion-control) var(--workshop-ease),
+    color var(--workshop-motion-control) var(--workshop-ease);
 }
 
 .language-picker-option svg {
@@ -665,6 +674,7 @@
 .analytics-consent a {
   color: #ffd1bd;
   font-weight: 800;
+  transition: color var(--workshop-motion-control) var(--workshop-ease);
 }
 
 .analytics-consent a:hover,
@@ -698,6 +708,9 @@
   color: #fff;
   background: #a33e33;
   border: 1px solid #a33e33;
+  transition:
+    background-color var(--workshop-motion-control) var(--workshop-ease),
+    border-color var(--workshop-motion-control) var(--workshop-ease);
 }
 
 .analytics-consent-actions button:focus-visible {
@@ -723,4 +736,17 @@
   .analytics-consent-actions {
     justify-content: flex-end;
   }
+}
+
+/* Input modality changes motion, never native focus presentation. */
+html[data-input-modality='keyboard'] .icon-button,
+html[data-input-modality='keyboard'] .icon-button > svg {
+  transition: none;
+}
+
+html[data-input-modality='keyboard'] .icon-button:hover:not(:disabled),
+html[data-input-modality='keyboard'] .icon-button:active:not(:disabled),
+html[data-input-modality='keyboard'] .icon-button[data-icon-motion]:hover:not(:disabled) > svg,
+html[data-input-modality='keyboard'] .icon-button[data-icon-motion]:active:not(:disabled) > svg {
+  transform: none;
 }

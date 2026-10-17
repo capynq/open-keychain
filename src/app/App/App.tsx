@@ -17,6 +17,7 @@ import { AnalyticsConsentBanner } from '../components/AnalyticsConsentBanner/Ana
 import { RouteErrorBoundary } from '../components/RouteErrorBoundary/RouteErrorBoundary';
 import { useAppAnalytics } from '../hooks/useAppAnalytics';
 import { useAppNavigationEffects } from '../hooks/useAppNavigationEffects';
+import { useInputModality } from '../hooks/useInputModality';
 import { useRoutePreload } from '../hooks/useRoutePreload';
 import { CREATE_ROUTE, PROFILE_ROUTE } from '../routes';
 import { AppSeoHead, useAppSeo } from '../seo/useAppSeo';
@@ -56,6 +57,7 @@ const App = () => {
 
   useAppNavigationEffects(location, locale);
   useRoutePreload();
+  useInputModality();
 
   const displayLocale = resolveDisplayLocale(location, locale);
 

@@ -49,6 +49,7 @@ export const SurfacePopover = ({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls="surface-menu"
+        data-icon-motion="rotate"
         onClick={() => setOpen((current) => !current)}
       >
         <span className={`surface-dot surface-dot-${surfacePreset}`} aria-hidden="true" />

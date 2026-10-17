@@ -27,6 +27,7 @@ import {
   VIEW_DEFINITIONS,
   type ViewId,
 } from '../../camera/views';
+import { setOrbitControlsDamping } from '../../model/reduced-motion';
 import { CameraViewIcon } from './CameraViewIcon';
 import { createSurfaceMaterials, type SurfaceMaterials } from './surface-materials';
 import styles from './Viewer.module.css';
@@ -131,7 +132,7 @@ const fitViewer = (
     result.dimensions.thicknessMm,
     center,
   );
-  if (state.platform.visible) bounds.expandByVector(new THREE.Vector3(18, 18, 5));
+  // Surface scenery must never change model framing or the inspection pan frame.
   const direction =
     selected === 'custom'
       ? state.camera.position.clone().sub(state.controls.target).normalize()
@@ -144,6 +145,8 @@ const fitViewer = (
   const fitted = fittedCameraPose(state.camera, bounds, direction, up, 1);
   const pose = fitted.pose;
 
+  // The display floor spans beyond the fitted model and can cross its near plane.
+  if (state.platform.visible) pose.near = Math.min(pose.near, 0.1);
   applyCameraPose(state.camera, pose);
   state.camera.zoom = inspectionZoom;
   state.camera.updateProjectionMatrix();
@@ -530,7 +533,9 @@ export const Viewer = ({
     const invalidate = () => {
       if (frame === 0) frame = requestAnimationFrame(render);
     };
+    let suppressControlsChange = false;
     const handleControlsChange = () => {
+      if (suppressControlsChange) return;
       const current = resultRef.current;
       if (current) {
         const center = new THREE.Vector3(...current.dimensions.centerMm);
@@ -599,6 +604,7 @@ export const Viewer = ({
       const aspect = camera.aspect;
       const width = Math.max(1, Math.round(longEdge * Math.min(aspect, 1)));
       const height = Math.max(1, Math.round(longEdge / Math.max(aspect, 1)));
+
       const photoCamera = camera.clone();
 
       photoCamera.aspect = width / height;
@@ -667,6 +673,22 @@ export const Viewer = ({
     };
 
     controls.addEventListener('change', handleControlsChange);
+    const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const applyReducedMotion = (reduce: boolean): void => {
+      suppressControlsChange = true;
+      try {
+        setOrbitControlsDamping(controls, !reduce);
+      } finally {
+        suppressControlsChange = false;
+      }
+      invalidate();
+    };
+    const handleReducedMotionChange = (event: MediaQueryListEvent): void => {
+      applyReducedMotion(event.matches);
+    };
+
+    applyReducedMotion(reducedMotionQuery.matches);
+    reducedMotionQuery.addEventListener('change', handleReducedMotionChange);
     viewerState.invalidate = invalidate;
     stateRef.current = viewerState;
     let captureQueue = Promise.resolve();
@@ -692,6 +714,7 @@ export const Viewer = ({
       cancelAnimationFrame(frame);
       resizeObserver.disconnect();
       controls.removeEventListener('change', handleControlsChange);
+      reducedMotionQuery.removeEventListener('change', handleReducedMotionChange);
       controls.dispose();
       onPhotoCaptureChangeRef.current?.(undefined);
       renderer.domElement.removeEventListener('wheel', handleWheel);

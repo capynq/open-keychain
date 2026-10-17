@@ -1,21 +1,22 @@
 :root {
-  --workshop-motion-fast: 140ms;
-  --workshop-motion-control: 180ms;
+  --workshop-motion-fast: 160ms;
+  --workshop-motion-control: 200ms;
   --workshop-motion-reveal: 220ms;
   --workshop-motion-stagger: 60ms;
-  --workshop-motion-page-step: 90ms;
-  --workshop-ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --workshop-motion-modal: 200ms;
+  --workshop-motion-discovery: 140ms;
+  --workshop-ease-hover: cubic-bezier(0.77, 0, 0.175, 1);
+  --workshop-ease: cubic-bezier(0.23, 1, 0.32, 1);
   --workshop-hover-lift: -2px;
   --workshop-press-scale: 0.98;
 }
 
 @media (prefers-reduced-motion: reduce) {
   :root {
-    --workshop-motion-fast: 0ms;
-    --workshop-motion-control: 0ms;
     --workshop-motion-reveal: 0ms;
     --workshop-motion-stagger: 0ms;
-    --workshop-motion-page-step: 0ms;
+    --workshop-motion-modal: 0ms;
+    --workshop-motion-discovery: 0ms;
     --workshop-hover-lift: 0px;
     --workshop-press-scale: 1;
   }

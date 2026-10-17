@@ -77,9 +77,9 @@
   border-radius: 50%;
   background: transparent;
   transition:
-    transform 130ms ease,
-    border-color 130ms ease,
-    background-color 130ms ease;
+    transform var(--workshop-motion-control) var(--workshop-ease-hover),
+    border-color var(--workshop-motion-control) var(--workshop-ease),
+    background-color var(--workshop-motion-control) var(--workshop-ease);
 }
 
 .hole {
@@ -90,15 +90,20 @@
   border-radius: 50%;
   color: var(--workshop-text-muted);
   background: transparent;
+  transition: color var(--workshop-motion-control) var(--workshop-ease);
 }
 
-.option:hover .marker {
-  transform: scale(1.1);
-  border-color: var(--workshop-accent-hover);
+@media (hover: hover) and (pointer: fine) {
+  .option:hover .marker {
+    transform: scale(1.1);
+    border-color: var(--workshop-accent-hover);
+  }
 }
 
 .option:active .marker {
-  transform: scale(0.94);
+  transition-duration: var(--workshop-motion-fast);
+  transition-timing-function: var(--workshop-ease);
+  transform: scale(var(--workshop-press-scale));
 }
 
 .option:has(input:checked) .marker {
@@ -150,4 +155,12 @@
   .option:active .marker {
     transform: none;
   }
+}
+
+:global(html[data-input-modality='keyboard']) .marker {
+  transition: none;
+}
+:global(html[data-input-modality='keyboard']) .option:hover .marker,
+:global(html[data-input-modality='keyboard']) .option:active .marker {
+  transform: none;
 }

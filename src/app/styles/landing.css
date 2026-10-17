@@ -59,6 +59,10 @@
   color: #a84e3b;
 }
 
+.github-link {
+  transition: color var(--workshop-motion-control) var(--workshop-ease);
+}
+
 .landing-topbar-actions {
   gap: 10px;
 }
@@ -77,9 +81,8 @@
   transition:
     background-color 160ms ease,
     border-color 160ms ease,
-    box-shadow 160ms ease,
     color 160ms ease,
-    transform 160ms ease;
+    transform var(--workshop-motion-control) var(--workshop-ease-hover);
 }
 
 .landing-header-cta {
@@ -90,18 +93,36 @@
 }
 
 .landing-header-cta:hover,
+.landing-button-primary:hover {
+  background: var(--landing-accent-hover);
+  box-shadow: 0 10px 20px #b94d3448;
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .landing-header-cta:hover,
+  .landing-button-primary:hover {
+    transform: translateY(-1px);
+  }
+}
+
 .landing-header-cta:focus-visible,
-.landing-button-primary:hover,
 .landing-button-primary:focus-visible {
   background: var(--landing-accent-hover);
   box-shadow: 0 10px 20px #b94d3448;
-  transform: translateY(-1px);
 }
 
 .landing-header-cta:active,
 .landing-button:active {
   box-shadow: none;
-  transform: translateY(1px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-input-modality='pointer'] .landing-header-cta:active,
+  html[data-input-modality='pointer'] .landing-button:active {
+    transform: translateY(1px);
+    transition-duration: var(--workshop-motion-fast);
+    transition-timing-function: var(--workshop-ease);
+  }
 }
 
 .landing-header-cta:focus-visible,
@@ -267,9 +288,7 @@
     0 8px 18px rgb(45 53 66 / 14%);
   transform: perspective(1200px) translate3d(0, 0, 0);
   transform-origin: center center;
-  transition:
-    transform 360ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    box-shadow 360ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform 360ms cubic-bezier(0.2, 0.8, 0.2, 1);
   touch-action: pan-y;
 }
 
@@ -278,12 +297,20 @@
     box-shadow:
       0 28px 54px rgb(45 53 66 / 24%),
       0 10px 20px rgb(45 53 66 / 16%);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .configurator-carousel:hover {
     transform: perspective(1200px) rotateX(1deg) rotateY(-1deg) translate3d(0, -4px, 0);
   }
+}
 
-  .configurator-carousel:active {
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  html[data-input-modality='pointer'] .configurator-carousel:active {
     transform: perspective(1200px) rotateX(0.4deg) rotateY(-0.4deg) translate3d(0, -1px, 0) scale(0.998);
-    transition-duration: 120ms;
+    transition-duration: var(--workshop-motion-fast);
+    transition-timing-function: var(--workshop-ease);
   }
 }
 
@@ -343,11 +370,20 @@
   line-height: 1;
   transform: translateY(-50%);
   cursor: pointer;
+  transition:
+    background-color var(--workshop-motion-control) var(--workshop-ease),
+    color var(--workshop-motion-control) var(--workshop-ease);
 }
-.configurator-carousel-arrow:not(:disabled):hover,
 .configurator-carousel-arrow:not(:disabled):focus-visible {
   background: #fff;
   color: #a33e33;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .configurator-carousel-arrow:not(:disabled):hover {
+    background: #fff;
+    color: #a33e33;
+  }
 }
 .configurator-carousel-arrow:disabled {
   cursor: default;
@@ -555,16 +591,21 @@
   text-decoration: none;
   transition:
     color 160ms ease,
-    transform 160ms ease;
+    transform var(--workshop-motion-control) var(--workshop-ease-hover);
 }
 
 .landing-template-card-action span {
-  transition: transform 0.16s ease;
+  transition: transform var(--workshop-motion-control) var(--workshop-ease-hover);
 }
 
-.landing-template-card-action:hover span,
 .landing-template-card-action:focus-visible span {
-  transform: translateX(3px);
+  transform: translateX(0);
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .landing-template-card-action:hover span {
+    transform: translateX(3px);
+  }
 }
 
 .landing-template-card-action:focus-visible {
@@ -593,8 +634,7 @@
   box-shadow: 0 5px 14px rgb(45 53 66 / 3%);
   transition:
     border-color 160ms ease,
-    box-shadow 160ms ease,
-    transform 160ms ease;
+    transform var(--workshop-motion-control) var(--workshop-ease-hover);
 }
 
 .landing-template-card-articulated-name {
@@ -609,11 +649,20 @@
   background: #f7f3e9;
 }
 
-.landing-template-card:hover,
 .landing-template-card:focus-within {
   border-color: #c9a698;
   box-shadow: 0 12px 24px rgb(45 53 66 / 8%);
-  transform: translateY(-2px);
+}
+
+.landing-template-card:hover {
+  border-color: #c9a698;
+  box-shadow: 0 12px 24px rgb(45 53 66 / 8%);
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .landing-template-card:hover {
+    transform: translateY(-2px);
+  }
 }
 
 .landing-template-image-wrap {
@@ -662,15 +711,23 @@
 .landing-run-card-actionable {
   transition:
     border-color 160ms ease,
-    box-shadow 160ms ease,
-    transform 160ms ease;
+    transform var(--workshop-motion-control) var(--workshop-ease-hover);
 }
 
-.landing-run-card-actionable:hover,
 .landing-run-card-actionable:focus-within {
   border-color: #c9a698;
   box-shadow: 0 12px 24px rgb(45 53 66 / 8%);
-  transform: translateY(-2px);
+}
+
+.landing-run-card-actionable:hover {
+  border-color: #c9a698;
+  box-shadow: 0 12px 24px rgb(45 53 66 / 8%);
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .landing-run-card-actionable:hover {
+    transform: translateY(-2px);
+  }
 }
 
 .landing-run-card-browser {
@@ -742,13 +799,21 @@
   text-decoration: none;
   transition:
     color 160ms ease,
-    transform 160ms ease;
+    transform var(--workshop-motion-control) var(--workshop-ease-hover);
 }
 
-.landing-card-link:hover,
 .landing-card-link:focus-visible {
   color: var(--landing-accent-hover);
-  transform: translateX(3px);
+}
+
+.landing-card-link:hover {
+  color: var(--landing-accent-hover);
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .landing-card-link:hover {
+    transform: translateX(3px);
+  }
 }
 
 .landing-trust {
@@ -962,13 +1027,27 @@
   .landing-template-card-action,
   .landing-card-link {
     transition: none;
+    transform: none;
   }
 
+  .landing-template-card,
   .landing-template-card:hover,
+  .landing-template-card:focus-within,
+  .landing-run-card-actionable,
   .landing-run-card-actionable:hover,
+  .landing-header-cta,
   .landing-header-cta:hover,
+  .landing-header-cta:active,
+  .landing-button,
   .landing-button:hover,
+  .landing-button:active,
+  .landing-card-link,
   .landing-card-link:hover {
+    transform: none;
+  }
+
+  .landing-template-card-action:hover span,
+  .landing-template-card-action:focus-visible span {
     transform: none;
   }
 

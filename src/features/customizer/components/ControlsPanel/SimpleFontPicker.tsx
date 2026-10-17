@@ -6,8 +6,10 @@ import type { KeychainParams } from '@/domain/keychain/model/types';
 import type { useFontSuggestions } from '@/features/customizer/hooks/useFontSuggestions';
 import type { Locale } from '@/infrastructure/i18n';
 
+import { useDiscoveryMotion } from '@/features/customizer/hooks/useDiscoveryMotion';
 import { useFontPreviewLoader } from '@/features/customizer/hooks/useFontPreviewLoader';
 import { t } from '@/infrastructure/i18n';
+import { activationMotion, navigationMotion, type MotionIntent } from '@/shared/lib/motion';
 
 import carouselStyles from './SimpleFontCarousel.module.css';
 import styles from './SimpleOptions.module.css';
@@ -40,7 +42,6 @@ export const SimpleFontPicker = ({
       : params.fontId;
   const pagesRef = useRef<HTMLDivElement>(null);
   const currentPageRef = useRef(suggestions.page);
-  const animatedNavigationRef = useRef(0);
   const { loadFont } = useFontPreviewLoader();
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const selectionVersion = useRef(0);
@@ -85,6 +86,13 @@ export const SimpleFontPicker = ({
     onSelect(font.id);
   };
 
+  const { beginDiscovery, focusAfterDiscovery } = useDiscoveryMotion(
+    pagesRef,
+    suggestions.revealBatch,
+    suggestions.page,
+    contextKey,
+  );
+
   useLayoutEffect(() => {
     if (discoveryFocusRef.current === undefined) return;
     const appended = suggestions.pageFonts.length > discoveryFocusRef.current;
@@ -92,8 +100,8 @@ export const SimpleFontPicker = ({
     discoveryFocusRef.current = undefined;
     const field =
       pagesRef.current?.children[suggestions.page - 1]?.querySelector<HTMLInputElement>('input');
-    (field ?? moreButtonRef.current)?.focus({ preventScroll: true });
-  }, [suggestions.page, suggestions.pageFonts, suggestions.exhausted]);
+    focusAfterDiscovery(field ?? moreButtonRef.current);
+  }, [suggestions.page, suggestions.pageFonts, suggestions.exhausted, focusAfterDiscovery]);
 
   useEffect(() => {
     let active = true;
@@ -118,18 +126,9 @@ export const SimpleFontPicker = ({
   useLayoutEffect(() => {
     const pages = pagesRef.current;
     if (!pages) return;
-    const batch = suggestions.revealBatch;
-    const newlyAppended =
-      batch &&
-      batch.revision !== animatedNavigationRef.current &&
-      currentPageRef.current === batch.firstPage + 1;
-    if (batch) animatedNavigationRef.current = batch.revision;
     pages.scrollTo({
       left: pages.clientWidth * (currentPageRef.current - 1),
-      behavior:
-        newlyAppended && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
-          ? 'smooth'
-          : 'auto',
+      behavior: 'instant',
     });
   }, [suggestions.pageFonts, suggestions.revealBatch]);
 
@@ -140,7 +139,10 @@ export const SimpleFontPicker = ({
     const observer = new ResizeObserver(() => {
       if (pages.clientWidth === previousWidth) return;
       previousWidth = pages.clientWidth;
-      pages.scrollTo({ left: pages.clientWidth * (currentPageRef.current - 1), behavior: 'auto' });
+      pages.scrollTo({
+        left: pages.clientWidth * (currentPageRef.current - 1),
+        behavior: 'instant',
+      });
     });
     observer.observe(pages);
     return () => observer.disconnect();
@@ -152,12 +154,13 @@ export const SimpleFontPicker = ({
     suggestions.goToPage(Math.round(pages.scrollLeft / pages.clientWidth));
   };
 
-  const handlePageClick = (pageIndex: number): void => {
+  const handlePageClick = (pageIndex: number, intent: MotionIntent): void => {
     const pages = pagesRef.current;
+    beginDiscovery('instant');
     suggestions.goToPage(pageIndex);
     pages?.scrollTo({
       left: (pages.clientWidth || 0) * pageIndex,
-      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      behavior: navigationMotion(intent),
     });
   };
 
@@ -185,14 +188,8 @@ export const SimpleFontPicker = ({
               <div className={styles.fontChoices}>
                 {pageFonts.map((font) => (
                   <label
-                    className={`${styles.choice} ${styles.fontChoice}${suggestions.revealBatch?.fontIds.includes(font.id) ? ` ${carouselStyles.revealCard}` : ''}`}
-                    style={
-                      suggestions.revealBatch?.fontIds.includes(font.id)
-                        ? {
-                            animationDelay: `calc(${suggestions.revealBatch.fontIds.indexOf(font.id)} * var(--workshop-motion-stagger))`,
-                          }
-                        : undefined
-                    }
+                    className={`${styles.choice} ${styles.fontChoice}`}
+                    data-font-id={font.id}
                     key={font.id}
                   >
                     <input
@@ -237,7 +234,8 @@ export const SimpleFontPicker = ({
                     disabled={suggestions.isLoading}
                     aria-busy={suggestions.isLoading}
                     data-icon-motion="none"
-                    onClick={() => {
+                    onClick={(event) => {
+                      beginDiscovery(activationMotion(event));
                       discoveryFocusRef.current = suggestions.pageFonts.length;
                       void suggestions.loadMore();
                     }}
@@ -272,20 +270,13 @@ export const SimpleFontPicker = ({
           <button
             type="button"
             key={pageIndex}
-            className={`${carouselStyles.dot}${suggestions.revealBatch && pageIndex >= suggestions.revealBatch.firstDot ? ` ${carouselStyles.revealDot}` : ''}`}
-            style={
-              suggestions.revealBatch && pageIndex >= suggestions.revealBatch.firstDot
-                ? {
-                    animationDelay: `calc(${pageIndex - suggestions.revealBatch.firstDot} * var(--workshop-motion-page-step))`,
-                  }
-                : undefined
-            }
+            className={carouselStyles.dot}
             aria-label={t(locale, 'simpleSuggestionSet', {
               page: pageIndex + 1,
               pages: suggestions.pages,
             })}
             aria-current={pageIndex === suggestions.page - 1 ? 'page' : undefined}
-            onClick={() => handlePageClick(pageIndex)}
+            onClick={(event) => handlePageClick(pageIndex, activationMotion(event))}
           />
         ))}
       </div>

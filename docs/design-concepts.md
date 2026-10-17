@@ -156,6 +156,13 @@ buttons, and focused keyboard shortcuts; keep browser modifier shortcuts intact.
 above 1×. Refinements retain inspection state; Fit and template changes clear zoom/pan and keep the
 angle, while Home restores the angle too. Named views keep magnification and recenter pan.
 
+Fit and pan against model bounds only, independently of the selected surface. Switching to wood or
+metal must preserve the model's apparent size and screen position, angle, lens zoom, and pan. Keep
+the large display floor outside the model-only near clipping limit. Boards and floors remain solid
+through the entire orbit, including behind the lettering; do not fade scenery based on viewing
+angle. From underneath, the physical board naturally occludes the keychain. Zoom, pan, selected
+surface and geometry stay intact.
+
 Backing edge finish and Text edge finish are separate quiet groups. Nest their explicitly named
 strengths under the activating profile with a subtle vertical rule; keep checking/rejection feedback
 in the owning group. Sharp hides strength controls. Never couple the backing and text values.
@@ -174,8 +181,8 @@ headings, reset actions, and candidate feedback independent. Font pages use scro
 page dots; do not replace the selected font while browsing. Default backing thickness must match the
 Balanced preset (2.4 mm); the default Heart pair is 22 mm / 1.6 mm. Preserve true Custom values.
 
-Share motion duration/easing tokens for hover, press, selection, dependent strength reveal, and setup
-step changes. Keep modal chrome stable, show the active setup step distinctly, and preserve the
+Share motion duration/easing tokens for pointer hover, press, selection, and setup entry.
+Setup steps and dependent strength controls appear immediately. Keep modal chrome stable, show the active setup step distinctly, and preserve the
 no-preselected-size rule for fresh setup. Reduced motion removes transforms/animated scrolling;
 hover lifts apply only to fine pointers. No ambient animations or model rotation are introduced.
 
@@ -208,14 +215,26 @@ pages and preserve rail effect gutters. Center the compact page dots (maximum 16
 pages remain visible. Do not scroll or clip the dot list; keep the font-track scrollbar hidden and
 retain touch/wheel/keyboard navigation.
 
-### Sequential font discovery reveal
+### Bounded discovery and input-aware motion
 
-Animate successful discovery batches only: new page dots appear in order at 90ms intervals, and
-new font cards cascade at 60ms intervals with the shared 220ms reveal duration. Previously displayed
-cards/dots and initial page load remain still. Smoothly move to the first new page; width-only resize
-alignment must not interrupt it. Keep the wrapping dot layout, page stride, hover gutters, and focus
-recovery intact. Keyboard-focused cards/dots show immediately; reduced motion skips all reveal
-animations and smooth navigation. Clear old batch animation state on target/text/category changes.
+Keyboard, assistive, and programmatic navigation is immediate. Focus reveals use instant nearest
+scrolling; pointer page/rail controls may scroll smoothly. Capture activation intent before async
+work, recheck reduced motion at completion, and never infer a keyboard request from a later pointer.
+Shared icon hover transforms require a fine pointer with hover support on every route. Keyboard
+activation keeps focus-visible feedback without movement. Shadows change immediately and transitions
+name their properties explicitly.
+
+A successful pointer discovery aligns instantly to its first new page. Only newly appended cards
+on that visible page reveal: 140ms opacity/translation with 0/60/120ms delays (260ms maximum).
+Existing/offscreen cards and all page dots appear immediately. A batch plays once; navigation,
+focus, keyboard input, context changes, reduced motion, and unmount cancel active reveals without
+hiding choices. Keep page stride, wrapping dots, rail gutters, and focus recovery intact.
+
+Setup pointer entry uses 200ms with the shared strong ease-out curve; keyboard entry and all step
+changes are immediate. Remove overshoot and step-direction animation. Reduced motion removes
+transforms, reveal delays, and smooth scrolling, while quiet color feedback may remain.
+The 3D viewer watches the preference live and removes camera inertia while retaining direct
+manipulation, the current pose/target/zoom, safe fitting, and render-on-demand scheduling.
 
 ### Pro finish alignment
 
@@ -248,3 +267,25 @@ size in EN/RU/UK; ordinary text labels still enlarge and wrap.
 Text-bearing template/style cards must retain content-driven height. Compact desktop rules may
 reduce the image row and caption offset, but must not force an aspect ratio that clips the caption.
 Verify caption bounds inside each card at ultra-wide/tall and enlarged-text layouts.
+
+### Perceptible button feedback
+
+Pointer movement restores pointer modality after keyboard use; pointer movement never changes
+focus and writes the modality attribute only when it changes. Touch movement cannot enable hover.
+Use 200ms for hover/on-screen feedback with the shared strong ease-in-out curve, and 160ms for
+press feedback with strong ease-out. Camera toolbar, surface, Photo-resolution, and text actions
+share explicit press feedback. Keyboard activation and reduced motion retain immediate controls.
+
+### Hover and interaction-state coverage
+
+Keep the complete selector inventory and surface decisions in [hover-interactions.md](hover-interactions.md).
+Define transitions on base selectors so entering and leaving hover both respond. Cover the properties
+that actually change; never add `transition: all` or animate focus outlines, shadows, gradients,
+or layout. Color-only feedback may remain under reduced motion; movement requires a fine pointer
+and a no-preference motion setting, with explicit static fallbacks where other state rules remain.
+Keep keyboard focus spatially stable while retaining its visible focus treatment. Apply the same
+property-specific policy to pressed/released, selected/checked, expanded, and current states:
+160ms for real pointer/touch presses, 200ms for control color/selection feedback, and immediate
+keyboard movement. Expanded chevrons convey state without delaying native disclosure content.
+Availability, disabled opacity, loading/error messages, and print severity remain immediate;
+never animate focus outlines or progress-indicator width just to give every state movement.

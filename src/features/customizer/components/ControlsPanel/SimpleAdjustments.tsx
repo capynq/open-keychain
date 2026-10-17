@@ -9,6 +9,7 @@ import type { Locale } from '@/infrastructure/i18n';
 
 import { simpleOptionGroups } from '@/features/customizer/model/simple-options';
 import { t } from '@/infrastructure/i18n';
+import { activationMotion, type MotionIntent } from '@/shared/lib/motion';
 
 import { GeometryFinishControls } from './GeometryFinishControls';
 import { SimpleChoiceGroup } from './SimpleChoiceGroup';
@@ -48,7 +49,7 @@ export const SimpleAdjustments = ({
   baseFinishFeedback?: ReactNode;
   textFinishFeedback?: ReactNode;
   renderFeedback: (group: CandidateControlGroup, presentation: Presentation) => ReactNode;
-  onPro: (destination: Presentation) => void;
+  onPro: (destination: Presentation, intent: MotionIntent) => void;
   onReset: () => void;
 }) => {
   const groups = useMemo(() => simpleOptionGroups(params), [params]);
@@ -97,7 +98,7 @@ export const SimpleAdjustments = ({
             <button
               type="button"
               className={styles.more}
-              onClick={() => onPro(section.id)}
+              onClick={(event) => onPro(section.id, activationMotion(event))}
               aria-label={`${t(locale, 'simpleFineTune')}: ${t(locale, section.labelKey)}`}
             >
               {t(locale, 'simpleFineTune')}

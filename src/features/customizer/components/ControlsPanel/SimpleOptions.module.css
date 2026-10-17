@@ -294,8 +294,7 @@
     background-color var(--workshop-motion-control) var(--workshop-ease),
     border-color var(--workshop-motion-control) var(--workshop-ease),
     color var(--workshop-motion-fast) var(--workshop-ease),
-    box-shadow var(--workshop-motion-control) var(--workshop-ease),
-    transform var(--workshop-motion-control) var(--workshop-ease);
+    transform var(--workshop-motion-control) var(--workshop-ease-hover);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -307,6 +306,9 @@
 
 .picker .choice:active:not(:disabled),
 .refresh:active:not(:disabled),
-.modeOption:active {
+.modeOption:active,
+.more:active {
+  transition-duration: var(--workshop-motion-fast);
+  transition-timing-function: var(--workshop-ease);
   transform: scale(var(--workshop-press-scale));
 }

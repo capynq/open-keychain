@@ -77,6 +77,10 @@
   background: transparent;
   color: var(--workshop-text-on-dark);
   cursor: pointer;
+  transition:
+    transform var(--workshop-motion-control) var(--workshop-ease-hover),
+    background-color var(--workshop-motion-control) var(--workshop-ease),
+    color var(--workshop-motion-control) var(--workshop-ease);
 }
 
 .viewer-toolbar svg {
@@ -98,7 +102,9 @@
 }
 
 .viewer-toolbar button:active:not(:disabled) {
-  transform: scale(0.96);
+  transition-duration: var(--workshop-motion-fast);
+  transition-timing-function: var(--workshop-ease);
+  transform: scale(var(--workshop-press-scale));
 }
 
 .viewer-toolbar button svg {
@@ -248,6 +254,11 @@
   font: inherit;
   font-weight: 800;
   cursor: pointer;
+  transition:
+    transform var(--workshop-motion-control) var(--workshop-ease-hover),
+    border-color var(--workshop-motion-control) var(--workshop-ease),
+    background-color var(--workshop-motion-control) var(--workshop-ease),
+    color var(--workshop-motion-control) var(--workshop-ease);
 }
 
 .appearance-control .reset-icon-button,

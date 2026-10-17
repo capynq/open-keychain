@@ -15,7 +15,7 @@
   padding: 16px;
   box-sizing: border-box;
   background: #1f243099;
-  animation: backdrop-in 160ms ease-out;
+  animation: backdrop-in var(--workshop-motion-fast) var(--workshop-ease);
 }
 .dialog {
   display: grid;
@@ -30,7 +30,7 @@
   background: var(--workshop-surface);
   color: var(--workshop-text);
   box-shadow: 0 24px 70px var(--workshop-text-25);
-  animation: setup-in 320ms cubic-bezier(0.22, 1.15, 0.36, 1);
+  animation: setup-in var(--workshop-motion-modal) var(--workshop-ease);
 }
 .header {
   position: relative;
@@ -109,9 +109,9 @@
   color: var(--workshop-text-muted);
   cursor: pointer;
   transition:
-    background 120ms,
-    color 120ms,
-    transform 120ms;
+    background-color var(--workshop-motion-control) var(--workshop-ease),
+    color var(--workshop-motion-control) var(--workshop-ease),
+    transform var(--workshop-motion-fast) var(--workshop-ease);
 }
 .close {
   position: absolute;
@@ -130,7 +130,7 @@
   padding: 24px 28px 28px;
 }
 .stepFrame {
-  animation: step-in var(--workshop-motion-reveal) var(--workshop-ease);
+  min-width: 0;
 }
 .stepContent {
   display: grid;
@@ -199,8 +199,8 @@
   color: var(--workshop-text);
   cursor: pointer;
   transition:
-    background 120ms,
-    border-color 120ms;
+    background-color var(--workshop-motion-control) var(--workshop-ease),
+    border-color var(--workshop-motion-control) var(--workshop-ease);
 }
 .sizeOption input {
   position: absolute;
@@ -310,8 +310,8 @@
   font-size: var(--workshop-font-label);
   cursor: pointer;
   transition:
-    background 120ms,
-    border-color 120ms;
+    background-color var(--workshop-motion-control) var(--workshop-ease),
+    border-color var(--workshop-motion-control) var(--workshop-ease);
 }
 .choiceCard input {
   position: absolute;
@@ -325,6 +325,9 @@
   background: var(--workshop-surface-control);
   appearance: none;
   cursor: pointer;
+  transition:
+    border-color var(--workshop-motion-control) var(--workshop-ease),
+    background-color var(--workshop-motion-control) var(--workshop-ease);
   transform: translateY(-50%);
 }
 .choiceCard input:checked {
@@ -448,8 +451,8 @@
   line-height: 1.4;
   cursor: pointer;
   transition:
-    background 120ms,
-    transform 120ms;
+    background-color var(--workshop-motion-control) var(--workshop-ease),
+    transform var(--workshop-motion-fast) var(--workshop-ease);
   overflow-wrap: anywhere;
 }
 .actions svg {
@@ -487,7 +490,7 @@
 .iconButton:active,
 .close:not(:disabled):active,
 .resetButton:active {
-  transform: scale(0.97);
+  transform: scale(var(--workshop-press-scale));
 }
 .field input:focus-visible,
 .customSize input:focus-visible,
@@ -577,16 +580,6 @@
     transform: none;
   }
 }
-@keyframes step-in {
-  from {
-    opacity: 0.6;
-    transform: translateX(6px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   .backdrop,
   .dialog,
@@ -624,7 +617,6 @@
 /* Give setup the same tactile response as the editor without moving its chrome. */
 .progressDots i {
   transition:
-    width var(--workshop-motion-control) var(--workshop-ease),
     background-color var(--workshop-motion-control) var(--workshop-ease),
     border-color var(--workshop-motion-control) var(--workshop-ease);
 }
@@ -645,7 +637,6 @@
   transition:
     background-color var(--workshop-motion-control) var(--workshop-ease),
     border-color var(--workshop-motion-control) var(--workshop-ease),
-    box-shadow var(--workshop-motion-control) var(--workshop-ease),
     transform var(--workshop-motion-control) var(--workshop-ease);
 }
 
@@ -674,6 +665,8 @@
 .sizeOption:active,
 .choiceCard:active,
 .customOption:active {
+  transition-duration: var(--workshop-motion-fast);
+  transition-timing-function: var(--workshop-ease);
   transform: scale(var(--workshop-press-scale));
 }
 
@@ -681,4 +674,9 @@
 .reviewRow:has(button:focus-visible) {
   background: var(--workshop-surface-subtle);
   border-color: var(--workshop-accent-hover);
+}
+
+:global(html:not([data-input-modality='pointer'])) .backdrop,
+:global(html:not([data-input-modality='pointer'])) .dialog {
+  animation: none;
 }

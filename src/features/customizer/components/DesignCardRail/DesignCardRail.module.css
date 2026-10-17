@@ -79,7 +79,10 @@
   visibility: hidden;
   transition:
     opacity 0.16s ease,
-    transform 0.16s ease,
+    background-color var(--workshop-motion-control) var(--workshop-ease),
+    border-color var(--workshop-motion-control) var(--workshop-ease),
+    color var(--workshop-motion-control) var(--workshop-ease),
+    transform var(--workshop-motion-control) var(--workshop-ease-hover),
     visibility 0s linear 0.16s;
 }
 
@@ -104,15 +107,17 @@
   transition-delay: 0s;
 }
 
-:global(.design-card-rail-shell .design-card-rail-next.icon-button:hover:not(:disabled)),
-:global(.design-card-rail-shell .design-card-rail-previous.icon-button:hover:not(:disabled)) {
-  border-color: #8f3828;
-  background: #ad432e;
-  color: #fff;
-  box-shadow:
-    0 6px 14px var(--workshop-text-16),
-    inset 0 1px 0 #ffffff40;
-  transform: translateY(calc(-50% - 1px)) scale(1);
+@media (hover: hover) and (pointer: fine) {
+  :global(.design-card-rail-shell .design-card-rail-next.icon-button:hover:not(:disabled)),
+  :global(.design-card-rail-shell .design-card-rail-previous.icon-button:hover:not(:disabled)) {
+    border-color: #8f3828;
+    background: #ad432e;
+    color: #fff;
+    box-shadow:
+      0 6px 14px var(--workshop-text-16),
+      inset 0 1px 0 #ffffff40;
+    transform: translateY(calc(-50% - 1px)) scale(1);
+  }
 }
 
 :global(.design-card-rail-shell .design-card-rail-next.icon-button:focus-visible),
@@ -145,4 +150,26 @@
   :global(.design-card-rail-shell .design-card-rail-previous.icon-button) {
     display: none;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :global(.design-card-rail-shell .design-card-rail-next.icon-button),
+  :global(.design-card-rail-shell .design-card-rail-previous.icon-button),
+  :global(.design-card-rail-shell .design-card-rail-next.icon-button:hover:not(:disabled)),
+  :global(.design-card-rail-shell .design-card-rail-previous.icon-button:hover:not(:disabled)) {
+    transform: translateY(-50%);
+  }
+}
+
+:global(html[data-input-modality='keyboard'] .design-card-rail-shell .icon-button),
+:global(
+  html[data-input-modality='keyboard'] .design-card-rail-shell .design-card-rail-next.icon-button:hover:not(:disabled)
+),
+:global(
+  html[data-input-modality='keyboard']
+    .design-card-rail-shell
+    .design-card-rail-previous.icon-button:hover:not(:disabled)
+) {
+  transition: none;
+  transform: translateY(-50%);
 }

@@ -41,6 +41,7 @@
   border-radius: 16px;
   box-shadow: inset 0 0 0 4px var(--workshop-surface-control);
   isolation: isolate;
+  transition: border-color var(--workshop-motion-control) var(--workshop-ease);
 }
 
 .swatch strong {
@@ -73,6 +74,7 @@
 }
 
 .swatch:has(input:active) {
+  transition-duration: var(--workshop-motion-fast);
   border-color: var(--workshop-accent-deep);
   box-shadow: inset 0 0 0 4px var(--workshop-accent-active-surface);
 }

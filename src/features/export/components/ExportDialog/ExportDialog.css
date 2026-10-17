@@ -219,14 +219,23 @@
   background: transparent;
   font-size: 10px;
   font-weight: 800;
+  transition:
+    transform var(--workshop-motion-control) var(--workshop-ease-hover),
+    border-color var(--workshop-motion-control) var(--workshop-ease),
+    background-color var(--workshop-motion-control) var(--workshop-ease),
+    color var(--workshop-motion-control) var(--workshop-ease);
 }
 
-.export-inline-state button:hover:not(:disabled) {
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .export-inline-state button:hover:not(:disabled) {
+    transform: translateY(var(--workshop-hover-lift));
+  }
 }
 
 .export-inline-state button:active:not(:disabled) {
-  transform: translateY(0) scale(0.97);
+  transition-duration: var(--workshop-motion-fast);
+  transition-timing-function: var(--workshop-ease);
+  transform: scale(var(--workshop-press-scale));
 }
 
 .export-inline-state .icon-button {
@@ -258,7 +267,6 @@
   transition:
     background-color var(--workshop-motion-fast) var(--workshop-ease),
     border-color var(--workshop-motion-fast) var(--workshop-ease),
-    box-shadow var(--workshop-motion-fast) var(--workshop-ease),
     transform var(--workshop-motion-fast) var(--workshop-ease);
 }
 
@@ -268,7 +276,9 @@
 }
 
 .export-choice-grid button:active:not(:disabled) {
-  transform: scale(0.99);
+  transition-duration: var(--workshop-motion-fast);
+  transition-timing-function: var(--workshop-ease);
+  transform: scale(var(--workshop-press-scale));
 }
 
 .export-choice-grid button:focus-visible {
@@ -309,7 +319,7 @@
 
 @media (hover: hover) and (pointer: fine) {
   .export-choice-grid button:hover:not(:disabled) {
-    transform: translateY(-1px);
+    transform: translateY(var(--workshop-hover-lift));
     box-shadow: 0 5px 14px var(--workshop-text-alpha-0d);
   }
 }
@@ -321,6 +331,8 @@
 
   .export-choice-grid button:hover:not(:disabled),
   .export-choice-grid button:active:not(:disabled) {
+    transition-duration: var(--workshop-motion-fast);
+    transition-timing-function: var(--workshop-ease);
     transform: none;
   }
 }

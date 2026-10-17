@@ -33,6 +33,9 @@
   background: var(--workshop-surface-control);
   color: var(--workshop-text);
   cursor: pointer;
+  transition:
+    border-color var(--workshop-motion-control) var(--workshop-ease),
+    background-color var(--workshop-motion-control) var(--workshop-ease);
 }
 
 .picker .option:has(input:checked) {
@@ -45,6 +48,7 @@
 }
 
 .picker .option:active {
+  transition-duration: var(--workshop-motion-fast);
   background: var(--workshop-accent-active-surface);
 }
 
@@ -68,6 +72,9 @@
   border-radius: 50%;
   background: var(--workshop-surface-control);
   cursor: pointer;
+  transition:
+    border-color var(--workshop-motion-control) var(--workshop-ease),
+    background-color var(--workshop-motion-control) var(--workshop-ease);
   transform: translateY(-50%);
 }
 

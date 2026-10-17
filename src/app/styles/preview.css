@@ -338,3 +338,37 @@
     border-right: 0;
   }
 }
+
+.surface-trigger,
+.surface-options button {
+  transition:
+    transform var(--workshop-motion-control) var(--workshop-ease-hover),
+    background-color var(--workshop-motion-control) var(--workshop-ease),
+    border-color var(--workshop-motion-control) var(--workshop-ease),
+    color var(--workshop-motion-control) var(--workshop-ease);
+}
+
+.surface-trigger:active:not(:disabled),
+.surface-options button:active:not(:disabled) {
+  transition-duration: var(--workshop-motion-fast);
+  transition-timing-function: var(--workshop-ease);
+  transform: scale(var(--workshop-press-scale));
+}
+
+.surface-trigger > svg {
+  transition: transform var(--workshop-motion-control) var(--workshop-ease-hover);
+}
+
+.surface-trigger[aria-expanded='true'] > svg {
+  transform: rotate(180deg);
+}
+
+html[data-input-modality='keyboard'] .surface-trigger > svg {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .surface-trigger > svg {
+    transition: none;
+  }
+}

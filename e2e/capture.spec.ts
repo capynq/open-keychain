@@ -21,6 +21,8 @@ test('captures the reviewed customizer showcase', async ({ page }, testInfo) => 
   const assertNoBrowserErrors = watchBrowserErrors(page);
 
   expect(target).toBeDefined();
+  // Freeze camera inertia as well as CSS movement for the reviewed static capture.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/create');
   await waitForReadyGeometry(page);
   await prepareForCapture(page);

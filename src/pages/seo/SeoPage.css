@@ -155,18 +155,27 @@
   line-height: 1.45;
   box-shadow: 0 0.35rem 1rem rgb(39 50 58 / 4%);
   transition:
-    border-color 0.16s ease,
-    box-shadow 0.16s ease,
-    transform 0.16s ease;
+    border-color var(--workshop-motion-control) var(--workshop-ease),
+    transform var(--workshop-motion-control) var(--workshop-ease-hover);
 }
 
-.seo-feature-card:hover,
 .seo-feature-card:focus-within,
-.seo-main > ul:not(.seo-resource-list) li:hover,
 .seo-main > ul:not(.seo-resource-list) li:focus-within {
   border-color: #d9a08f;
   box-shadow: 0 0.8rem 1.5rem rgb(39 50 58 / 10%);
-  transform: translateY(-2px);
+}
+
+.seo-feature-card:hover,
+.seo-main > ul:not(.seo-resource-list) li:hover {
+  border-color: #d9a08f;
+  box-shadow: 0 0.8rem 1.5rem rgb(39 50 58 / 10%);
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .seo-feature-card:hover,
+  .seo-main > ul:not(.seo-resource-list) li:hover {
+    transform: translateY(-2px);
+  }
 }
 
 .seo-cta {
@@ -185,8 +194,7 @@
   text-decoration: none;
   transition:
     background-color 0.16s ease,
-    box-shadow 0.16s ease,
-    transform 0.16s ease;
+    transform var(--workshop-motion-control) var(--workshop-ease-hover);
 }
 
 .seo-guide-related,
@@ -226,16 +234,32 @@
   font-size: 1.1rem;
 }
 
-.seo-cta:hover,
 .seo-cta:focus-visible {
   background: var(--seo-accent-dark);
   box-shadow: 0 0.8rem 1.25rem rgb(169 70 53 / 24%);
-  transform: translateY(-1px);
+}
+
+.seo-cta:hover {
+  background: var(--seo-accent-dark);
+  box-shadow: 0 0.8rem 1.25rem rgb(169 70 53 / 24%);
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .seo-cta:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .seo-cta:active {
   box-shadow: 0 0.3rem 0.6rem rgb(169 70 53 / 18%);
-  transform: translateY(1px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-input-modality='pointer'] .seo-cta:active {
+    transform: translateY(1px);
+    transition-duration: var(--workshop-motion-fast);
+    transition-timing-function: var(--workshop-ease);
+  }
 }
 
 .seo-faq {
@@ -331,5 +355,10 @@
   .seo-main > ul li,
   .seo-cta {
     transition: none;
+    transform: none;
+  }
+
+  .seo-cta:active {
+    transform: none;
   }
 }

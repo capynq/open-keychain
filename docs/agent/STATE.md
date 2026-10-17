@@ -1,28 +1,101 @@
 # Agent handoff
 
+## Release checkpoint — 2026-10-18
+
+- User explicitly authorized committing the current state and pushing `main`, including its two
+  existing local commits. This checkpoint supersedes earlier no-commit/no-push handoff instructions.
+- Scope: input-aware motion, full hover/state polish and audit, bounded font discovery, live camera
+  reduced-motion handling, and solid wood/metal surfaces with clipping-safe, surface-independent
+  model framing. Starting HEAD before this checkpoint: `483e749`.
+- Current gate: changed-code formatting/lint passed for every modified/new file; 26 focused unit
+  tests passed. Latest build/typecheck passed during the framing fix. Nine surface browser checks
+  passed at 100%/244% zoom across desktop/mobile/mobile-2x. Final hover/motion browser run
+  passed 30/30 across the same profiles, including the previously deferred hover/state regressions.
+- Known limitation: the pre-existing UK 320px/200%-text setup wrapping issue remains; full geometry/
+  release matrix and tracked capture regeneration were not run for this UI slice.
+
 ## Current checkpoint — 2026-10-17
 
-- Branch `main`, HEAD `decf07c` (`style(customizer): refresh export and preview summary`). The
-  approved Workshop refresh is committed locally. The photo/board changes are uncommitted; no push.
-- Latest user direction replaces the rejected Photo mode modal and scale slider with a Photo button
-  at the far right of the view/zoom toolbar, separated from scrolling camera controls, and large
-  1024/2048/4096 px cards below the preview. Each card downloads a PNG using the current
-  preview camera, zoom, scene, and aspect ratio. Capture uses a cloned camera and immediately
-  restores the renderer target before asynchronous pixel readback. Export is back to its three
-  print-format choices; page/workspace capture plumbing and unused modal/localization code removed.
-- Oak and brushed-metal boards retain the shared scene lights. The extra room environment was
-  removed after brightness feedback; material/background values are subdued. Geometry is unchanged.
-- Shared token validation and locale-key parity guards remain. Resolution-download browser coverage
-  replaces the obsolete modal tests. Browser gates/tracked capture updates await visual approval.
-- This revision passed production build/typecheck, focused ESLint, formatting, diff checking, and
-  both contract test files (3 tests). UI browser tests have not run for this revision.
-  The local preview is at `http://127.0.0.1:5194/create` (session `50149`); connected CUA browsers were
-  unavailable.
+- Branch `main`, HEAD `483e749` (`feat: photo mode`), ahead of origin by two commits. This run's
+  motion fixes are uncommitted; no commit/push authorized or performed. The starting tree was clean.
+- Keyboard focus/pagination/rail/Pro navigation is instant. Pointer navigation may scroll smoothly.
+  Shared icon transforms require hover/fine-pointer support everywhere; keyboard press movement,
+  template image zoom, step slides, strength entrances, and toast entrances are removed.
+- Pointer setup entry is 200ms without overshoot. Discovery aligns instantly and reveals only up to
+  three new visible cards in at most 260ms, once per batch. External focus, keyboard, navigation,
+  context/preference changes, and unmount cancel reveals; owned focus recovery keeps its card still.
+- The viewer observes reduced motion initially/live and removes inertia without changing pose,
+  target, or magnification. Public OrbitControls APIs flush residual rotation/pan; change handling
+  is suppressed during that synchronous transaction. Photo/export behavior is preserved.
+- Validation: frozen-lockfile install, build/typecheck, repository lint, changed-file formatting/lint,
+  and 15 focused unit tests passed. The final motion + Simple-editor browser run passed 33/33
+  across desktop/mobile/mobile-2x, including large touch hover and discovery replay prevention.
+  Six further browser checks passed: localized EN/RU 320px/200%-text setup, native export,
+  Photo download, and two shared-icon checks. UK fails because “Розташування” wraps within a word;
+  the identical failure was reproduced on unchanged HEAD `483e749` in a temporary archive.
+  Command: `playwright test e2e/quick-setup.spec.ts --grep 'enlarged text: uk' --project=desktop`.
+  This pre-existing layout issue remains outside the motion slice.
+- CUA reports no connected browsers, so visual feel/device performance has not been independently
+  inspected. Tracked showcase images were not regenerated; capture setup now disables camera
+  inertia as well as CSS motion. No full geometry/release validation was run for this UI slice.
+
+## Button feedback refinement — 2026-10-17
+
+- User feedback: some controls lacked movement and the response was too fast. Pointer hover was
+  suppressed after keyboard use until clicking; mouse/pen movement now restores pointer modality
+  without changing focus or writing attributes on every move. Touch movement does not enable hover.
+- Hover feedback uses 200ms strong ease-in-out; presses use 160ms strong ease-out. Added missing
+  button transitions/press feedback to camera, surface, Photo-resolution, and Simple text actions.
+  Keyboard/reduced-motion controls remain immediate. Existing motion work stays uncommitted.
+- This follow-up passed build/typecheck and 3 focused modality/token unit tests. Prior-run browser
+  evidence above predates it; the mouse-return browser regression was extended but not rerun.
+  Tracked captures and broader browser validation await the user's visual acceptance.
+
+## Complete hover and interaction-state audit — 2026-10-17
+
+- Reviewed all 66 application CSS files; 19 contain hover declarations. The complete selector
+  inventory and decisions are in `docs/hover-interactions.md`. The expanded audit also includes
+  active, focus, checked/selected, expanded, disabled/busy, and status states. Font-preview loading on
+  mouse hover remains unchanged.
+- Filled base transitions for swatch/hardware borders, font filters/provider/recovery controls,
+  preview appearance/surface colors, rail colors, shared account/language/consent/header controls,
+  landing carousel arrows/GitHub, and public resource links. Public control timing is aligned; the marketing-carousel hover remains 360ms.
+- Press feedback uses 160ms; control transforms/selection colors use 200ms, with native availability
+  and status/error messages immediate. Added custom checked-indicator/color transitions and surface
+  expansion chevron feedback; keyboard/reduced-motion changes remain immediate. Setup progress
+  colors transition, while its width no longer animates layout.
+- Removed shadow interpolation, gated hover movement, kept public keyboard focus spatially stable,
+  and restored static baseline transforms under reduced motion. Color feedback remains available.
+- Added `e2e/hover.spec.ts` regression sources for reduced-motion baseline decoration, focus rings,
+  large touch layouts (including carousel presses), and input-aware surface expansion. They have not
+  run; visual approval/capture and browser gates remain pending.
+- Hover-audit static gates passed. Expanded state-audit build/typecheck and 3 focused
+  modality/token tests passed. Changed-code formatting/lint and diff checks passed after the final
+  carousel touch fix. Browser regression sources remain unrun for this audit. Keep all earlier
+  session changes uncommitted.
+
+## Display-surface inspection repair — 2026-10-17
+
+- Preserved prior uncommitted motion work. Follow-up scale correction: fit and pan use model bounds
+  for every surface; scenery no longer pulls the camera back. The active board scene still caps
+  the near plane at 0.1 mm so the large floor is not sliced by the model-only near limit.
+- Follow-up user correction: removed angle-based board/floor fading. Both remain solid through
+  camera rotation, including behind the lettering. Full orbit remains available; underside views
+  naturally show the board instead of the keychain. Removed the superseded fade helper/tests.
+- Corrected persistent-board behavior passed build/typecheck, changed-code checks, 12 camera/
+  inspection unit tests and 6 focused browser regressions (desktop/mobile/mobile-2x). The first
+  wood pixel assertion misclassified brown wood as red backing; inspected screenshots, corrected
+  the classifier and added an above-view positive control before the passing rerun.
+- Added screenshot-measured framing regression: matte/wood/metal/reset retain backing bounds
+  within 1 pixel at 100% and 244% zoom on desktop/mobile/mobile-2x. Nine browser checks passed
+  after the model-only fit correction; build/typecheck, changed-code checks and 12 camera unit
+  tests also passed. Solid underside occlusion coverage remains.
+  No tracked capture assets or commits produced.
 
 ## Next action
 
-Review the simplified Photo button/resolution cards, then run focused browser coverage and update
-responsive captures after visual approval. Keep this slice uncommitted; do not push.
+Verify the pushed checkpoint and normal remote CI. Tracked desktop/mobile/mobile-2x capture
+regeneration remains a separate visual-review action.
 
 ## Current checkpoint — 2026-10-16
 

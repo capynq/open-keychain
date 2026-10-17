@@ -14,9 +14,8 @@
   box-shadow: 0 0.5rem 1.25rem rgb(39 50 58 / 4%);
   color: var(--resource-muted);
   transition:
-    border-color 0.16s ease,
-    box-shadow 0.16s ease,
-    transform 0.16s ease;
+    border-color var(--workshop-motion-control) var(--workshop-ease),
+    transform var(--workshop-motion-control) var(--workshop-ease-hover);
 }
 
 .seo-resource-card::before,
@@ -26,7 +25,7 @@
   border-radius: 999px;
   content: '';
   pointer-events: none;
-  transition: transform 0.2s ease;
+  transition: transform var(--workshop-motion-control) var(--workshop-ease-hover);
 }
 
 .seo-resource-card::before {
@@ -59,21 +58,36 @@
   --resource-wash: #d5e8d5;
 }
 
-.seo-resource-card:hover,
 .seo-resource-card:focus-within {
   border-color: #d9a08f;
   box-shadow: 0 0.8rem 1.5rem rgb(39 50 58 / 10%);
-  transform: translateY(-2px);
 }
 
-.seo-resource-card:hover::before,
 .seo-resource-card:focus-within::before {
-  transform: rotate(28deg) scale(1.08);
+  transform: rotate(18deg);
 }
 
-.seo-resource-card:hover::after,
 .seo-resource-card:focus-within::after {
-  transform: rotate(-28deg) scale(1.08);
+  transform: rotate(-20deg);
+}
+
+.seo-resource-card:hover {
+  border-color: #d9a08f;
+  box-shadow: 0 0.8rem 1.5rem rgb(39 50 58 / 10%);
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .seo-resource-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .seo-resource-card:hover::before {
+    transform: rotate(28deg) scale(1.08);
+  }
+
+  .seo-resource-card:hover::after {
+    transform: rotate(-28deg) scale(1.08);
+  }
 }
 
 .seo-resource-card > a {
@@ -90,6 +104,7 @@
   font-weight: 800;
   line-height: 1.4;
   text-decoration: none;
+  transition: color var(--workshop-motion-control) var(--workshop-ease);
 }
 
 .seo-resource-card > a::after {
@@ -106,9 +121,26 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .seo-resource-card,
+  .seo-resource-card {
+    transition: none;
+    transform: none;
+  }
+
   .seo-resource-card::before,
   .seo-resource-card::after {
     transition: none;
+  }
+
+  .seo-resource-card::before {
+    transform: rotate(18deg);
+  }
+
+  .seo-resource-card::after {
+    transform: rotate(-20deg);
+  }
+
+  .seo-resource-card,
+  .seo-resource-card:hover {
+    transform: none;
   }
 }

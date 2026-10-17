@@ -30,11 +30,8 @@ export const DesignSelectCard = ({
   const descriptionId = useId();
 
   const keepInView = (): void => {
-    const reducedMotion =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     buttonRef.current?.scrollIntoView?.({
-      behavior: reducedMotion ? 'auto' : 'smooth',
+      behavior: 'instant',
       block: 'nearest',
       inline: 'nearest',
     });

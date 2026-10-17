@@ -25,27 +25,6 @@
   font-size: calc(var(--workshop-font-description) * var(--customizer-scale, 1));
 }
 
-.strength {
-  animation: strength-reveal var(--workshop-motion-reveal) var(--workshop-ease);
-}
-
-@keyframes strength-reveal {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .strength {
-    animation: none;
-  }
-}
-
 /* Pro shares the full-width alignment of adjacent precision controls. */
 .pro .group {
   gap: var(--control-subsection-gap);

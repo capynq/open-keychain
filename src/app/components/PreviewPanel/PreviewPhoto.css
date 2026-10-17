@@ -32,6 +32,10 @@
   border-radius: var(--workshop-radius-panel);
   color: var(--workshop-text-strong);
   background: var(--workshop-surface-control);
+  transition:
+    transform var(--workshop-motion-control) var(--workshop-ease-hover),
+    border-color var(--workshop-motion-control) var(--workshop-ease),
+    background-color var(--workshop-motion-control) var(--workshop-ease);
   font: inherit;
   text-align: center;
   overflow-wrap: anywhere;
@@ -54,7 +58,9 @@
 }
 
 .photo-resolution-card:active:not(:disabled) {
-  filter: brightness(0.95);
+  transition-duration: var(--workshop-motion-fast);
+  transition-timing-function: var(--workshop-ease);
+  transform: scale(var(--workshop-press-scale));
 }
 
 .photo-resolution-card:focus-visible {
@@ -91,5 +97,11 @@
 
   .photo-resolution-card small {
     grid-column: 1 / -1;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .photo-resolution-card:hover:not(:disabled) {
+    transform: translateY(var(--workshop-hover-lift));
   }
 }

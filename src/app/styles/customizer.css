@@ -488,9 +488,8 @@ p {
   color: #4e5260;
   cursor: pointer;
   transition:
-    border-color 150ms ease,
-    background-color 150ms ease,
-    box-shadow 150ms ease;
+    border-color var(--workshop-motion-control) var(--workshop-ease),
+    background-color var(--workshop-motion-control) var(--workshop-ease);
 }
 
 .geometry-finish-profile:hover {
@@ -587,7 +586,6 @@ p {
   user-select: none;
   -webkit-user-select: none;
   transform: translateX(-50%);
-  animation: share-toast-in 180ms ease-out;
 }
 
 .share-manual-content {
@@ -655,23 +653,6 @@ p {
   color: #8b3027;
 }
 
-@keyframes share-toast-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -8px);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .toast {
-    animation: none;
-  }
-}
-
 .selected-note {
   min-width: 0;
   overflow: hidden;
@@ -697,7 +678,10 @@ p {
   border: 1px solid #dfddd6;
   background: #fbfaf6;
   border-radius: 10px;
-  transition: 0.15s ease;
+  transition:
+    color var(--workshop-motion-fast) var(--workshop-ease),
+    border-color var(--workshop-motion-fast) var(--workshop-ease),
+    background-color var(--workshop-motion-fast) var(--workshop-ease);
 }
 
 .choice-card {
@@ -1083,8 +1067,9 @@ p {
   list-style: none;
   font-size: 13px;
   transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease;
+    border-color var(--workshop-motion-control) var(--workshop-ease),
+    background-color var(--workshop-motion-control) var(--workshop-ease),
+    color var(--workshop-motion-control) var(--workshop-ease);
 }
 
 .font-local-about summary:hover,
@@ -1343,7 +1328,10 @@ p {
   color: #6f7480;
   font-size: 11px;
   font-weight: 800;
-  transition: 0.15s ease;
+  transition:
+    color var(--workshop-motion-fast) var(--workshop-ease),
+    border-color var(--workshop-motion-fast) var(--workshop-ease),
+    background-color var(--workshop-motion-fast) var(--workshop-ease);
 }
 
 .reset-settings:hover {
@@ -1368,7 +1356,10 @@ p {
   border-radius: 999px;
   background: transparent;
   color: #8a8d95;
-  transition: 0.15s ease;
+  transition:
+    color var(--workshop-motion-fast) var(--workshop-ease),
+    border-color var(--workshop-motion-fast) var(--workshop-ease),
+    background-color var(--workshop-motion-fast) var(--workshop-ease);
 }
 
 .controls-panel .section-heading > .reset-icon-button {
@@ -1807,7 +1798,6 @@ input[type='range'] {
     border-color var(--workshop-motion-control) var(--workshop-ease),
     background-color var(--workshop-motion-control) var(--workshop-ease),
     color var(--workshop-motion-fast) var(--workshop-ease),
-    box-shadow var(--workshop-motion-control) var(--workshop-ease),
     transform var(--workshop-motion-control) var(--workshop-ease);
 }
 
@@ -1827,10 +1817,62 @@ input[type='range'] {
 }
 
 .controls-panel .geometry-finish-profile:active:not(:has(input:disabled)) {
+  transition-duration: var(--workshop-motion-fast);
+  transition-timing-function: var(--workshop-ease);
   transform: scale(var(--workshop-press-scale));
 }
 
 /* Leave breathing room when contextual Simple actions reveal their Pro destination. */
 .controls-panel .adjustment-settings :is(h2, h3) {
   scroll-margin-block-start: var(--control-space-4);
+}
+
+html[data-input-modality='keyboard'] .customizer-app-shell {
+  --workshop-motion-fast: 0ms;
+  --workshop-motion-control: 0ms;
+  --workshop-hover-lift: 0px;
+  --workshop-press-scale: 1;
+}
+
+html[data-input-modality='keyboard'] .customizer-app-shell :is(.design-select-card, .geometry-finish-profile):active,
+html[data-input-modality='keyboard'] .customizer-app-shell .design-select-card:hover {
+  transform: none;
+  transition: none;
+}
+
+/* Transition only the properties that these existing hover states change. */
+.font-filter-disclosure,
+.font-filter-clear,
+.font-provider-state button {
+  transition:
+    border-color var(--workshop-motion-control) var(--workshop-ease),
+    background-color var(--workshop-motion-control) var(--workshop-ease),
+    color var(--workshop-motion-control) var(--workshop-ease);
+}
+
+/* Pressed/released feedback shares the same control roles as hover and selection. */
+.share-manual-copy {
+  transition:
+    background-color var(--workshop-motion-control) var(--workshop-ease),
+    transform var(--workshop-motion-control) var(--workshop-ease-hover);
+}
+
+.share-manual-copy:active {
+  transition-duration: var(--workshop-motion-fast);
+  transition-timing-function: var(--workshop-ease);
+  transform: scale(var(--workshop-press-scale));
+}
+
+.font-filter-clear:active:not(:disabled),
+.font-provider-state button:active:not(:disabled),
+.font-pagination button:active:not(:disabled),
+.font-local-about summary:active {
+  transition-duration: var(--workshop-motion-fast);
+  background-color: var(--workshop-accent-active-surface);
+}
+
+.font-pagination button {
+  transition:
+    border-color var(--workshop-motion-control) var(--workshop-ease),
+    background-color var(--workshop-motion-control) var(--workshop-ease);
 }

@@ -203,17 +203,23 @@
     border-color 0.14s ease,
     background-color 0.14s ease,
     color 0.14s ease,
-    transform 0.14s ease;
+    transform var(--workshop-motion-control) var(--workshop-ease-hover);
 }
 
-.profile-card button:hover:not(:disabled),
-.profile-status button:hover:not(:disabled) {
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .profile-card button:hover:not(:disabled),
+  .profile-status button:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
 }
 
-.profile-card button:active:not(:disabled),
-.profile-status button:active:not(:disabled) {
-  transform: translateY(0) scale(0.98);
+@media (prefers-reduced-motion: no-preference) {
+  html[data-input-modality='pointer'] .profile-card button:active:not(:disabled),
+  html[data-input-modality='pointer'] .profile-status button:active:not(:disabled) {
+    transition-duration: var(--workshop-motion-fast);
+    transition-timing-function: var(--workshop-ease);
+    transform: translateY(0) scale(0.98);
+  }
 }
 
 .profile-card-heading a:hover,
@@ -227,6 +233,22 @@
 .profile-text-button:focus-visible {
   outline: 2px solid #9a3d31;
   outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-card button,
+  .profile-status button,
+  .profile-card-heading a,
+  .profile-primary-link,
+  .profile-text-button {
+    transition: none;
+    transform: none;
+  }
+
+  .profile-card button:active:not(:disabled),
+  .profile-status button:active:not(:disabled) {
+    transform: none;
+  }
 }
 
 .profile-delete {
@@ -413,15 +435,5 @@
   .profile-projects li {
     align-items: flex-start;
     flex-direction: column;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .profile-card button,
-  .profile-status button,
-  .profile-card-heading a,
-  .profile-primary-link,
-  .profile-text-button {
-    transition: none;
   }
 }

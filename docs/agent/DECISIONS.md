@@ -465,3 +465,13 @@ Keep the compact centered dot list capped at 16rem and wrap all page buttons int
 Do not clip or horizontally scroll page buttons, and remove automatic dot-strip scrolling. Retain
 44px touch targets and focus-visible feedback. Font cards still swipe with their scrollbar hidden.
 This supersedes the earlier horizontally scrolling dot-strip choice.
+
+## 2026-10-17 — Input-aware, bounded Workshop motion
+
+Keyboard/assistive/programmatic navigation and setup steps are immediate. Pointer navigation may
+scroll smoothly; shared icon hover movement requires hover support and a fine pointer on all routes.
+Pointer setup entry is 200ms without overshoot. Font discovery reveals only up to three visible new
+cards, once per batch, within 260ms; dots/offscreen cards appear immediately. This supersedes the
+batch-wide sequential discovery reveal and smooth append navigation. Reduced motion is observed
+live by the camera controls as well as CSS, preserving the current pose when inertia is disabled.
+No geometry, persistence, font fetching, or export contract changes are part of this decision.
