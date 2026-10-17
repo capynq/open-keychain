@@ -1,5 +1,25 @@
 # Agent handoff
 
+## Current checkpoint — 2026-10-17
+
+- Branch `main`, HEAD `5e72341`; the worktree contains the Customizer Workshop refresh awaiting the
+  user-authorized local commit. Do not push.
+- Export choices now use icon-led cards in a native dialog; print facts use accepted geometry
+  metrics and the preview surface picker uses Lucide. Export formats and geometry are unchanged.
+- Prior handoff reported `pnpm typecheck`, `pnpm lint`, and `pnpm build` passing. This run passed
+  formatting, focused ESLint, `git diff --check`, and five focused desktop browser checks for
+  localized export, dialog keyboard behavior, and print facts. A broader two-spec run had 35
+  passes and 14 failures in additional flows; those failures were not confirmed against a clean
+  baseline.
+- The user approved the visual direction. The native dialog test now checks `::backdrop`, explicit
+  focus wrapping, Escape, and focus return. Print-facts labels wrap at narrow widths and 200% text.
+
+## Next action
+
+Commit only this Workshop refresh locally as `style(customizer): refresh export and preview
+summary`, then implement Photo mode and realistic oak/satin-metal boards as a separate change. Do
+not push.
+
 ## Current checkpoint — 2026-10-16
 
 - Branch `main`, based on `ddba30e`. The user authorized committing the current changes and

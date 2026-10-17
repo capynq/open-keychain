@@ -70,6 +70,7 @@ export const useCustomizerPageState = (
   const lastValidationErrorRequestId = useRef<number | undefined>(undefined);
   const geometryClock = useRef<{ paramsKey: string; startedAt: number } | undefined>(undefined);
   const customizer = useCustomizerParams(initialParams, candidateCallbacks);
+  const activeStyle = STYLE_CATALOG.find((style) => style.id === customizer.acceptedParams.styleId);
   const geometryInputSignature = JSON.stringify([
     customizer.acceptedParams,
     customizer.fontForId(customizer.acceptedParams.fontId).id,
@@ -165,7 +166,6 @@ export const useCustomizerPageState = (
     setDisconnectedAcknowledgedSignature(undefined);
   }, [customizer, initialAppearanceOverrides, initialParams, routeInputKey]);
 
-  const activeStyle = STYLE_CATALOG.find((style) => style.id === customizer.acceptedParams.styleId);
   const lastTemplate = useRef(customizer.acceptedParams.templateId);
   const lastGeometryError = useRef<string | undefined>(undefined);
   const lastGeometryReadyId = useRef<number | undefined>(undefined);
@@ -308,16 +308,6 @@ export const useCustomizerPageState = (
     if (randomizing) return;
     customizer.undo();
   };
-
-  useEffect(() => {
-    if (!exportOpen) return undefined;
-    const closeOnEscape = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') setExportOpen(false);
-    };
-
-    document.addEventListener('keydown', closeOnEscape);
-    return () => document.removeEventListener('keydown', closeOnEscape);
-  }, [exportOpen]);
 
   return {
     customizer,

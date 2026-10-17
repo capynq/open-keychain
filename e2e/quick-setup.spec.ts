@@ -550,6 +550,36 @@ test('direct and shared Customizer entry stays free of an automatic setup dialog
   await expect(page.getByLabel('Name or text')).toHaveValue('MIRA');
 });
 
+test('shows accepted print measurements, the saved maximum, and fit status below the preview', async ({
+  page,
+}) => {
+  const design = encodeDesignDocument(
+    createDesignDocument({
+      ...DEFAULT_PARAMS,
+      text: 'MIRA',
+      sizeEnvelope: { widthMm: 100, heightMm: 50 },
+    }),
+  );
+  await page.goto(`/create?design=${design}`);
+  await waitForReadyGeometry(page);
+
+  const facts = page.getByRole('region', { name: 'Print facts' });
+  await expect(facts).toBeVisible();
+  await expect(facts.getByText('Model size', { exact: true })).toBeVisible();
+  await expect(facts.locator('.summary-metrics strong').nth(0)).toHaveText(
+    /^\d+\.\d+ × \d+\.\d+ mm$/,
+  );
+  await expect(facts.getByText('Thickness', { exact: true })).toBeVisible();
+  await expect(facts.getByText('Printable parts', { exact: true })).toBeVisible();
+  await expect(facts.getByText('Maximum size', { exact: true })).toBeVisible();
+  await expect(facts.getByText('100.0 × 50.0 mm', { exact: true })).toBeVisible();
+  await expect(facts.getByText('Fits within maximum', { exact: true })).toBeVisible();
+  await expect(facts.locator('.summary-fit-status strong')).toHaveText('Yes');
+  await expect(facts.getByText('Template', { exact: true })).toHaveCount(0);
+  await expect(facts.getByText('Style', { exact: true })).toHaveCount(0);
+  await expect(facts.getByText('Font', { exact: true })).toHaveCount(0);
+});
+
 test('keeps actions reachable with a keyboard-sized viewport', async ({ page }) => {
   await page.goto('/create?setup=1');
   const dialog = setup(page);
@@ -694,9 +724,14 @@ test('keeps actual and maximum metrics readable at narrow enlarged text', async 
   await expect(page.locator('.preview-panel')).toHaveAttribute('data-model-ready', 'true');
   await page.addStyleTag({ content: ':root { font-size: 200%; }' });
   const summary = page.locator('.preview-summary');
-  await expect(summary.locator('.summary-fit-status')).toContainText('80.0 × 30.0 mm');
-  expect(await summary.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
-    true,
+  await expect(summary.locator('.summary-metrics strong').nth(3)).toHaveText('80.0 × 30.0 mm');
+  await expect(summary.locator('.summary-fit-status strong')).toHaveText('Да');
+  const summaryDimensions = await summary.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+  expect(summaryDimensions.scrollWidth, JSON.stringify(summaryDimensions)).toBeLessThanOrEqual(
+    summaryDimensions.clientWidth,
   );
   for (const metric of await summary.locator('.summary-metrics strong').all()) {
     expect(await metric.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(

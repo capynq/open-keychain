@@ -96,10 +96,9 @@ for (const flow of [
       await exportTrigger.press('Space');
     const dialog = page.getByRole('dialog', { name: flow.dialog });
     await expect(dialog).toBeVisible();
-    const backdrop = page.locator('.modal-backdrop');
-    await expect(backdrop).toBeVisible();
-    const modalLayout = await backdrop.evaluate((element) => {
+    const modalLayout = await dialog.evaluate((element) => {
       const style = getComputedStyle(element);
+      const backdropStyle = getComputedStyle(element, '::backdrop');
       const rect = element.getBoundingClientRect();
       return {
         position: style.position,
@@ -107,15 +106,17 @@ for (const flow of [
         left: rect.left,
         width: rect.width,
         height: rect.height,
+        backdropColor: backdropStyle.backgroundColor,
         viewportWidth: window.innerWidth,
         viewportHeight: window.innerHeight,
       };
     });
     expect(modalLayout.position).toBe('fixed');
-    expect(modalLayout.top).toBe(0);
-    expect(modalLayout.left).toBe(0);
-    expect(modalLayout.width).toBe(modalLayout.viewportWidth);
-    expect(modalLayout.height).toBe(modalLayout.viewportHeight);
+    expect(modalLayout.backdropColor).not.toBe('rgba(0, 0, 0, 0)');
+    expect(modalLayout.top).toBeGreaterThanOrEqual(0);
+    expect(modalLayout.left).toBeGreaterThanOrEqual(0);
+    expect(modalLayout.top + modalLayout.height).toBeLessThanOrEqual(modalLayout.viewportHeight);
+    expect(modalLayout.left + modalLayout.width).toBeLessThanOrEqual(modalLayout.viewportWidth);
 
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
@@ -232,8 +233,14 @@ test('treats adjusted NIKITA Bubble geometry as ready and keeps width warnings e
   await expect(page.locator('.status-pill')).toHaveText('Ready · adjusted', { timeout: 10000 });
   await expect(page.getByText(/adjusted to .* mm high/)).toBeVisible();
   await page.getByRole('button', { name: 'Export' }).click();
-  await expect(page.getByRole('dialog', { name: 'Choose an export' })).toBeVisible();
-  await expect(page.getByRole('dialog').getByRole('button', { name: /STL file/ })).toBeEnabled();
+  const dialog = page.getByRole('dialog', { name: 'Choose an export' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /STL file/ })).toBeEnabled();
+  await expect(dialog.locator('.export-preflight')).toHaveClass(
+    /export-preflight--ready-with-warnings/,
+  );
+  await dialog.locator('.export-preflight summary').click();
+  await expect(dialog.locator('.export-preflight-body li').first()).toBeVisible();
   await page.getByLabel('Text size').fill('12');
   await page.getByLabel('Name or text').fill('WWWWWWWWWWWWWWWWWWWWWWWW');
   await expect(page.locator('.status-pill')).toHaveText('Ready · adjusted', { timeout: 10000 });
@@ -273,7 +280,7 @@ test('supports bounded zoom, preview surfaces, locales, and configurable 3MF exp
   await page.goto('/create');
   await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await expect(page.locator('.status-pill')).toHaveText('Ready to print', { timeout: 10000 });
-  await expect(page.getByRole('region', { name: 'Model summary' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Print facts' })).toBeVisible();
   for (let click = 0; click < 8; click += 1)
     await page.getByRole('button', { name: 'Zoom in' }).click();
   await page.getByRole('button', { name: 'Zoom out' }).click();
@@ -301,6 +308,34 @@ test('supports bounded zoom, preview surfaces, locales, and configurable 3MF exp
     .getByRole('button', { name: /3MF · единый объект/ })
     .click();
   expect((await download).suggestedFilename()).toMatch(/\.3mf$/);
+});
+
+test('uses a native export dialog with contained focus, Escape, backdrop close, and focus return', async ({
+  page,
+}) => {
+  await page.goto('/create');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
+  await expect(page.locator('.status-pill')).toHaveText('Ready to print', { timeout: 10000 });
+
+  const exportButton = page.getByRole('button', { name: 'Export' });
+  await exportButton.click();
+  const dialog = page.getByRole('dialog', { name: 'Choose an export' });
+  const firstChoice = dialog.getByRole('button', { name: /STL file/ });
+  await expect(dialog).toBeVisible();
+  await expect(firstChoice).toBeFocused();
+
+  await dialog.getByRole('button', { name: 'Close' }).focus();
+  await page.keyboard.press('Shift+Tab');
+  await expect(dialog.locator('.export-choice-grid button').last()).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(exportButton).toBeFocused();
+
+  await exportButton.click();
+  await expect(dialog).toBeVisible();
+  await page.mouse.click(2, 2);
+  await expect(dialog).toBeHidden();
+  await expect(exportButton).toBeFocused();
 });
 test('exports the selected base and raised-text colors as named 3MF volumes', async ({ page }) => {
   await page.goto('/create');

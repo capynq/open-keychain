@@ -1,3 +1,5 @@
+import { Box, Combine, Layers3 } from 'lucide-react';
+
 import type { Locale } from '../../../../infrastructure/i18n/config';
 import type { ExportActionsState } from '../../model/use-export-actions';
 
@@ -20,20 +22,29 @@ export const ExportChoices = ({
   return (
     <div className="export-choice-grid">
       <button type="button" disabled={disabled} onClick={() => onDownload('stl')}>
-        <strong>{t(locale, 'exportStl')}</strong>
-        <small>{t(locale, 'exportStlDescription')}</small>
+        <Box className="export-choice-icon" aria-hidden="true" />
+        <span className="export-choice-copy">
+          <strong>{t(locale, 'exportStl')}</strong>
+          <small>{t(locale, 'exportStlDescription')}</small>
+        </span>
       </button>
       <button
         type="button"
         disabled={disabled}
         onClick={() => onDownload('3mf', 'separate-colors')}
       >
-        <strong>{t(locale, 'export3mfSeparate')}</strong>
-        <small>{t(locale, 'export3mfSeparateDescription')}</small>
+        <Layers3 className="export-choice-icon" aria-hidden="true" />
+        <span className="export-choice-copy">
+          <strong>{t(locale, 'export3mfSeparate')}</strong>
+          <small>{t(locale, 'export3mfSeparateDescription')}</small>
+        </span>
       </button>
       <button type="button" disabled={disabled} onClick={() => onDownload('3mf', 'merged')}>
-        <strong>{t(locale, 'export3mfMerged')}</strong>
-        <small>{t(locale, 'export3mfMergedDescription')}</small>
+        <Combine className="export-choice-icon" aria-hidden="true" />
+        <span className="export-choice-copy">
+          <strong>{t(locale, 'export3mfMerged')}</strong>
+          <small>{t(locale, 'export3mfMergedDescription')}</small>
+        </span>
       </button>
     </div>
   );

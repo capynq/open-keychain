@@ -1698,11 +1698,6 @@ input[type='range'] {
     gap: 7px;
   }
 
-  .summary-tags > span {
-    flex: 1 1 calc(50% - 6px);
-    max-width: none;
-  }
-
   .surface-trigger {
     min-height: 44px;
   }

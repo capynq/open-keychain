@@ -1,3 +1,4 @@
+import { ChevronDown } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { ResetIconButton } from '@/shared/ui/ResetIconButton';
@@ -52,9 +53,7 @@ export const SurfacePopover = ({
       >
         <span className={`surface-dot surface-dot-${surfacePreset}`} aria-hidden="true" />
         <span>{t(locale, surfacePreset)}</span>
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="m7 9 5 5 5-5" />
-        </svg>
+        <ChevronDown aria-hidden="true" />
       </button>
       {open && (
         <div

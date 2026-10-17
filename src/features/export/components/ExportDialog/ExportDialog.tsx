@@ -38,8 +38,32 @@ export const ExportDialog = ({
   disconnectedExportAcknowledged: boolean;
   onDisconnectedExportAcknowledged: (acknowledged: boolean) => void;
 }) => {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const printableWhenClosed = useRef(preflight.printable);
   const wasOpen = useRef(false);
   const reportedSuccess = useRef(false);
+
+  useEffect(() => {
+    if (!open) printableWhenClosed.current = preflight.printable;
+  }, [open, preflight.printable]);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog || !open) return undefined;
+
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    dialog.showModal();
+    const initialFocus = printableWhenClosed.current
+      ? dialog.querySelector<HTMLButtonElement>('.export-choice-grid button:not(:disabled)')
+      : dialog.querySelector<HTMLButtonElement>('.modal-close');
+    initialFocus?.focus();
+
+    return () => {
+      dialog.close();
+      previous?.focus();
+    };
+  }, [open]);
+
   useEffect(() => {
     const justOpened = open && !wasOpen.current;
     if (justOpened) {
@@ -61,34 +85,65 @@ export const ExportDialog = ({
     void exportState.download(format, mode);
   };
   return (
-    <div
-      className="modal-backdrop"
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+    <dialog
+      ref={dialogRef}
+      className="export-modal"
+      aria-modal="true"
+      aria-labelledby="export-title"
+      aria-busy={exportState.downloading}
+      onCancel={(event) => {
+        event.preventDefault();
+        if (!exportState.downloading) onClose();
+      }}
+      onClick={(event) => {
+        if (exportState.downloading || event.target !== event.currentTarget) return;
+        const bounds = event.currentTarget.getBoundingClientRect();
+        if (
+          event.clientX < bounds.left ||
+          event.clientX > bounds.right ||
+          event.clientY < bounds.top ||
+          event.clientY > bounds.bottom
+        )
+          onClose();
+      }}
+      onKeyDown={(event) => {
+        if (event.key !== 'Tab') return;
+        const dialog = dialogRef.current;
+        if (!dialog) return;
+        const focusable = Array.from(
+          dialog.querySelectorAll<HTMLElement>(
+            'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary, a[href], [tabindex]:not([tabindex="-1"])',
+          ),
+        ).filter((element) => element.getClientRects().length > 0);
+        const first = focusable[0];
+        const last = focusable.at(-1);
+        const active = document.activeElement;
+
+        if (!first || !last) return;
+        if (event.shiftKey && (active === first || !dialog.contains(active))) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && (active === last || !dialog.contains(active))) {
+          event.preventDefault();
+          first.focus();
+        }
       }}
     >
-      <section
-        className="export-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="export-title"
-      >
-        <div className="export-modal-heading">
-          <div>
-            <h2 id="export-title">{t(locale, 'exportTitle')}</h2>
-          </div>
-          <IconButton
-            action="close-export"
-            className="modal-close"
-            icon={X}
-            label={t(locale, 'close')}
-            motion="scale"
-            onClick={onClose}
-            autoFocus={!exportState.downloading}
-            disabled={exportState.downloading}
-          />
+      <div className="export-modal-heading">
+        <div>
+          <h2 id="export-title">{t(locale, 'exportTitle')}</h2>
         </div>
+        <IconButton
+          action="close-export"
+          className="modal-close"
+          icon={X}
+          label={t(locale, 'close')}
+          motion="scale"
+          onClick={onClose}
+          disabled={exportState.downloading}
+        />
+      </div>
+      <div className="export-modal-body">
         <p className="export-modal-copy">{t(locale, 'exportDescription')}</p>
         <ExportPreflight
           locale={locale}
@@ -120,7 +175,7 @@ export const ExportDialog = ({
           printable={preflight.printable}
           onDownload={handleDownload}
         />
-      </section>
-    </div>
+      </div>
+    </dialog>
   );
 };

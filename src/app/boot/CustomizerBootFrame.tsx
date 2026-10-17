@@ -1,3 +1,5 @@
+import type { Locale } from '@/infrastructure/i18n';
+
 import { CustomizerNavigationHeader } from '@/app/components/CustomizerNavigationHeader/CustomizerNavigationHeader';
 import { PreviewPanel } from '@/app/components/PreviewPanel/PreviewPanel';
 import {
@@ -7,12 +9,9 @@ import {
   normalizeParams,
   type TemplateId,
 } from '@/domain/keychain/model/types';
-import { STYLE_CATALOG } from '@/domain/keychain/styles/style-builder';
-import { TEMPLATE_CATALOG } from '@/domain/keychain/templates/template-builder';
 import { ControlsPanel } from '@/features/customizer/components/ControlsPanel/ControlsPanel';
 import { useCustomizerParams } from '@/features/customizer/hooks/useCustomizerParams';
 import { previewStatus } from '@/features/preview/model/preview-status';
-import { styleName, templateName, type Locale } from '@/infrastructure/i18n';
 import '@/app/styles/customizer.css';
 import '@/app/styles/preview.css';
 
@@ -38,17 +37,7 @@ export const CustomizerBootFrame = ({
   const customizer = useCustomizerParams(params);
   const appearance =
     templateId === 'articulated-name' ? ARTICULATED_PRINT_APPEARANCE : DEFAULT_PRINT_APPEARANCE;
-  const activeTemplate = TEMPLATE_CATALOG.find((template) => template.id === templateId)!;
-  const activeStyle = STYLE_CATALOG.find(
-    (style) => activeTemplate.styles.includes(style.id) && style.id === params.styleId,
-  );
   const geometry = { result: undefined, busy: true, error: undefined, current: false };
-  const modelInfo = {
-    templateId,
-    template: templateName(locale, templateId, activeTemplate.name),
-    style: activeStyle ? styleName(locale, params.styleId, activeStyle.name) : undefined,
-    font: customizer.selectedFont.name,
-  };
 
   return (
     <main className="app-shell customizer-app-shell customizer-boot-frame" aria-label="Customizer">
@@ -77,10 +66,9 @@ export const CustomizerBootFrame = ({
           surfacePreset="matte"
           status={previewStatus(geometry, locale)}
           exportOpen={false}
-          modelInfo={modelInfo}
+          modelInfo={{ templateId }}
           onSurfaceChange={noop}
           onSurfaceReset={noop}
-          neutralSummary={neutral}
         />
       </div>
     </main>

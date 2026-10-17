@@ -16,10 +16,11 @@ import type { Locale } from '../../../infrastructure/i18n/config';
 import { applyPrintAppearanceOverrides } from '../../../domain/keychain/model/types';
 import { t } from '../../../infrastructure/i18n/utils';
 import styles from './PreviewPanel.module.css';
-import { PreviewSummary, type PreviewModelInfo } from './PreviewSummary';
+import { PreviewSummary } from './PreviewSummary';
 import { SurfacePopover } from './SurfacePopover';
 
 type ViewerComponent = typeof ViewerComponentExport;
+type PreviewModelInfo = { templateId: string };
 
 export type PreviewPanelProps = {
   locale: Locale;
@@ -37,7 +38,6 @@ export type PreviewPanelProps = {
   appearanceOverrides?: PrintAppearanceOverrides;
   onSurfaceChange: (preset: SurfacePresetId) => void;
   onSurfaceReset: () => void;
-  neutralSummary?: boolean;
 };
 
 export const PreviewPanel = ({
@@ -50,7 +50,6 @@ export const PreviewPanel = ({
   appearanceOverrides = { version: 1 },
   onSurfaceChange,
   onSurfaceReset,
-  neutralSummary = false,
 }: PreviewPanelProps) => {
   const [Viewer, setViewer] = useState<ViewerComponent | undefined>(undefined);
   const [viewerUnavailable, setViewerUnavailable] = useState(false);
@@ -192,14 +191,7 @@ export const PreviewPanel = ({
           </div>
         )}
       </div>
-      <PreviewSummary
-        locale={locale}
-        geometry={geometry}
-        status={status}
-        modelInfo={modelInfo}
-        exportOpen={exportOpen}
-        neutral={neutralSummary}
-      />
+      <PreviewSummary locale={locale} geometry={geometry} status={status} exportOpen={exportOpen} />
     </section>
   );
 };
