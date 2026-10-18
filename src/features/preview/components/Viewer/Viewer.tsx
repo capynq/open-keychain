@@ -8,6 +8,7 @@ import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { GeometryResult, PrintAppearance } from '../../../../domain/keychain/model/types';
 import type { Locale } from '../../../../infrastructure/i18n/config';
 import type { PhotoCaptureApi } from '../../model/photo-capture';
+import type { PhotoFormat } from '../../model/photo-format';
 
 import { t } from '../../../../infrastructure/i18n/utils';
 import {
@@ -587,7 +588,7 @@ export const Viewer = ({
       invalidate();
     };
 
-    const capturePreview = async (longEdge: number): Promise<Blob> => {
+    const capturePreview = async (longEdge: number, format: PhotoFormat = 'png'): Promise<Blob> => {
       if (
         !resultRef.current ||
         stateRef.current !== viewerState ||
@@ -662,10 +663,10 @@ export const Viewer = ({
           0,
         );
         return await new Promise<Blob>((resolve, reject) => {
-          canvas.toBlob(
-            (blob) => (blob ? resolve(blob) : reject(new Error('Image encoding failed.'))),
-            'image/png',
-          );
+          const handleBlob = (blob: Blob | null): void =>
+            blob ? resolve(blob) : reject(new Error('Image encoding failed.'));
+          if (format === 'jpg') canvas.toBlob(handleBlob, 'image/jpeg', 0.92);
+          else canvas.toBlob(handleBlob, 'image/png');
         });
       } finally {
         target.dispose();
@@ -694,8 +695,8 @@ export const Viewer = ({
     let captureQueue = Promise.resolve();
     const captureApi: PhotoCaptureApi = {
       maxTextureSize: renderer.capabilities.maxTextureSize,
-      capture: (options) => {
-        const task = captureQueue.then(() => capturePreview(options));
+      capture: (options, format = 'png') => {
+        const task = captureQueue.then(() => capturePreview(options, format));
 
         captureQueue = task.then(
           () => undefined,

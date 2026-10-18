@@ -1,0 +1,77 @@
+.root {
+  display: flex;
+  align-items: center;
+  gap: var(--workshop-space-3);
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  min-height: var(--workshop-touch-target);
+  padding: var(--workshop-space-3) var(--workshop-space-4);
+  border: 1px solid transparent;
+  border-radius: var(--workshop-radius-control);
+  background: transparent;
+  color: var(--workshop-text-strong);
+  font: inherit;
+  font-weight: 700;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform var(--workshop-motion-control) var(--workshop-ease),
+    background-color var(--workshop-motion-control) var(--workshop-ease),
+    border-color var(--workshop-motion-control) var(--workshop-ease),
+    color var(--workshop-motion-control) var(--workshop-ease);
+}
+.leading {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 0.625rem;
+  color: var(--popover-action-icon, var(--workshop-accent-strong));
+  background: color-mix(in srgb, var(--popover-action-icon, var(--workshop-accent)) 12%, var(--workshop-surface));
+  transition: transform var(--workshop-motion-control) var(--workshop-ease-hover);
+}
+.root svg {
+  flex: 0 0 auto;
+}
+.label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.detail {
+  overflow-wrap: normal;
+  flex: 0 1 auto;
+  font-size: var(--workshop-font-description);
+  color: var(--workshop-text-muted);
+}
+.root:hover:not(:disabled),
+.selected {
+  border-color: var(--popover-action-icon, var(--workshop-accent-strong));
+  background: color-mix(in srgb, var(--popover-action-icon, var(--workshop-accent)) 10%, var(--workshop-surface));
+}
+.root:active:not(:disabled) {
+  background: var(--workshop-selected-surface);
+  transition-duration: var(--workshop-motion-fast);
+}
+.root:focus-visible {
+  outline: var(--workshop-focus-ring);
+  outline-offset: -3px;
+}
+.root:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  :global(html[data-input-modality='pointer']) .root:hover:not(:disabled) .leading {
+    transform: scale(1.05);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  :global(html[data-input-modality='pointer']) .root:active:not(:disabled) {
+    transform: scale(var(--workshop-press-scale));
+  }
+}

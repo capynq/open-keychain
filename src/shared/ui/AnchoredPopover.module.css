@@ -1,0 +1,31 @@
+.positioner {
+  z-index: 1000;
+  width: min(17.5rem, calc(100vw - 1rem));
+  outline: none;
+}
+.positioner[data-sizing='content'] {
+  width: max-content;
+  max-width: min(17.5rem, calc(100vw - 1rem));
+}
+.positioner[data-state='closed'] {
+  pointer-events: none;
+}
+.root {
+  display: grid;
+  align-content: start;
+  gap: var(--workshop-space-2);
+  box-sizing: border-box;
+  width: 100%;
+  max-height: var(--popover-available-height, calc(100dvh - 1rem));
+  min-width: 0;
+  padding: var(--workshop-space-3);
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid color-mix(in srgb, var(--workshop-accent) 40%, var(--workshop-border));
+  border-radius: var(--workshop-radius-panel);
+  background: var(--workshop-surface);
+  color: var(--workshop-text);
+  box-shadow: 0 16px 34px var(--workshop-text-strong-alpha-40);
+  font-size: var(--workshop-font-label);
+  overflow-wrap: anywhere;
+}

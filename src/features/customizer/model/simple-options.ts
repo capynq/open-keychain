@@ -285,4 +285,10 @@ export const simpleOptionMatches = (
   params: KeychainParams,
   changes: Partial<KeychainParams>,
 ): boolean =>
-  Object.entries(changes).every(([key, value]) => params[key as keyof KeychainParams] === value);
+  Object.entries(changes).every(([key, value]) => {
+    const current = params[key as keyof KeychainParams];
+    // Printer-grid normalization can turn 0.6 into 0.6000000000000001.
+    return typeof current === 'number' && typeof value === 'number'
+      ? Number.isFinite(current) && Number.isFinite(value) && Math.abs(current - value) <= 1e-9
+      : current === value;
+  });

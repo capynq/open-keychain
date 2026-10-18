@@ -1,7 +1,4 @@
-import { Camera } from 'lucide-react';
-import { useCallback, useEffect, useId, useState } from 'react';
-
-import { IconButton } from '@/shared/ui/IconButton';
+import { useCallback, useEffect, useState } from 'react';
 
 import type {
   GeometryResult,
@@ -14,6 +11,7 @@ import type {
   Viewer as ViewerComponentExport,
 } from '../../../features/preview/components/Viewer/Viewer';
 import type { PhotoCaptureApi } from '../../../features/preview/model/photo-capture';
+import type { PhotoDesign } from '../../../features/preview/model/photo-filename';
 import type { PreviewStatus } from '../../../features/preview/model/preview-status';
 import type { Locale } from '../../../infrastructure/i18n/config';
 
@@ -40,6 +38,7 @@ export type PreviewPanelProps = {
   status: PreviewStatus;
   exportOpen: boolean;
   modelInfo: PreviewModelInfo;
+  photoDesign?: PhotoDesign;
   appearanceOverrides?: PrintAppearanceOverrides;
   onSurfaceChange: (preset: SurfacePresetId) => void;
   onSurfaceReset: () => void;
@@ -52,12 +51,11 @@ export const PreviewPanel = ({
   status,
   exportOpen,
   modelInfo,
+  photoDesign,
   appearanceOverrides = { version: 1 },
   onSurfaceChange,
   onSurfaceReset,
 }: PreviewPanelProps) => {
-  const [photoOpen, setPhotoOpen] = useState(false);
-  const photoChoicesId = useId();
   const [photoCapture, setPhotoCapture] = useState<PhotoCaptureApi>();
   const [Viewer, setViewer] = useState<ViewerComponent | undefined>(undefined);
   const [viewerUnavailable, setViewerUnavailable] = useState(false);
@@ -166,22 +164,13 @@ export const PreviewPanel = ({
             onUnavailable={onViewerUnavailable}
             onPhotoCaptureChange={setPhotoCapture}
             toolbarAction={
-              <IconButton
-                action="preview-photo"
-                className={photoOpen ? 'active' : undefined}
-                icon={Camera}
-                label={t(locale, 'photoButton')}
-                motion="none"
-                aria-expanded={photoOpen}
-                aria-controls={photoChoicesId}
+              <PreviewPhoto
+                locale={locale}
+                captureApi={photoCapture}
+                design={photoDesign}
                 disabled={
-                  !photoCapture ||
-                  pendingPreview ||
-                  viewerUnavailable ||
-                  !!geometry.error ||
-                  !geometry.result
+                  pendingPreview || viewerUnavailable || !!geometry.error || !geometry.result
                 }
-                onClick={() => setPhotoOpen((previous) => !previous)}
               />
             }
           />
@@ -219,13 +208,6 @@ export const PreviewPanel = ({
           </div>
         )}
       </div>
-      <PreviewPhoto
-        open={photoOpen}
-        choicesId={photoChoicesId}
-        locale={locale}
-        captureApi={photoCapture}
-        disabled={pendingPreview || viewerUnavailable || !!geometry.error || !geometry.result}
-      />
       <PreviewSummary locale={locale} geometry={geometry} status={status} exportOpen={exportOpen} />
     </section>
   );

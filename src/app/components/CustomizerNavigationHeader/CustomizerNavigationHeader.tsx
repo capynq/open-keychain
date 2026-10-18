@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import { Download, Share2, Shuffle, SlidersHorizontal, Undo2 } from 'lucide-react';
 import { Link } from 'react-router';
 
@@ -19,6 +21,7 @@ export const CustomizerNavigationHeader = ({
   exportOpen,
   onExportOpen,
   onShare,
+  shareAction,
   onSetupOpen,
   setupOpen = false,
   onRandomize,
@@ -34,6 +37,7 @@ export const CustomizerNavigationHeader = ({
   exportOpen: boolean;
   onExportOpen?: () => void;
   onShare?: () => void;
+  shareAction?: ReactNode;
   onSetupOpen?: () => void;
   setupOpen?: boolean;
   onRandomize?: () => void;
@@ -73,16 +77,18 @@ export const CustomizerNavigationHeader = ({
         aria-haspopup="dialog"
         aria-expanded={exportOpen}
       />
-      <IconButton
-        action="share"
-        className="share-header-button"
-        icon={Share2}
-        iconSize={22}
-        label={t(locale, 'share')}
-        motion="nudge"
-        onClick={onShare}
-        disabled={randomizing}
-      />
+      {shareAction ?? (
+        <IconButton
+          action="share"
+          className="share-header-button"
+          icon={Share2}
+          iconSize={22}
+          label={t(locale, 'share')}
+          motion="nudge"
+          onClick={onShare}
+          disabled={randomizing}
+        />
+      )}
     </div>
     <div className="topbar-actions">
       <IconButton

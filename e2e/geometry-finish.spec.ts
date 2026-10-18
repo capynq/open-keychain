@@ -167,3 +167,27 @@ for (const profile of ['Chamfered', 'Rounded']) {
     await expect(page.locator('.candidate-feedback-rejected')).toHaveCount(0);
   });
 }
+
+test('keeps Simple Strong backing strength selected after geometry normalization', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/create');
+  await waitForReadyGeometry(page);
+  const finish = page.getByTestId('geometry-finish-settings');
+  const strengths = finish.locator('[data-simple-group="base-finish-strength"]');
+  for (const profile of ['Chamfered', 'Rounded']) {
+    await finish
+      .getByRole('radiogroup', { name: 'Backing profile', exact: true })
+      .getByRole('radio', { name: profile, exact: true })
+      .check();
+    await waitForReadyGeometry(page);
+    const strong = strengths.locator('input[value="strong"]');
+    await strengths.getByText('Strong', { exact: true }).click();
+    await waitForReadyGeometry(page);
+    await expect(strong).toBeChecked();
+    await expect(strengths.locator('legend')).not.toContainText('Custom');
+    await expect(page.locator('.candidate-feedback-rejected')).toHaveCount(0);
+  }
+  await strengths.scrollIntoViewIfNeeded();
+  await strengths.screenshot({ path: testInfo.outputPath('strong-backing-selected.png') });
+});

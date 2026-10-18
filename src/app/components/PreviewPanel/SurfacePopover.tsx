@@ -1,6 +1,8 @@
 import { ChevronDown } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
+import { AnchoredPopover } from '@/shared/ui/AnchoredPopover';
+import { PopoverAction } from '@/shared/ui/PopoverAction';
 import { ResetIconButton } from '@/shared/ui/ResetIconButton';
 
 import type { SurfacePresetId } from '../../../features/preview/components/Viewer/Viewer';
@@ -22,76 +24,49 @@ export const SurfacePopover = ({
   onReset: () => void;
 }) => {
   const [open, setOpen] = useState(false);
-  const popoverRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const closeOnEscape = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    const closeOnOutsidePointer = (event: PointerEvent): void => {
-      if (!popoverRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-
-    document.addEventListener('keydown', closeOnEscape);
-    document.addEventListener('pointerdown', closeOnOutsidePointer);
-    return () => {
-      document.removeEventListener('keydown', closeOnEscape);
-      document.removeEventListener('pointerdown', closeOnOutsidePointer);
-    };
-  }, [open]);
 
   return (
-    <div className="surface-popover" ref={popoverRef}>
-      <button
-        type="button"
-        className="surface-trigger"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-controls="surface-menu"
-        data-icon-motion="rotate"
-        onClick={() => setOpen((current) => !current)}
+    <div className="surface-popover">
+      <AnchoredPopover
+        open={open}
+        onOpenChange={setOpen}
+        label={t(locale, 'surface')}
+        placement="bottom-end"
+        trigger={(props) => (
+          <button {...props} type="button" className="surface-trigger" data-icon-motion="rotate">
+            <span className={`surface-dot surface-dot-${surfacePreset}`} aria-hidden="true" />
+            <span>{t(locale, surfacePreset)}</span>
+            <ChevronDown aria-hidden="true" />
+          </button>
+        )}
       >
-        <span className={`surface-dot surface-dot-${surfacePreset}`} aria-hidden="true" />
-        <span>{t(locale, surfacePreset)}</span>
-        <ChevronDown aria-hidden="true" />
-      </button>
-      {open && (
-        <div
-          className="surface-menu"
-          id="surface-menu"
-          role="dialog"
-          aria-label={t(locale, 'surface')}
-        >
-          <div className="surface-menu-heading">
-            <span>{t(locale, 'surface')}</span>
-            <ResetIconButton
-              label={t(locale, 'resetSurface')}
+        <div className="surface-menu-heading">
+          <span>{t(locale, 'surface')}</span>
+          <ResetIconButton
+            label={t(locale, 'resetSurface')}
+            onClick={() => {
+              onReset();
+              setOpen(false);
+            }}
+          />
+        </div>
+        <div className="surface-popover-options">
+          {SURFACE_PRESETS.map((preset) => (
+            <PopoverAction
+              key={preset}
+              kind="button"
+              label={t(locale, preset)}
+              selected={surfacePreset === preset}
+              aria-pressed={surfacePreset === preset}
               onClick={() => {
-                onReset();
+                onSurfaceChange(preset);
                 setOpen(false);
               }}
+              leading={<span className={`surface-dot surface-dot-${preset}`} aria-hidden="true" />}
             />
-          </div>
-          <div className="surface-options">
-            {SURFACE_PRESETS.map((preset) => (
-              <button
-                type="button"
-                key={preset}
-                className={surfacePreset === preset ? 'selected' : ''}
-                aria-pressed={surfacePreset === preset}
-                onClick={() => {
-                  onSurfaceChange(preset);
-                  setOpen(false);
-                }}
-              >
-                <span className={`surface-dot surface-dot-${preset}`} aria-hidden="true" />
-                <span>{t(locale, preset)}</span>
-              </button>
-            ))}
-          </div>
+          ))}
         </div>
-      )}
+      </AnchoredPopover>
     </div>
   );
 };

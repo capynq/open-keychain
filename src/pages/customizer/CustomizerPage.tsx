@@ -10,6 +10,7 @@ import { TEMPLATE_CATALOG } from '@/domain/keychain/templates/template-builder';
 import { applyPrintAppearanceOverrides } from '@/entities/keychain/model/types';
 import { useQuickSetup } from '@/features/customizer/hooks/useQuickSetup';
 import { setupAppearance } from '@/features/customizer/model/quick-setup';
+import { SharePopover } from '@/features/share/components/SharePopover';
 import { useWebMcp } from '@/features/webmcp/hooks/useWebMcp';
 
 import type { Locale } from '../../infrastructure/i18n/config';
@@ -66,7 +67,14 @@ export const CustomizerPage = ({
         onLocaleChange={onLocaleChange}
         exportOpen={state.exportOpen}
         onExportOpen={state.openExport}
-        onShare={() => void state.shareDesign()}
+        shareAction={
+          <SharePopover
+            locale={locale}
+            share={state.share}
+            fontFallback={routeModel.sharedFontFallback}
+            disabled={state.randomizing}
+          />
+        }
         onSetupOpen={quickSetup.openSetup}
         setupOpen={quickSetup.setupOpen}
         onRandomize={state.randomize}
@@ -77,58 +85,17 @@ export const CustomizerPage = ({
         hosted={state.hosted}
         currentParams={state.customizer.params}
       />
-      {(routeModel.hasInvalidDesign ||
-        routeModel.sharedFontFallback ||
-        state.shareFontFallback ||
-        state.shareStatus !== 'idle' ||
-        state.randomizeFailure) &&
+      {(routeModel.hasInvalidDesign || routeModel.sharedFontFallback || state.randomizeFailure) &&
         (() => {
-          const variant: ToastVariant = routeModel.hasInvalidDesign
-            ? 'error'
-            : state.randomizeFailure
-              ? 'error'
-              : state.shareStatus === 'failed'
-                ? 'error'
-                : state.shareStatus === 'manual'
-                  ? 'manual'
-                  : 'success';
+          const variant: ToastVariant =
+            routeModel.hasInvalidDesign || state.randomizeFailure ? 'error' : 'success';
           const message = routeModel.hasInvalidDesign
             ? t(locale, 'shareInvalid')
             : state.randomizeFailure
               ? t(locale, 'randomizeFailed')
-              : state.shareStatus === 'failed'
-                ? t(locale, 'shareFailed')
-                : state.shareStatus === 'manual'
-                  ? t(locale, 'shareManual')
-                  : routeModel.sharedFontFallback || state.shareFontFallback
-                    ? t(locale, 'shareFontFallback')
-                    : t(locale, 'shareCopied');
+              : t(locale, 'shareFontFallback');
 
-          return (
-            <Toast variant={variant}>
-              {state.shareStatus === 'manual' && state.shareUrl ? (
-                <div className="share-manual-content">
-                  <span>{message}</span>
-                  <input
-                    aria-label={t(locale, 'shareManualPrompt')}
-                    className="share-manual-input"
-                    onFocus={(event) => event.currentTarget.select()}
-                    readOnly
-                    value={state.shareUrl}
-                  />
-                  <button
-                    className="share-manual-copy"
-                    onClick={() => void state.shareDesign()}
-                    type="button"
-                  >
-                    {t(locale, 'copyLink')}
-                  </button>
-                </div>
-              ) : (
-                message
-              )}
-            </Toast>
-          );
+          return <Toast variant={variant}>{message}</Toast>;
         })()}
       <CustomizerWorkspace
         locale={locale}

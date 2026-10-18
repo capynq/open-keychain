@@ -1,10 +1,10 @@
 import type { LucideIcon } from 'lucide-react';
-import type { ButtonHTMLAttributes } from 'react';
+import type { ComponentPropsWithRef } from 'react';
 
 import styles from './IconButton.module.css';
 
 export type IconButtonProps = Omit<
-  ButtonHTMLAttributes<HTMLButtonElement>,
+  ComponentPropsWithRef<'button'>,
   'aria-label' | 'children' | 'title'
 > & {
   action?: string;

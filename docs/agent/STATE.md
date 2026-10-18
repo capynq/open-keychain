@@ -1,5 +1,58 @@
 # Agent handoff
 
+## Current work — 2026-10-18
+
+- Starting branch `main`, HEAD `8972e8f`, clean and synchronized with origin. User requested the
+  approved compact Photo/Surface/Share popup plan; this request authorizes edits/checks, not a new
+  commit or push. Previous release authorization applies to its completed checkpoint only.
+- Completed shared portaled, non-modal Photo/Surface/Share popovers and typed button/link rows.
+  Photo no longer expands below the viewer. Capture and share hooks guard duplicate/stale/unmounted
+  work; download success closes Photo, copying/native success closes Share, and recovery stays inside.
+  Surface selection/reset behavior and accepted-state design serialization are preserved.
+- Validation: frozen-lockfile install, build/typecheck, full repository lint, changed-code formatting/
+  lint and diff checks passed. Fifteen focused unit/contract tests passed. Eighteen browser workflow
+  checks passed on desktop/mobile/mobile-2x; six final Photo/localized layout checks also passed after
+  fixing PNG wrapping at doubled text. EN/RU/UK, 320px, 200% text, keyboard focus/Tab/Escape,
+  no-reflow bounds, PNG downloads, native-share success/cancellation (mocked), copy fallback and
+  accepted-design edits are covered. External social composers were checked as encoded links only.
+- Independent review: no remaining material findings. Saved Photo/Share and localized screenshots
+  were inspected under `/private/tmp/keychain-popover-review` and
+  `/private/tmp/keychain-popover-final-visual`; tracked showcase assets were not regenerated.
+- Follow-up polish is implemented: reversible pointer popup presence, colored action wells,
+  official Simple Icons social artwork/colors, and typed PNG/JPG export (PNG default, JPEG quality
+  0.92). Existing PhotoCaptureApi.capture(longEdge) remains PNG; optional format adds JPG.
+- Follow-up validation: frozen install, build/typecheck, full lint, changed-code gate and diff check
+  passed. Eighteen unit/contract tests and 21 browser checks passed. Browser checks cover both formats
+  at 1024/2048/4096, branded SVG colors, pointer open/close/reversal, live reduced motion, instant
+  keyboard behavior and localized 320px doubled-text layouts on desktop/mobile/mobile-2x. Independent
+  review found no material issues. The earlier 15/18/6 counts describe the preceding popup version.
+- Final desktop/mobile/mobile-2x screenshots were inspected under
+  `/private/tmp/keychain-popup-brand-jpg-review`. No tracked captures were regenerated.
+- Latest follow-up: PNG/JPG segments now fill the action width equally; photo filenames use accepted
+  text, template, applicable style and resolution, preserving Unicode names and bounding their length.
+  Filename metadata is captured before asynchronous rendering so later design edits cannot rename an
+  earlier image. Templates without backing styles omit the retained style value.
+- Latest validation: 11 focused filename/download tests, build/typecheck, full lint, changed-code gate
+  and diff check passed. Nine browser checks passed across desktop/mobile/mobile-2x, covering equal
+  selector alignment, PNG/JPG names at all resolutions, focus/no resize and EN/RU/UK 320px doubled
+  text. Desktop/mobile captures inspected under `/private/tmp/keychain-photo-naming-review`.
+- Share-width follow-up: shared popovers support opt-in content sizing; Share now fits its longest
+  action instead of inheriting Photo's fixed width, with the existing viewport/maximum-width cap.
+  Build/typecheck, full lint, changed-code gate and diff check passed. Compact desktop/mobile captures
+  inspected under `/private/tmp/keychain-share-width-review`. Nine browser checks passed across
+  desktop/mobile/mobile-2x: compact width, social/native actions, clipboard recovery and localized
+  320px doubled-text layouts.
+- Backing-strength fix: exact preset comparison misclassified normalized 0.6 mm values
+  (0.6000000000000001) as Custom. Numeric preset matching now permits only 1e-9 rounding noise;
+  genuinely different values stay Custom. Regression failed before the fix and passes afterward.
+- Strength validation: seven focused preset/edge-model tests, build/typecheck, full lint,
+  changed-code gate and diff check passed. Three browser checks passed on desktop/mobile/mobile-2x
+  for Strong after real Chamfered/Rounded geometry acceptance; desktop/mobile selected-state captures
+  inspected under `/private/tmp/keychain-strength-verified`. Initial browser attempts had test-only
+  hidden-input/relative-locator issues, corrected by clicking the visible Strong label.
+- Working tree contains the uncommitted popup slice and backing-strength fix. No commit, push or deployment performed.
+  Next action: review Strong backing selection and Photo/Share at `http://127.0.0.1:5198/create` before a scoped release.
+
 ## Release checkpoint — 2026-10-18
 
 - User explicitly authorized committing the current state and pushing `main`, including its two

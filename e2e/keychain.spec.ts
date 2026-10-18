@@ -339,7 +339,7 @@ test('uses a native export dialog with contained focus, Escape, backdrop close, 
   await expect(exportButton).toBeFocused();
 });
 
-test('downloads the current preview from three simple photo resolution cards', async ({ page }) => {
+test('downloads the current preview from an anchored photo resolution popup', async ({ page }) => {
   await page.goto('/create');
   await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await expect(page.locator('.status-pill')).toHaveText('Ready to print', { timeout: 10000 });
@@ -351,25 +351,39 @@ test('downloads the current preview from three simple photo resolution cards', a
     .locator('.viewer-toolbar-photo')
     .getByRole('button', { name: 'Photo', exact: true })
     .click();
-  const choices = page.getByRole('group', { name: 'Photo resolution' });
+  const choices = page.getByRole('dialog', { name: 'Photo resolution' });
   await expect(choices.getByRole('button')).toHaveCount(3);
-  await expect(page.getByRole('dialog')).toHaveCount(0);
-  for (const resolution of [1024, 2048, 4096]) {
-    const choice = choices.getByRole('button', { name: new RegExp(`${resolution} px`) });
-    await expect(choices.getByRole('button', { name: /1024 px/ })).toBeEnabled();
-    if (resolution === 4096 && (await choice.isDisabled())) continue;
-    await expect(choice).toBeEnabled();
-    const pending = page.waitForEvent('download');
-    await choice.click();
-    const download = await pending;
-    expect(download.suggestedFilename()).toBe(`keychain-photo-${resolution}.png`);
-    const photoPath = await download.path();
-    expect(photoPath).toBeTruthy();
-    const metadata = await sharp(photoPath!).metadata();
-    expect(metadata.format).toBe('png');
-    expect(Math.max(metadata.width!, metadata.height!)).toBe(resolution);
-    await expect(viewer).toHaveAttribute('data-view', 'top');
-    await expect(viewer).toHaveAttribute('data-zoom-scale', zoom!);
+  for (const format of ['png', 'jpg'] as const) {
+    if (format === 'jpg') {
+      await page.getByRole('button', { name: 'Photo', exact: true }).click();
+      await choices.getByText('JPG', { exact: true }).first().click();
+    }
+    for (const resolution of [1024, 2048, 4096]) {
+      const choice = choices.getByRole('button', { name: new RegExp(`${resolution} px`) });
+      await expect(
+        choices.getByRole('radio', { name: format.toUpperCase(), exact: true }),
+      ).toBeChecked();
+      if (resolution === 4096 && (await choice.isDisabled())) {
+        await page.keyboard.press('Escape');
+        continue;
+      }
+      const pending = page.waitForEvent('download');
+      await choice.click();
+      const download = await pending;
+      expect(download.suggestedFilename()).toBe(
+        `alex-name-keychain-contour-${resolution}px.${format}`,
+      );
+      const photoPath = await download.path();
+      expect(photoPath).toBeTruthy();
+      const metadata = await sharp(photoPath!).metadata();
+      expect(metadata.format).toBe(format === 'jpg' ? 'jpeg' : 'png');
+      expect(Math.max(metadata.width!, metadata.height!)).toBe(resolution);
+      await expect(viewer).toHaveAttribute('data-view', 'top');
+      await expect(viewer).toHaveAttribute('data-zoom-scale', zoom!);
+      await expect(choices).toBeHidden();
+      if (resolution !== 4096)
+        await page.getByRole('button', { name: 'Photo', exact: true }).click();
+    }
   }
   for (const locale of ['ru', 'uk'] as const) {
     await selectLocale(page, locale);

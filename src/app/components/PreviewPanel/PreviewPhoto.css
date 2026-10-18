@@ -1,80 +1,86 @@
 .preview-photo {
   display: grid;
-  flex: 0 0 auto;
-  justify-items: end;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  justify-items: stretch;
   gap: var(--workshop-space-3);
-  padding: var(--workshop-space-1) var(--workshop-space-1) var(--workshop-space-4);
-}
-
-.photo-resolution-card svg {
-  width: 20px;
-  height: 20px;
+  padding: var(--workshop-space-1);
 }
 
 .photo-resolution-choices {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--workshop-space-4);
+  gap: var(--workshop-space-2);
   width: 100%;
-  padding: var(--workshop-space-1);
   box-sizing: border-box;
 }
 
-.photo-resolution-card {
+.photo-format-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.photo-format-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+  box-sizing: border-box;
+  padding: 2px;
+  border: 1px solid var(--workshop-border-strong);
+  border-radius: var(--workshop-radius-control);
+  background: var(--workshop-surface-control);
+}
+
+.photo-format-option {
   display: grid;
   place-items: center;
-  align-content: center;
-  gap: var(--workshop-space-3);
   min-width: 0;
-  min-height: 120px;
-  padding: var(--workshop-space-5);
-  border: 1px solid var(--workshop-border-strong);
-  border-radius: var(--workshop-radius-panel);
-  color: var(--workshop-text-strong);
-  background: var(--workshop-surface-control);
-  transition:
-    transform var(--workshop-motion-control) var(--workshop-ease-hover),
-    border-color var(--workshop-motion-control) var(--workshop-ease),
-    background-color var(--workshop-motion-control) var(--workshop-ease);
-  font: inherit;
-  text-align: center;
-  overflow-wrap: anywhere;
-}
-
-.photo-resolution-card strong {
-  font-size: 1.25rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.photo-resolution-card span,
-.photo-resolution-card small {
+  min-height: var(--workshop-touch-target);
+  border-radius: calc(var(--workshop-radius-control) - 2px);
   color: var(--workshop-text-muted);
-  font-size: var(--workshop-font-description);
+  font-size: var(--workshop-font-label);
+  cursor: pointer;
+  transition:
+    color var(--workshop-motion-control) var(--workshop-ease),
+    background-color var(--workshop-motion-control) var(--workshop-ease);
 }
 
-.photo-resolution-card:hover:not(:disabled) {
-  border-color: var(--workshop-accent-strong);
-  background: var(--workshop-selected-surface);
+.photo-format-option input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 
-.photo-resolution-card:active:not(:disabled) {
+.photo-format-option:hover:not(:has(input:disabled)) {
+  color: var(--workshop-accent-strong);
+  background: var(--workshop-surface-subtle);
+}
+.photo-format-option:active:not(:has(input:disabled)) {
   transition-duration: var(--workshop-motion-fast);
-  transition-timing-function: var(--workshop-ease);
-  transform: scale(var(--workshop-press-scale));
+}
+.photo-format-option:has(input:checked) {
+  color: var(--workshop-text-strong);
+  background: var(--workshop-selected-surface);
+  box-shadow: inset 0 0 0 1px var(--workshop-border-strong);
 }
 
-.photo-resolution-card:focus-visible {
+.photo-format-option:has(input:focus-visible) {
   outline: var(--workshop-focus-ring);
   outline-offset: 2px;
 }
 
-.photo-resolution-card:disabled {
+.photo-format-fieldset:disabled .photo-format-option {
   cursor: not-allowed;
   opacity: 0.6;
 }
 
 .preview-photo-status {
-  justify-self: start;
+  min-height: 1.2em;
+  justify-self: stretch;
   margin: 0;
   color: var(--workshop-text);
   font-size: var(--workshop-font-description);
@@ -82,26 +88,4 @@
 
 .preview-photo-status:empty {
   display: none;
-}
-
-@media (max-width: 520px) {
-  .photo-resolution-choices {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .photo-resolution-card {
-    grid-template-columns: auto 1fr auto;
-    min-height: 88px;
-    text-align: left;
-  }
-
-  .photo-resolution-card small {
-    grid-column: 1 / -1;
-  }
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .photo-resolution-card:hover:not(:disabled) {
-    transform: translateY(var(--workshop-hover-lift));
-  }
 }

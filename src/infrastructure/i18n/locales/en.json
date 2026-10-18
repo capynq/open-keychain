@@ -124,6 +124,10 @@
   "documentProfileTitle": "Open Keychain 3D | Seller workspace",
   "metaProfileDescription": "Sign in to manage reusable print presets and browser-local name-keychain batches.",
   "export": "Export",
+  "shareViaDevice": "Share via device…",
+  "shareNativeFailed": "Could not open sharing. Copy the link or try again.",
+  "shareCompleted": "Design shared.",
+  "sharePreparing": "Preparing share…",
   "share": "Share",
   "shareCopied": "Link copied",
   "shareManual": "Link ready",
@@ -919,6 +923,7 @@
   "simpleEffectlightDescription": "A subtle softened edge",
   "simpleEffectmediumDescription": "A clearly softened edge",
   "simpleEffectstrongDescription": "A more pronounced edge",
+  "photoFormat": "Format",
   "photoButton": "Photo",
   "photoResolution": "Photo resolution",
   "photoPixels": "{resolution} px"

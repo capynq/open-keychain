@@ -50,6 +50,7 @@ export const CustomizerWorkspace = ({
         status={state.status}
         exportOpen={state.exportOpen}
         modelInfo={state.modelInfo}
+        photoDesign={state.customizer.acceptedParams}
         appearanceOverrides={state.appearanceOverrides}
         onSurfaceChange={setSurface}
         onSurfaceReset={() => setSurface('matte')}

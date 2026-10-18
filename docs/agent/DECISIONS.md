@@ -475,3 +475,21 @@ cards, once per batch, within 260ms; dots/offscreen cards appear immediately. Th
 batch-wide sequential discovery reveal and smooth append navigation. Reduced motion is observed
 live by the camera controls as well as CSS, preserving the current pose when inertia is disabled.
 No geometry, persistence, font fetching, or export contract changes are part of this decision.
+
+## 2026-10-18 — Shared anchored actions without preview reflow
+
+Photo resolution choices overlay the existing camera button rather than expanding below the viewer.
+Photo, Surface and Share share a non-modal, portaled Floating UI primitive with viewport collision
+handling and focus/dismissal behavior. Feature hooks retain async capture and sharing state; shared
+UI accepts typed button/link actions without knowing domain operations. This supersedes the Photo
+resolution-card section below the preview. Share sends accepted editable-design links only through
+copy/native sharing or explicit social composer links; no social SDK/backend/upload is added.
+
+## 2026-10-18 — Popup motion, brand artwork and JPG
+
+Pointer popup presence uses existing 200ms/160ms CSS motion roles with a reversible 0.95 scale and
+opacity transition anchored to the trigger. Keyboard/reduced-motion changes stay immediate; exit
+content is inert and excluded from accessibility before visual removal. Animate a separate inner
+surface so Floating UI positioning never competes for transform. Social artwork and colors come
+from tree-shaken Simple Icons assets. Photo adds a mounted-only PNG/JPG radio choice, keeping PNG as
+the backward-compatible capture default; JPG uses image/jpeg, .jpg filenames and quality 0.92.

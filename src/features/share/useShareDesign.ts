@@ -1,11 +1,20 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { KeychainParams, PrintAppearanceOverrides } from '../../domain/keychain/model/types';
 
 import { copyTextToClipboard } from '../../shared/lib/clipboard';
 import { buildShareUrl } from './model/share-url';
 
-export type ShareDesignStatus = 'idle' | 'copied' | 'manual' | 'failed';
+export type ShareDesignFeedback =
+  | { status: 'idle' }
+  | { status: 'preparing'; url: string }
+  | { status: 'copied'; url: string }
+  | { status: 'manual'; url: string }
+  | { status: 'failed'; url: string; error: string }
+  | { status: 'native-completed'; url: string }
+  | { status: 'native-failed'; url: string; error: string };
+
+export type ShareDesignStatus = ShareDesignFeedback['status'];
 
 type UseShareDesignOptions = {
   params: KeychainParams;
@@ -13,59 +22,175 @@ type UseShareDesignOptions = {
   hasNonBundledFont: boolean;
 };
 
-type ShareDesignResult = {
-  shareDesign: () => Promise<void>;
-  shareStatus: ShareDesignStatus;
+export type ShareDesignApi = {
+  feedback: ShareDesignFeedback;
   shareFontFallback: boolean;
-  shareUrl?: string;
+  shareUrl: string;
+  canShareViaDevice: boolean;
+  copyLink: () => Promise<boolean>;
+  shareViaDevice: () => Promise<boolean>;
+  clearFeedback: () => void;
 };
 
-const SHARE_STATUS_DURATION_MS = 4_000;
-const SHARE_MANUAL_STATUS_DURATION_MS = 15_000;
+const getShareUrl = (
+  params: KeychainParams,
+  appearanceOverrides: PrintAppearanceOverrides,
+): string => buildShareUrl(window.location.href, params, appearanceOverrides);
+
+const isNativeShareSupported = (url: string): boolean => {
+  if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') return false;
+
+  if (typeof navigator.canShare !== 'function') return true;
+
+  try {
+    return navigator.canShare({ url });
+  } catch {
+    return false;
+  }
+};
 
 export const useShareDesign = ({
   params,
   appearanceOverrides,
   hasNonBundledFont,
-}: UseShareDesignOptions): ShareDesignResult => {
-  const [shareStatus, setShareStatus] = useState<ShareDesignStatus>('idle');
+}: UseShareDesignOptions): ShareDesignApi => {
+  const [feedback, setFeedback] = useState<ShareDesignFeedback>({ status: 'idle' });
   const [shareFontFallback, setShareFontFallback] = useState(false);
-  const [shareUrl, setShareUrl] = useState<string>();
+  const requestId = useRef(0);
+  const mounted = useRef(true);
+  const busy = useRef(false);
+  const designSignature = useMemo(
+    () => JSON.stringify([params, appearanceOverrides]),
+    [appearanceOverrides, params],
+  );
+  const previousSignature = useRef(designSignature);
 
   useEffect(() => {
-    if (shareStatus === 'idle' && !shareFontFallback) return undefined;
+    mounted.current = true;
 
-    const timeout = window.setTimeout(
-      () => {
-        setShareStatus('idle');
-        setShareFontFallback(false);
-        setShareUrl(undefined);
-      },
-      shareStatus === 'manual' ? SHARE_MANUAL_STATUS_DURATION_MS : SHARE_STATUS_DURATION_MS,
-    );
+    return () => {
+      mounted.current = false;
+      requestId.current += 1;
+    };
+  }, []);
 
-    return () => window.clearTimeout(timeout);
-  }, [shareFontFallback, shareStatus]);
+  useEffect(() => {
+    if (previousSignature.current === designSignature) return;
 
-  const shareDesign = useCallback(async (): Promise<void> => {
+    previousSignature.current = designSignature;
+    requestId.current += 1;
+    busy.current = false;
+    setFeedback({ status: 'idle' });
+    setShareFontFallback(false);
+  }, [designSignature]);
+
+  const locationHref = typeof window === 'undefined' ? '' : window.location.href;
+  const currentUrl = useMemo(
+    () => (locationHref ? buildShareUrl(locationHref, params, appearanceOverrides) : ''),
+    [appearanceOverrides, locationHref, params],
+  );
+  const canShareViaDevice = isNativeShareSupported(currentUrl);
+
+  const copyLink = useCallback(async (): Promise<boolean> => {
+    if (busy.current) return false;
+
+    const url = getShareUrl(params, appearanceOverrides);
+    const operationId = ++requestId.current;
+    busy.current = true;
+    setShareFontFallback(hasNonBundledFont);
+    setFeedback({ status: 'preparing', url });
+
     try {
-      const value = buildShareUrl(window.location.href, params, appearanceOverrides);
+      if (await copyTextToClipboard(url)) {
+        if (!mounted.current || operationId !== requestId.current) return false;
 
-      setShareFontFallback(hasNonBundledFont);
-      if (await copyTextToClipboard(value)) {
-        setShareUrl(undefined);
-        setShareStatus('copied');
+        setFeedback({ status: 'copied', url });
 
-        return;
+        return true;
       }
 
-      setShareUrl(value);
-      setShareStatus('manual');
+      if (!mounted.current || operationId !== requestId.current) return false;
+
+      setFeedback({ status: 'manual', url });
+
+      return false;
     } catch {
-      setShareUrl(undefined);
-      setShareStatus('failed');
+      if (!mounted.current || operationId !== requestId.current) return false;
+
+      setFeedback({ status: 'failed', url, error: 'clipboard-failed' });
+
+      return false;
+    } finally {
+      if (operationId === requestId.current) busy.current = false;
     }
   }, [appearanceOverrides, hasNonBundledFont, params]);
 
-  return { shareDesign, shareStatus, shareFontFallback, shareUrl };
+  const shareViaDevice = useCallback(async (): Promise<boolean> => {
+    const share = typeof navigator !== 'undefined' ? navigator.share : undefined;
+
+    if (!share) return false;
+
+    if (busy.current) return false;
+
+    const url = getShareUrl(params, appearanceOverrides);
+    const operationId = ++requestId.current;
+    busy.current = true;
+    setShareFontFallback(hasNonBundledFont);
+
+    setFeedback({ status: 'preparing', url });
+    // Keep the native call in the click handler so mobile browsers retain user activation.
+    let result: Promise<void>;
+
+    try {
+      result = share.call(navigator, { url });
+    } catch {
+      busy.current = false;
+      setFeedback({ status: 'native-failed', url, error: 'native-share-failed' });
+
+      return false;
+    }
+
+    return result.then(
+      () => {
+        if (!mounted.current || operationId !== requestId.current) return false;
+
+        setFeedback({ status: 'native-completed', url });
+        busy.current = false;
+
+        return true;
+      },
+      (error: unknown) => {
+        if (!mounted.current || operationId !== requestId.current) return false;
+
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          setFeedback({ status: 'idle' });
+          busy.current = false;
+
+          return false;
+        }
+
+        setFeedback({ status: 'native-failed', url, error: 'native-share-failed' });
+        busy.current = false;
+
+        return false;
+      },
+    );
+  }, [appearanceOverrides, hasNonBundledFont, params]);
+
+  const clearFeedback = useCallback((): void => {
+    requestId.current += 1;
+    busy.current = false;
+    setFeedback({ status: 'idle' });
+    setShareFontFallback(false);
+  }, []);
+
+  return {
+    feedback,
+    shareFontFallback,
+    shareUrl: currentUrl,
+    canShareViaDevice,
+    copyLink,
+    shareViaDevice,
+    clearFeedback,
+  };
 };

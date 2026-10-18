@@ -124,6 +124,10 @@
   "documentProfileTitle": "Open Keychain 3D | Рабочее пространство продавца",
   "metaProfileDescription": "Войдите, чтобы управлять повторно используемыми настройками печати и локальными пакетами именных брелоков.",
   "export": "Экспорт",
+  "shareViaDevice": "Поделиться через устройство…",
+  "shareNativeFailed": "Не удалось открыть отправку. Скопируйте ссылку или попробуйте ещё раз.",
+  "shareCompleted": "Дизайн отправлен.",
+  "sharePreparing": "Подготовка ссылки…",
   "share": "Поделиться",
   "shareCopied": "Ссылка скопирована",
   "shareManual": "Ссылка готова",
@@ -914,6 +918,7 @@
   "simpleEffectlightDescription": "Слегка смягчённый край",
   "simpleEffectmediumDescription": "Заметно смягчённый край",
   "simpleEffectstrongDescription": "Более выраженная обработка края",
+  "photoFormat": "Формат",
   "photoButton": "Фото",
   "photoResolution": "Разрешение фото",
   "photoPixels": "{resolution} пкс"

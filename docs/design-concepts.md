@@ -16,10 +16,24 @@ repeated landing-page persuasion.
 alive: selected choices, regenerated preview, progress, and print states show what
 changed. Make comes first; precision and manufacturing controls are contextual.
 
-Photo capture uses an icon button at the far right of the view/zoom toolbar, separated from the
-scrolling camera controls. It reveals large 1024, 2048, and 4096 px resolution cards below the preview.
-Choosing a card downloads a PNG of the current camera, zoom, surface, and aspect ratio. Use the
-preview's existing camera controls to frame the image.
+Photo capture uses the existing far-right toolbar icon and a compact, non-modal anchored popup with
+1024, 2048 and 4096 px actions with a PNG/JPG format choice (PNG by default). The two format segments fill the action width equally. Photo filenames include the accepted name, template, applicable style and resolution. Opening Photo must not resize the preview, change framing, or
+add a section below it. Successful downloads close the popup; preparing/error feedback stays inside,
+while success is announced without consuming layout space. Camera controls continue to own framing. JPG uses 92% quality and the same opaque scene backdrop;
+formats never change image dimensions or camera state.
+
+Photo, Surface and Share use the shared portaled `AnchoredPopover` and `PopoverAction` conventions.
+Popups flip/shift within the viewport, preserve native Tab navigation, dismiss on Escape/outside
+press/focus-out, and restore trigger focus when appropriate. They use 44px action rows and keep
+keyboard/reduced-motion entry immediate. Pointer popups scale from 95% at the trigger and fade in
+over 200ms, then reverse over 160ms; closing content becomes inert immediately. Only opacity and
+transform animate, independently of fixed positioning. Scenery, geometry and camera state never depend on popup state.
+
+Share sizes its popup to the action content within the shared viewport cap. It offers the current editable design link through Copy link, supported device sharing, Telegram,
+WhatsApp, Facebook and X. Social icons use Simple Icons artwork with each brand's supplied color and a quiet tinted icon well.
+Social destinations open their own composer through ordinary links; no
+social widgets, SDKs, image upload, identity tracking or automatic publishing is introduced. Clipboard
+fallback and recoverable errors stay inside the popup; native-share cancellation is neutral.
 
 New-design entry offers an optional focused Workshop setup: **Name & size → Keyring position →
 Opening → Font styles → Colors → Review**. The two keyring steps appear only for supported templates.
@@ -79,7 +93,7 @@ finishes use separate profiles; text finishing affects only its visible front ed
   and keeps Simple mode. Closing while a font is loading must not apply it later.
 - Chamfered/Rounded profiles reveal up to three distinct Light/Medium/Strong strengths, limited to
   verified 0.2 mm steps and a 0.8 mm Simple maximum. Backing strengths set equal top/bottom amounts;
-  Pro preserves independent precision. Unmatched strengths show Custom while retaining the profile.
+  Pro preserves independent precision. Numeric preset recognition tolerates only floating-point rounding noise (1e-9), so printer-grid normalization preserves the chosen strength. Unmatched strengths show Custom while retaining the profile.
 - The Customizer has no page footer. Header actions are at least 48 px; Export has a visible label
   and 52 px minimum height. On narrow screens, action groups wrap into separate rows. Center the
   whole bounded workspace rather than centering the preview inside an oversized right column;

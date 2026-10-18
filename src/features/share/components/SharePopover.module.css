@@ -1,0 +1,57 @@
+.root {
+  display: grid;
+  gap: var(--workshop-space-3);
+  min-width: 0;
+}
+
+.actions {
+  display: grid;
+  gap: var(--workshop-space-1);
+  min-width: 0;
+}
+
+.status,
+.hint {
+  margin: 0;
+  color: var(--workshop-text-muted);
+  font-size: var(--workshop-font-description);
+  overflow-wrap: anywhere;
+}
+
+.status:empty {
+  display: none;
+}
+
+.hint {
+  color: var(--workshop-text);
+}
+
+.manual {
+  display: grid;
+  gap: var(--workshop-space-2);
+  min-width: 0;
+}
+
+.manual label {
+  font-size: var(--workshop-font-description);
+  font-weight: 700;
+}
+
+.input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--workshop-touch-target);
+  padding: var(--workshop-space-2) var(--workshop-space-3);
+  border: 1px solid var(--workshop-border-strong);
+  border-radius: var(--workshop-radius-control);
+  background: var(--workshop-surface-muted);
+  color: var(--workshop-text);
+  font: inherit;
+  font-size: var(--workshop-font-description);
+}
+
+.input:focus-visible {
+  outline: var(--workshop-focus-ring);
+  outline-offset: 2px;
+}
