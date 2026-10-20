@@ -329,3 +329,63 @@ html[data-input-modality='keyboard'] .surface-trigger > svg {
     transition: none;
   }
 }
+
+/* Stacked layouts must keep an intrinsic preview height instead of shrinking into the toolbar. */
+@media (max-width: 900px) {
+  .customizer-app-shell .workspace > .controls-panel {
+    flex: 0 0 auto;
+  }
+
+  .customizer-app-shell .workspace > .preview-panel {
+    flex: 0 0 auto;
+  }
+
+  .customizer-app-shell .viewer-wrap {
+    height: min(520px, 75vw);
+    max-height: none;
+  }
+}
+
+.viewer[data-preview-capability='unavailable'] .viewer-surface,
+.viewer--unavailable {
+  overflow: auto;
+  overscroll-behavior: contain;
+  scroll-padding: var(--workshop-space-3);
+}
+
+.viewer .viewer-unavailable {
+  box-sizing: border-box;
+  width: min(100%, 30rem);
+  min-width: 0;
+  padding: var(--workshop-space-4);
+}
+
+.viewer-wrap[data-preview-unavailable='true'] {
+  height: auto;
+  max-height: none;
+  aspect-ratio: auto;
+  contain: layout;
+}
+
+.viewer-wrap[data-preview-unavailable='true'] > .viewer {
+  height: auto;
+}
+
+.viewer-wrap[data-preview-unavailable='true'] .viewer-surface {
+  flex: 0 0 auto;
+  min-height: 50dvh;
+  max-height: 70dvh;
+}
+
+.viewer-wrap[data-preview-unavailable='true'] > .surface-popover {
+  display: none;
+}
+
+.viewer--unavailable {
+  align-items: flex-start;
+  max-height: 70dvh;
+}
+
+.viewer .viewer-unavailable p {
+  font-size: var(--workshop-font-description);
+}

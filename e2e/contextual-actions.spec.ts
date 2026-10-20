@@ -103,12 +103,17 @@ test('Share offers encoded social links and native sharing without changing layo
     ['Telegram', 't.me', 'url'],
     ['WhatsApp', 'wa.me', 'text'],
     ['Facebook', 'www.facebook.com', 'u'],
-    ['X', 'twitter.com', 'url'],
+    ['X', 'x.com', 'url'],
   ]) {
     const link = popup.getByRole('link', { name, exact: true });
     const url = new URL((await link.getAttribute('href'))!);
     expect(url.hostname).toBe(host);
-    expect(url.searchParams.get(parameter)).toContain('design=');
+    const destination = new URL(url.searchParams.get(parameter)!);
+    expect(destination.origin).toBe(new URL(page.url()).origin);
+    expect(destination.searchParams.get('lang')).toBe(new URL(page.url()).searchParams.get('lang'));
+    const document = decodeDesignDocument(destination.searchParams.get('design')!);
+    expect(document).toBeDefined();
+    expect(document && designParams(document).text).toBe('ALEX');
     await expect(link).toHaveAttribute('target', '_blank');
     await expect(link).toHaveAttribute('rel', /noopener/);
     await expect(link.locator('[data-social-brand]')).toHaveCSS('color', brandColors[name]);
@@ -215,7 +220,7 @@ test('localized popups remain usable at 320px and doubled text', async ({ page }
 
 test('successful copying closes Share and later design edits do not reopen it', async ({
   page,
-}) => {
+}, testInfo) => {
   await page.evaluate(() => {
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -227,8 +232,17 @@ test('successful copying closes Share and later design edits do not reopen it', 
   const popup = page.getByRole('dialog', { name: 'Share', exact: true });
   await popup.getByRole('button', { name: 'Copy link', exact: true }).click();
   await expect(popup).toBeHidden();
+  const toast = page.locator('[data-notification-toast]');
+  await expect(toast.getByRole('status')).toHaveText(
+    'Link copiedPaste it to share your editable design.',
+  );
+  await expect(trigger).toBeFocused();
+  const bounds = (await toast.locator(':scope > div').boundingBox())!;
+  expect(bounds.x + bounds.width / 2).toBeCloseTo(page.viewportSize()!.width / 2, 0);
+  await page.screenshot({ path: testInfo.outputPath('copied-link-toast.png') });
   await page.getByRole('textbox', { name: 'Name or text', exact: true }).fill('OLIVER');
   await waitForReadyGeometry(page);
+  await expect(toast).toBeHidden();
   await expect(popup).toBeHidden();
   await trigger.click();
   await expect(popup).toBeVisible();
@@ -273,4 +287,53 @@ test('pointer popovers animate reversibly while keyboard and reduced motion stay
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(popup).toHaveAttribute('data-motion', 'instant');
   await expect(panel).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
+});
+
+test('copied-link toast wraps at 320px with doubled localized text and can be dismissed', async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.clock.install();
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: async () => undefined },
+    });
+  });
+  for (const locale of ['en', 'ru', 'uk']) {
+    await page.goto(`/create?lang=${locale}`);
+    await expect(page.locator('main:not(.customizer-boot-frame) .status-pill.ready')).toBeVisible();
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = '32px';
+    });
+    await page.locator('[data-icon-action="share"]').click();
+    const popup = page.locator('[data-anchored-popover][data-state="open"]');
+    await popup.getByRole('button').first().click();
+    const toast = page.locator('[data-notification-toast]');
+    await expect(toast.getByRole('status')).not.toBeEmpty();
+    const fits = await toast.evaluate((element) => {
+      const panel = element.firstElementChild!;
+      const bounds = panel.getBoundingClientRect();
+      return (
+        bounds.x >= 15 &&
+        bounds.right <= innerWidth - 15 &&
+        bounds.y >= 0 &&
+        bounds.bottom <= innerHeight &&
+        panel.scrollWidth <= panel.clientWidth
+      );
+    });
+    expect(fits).toBe(true);
+    const dismiss = toast.getByRole('button');
+    expect((await dismiss.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await page.screenshot({ path: testInfo.outputPath(`copied-${locale}-320-2x.png`) });
+    await toast.hover();
+    await page.clock.fastForward(7000);
+    await expect(toast).toBeVisible();
+    await dismiss.focus();
+    await page.mouse.move(0, 0);
+    await page.clock.fastForward(7000);
+    await expect(toast).toBeVisible();
+    await dismiss.press('Enter');
+    await expect(toast).toBeHidden();
+  }
 });

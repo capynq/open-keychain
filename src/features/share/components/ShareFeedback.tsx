@@ -1,27 +1,22 @@
-import { Copy, Share2 } from 'lucide-react';
+import { Copy } from 'lucide-react';
 import { useId, type ReactElement } from 'react';
 
 import { PopoverAction } from '@/shared/ui/PopoverAction';
+import { RecoveryNotice } from '@/shared/ui/RecoveryNotice';
 
 import type { Locale } from '../../../infrastructure/i18n/config';
 import type { ShareDesignApi } from '../useShareDesign';
 
-import { t } from '../../../infrastructure/i18n/utils';
+import { recoveryMessage, recoverySteps, t } from '../../../infrastructure/i18n/utils';
 import styles from './SharePopover.module.css';
 
 const shareStatusMessage = (
   locale: Locale,
   status: ShareDesignApi['feedback']['status'],
 ): string => {
-  if (status === 'copied') return t(locale, 'shareCopied');
-
   if (status === 'native-completed') return t(locale, 'shareCompleted');
 
   if (status === 'preparing') return t(locale, 'sharePreparing');
-
-  if (status === 'native-failed') return t(locale, 'shareNativeFailed');
-
-  if (status === 'failed') return t(locale, 'shareFailed');
 
   if (status === 'manual') return t(locale, 'shareManual');
 
@@ -75,21 +70,47 @@ export const ShareFeedback = ({
         </div>
       )}
       {status === 'failed' && (
-        <PopoverAction
-          kind="button"
-          icon={Copy}
-          label={t(locale, 'copyLink')}
-          onClick={onCopy}
-          disabled={disabled}
+        <RecoveryNotice
+          role="alert"
+          message={recoveryMessage(locale, feedback.failure)}
+          detailsLabel={t(locale, 'recoveryDetails')}
+          diagnostic={feedback.failure.message}
+          steps={recoverySteps(locale, feedback.failure)}
+          actions={[
+            {
+              id: 'copy-share-link',
+              label: t(locale, 'copyLink'),
+              onAction: onCopy,
+              disabled,
+            },
+          ]}
         />
       )}
-      {status === 'native-failed' && share.canShareViaDevice && (
-        <PopoverAction
-          kind="button"
-          icon={Share2}
-          label={t(locale, 'shareViaDevice')}
-          onClick={onNative}
-          disabled={disabled}
+      {status === 'native-failed' && (
+        <RecoveryNotice
+          role="alert"
+          message={recoveryMessage(locale, feedback.failure)}
+          detailsLabel={t(locale, 'recoveryDetails')}
+          diagnostic={feedback.failure.message}
+          steps={recoverySteps(locale, feedback.failure)}
+          actions={[
+            ...(share.canShareViaDevice
+              ? [
+                  {
+                    id: 'retry-native-share',
+                    label: t(locale, 'shareViaDevice'),
+                    onAction: onNative,
+                    disabled,
+                  },
+                ]
+              : []),
+            {
+              id: 'copy-share-link',
+              label: t(locale, 'copyLink'),
+              onAction: onCopy,
+              disabled,
+            },
+          ]}
         />
       )}
     </>

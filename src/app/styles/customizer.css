@@ -470,7 +470,7 @@ p {
 
 .geometry-finish-profiles {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 5rem), 1fr));
   gap: var(--control-space-3);
 }
 
@@ -530,7 +530,7 @@ p {
   min-width: 0;
   font-size: 0.78rem;
   line-height: 1.35;
-  overflow-wrap: normal;
+  overflow-wrap: anywhere;
 }
 
 .geometry-finish-tune {
@@ -682,7 +682,7 @@ p {
 
 .choice-card:focus-visible,
 .font-card:focus-visible {
-  outline: 2px solid #ef815e;
+  outline: var(--workshop-focus-ring);
   outline-offset: 1px;
 }
 
@@ -798,7 +798,7 @@ p {
   border: 0;
   border-radius: 7px;
   background: transparent;
-  color: #777b87;
+  color: var(--workshop-text-muted);
   cursor: pointer;
   font: inherit;
   font-size: 10px;
@@ -1032,7 +1032,7 @@ p {
 }
 
 .font-local-about summary:focus-visible {
-  outline: 2px solid #ef815e;
+  outline: var(--workshop-focus-ring);
   outline-offset: 2px;
 }
 
@@ -1188,13 +1188,11 @@ p {
 
 .font-card small {
   min-width: 0;
-  max-width: 45%;
-  flex: 0 1 auto;
-  color: #858791;
-  font-size: 8px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: 1 1 50%;
+  color: var(--workshop-text-muted);
+  font-size: var(--workshop-font-description);
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .articulated-font-grid .font-card {
@@ -1231,7 +1229,7 @@ p {
   border-radius: 8px;
   background: #e7e6e0;
   color: #555966;
-  font-size: 11px;
+  font-size: var(--workshop-font-description);
   line-height: 1.4;
 }
 
@@ -1247,8 +1245,8 @@ p {
 
 .candidate-review-action {
   justify-self: start;
-  min-height: 28px;
-  padding: 3px 0;
+  min-height: var(--workshop-touch-target);
+  padding: var(--workshop-space-2) 0;
   border: 0;
   background: transparent;
   color: inherit;
@@ -1259,8 +1257,14 @@ p {
   cursor: pointer;
 }
 
+.candidate-review-action:focus-visible {
+  outline: var(--workshop-focus-ring);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
 .candidate-feedback details {
-  font-size: 10px;
+  font-size: var(--workshop-font-description);
 }
 
 .candidate-feedback code {
@@ -1276,7 +1280,7 @@ p {
   border: 1px solid #cecbc2;
   border-radius: 9px;
   background: transparent;
-  color: #6f7480;
+  color: var(--workshop-text-muted);
   font-size: 11px;
   font-weight: 800;
   transition:
@@ -1292,7 +1296,7 @@ p {
 }
 
 .reset-settings:focus-visible {
-  outline: 2px solid #ef815e;
+  outline: var(--workshop-focus-ring);
   outline-offset: 1px;
 }
 

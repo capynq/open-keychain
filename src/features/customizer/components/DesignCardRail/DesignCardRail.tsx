@@ -87,6 +87,7 @@ export const DesignCardRail = ({
       <div
         ref={railRef}
         className={`design-card-rail${className ? ` ${className}` : ''}`}
+        role="group"
         aria-label={label}
         onScroll={(event) => updateScrollState(event.currentTarget)}
       >

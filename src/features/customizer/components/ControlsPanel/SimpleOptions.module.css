@@ -43,6 +43,7 @@
 
 .picker {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   min-width: 0;
   margin: 0;
@@ -127,7 +128,7 @@
 .picker .choice:has(input:focus-visible),
 .picker .choice:focus-visible,
 .more:focus-visible {
-  outline: 2px solid var(--workshop-accent);
+  outline: var(--workshop-focus-ring);
   outline-offset: 3px;
 }
 
@@ -170,11 +171,12 @@
 }
 
 .fontSpecimen {
-  font-size: calc(1.75rem * var(--customizer-scale, 1));
+  font-size: clamp(1rem, 40cqi, calc(1.75rem * var(--customizer-scale, 1)));
   line-height: 1.2;
 }
 
 .fontChoices .choice {
+  container-type: inline-size;
   min-height: var(--workshop-font-card-min-height);
 }
 
@@ -255,7 +257,7 @@
 }
 
 .refresh:focus-visible {
-  outline: 2px solid var(--workshop-accent);
+  outline: var(--workshop-focus-ring);
   outline-offset: 2px;
 }
 

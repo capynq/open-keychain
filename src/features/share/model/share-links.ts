@@ -19,6 +19,6 @@ export const shareNetworkUrl = (network: ShareNetwork, url: string): string => {
     case 'x':
       params.set('url', url);
 
-      return `https://twitter.com/intent/tweet?${params}`;
+      return `https://x.com/intent/tweet?${params}`;
   }
 };

@@ -1,0 +1,115 @@
+.positioner {
+  position: fixed;
+  z-index: 1100;
+  inset-inline: 16px;
+  bottom: max(20px, env(safe-area-inset-bottom, 0px));
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.root {
+  display: flex;
+  align-items: center;
+  gap: var(--workshop-space-3);
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(100%, 30rem);
+  max-height: calc(100dvh - 40px);
+  overflow: auto;
+  padding: var(--workshop-space-3);
+  border: 1px solid #9ec8a8;
+  border-radius: var(--workshop-radius-panel);
+  background: #f0faf1;
+  color: #28603b;
+  box-shadow: 0 12px 32px #30354524;
+  pointer-events: auto;
+  animation: appear 220ms var(--workshop-ease) both;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #d9efdf;
+}
+
+.message {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--workshop-font-label);
+  line-height: 1.4;
+}
+
+.message strong {
+  display: block;
+}
+.message p {
+  margin: 2px 0 0;
+  color: #345d42;
+  font-size: var(--workshop-font-description);
+}
+
+.root > button {
+  flex: 0 0 auto;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    animation: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .root {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) 44px;
+  }
+
+  .message {
+    display: contents;
+  }
+
+  .message strong {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: var(--workshop-font-label);
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+
+  .message p {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+
+  .root > button {
+    grid-column: 3;
+    grid-row: 1;
+  }
+}
+
+@media (forced-colors: active) {
+  .root {
+    border-color: CanvasText;
+  }
+}

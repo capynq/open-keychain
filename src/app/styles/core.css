@@ -389,7 +389,7 @@
 
 .export-header-button {
   border: 0;
-  background: #ef815e;
+  background: var(--workshop-accent-strong);
   color: #fff;
   box-shadow: 0 5px 12px #ef815e38;
 }
@@ -408,7 +408,7 @@
 }
 
 .icon-button.export-header-button:hover:not(:disabled) {
-  background: #d96547;
+  background: var(--workshop-accent-link-hover);
 }
 
 .icon-button.export-header-button:hover:not(:disabled),

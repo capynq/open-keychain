@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { KeychainParams, PrintAppearanceOverrides } from '../../domain/keychain/model/types';
+import type { RecoveryFailure } from '../../shared/lib/recovery/failure';
 
 import { copyTextToClipboard } from '../../shared/lib/clipboard';
+import { failureFrom } from '../../shared/lib/recovery/failure';
 import { buildShareUrl } from './model/share-url';
 
 export type ShareDesignFeedback =
@@ -10,9 +12,9 @@ export type ShareDesignFeedback =
   | { status: 'preparing'; url: string }
   | { status: 'copied'; url: string }
   | { status: 'manual'; url: string }
-  | { status: 'failed'; url: string; error: string }
+  | { status: 'failed'; url: string; failure: RecoveryFailure }
   | { status: 'native-completed'; url: string }
-  | { status: 'native-failed'; url: string; error: string };
+  | { status: 'native-failed'; url: string; failure: RecoveryFailure };
 
 export type ShareDesignStatus = ShareDesignFeedback['status'];
 
@@ -49,10 +51,16 @@ const isNativeShareSupported = (url: string): boolean => {
   }
 };
 
+const shareFailure = (error: unknown, fallbackCode: string): RecoveryFailure =>
+  failureFrom(error, fallbackCode);
+
+// The hook owns two guarded async workflows and their shared lifecycle state.
+
 export const useShareDesign = ({
   params,
   appearanceOverrides,
   hasNonBundledFont,
+  // eslint-disable-next-line max-lines-per-function
 }: UseShareDesignOptions): ShareDesignApi => {
   const [feedback, setFeedback] = useState<ShareDesignFeedback>({ status: 'idle' });
   const [shareFontFallback, setShareFontFallback] = useState(false);
@@ -99,7 +107,6 @@ export const useShareDesign = ({
     busy.current = true;
     setShareFontFallback(hasNonBundledFont);
     setFeedback({ status: 'preparing', url });
-
     try {
       if (await copyTextToClipboard(url)) {
         if (!mounted.current || operationId !== requestId.current) return false;
@@ -114,10 +121,14 @@ export const useShareDesign = ({
       setFeedback({ status: 'manual', url });
 
       return false;
-    } catch {
+    } catch (error) {
       if (!mounted.current || operationId !== requestId.current) return false;
 
-      setFeedback({ status: 'failed', url, error: 'clipboard-failed' });
+      setFeedback({
+        status: 'failed',
+        url,
+        failure: shareFailure(error, 'share-clipboard-failed'),
+      });
 
       return false;
     } finally {
@@ -143,9 +154,13 @@ export const useShareDesign = ({
 
     try {
       result = share.call(navigator, { url });
-    } catch {
+    } catch (error) {
       busy.current = false;
-      setFeedback({ status: 'native-failed', url, error: 'native-share-failed' });
+      setFeedback({
+        status: 'native-failed',
+        url,
+        failure: shareFailure(error, 'share-native-failed'),
+      });
 
       return false;
     }
@@ -169,7 +184,11 @@ export const useShareDesign = ({
           return false;
         }
 
-        setFeedback({ status: 'native-failed', url, error: 'native-share-failed' });
+        setFeedback({
+          status: 'native-failed',
+          url,
+          failure: shareFailure(error, 'share-native-failed'),
+        });
         busy.current = false;
 
         return false;

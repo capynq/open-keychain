@@ -196,6 +196,12 @@ page dots; do not replace the selected font while browsing. Default backing thic
 Balanced preset (2.4 mm); the default Heart pair is 22 mm / 1.6 mm. Preserve true Custom values.
 
 Share motion duration/easing tokens for pointer hover, press, selection, and setup entry.
+Discrete geometry choices dispatch immediately. Text edits use a 100 ms trailing debounce;
+continuous range edits dispatch immediately and coalesce within 32 ms windows. Interactive validation
+keeps one active build and one latest queued candidate; stale results cannot change acceptance,
+rejection feedback or export/share state. Local timing diagnostics distinguish cache lookup from
+fresh build time and measure input through both draw submission and the ready-state DOM commit without test polling overhead. A submitted draw is not a measurement of GPU completion or physical screen presentation.
+
 Setup steps and dependent strength controls appear immediately. Keep modal chrome stable, show the active setup step distinctly, and preserve the
 no-preselected-size rule for fresh setup. Reduced motion removes transforms/animated scrolling;
 hover lifts apply only to fine pointers. No ambient animations or model rotation are introduced.
@@ -303,3 +309,45 @@ property-specific policy to pressed/released, selected/checked, expanded, and cu
 keyboard movement. Expanded chevrons convey state without delaying native disclosure content.
 Availability, disabled opacity, loading/error messages, and print severity remain immediate;
 never animate focus outlines or progress-indicator width just to give every state movement.
+
+### Customizer recovery actions
+
+Blocked operations use the shared `RecoveryNotice` and centralized localized catalog. Candidate
+repair appears in an anchored editor popover, or inline inside an existing font dialog. Verified
+fixes name the requested font and changed edge amount, remain disabled while checking, and support
+Undo. Manual editing remains available. Recovery proposals use the existing Workshop actions,
+keyboard focus, reversible popover motion and reduced-motion behavior. Narrow EN/RU/UK recovery
+captures are covered by `e2e/recovery.spec.ts`, including 320px doubled text.
+
+### Preview readiness and recovery
+
+A valid geometry result alone does not make the preview ready. The current renderer session must
+install that generation, fit a valid inspection camera and submit its model frame. Renderer failure
+replaces readiness with the existing compact recovery treatment and disables Photo until recovery.
+An unfitted camera is never saved during lifecycle cleanup. Valid orientation, zoom and pan are
+restored against current model bounds; initial setup uses Home. One renderer restart is automatic
+per mounted editor session, then Try again/Reload remain explicit. Successful frames do not refill
+the automatic restart allowance. Pixel-based development and production lifecycle regressions live
+in `e2e/preview-lifecycle.spec.ts`; production rendering does not poll pixels.
+
+### Recovery accessibility and responsive acceptance
+
+Recovery live regions announce only the problem; actions and native disclosures stay outside the
+announcement. Recovery actions and disclosure summaries use 44px targets. Named preview and choice
+groups expose their purpose, and font tabs have instance-specific relationships and scoped keyboard
+navigation. Workshop focus and small text must retain contrast on selected and warning surfaces.
+Photo format selection remains distinguishable in forced colors without relying on shadows.
+
+Stacked previews and controls must not flex-shrink away. Failed previews scroll recovery content
+without camera shortcuts consuming arrow keys. Font and finish choices wrap at 320px with doubled
+text. `e2e/recovery-accessibility.spec.ts` covers these states in Chrome on desktop, mobile and
+mobile-2x, alongside EN/RU/UK, text-spacing overrides, reduced motion and forced colors.
+
+### Copy-link confirmation
+
+Successful copying closes Share and presents a compact bottom-centered, portaled success toast.
+The check icon, title and one-line instruction identify the completed action; its close control is
+44px, it never moves focus, and its six-second timeout pauses during hover or focus. Localized
+content wraps within the viewport and reduced motion disables entrance movement. Social actions
+use direct official composer URLs; X uses `x.com/intent/tweet`. Chrome captures and localized narrow
+checks live in `e2e/contextual-actions.spec.ts`.

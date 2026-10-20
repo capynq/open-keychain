@@ -12,7 +12,7 @@ describe('shareNetworkUrl', () => {
       'facebook',
       `https://www.facebook.com/sharer/sharer.php?${new URLSearchParams({ u: designUrl })}`,
     ],
-    ['x', `https://twitter.com/intent/tweet?${new URLSearchParams({ url: designUrl })}`],
+    ['x', `https://x.com/intent/tweet?${new URLSearchParams({ url: designUrl })}`],
   ] as const)('builds the %s adapter URL', (network, expected) => {
     expect(shareNetworkUrl(network, designUrl)).toBe(expected);
   });

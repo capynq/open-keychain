@@ -130,7 +130,7 @@
 }
 
 .copy small {
-  color: #6e727d;
+  color: var(--workshop-text-muted);
   font-size: 0.7rem;
   line-height: 1.3;
 }

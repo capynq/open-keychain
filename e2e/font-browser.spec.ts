@@ -104,7 +104,9 @@ test('shows the Google Fonts unavailable fallback and keeps built-in fonts avail
   const googleTab = fontSection.getByRole('tab', { name: 'Google Fonts' });
   await googleTab.click();
   await expect(googleTab).toHaveAttribute('aria-selected', 'true');
-  await expect(fontSection.getByText(/Online fonts are unavailable/)).toBeVisible();
+  await expect(
+    fontSection.getByRole('alert').filter({ hasText: 'Online fonts could not be reached.' }),
+  ).toBeVisible();
 
   await fontSection.getByRole('tab', { name: 'Built-in' }).click();
   await expect(fontSection.locator('.font-card')).toHaveCount(23);
@@ -162,7 +164,9 @@ test('supports keyboard access for font source, search, and selection controls',
   await googleTab.focus();
   await page.keyboard.press('Enter');
   await expect(googleTab).toHaveAttribute('aria-selected', 'true');
-  await expect(fontSection.getByText(/Online fonts are unavailable/)).toBeVisible();
+  await expect(
+    fontSection.getByRole('alert').filter({ hasText: 'Online fonts could not be reached.' }),
+  ).toBeVisible();
 
   const localTab = fontSection.getByRole('tab', { name: 'Built-in' });
   await localTab.focus();

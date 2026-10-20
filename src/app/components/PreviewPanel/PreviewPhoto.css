@@ -89,3 +89,14 @@
 .preview-photo-status:empty {
   display: none;
 }
+
+@media (forced-colors: active) {
+  .photo-format-option {
+    border: 2px solid Canvas;
+  }
+
+  .photo-format-option:has(input:checked) {
+    border-color: Highlight;
+    font-weight: 800;
+  }
+}

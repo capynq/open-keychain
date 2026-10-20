@@ -31,7 +31,7 @@
   --workshop-image-card-muted: #f8f5efcc;
   --workshop-image-card-overlay: #171d2bd9;
   --workshop-image-card-selected-overlay: #141a29f2;
-  --workshop-focus-ring: 2px solid var(--workshop-accent);
+  --workshop-focus-ring: 2px solid var(--workshop-accent-strong);
   --workshop-surface-dark-50: #29314180;
   --workshop-surface-dark-72: #293141b8;
   --workshop-text-7: #30354512;

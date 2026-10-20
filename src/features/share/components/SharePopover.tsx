@@ -7,6 +7,7 @@ import { siFacebook, siTelegram, siWhatsapp, siX } from 'simple-icons';
 
 import { AnchoredPopover } from '@/shared/ui/AnchoredPopover';
 import { IconButton } from '@/shared/ui/IconButton';
+import { NotificationToast } from '@/shared/ui/NotificationToast';
 import { PopoverAction } from '@/shared/ui/PopoverAction';
 
 import type { Locale } from '../../../infrastructure/i18n/config';
@@ -134,12 +135,16 @@ export const SharePopover = ({
           />
         </div>
       </AnchoredPopover>
+      {feedback.status === 'copied' && (
+        <NotificationToast
+          title={t(locale, 'shareCopied')}
+          description={t(locale, 'shareCopiedDescription')}
+          dismissLabel={t(locale, 'close')}
+          onDismiss={share.clearFeedback}
+        />
+      )}
       <p className="sr-only" role="status" aria-live="polite">
-        {feedback.status === 'copied'
-          ? t(locale, 'shareCopied')
-          : feedback.status === 'native-completed'
-            ? t(locale, 'shareCompleted')
-            : ''}
+        {feedback.status === 'native-completed' ? t(locale, 'shareCompleted') : ''}
       </p>
     </>
   );

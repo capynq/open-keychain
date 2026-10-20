@@ -75,4 +75,23 @@ describe('Workshop design token contract', () => {
     expect(contrastRatio(foreground!, resting!)).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(selectedText!, selectedSurface!)).toBeGreaterThanOrEqual(4.5);
   });
+  it('keeps keyboard focus distinct on Workshop surfaces and recovery feedback', () => {
+    const tokens = workshopTokens();
+    const focusToken = tokens
+      .get('--workshop-focus-ring')
+      ?.match(/var\((--workshop-[\w-]+)\)/)?.[1];
+    expect(focusToken).toBeDefined();
+    const color = tokens.get(focusToken!)!;
+
+    for (const surface of [
+      '--workshop-surface',
+      '--workshop-surface-control',
+      '--workshop-selected-surface',
+    ]) {
+      expect(contrastRatio(color, tokens.get(surface)!)).toBeGreaterThanOrEqual(3);
+    }
+
+    expect(contrastRatio(color, '#fbe0cd')).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio(tokens.get('--workshop-text')!, '#fbe0cd')).toBeGreaterThanOrEqual(4.5);
+  });
 });
