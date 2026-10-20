@@ -75,7 +75,7 @@ export const main = async () => {
       files = changes.files;
       const branch = changes.branch;
       const sha = changes.head.slice(0, 10);
-      if (('deletedOnly' in changes && changes.deletedOnly) || files.length === 0) {
+      if ('deletedOnly' in changes && changes.deletedOnly) {
         process.stdout.write('No pushed file changes require validation.\n');
         return;
       }

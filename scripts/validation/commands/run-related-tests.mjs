@@ -9,7 +9,7 @@ const tests = separator < 0 ? [] : args.slice(separator + 1);
 let selected = false;
 
 const run = (runArgs) => {
-  const result = spawnSync('pnpm', ['exec', 'vitest', ...runArgs], {
+  const result = spawnSync('pnpm', ['exec', 'vitest', ...runArgs, '--maxWorkers=1'], {
     encoding: 'utf8',
     env: process.env,
   });

@@ -223,6 +223,40 @@ export const relatedInputsForCi = (files) => {
   };
 };
 
+const createBuildGate = () => ({
+  id: 'build',
+  name: 'Build',
+  required: true,
+  phase: 'Vite production artifact',
+  command: 'pnpm',
+  args: ['build:artifact'],
+  env: { VITE_GOOGLE_FONTS_API_KEY: 'playwright-google-fonts-key' },
+});
+
+const appendJourneyGate = (gates) => {
+  if (!gates.some(({ id }) => id === 'build')) gates.push(createBuildGate());
+  if (!gates.some(({ id }) => id === 'browser:journey'))
+    gates.push({
+      id: 'browser:journey',
+      name: 'Critical user journey',
+      required: true,
+      cacheable: false,
+      verificationRequired: true,
+      workerSlots: 1,
+      command: 'pnpm',
+      args: ['test:e2e:journey'],
+      env: {
+        PLAYWRIGHT_BASE_URL: '',
+        PLAYWRIGHT_USE_EXISTING_BUILD: 'true',
+        PLAYWRIGHT_SMOKE: 'false',
+        VITE_HOSTED_MODE: 'false',
+        PLAYWRIGHT_DEPLOYMENT: 'false',
+      },
+      dependsOn: ['build'],
+    });
+  return gates;
+};
+
 export const createCiChangedGatePlan = (inputFiles) => {
   const {
     files,
@@ -236,7 +270,6 @@ export const createCiChangedGatePlan = (inputFiles) => {
     conservative,
   } = classifyChangedFiles(inputFiles);
   const normalized = files.map(normalize);
-  if (!normalized.length) return [];
   const testOnly = normalized.every(isTest);
   const unknown = normalized.some(isUnclassified);
   const toolingOnly = normalized.every(
@@ -282,9 +315,14 @@ export const createCiChangedGatePlan = (inputFiles) => {
       (file) => isTest(file) && existsSync(file) && !file.startsWith('e2e/'),
     );
     if (tests.length)
-      add('unit:changed', 'Unit (changed tests)', ['exec', 'vitest', 'run', ...tests], {
-        workerSlots: 1,
-      });
+      add(
+        'unit:changed',
+        'Unit (changed tests)',
+        ['exec', 'vitest', 'run', ...tests, '--maxWorkers=1'],
+        {
+          workerSlots: 1,
+        },
+      );
   }
   if (
     !documentationOnly &&
@@ -298,7 +336,7 @@ export const createCiChangedGatePlan = (inputFiles) => {
     add(
       'browser:changed',
       'Browser (changed specs)',
-      ['exec', 'playwright', 'test', ...changedBrowserSpecs],
+      ['exec', 'playwright', 'test', ...changedBrowserSpecs, '--workers=1'],
       testOnly
         ? { workerSlots: 1 }
         : {
@@ -309,11 +347,11 @@ export const createCiChangedGatePlan = (inputFiles) => {
     );
   if (!documentationOnly && !testOnly && needsBrowser && !needsGeometry)
     add('browser', 'Browser smoke', ['test:e2e:smoke'], {
-      workerSlots: 1,
+      workerSlots: 2,
       env: { PLAYWRIGHT_USE_EXISTING_BUILD: 'true' },
       dependsOn: ['build'],
     });
-  return gates;
+  return appendJourneyGate(gates);
 };
 
 export const createGatePlan = (inputFiles, profile = 'push') => {
@@ -372,7 +410,7 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
     return gates;
   };
   if (profile === 'full') {
-    return [
+    return appendJourneyGate([
       { id: 'format', name: 'Format', required: true, command: 'pnpm', args: ['format:check'] },
       { id: 'lint', name: 'Lint', required: true, command: 'pnpm', args: ['lint'] },
       {
@@ -425,11 +463,11 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
         args: ['bench:matrix'],
         env: { MATRIX_CONCURRENCY: String(matrixWorkerCount()) },
       },
-    ];
+    ]);
   }
 
   if (profile === 'ci') {
-    return [
+    return appendJourneyGate([
       { id: 'format', name: 'Format', required: true, command: 'pnpm', args: ['format:check'] },
       { id: 'lint', name: 'Lint', required: true, command: 'pnpm', args: ['lint'] },
       {
@@ -457,7 +495,7 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
         args: ['build:artifact'],
         env: { VITE_GOOGLE_FONTS_API_KEY: 'playwright-google-fonts-key' },
       },
-    ];
+    ]);
   }
 
   if (profile === 'ci-browser')
@@ -501,10 +539,9 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
   if (profile === 'bench-docs') return createGatePlan(['CONTRIBUTING.md'], 'push');
 
   if (profile !== 'push') throw new Error(`Unknown validation profile: ${profile}`);
-  if (files.length === 0) return [];
-  if (classification.conservative) return createFastPushPlan();
+  if (classification.conservative) return appendJourneyGate(createFastPushPlan());
   if (classification.documentationOnly) {
-    return [
+    return appendJourneyGate([
       {
         id: 'format:changed',
         name: 'Format',
@@ -512,7 +549,7 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
         command: 'pnpm',
         args: ['validate:changed', '--format-only', '--', ...files],
       },
-    ];
+    ]);
   }
 
   const gates = [];
@@ -582,7 +619,7 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
       command: 'pnpm',
       args: ['build:artifact'],
     });
-  return gates;
+  return appendJourneyGate(gates);
 };
 
 export const classifyRefs = (hookInput) => {

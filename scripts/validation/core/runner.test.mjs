@@ -61,6 +61,67 @@ describe('validation scheduler', () => {
     expect(results.find((result) => result.id === 'unit').status).toBe('passed');
   });
 
+  it('does not treat a skipped or cached critical journey as verified', async () => {
+    const skipped = await runValidationGates(
+      [gate('browser:journey', 0, { verificationRequired: true, skipRequested: true })],
+      { mode: 'plain', cache: false, concurrency: 1, profile: 'ci', failFast: false },
+    );
+    expect(skipped[0]).toMatchObject({ ok: false, status: 'skipped' });
+    expect(skipped.ok).toBe(false);
+
+    const failed = await runValidationGates(
+      [
+        gate('browser:journey', 1, {
+          verificationRequired: true,
+          env: { PLAYWRIGHT_PREVIEW_PORT: '4173' },
+        }),
+      ],
+      { mode: 'plain', cache: false, concurrency: 1, profile: 'ci', failFast: false },
+    );
+    expect(failed[0]).toMatchObject({ ok: false, status: 'failed' });
+    expect(failed.ok).toBe(false);
+
+    const cacheBypass = await runValidationGates(
+      [
+        gate('browser:journey', 0, {
+          verificationRequired: true,
+          cacheable: true,
+          env: { PLAYWRIGHT_PREVIEW_PORT: '4173' },
+        }),
+      ],
+      { mode: 'plain', cache: true, concurrency: 1, profile: 'ci', failFast: false },
+    );
+    expect(cacheBypass[0].status).toBe('passed');
+    expect(cacheBypass[0].status).not.toBe('cached');
+    expect(cacheBypass.ok).toBe(true);
+  });
+
+  it('isolates concurrent browser trace/download directories per gate', async () => {
+    const makeBrowser = (id) =>
+      gate(id, 0, {
+        args: [
+          '--input-type=module',
+          '-e',
+          'process.stdout.write(process.env.PLAYWRIGHT_OUTPUT_DIR)',
+        ],
+        env: { PLAYWRIGHT_PREVIEW_PORT: '4173' },
+      });
+    const results = await runValidationGates(
+      [makeBrowser('browser:one'), makeBrowser('browser:two')],
+      {
+        mode: 'plain',
+        cache: false,
+        concurrency: 2,
+        profile: 'ci',
+        failFast: false,
+      },
+    );
+    expect(results.ok).toBe(true);
+    expect(results.find(({ id }) => id === 'browser:one').tail).toContain('browser_one');
+    expect(results.find(({ id }) => id === 'browser:two').tail).toContain('browser_two');
+    expect(results[0].tail).not.toBe(results[1].tail);
+  });
+
   it('passes an available local port to the Browser gate and respects an explicit port', async () => {
     const browserGate = (id, extra = {}) =>
       gate(id, 0, {

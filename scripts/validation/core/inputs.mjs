@@ -52,6 +52,7 @@ export const validationInputsForGate = (gate, allInputs, changedFiles = []) => {
         (file.startsWith('src/') && !/\.(?:test|spec)\.[^.]+$/.test(file)) ||
         file.startsWith('public/') ||
         file.startsWith('assets/') ||
+        (file.startsWith('scripts/build/') && !/\.(?:test|spec)\.[^.]+$/.test(file)) ||
         file.startsWith('.env') ||
         file === 'index.html' ||
         [

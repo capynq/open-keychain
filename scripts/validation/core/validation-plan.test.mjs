@@ -8,9 +8,30 @@ import {
 } from './validation-plan.mjs';
 
 describe('validation gate selection', () => {
+  const expectJourney = (plan) => {
+    const journey = plan.find(({ id }) => id === 'browser:journey');
+    expect(journey).toMatchObject({
+      required: true,
+      cacheable: false,
+      workerSlots: 1,
+      args: ['test:e2e:journey'],
+      env: {
+        PLAYWRIGHT_BASE_URL: '',
+        PLAYWRIGHT_USE_EXISTING_BUILD: 'true',
+        PLAYWRIGHT_SMOKE: 'false',
+        VITE_HOSTED_MODE: 'false',
+        PLAYWRIGHT_DEPLOYMENT: 'false',
+      },
+      dependsOn: ['build'],
+    });
+    expect(plan.filter(({ id }) => id === 'build')).toHaveLength(1);
+  };
+
   it('selects only formatting for documentation and focused tests/build for geometry', () => {
     expect(createCiChangedGatePlan(['docs/geometry-roadmap.md']).map(({ id }) => id)).toEqual([
       'format:changed',
+      'build',
+      'browser:journey',
     ]);
     const geometry = createCiChangedGatePlan(['src/domain/keychain/build/keychain-builder.ts']);
     expect(geometry.map(({ id }) => id)).toContain('unit:related');
@@ -34,12 +55,17 @@ describe('validation gate selection', () => {
       'unit:related',
       'build',
       'browser',
+      'browser:journey',
     ]);
     const browserSpec = createCiChangedGatePlan(['e2e/smoke.spec.ts']);
+    expect(browserSpec.find(({ id }) => id === 'browser:changed').args).toContain('--workers=1');
+    expect(ui.find(({ id }) => id === 'browser').workerSlots).toBe(2);
     expect(browserSpec.map(({ id }) => id)).toEqual([
       'format:changed',
       'lint:changed',
       'browser:changed',
+      'build',
+      'browser:journey',
     ]);
     const mixedUiAndBrowser = createCiChangedGatePlan([
       'src/app/components/landing/TemplatePreviewCard/TemplatePreviewCard.tsx',
@@ -63,9 +89,17 @@ describe('validation gate selection', () => {
       'lint:changed',
       'unit:changed',
       'browser:changed',
+      'build',
+      'browser:journey',
     ]);
     const unit = createCiChangedGatePlan(['src/infrastructure/telemetry/telemetry-events.test.ts']);
-    expect(unit.map(({ id }) => id)).toEqual(['format:changed', 'lint:changed', 'unit:changed']);
+    expect(unit.map(({ id }) => id)).toEqual([
+      'format:changed',
+      'lint:changed',
+      'unit:changed',
+      'build',
+      'browser:journey',
+    ]);
   });
 
   it('maps export, bundled font, and WASM changes to their owning Unit coverage', () => {
@@ -96,6 +130,7 @@ describe('validation gate selection', () => {
       'lint',
       'typecheck',
       'build',
+      'browser:journey',
     ]);
     const deleted = createCiChangedGatePlan(['src/domain/keychain/build/removed-builder.ts']);
     expect(deleted.map(({ id }) => id)).toContain('typecheck');
@@ -113,13 +148,16 @@ describe('validation gate selection', () => {
       const plan = createCiChangedGatePlan([file]);
       expect(plan.map(({ id }) => id)).toContain('unit:related');
       expect(plan.map(({ id }) => id)).not.toContain('typecheck');
-      expect(plan.map(({ id }) => id)).not.toContain('build');
+      expect(plan.map(({ id }) => id)).toContain('build');
+      expectJourney(plan);
     }
   });
 
   it('runs only changed formatting for documentation', () => {
     expect(createGatePlan(['docs/seo.md', 'README.md']).map(({ id }) => id)).toEqual([
       'format:changed',
+      'build',
+      'browser:journey',
     ]);
   });
 
@@ -132,6 +170,7 @@ describe('validation gate selection', () => {
       'unit:fast',
       'build',
       'browser',
+      'browser:journey',
     ]);
     expect(plan.find(({ id }) => id === 'browser').dependsOn).toEqual(['build']);
     expect(plan.find(({ id }) => id === 'browser').required).toBe(true);
@@ -162,6 +201,7 @@ describe('validation gate selection', () => {
       'unit:fast',
       'build',
       'browser',
+      'browser:journey',
     ]);
     expect(plan.find(({ id }) => id === 'unit:fast').args).toEqual([
       'test:fast',
@@ -208,7 +248,7 @@ describe('validation gate selection', () => {
     ).toContain('build');
     expect(
       createGatePlan(['scripts/validation/core/validation-plan.mjs']).map(({ id }) => id),
-    ).toEqual(['format', 'lint', 'typecheck', 'unit:fast', 'build', 'browser']);
+    ).toEqual(['format', 'lint', 'typecheck', 'unit:fast', 'build', 'browser', 'browser:journey']);
   });
 
   it('runs full required checks in CI and lets the workflow add conditional gates', () => {
@@ -218,7 +258,14 @@ describe('validation gate selection', () => {
       'typecheck',
       'unit',
       'build',
+      'browser:journey',
     ]);
+    expectJourney(createGatePlan([], 'full'));
+    expectJourney(createGatePlan([], 'ci'));
+    expectJourney(createGatePlan([], 'push'));
+    expectJourney(createGatePlan(['docs/release.md'], 'push'));
+    expectJourney(createGatePlan(['src/domain/keychain/build/removed.ts'], 'push'));
+    expectJourney(createCiChangedGatePlan([]));
     expect(createGatePlan([], 'ci-browser').map(({ id }) => id)).toEqual(['browser']);
     expect(createGatePlan([], 'ci-browser')[0].args).toEqual(['test:e2e:full']);
     expect(createGatePlan([], 'ci-browser')[0].env).toMatchObject({

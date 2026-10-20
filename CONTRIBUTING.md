@@ -19,17 +19,32 @@ Compare Node with installed Bun using `pnpm validate:bench runtime --sample=100 
 
 ## Local push checks
 
-The Husky pre-push hook reads Git's ref input and verifies the pushed commit is the checked-out `HEAD`. Before validation it removes untracked macOS `.DS_Store` metadata and temporarily moves ignored root `.env*` files outside the checkout, restoring them on success, failure, or cancellation. This prevents machine-local Vite settings and Finder files from changing the result; these files are never staged. Other untracked files that can affect validation and all tracked modifications are still rejected, so commit or remove those before pushing. Keep secrets in `.env*`; commit only sanitized `.env.example` values. An ordinary push chooses gates from the changes:
+The Husky pre-push hook reads Git's ref input and verifies the pushed commit is the checked-out `HEAD`. Before validation it removes untracked macOS `.DS_Store` metadata and temporarily moves ignored root `.env*` files outside the checkout, restoring them on success, failure, or cancellation. This prevents machine-local Vite settings and Finder files from changing the result; these files are never staged. Other untracked files that can affect validation and all tracked modifications are still rejected, so commit or remove those before pushing. Keep secrets in `.env*`; commit only sanitized `.env.example` values. Every push of a revision must pass the critical user journey, even for documentation-only, test-only,
+or empty-tree-diff changes. This required gate cannot be skipped or satisfied from a cached browser
+result. All six cases must finish as ordinary passes: skip/fixme/expected failures, partial selection,
+zero cases and focused .only runs fail strict verification. It builds or restores the verified matching artifact and forces a fresh local preview rather
+than accepting an inherited external `PLAYWRIGHT_BASE_URL`. Parallel Browser gates use isolated trace/download directories under `artifacts/validation-browser`.
+Missing pnpm or Chromium is a failed
+check, never a silent bypass. Only deletion of a remote branch (no shipped revision) is excluded.
+Do not bypass these checks with `--no-verify` or `HUSKY=0`; fix the failing prerequisite first.
 
-- Documentation runs changed-file formatting.
+Run `pnpm test:e2e:journey` to exercise landing → all setup steps → editor change → visible preview →
+STL → merged 3MF → separate-colors 3MF → another edit/export, plus worker failure and explicit retry,
+on desktop, mobile, and mobile-2x. Downloads are read and checked: binary STL triangle count/length,
+3MF mesh/build content, distinct merged/separate material and volume contracts. This is a critical
+path safety check, not exhaustive coverage of every template and parameter combination.
+
+Additional checks are selected from the changes:
+
+- Documentation adds changed-file formatting to the mandatory build/journey.
 - UI/CSS changes run related Unit tests, typecheck, build, and Browser smoke. Changed Playwright specs run directly.
-- Geometry, export, font, and WASM changes run related Unit tests plus explicit tests for dynamic builder/worker/font boundaries, typecheck, and build. Routine CI skips Browser and the 4,267-case Geometry matrix for these changes.
+- Geometry, export, font, and WASM changes run related Unit tests plus explicit tests for dynamic builder/worker/font boundaries, typecheck, and build. Routine CI always runs the critical Browser journey; the exhaustive 4,267-case Geometry matrix remains explicit.
 - Test-only changes run the changed tests. Validation-tooling and configuration changes run owning tests where mapped; unknown paths use the cost-first format/lint, typecheck, and build fallback.
 - Deleted and renamed paths remain in classification. Related test paths are filtered to files present in the checkout; an empty selection is reported as `not selected`, never as a passing Unit suite.
 
 The full builder geometry tests are grouped into separate contracts, style/font, magnet/nameplate/plant-label, and keyring/articulated files. `pnpm test:fast` excludes these expensive geometry integrations. `pnpm test:full`, `pnpm validate:full`, and the manual CI dispatch include all of them.
 
-Successful local gates are cached separately under `node_modules/.cache/open-keychain-validation`, keyed by each gate's relevant tracked/untracked input content, command, Node/platform, lockfile and relevant environment. Geometry fingerprints include builder/templates, export serializers, fonts, WASM, matrix code, and package metadata, so documentation changes do not invalidate geometry. Only successful completion is saved. The build cache also saves and digest-checks its `dist` artifact before browser tests can use it. Cache bypass is `VALIDATION_CACHE=0`; clear it with the command above. CI disables local validation results and verifies its checkout independently.
+Successful local gates are cached separately under `node_modules/.cache/open-keychain-validation`, keyed by each gate's relevant tracked/untracked input content, command, Node/platform, lockfile and relevant environment. Geometry fingerprints include builder/templates, export serializers, fonts, WASM, matrix code, and package metadata, so documentation changes do not invalidate geometry. Only successful completion is saved. The critical journey is always executed again. Build fingerprints include build helpers, source HEAD and revision/context variables. The build cache also saves and digest-checks its `dist` artifact before browser tests can use it. Cache bypass is `VALIDATION_CACHE=0`; clear it with the command above. CI disables local validation results and verifies its checkout independently.
 
 ## TUI and plain mode
 
@@ -46,7 +61,7 @@ Required checks cannot be skipped. Quick-profile skips are reported as `SKIPPED 
 
 ## Main and production workflow
 
-Work directly on `main`; GitHub Actions runs after a direct push and cannot reject that push. The stable required status is `quality`. Routine checks classify changed paths and run sequentially on one runner after one dependency install. Selected failures fail `quality`; intentionally unselected Browser and full Geometry checks are printed as not selected. Manual `workflow_dispatch` runs full format, lint, typecheck, Unit, build, Browser, and Geometry profiles on the same runner. Production build and deploy wait for `quality` and use Netlify's `production` build context/environment.
+Work directly on `main`; GitHub Actions runs after a direct push and cannot reject that push. The stable required status is `quality`. Routine checks classify changed paths and run sequentially on one runner after one dependency install. The critical Browser journey is always selected, including documentation-only or empty change lists. Any failure fails `quality`; additional Browser checks and the full Geometry matrix remain change-based or explicit. Manual `workflow_dispatch` runs full format, lint, typecheck, Unit, build, Browser, and Geometry profiles on the same runner. Production build and deploy wait for `quality` and use Netlify's `production` build context/environment. After Netlify builds the production artifact, that exact `dist` must independently pass the critical journey before artifact upload; deploy only consumes that checked artifact.
 
 Install Chromium once with `pnpm exec playwright install chromium`. `pnpm validate:full` is the exhaustive local regression command: full format, lint, typecheck, Unit, build, Browser, and all 4,267 Geometry cases. These are automated checks, not physical-printer evidence.
 

@@ -31,6 +31,7 @@
     "test:e2e:full": "pnpm exec playwright test --workers=2 && pnpm test:e2e:workspace",
     "test:e2e:workspace": "VITE_HOSTED_MODE=true PLAYWRIGHT_USE_EXISTING_BUILD=false playwright test e2e/workspace.spec.ts --project=desktop --workers=1",
     "test:e2e:smoke": "PLAYWRIGHT_SMOKE=true playwright test e2e/smoke.spec.ts --project=desktop --project=mobile --workers=2",
+    "test:e2e:journey": "PLAYWRIGHT_REQUIRED_JOURNEY=true playwright test e2e/critical-journey.spec.ts e2e/export-recovery.spec.ts --project=desktop --project=mobile --project=mobile-2x --workers=1",
     "test:e2e:performance": "PLAYWRIGHT_PERFORMANCE=true playwright test e2e/performance.spec.ts --workers=1",
     "capture:ui": "pnpm build && playwright test --config playwright.capture.config.ts",
     "test:watch": "vitest",

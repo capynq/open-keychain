@@ -2,4 +2,7 @@ set -e
 
 if command -v pnpm >/dev/null 2>&1; then
   node scripts/validation/commands/pre-push-changed.mjs
+else
+  echo "pre-push: pnpm is required for validation but was not found on PATH" >&2
+  exit 1
 fi

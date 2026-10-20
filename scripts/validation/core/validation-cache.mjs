@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { mkdir, open, readFile, readdir, rename, rm, stat, writeFile, cp } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
@@ -7,6 +8,9 @@ const CACHE_VERSION = 1;
 const CACHE_DIR = path.join('node_modules', '.cache', 'open-keychain-validation');
 const ENV_KEYS = [
   'CI',
+  'CONTEXT',
+  'GITHUB_SHA',
+  'COMMIT_REF',
   'NODE_ENV',
   'TZ',
   'LANG',
@@ -88,6 +92,19 @@ export const fingerprintGate = async ({
       tools: { packageManager: 'pnpm@10.27.0' },
     }),
   );
+  if (gate.id === 'build') {
+    // Git HEAD is a build input when Vite resolves its source version without a CI variable.
+    try {
+      digest.update(
+        execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], {
+          encoding: 'utf8',
+          stdio: ['ignore', 'pipe', 'ignore'],
+        }).trim(),
+      );
+    } catch {
+      digest.update('no-git-head');
+    }
+  }
   if (contentFingerprint) digest.update(contentFingerprint);
   else
     for (const file of files) {

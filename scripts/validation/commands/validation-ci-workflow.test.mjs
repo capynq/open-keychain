@@ -36,6 +36,23 @@ describe('change-based CI workflow', () => {
     expect(existsSync('.github/workflows/netlify.yml')).toBe(false);
   });
 
+  it('installs browser coverage for changed journeys and verifies the exact production artifact', () => {
+    const workflow = readFileSync('.github/workflows/ci.yml', 'utf8');
+    expect(workflow).toContain("if: steps.changes.outputs.needs_browser == 'true'");
+    expect(workflow).toContain('name: Verify production artifact user journey and exports');
+    expect(workflow).toContain('run: pnpm test:e2e:journey');
+    const productionSmoke = workflow.slice(
+      workflow.indexOf('name: Verify production artifact user journey and exports'),
+      workflow.indexOf('uses: actions/upload-artifact@'),
+    );
+    expect(productionSmoke).toContain("PLAYWRIGHT_BASE_URL: ''");
+    expect(productionSmoke).toContain("PLAYWRIGHT_USE_EXISTING_BUILD: 'true'");
+    expect(workflow.indexOf('run: pnpm test:e2e:journey')).toBeLessThan(
+      workflow.indexOf('actions/upload-artifact'),
+    );
+    expect(workflow).toMatch(/deploy:\n\s+needs: \[quality, production-build\]/);
+  });
+
   it('does not count an empty static related-test selection as a passing Unit suite', () => {
     const result = spawnSync(
       process.execPath,

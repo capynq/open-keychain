@@ -45,6 +45,31 @@ describe('local validation cache', () => {
     expect(new Set([first, sourceChanged, lockChanged]).size).toBe(3);
   });
 
+  it('invalidates builds for build helper changes and production revision/context changes', async () => {
+    const root = await createRoot();
+    const { validationInputsForGate } = await import('./inputs.mjs');
+    await mkdir(path.join(root, 'scripts', 'build'), { recursive: true });
+    const helper = 'scripts/build/build-version.ts';
+    await writeFile(path.join(root, helper), 'version-one');
+    const gate = { id: 'build', command: 'pnpm', args: ['build:artifact'] };
+    const inputFiles = validationInputsForGate(gate, ['input.ts', helper, 'README.md']);
+    expect(inputFiles).toContain(helper);
+    expect(inputFiles).not.toContain('README.md');
+    const baseline = await fingerprintGate({ root, gate, inputFiles, environment: {} });
+    await writeFile(path.join(root, helper), 'version-two');
+    const changedHelper = await fingerprintGate({ root, gate, inputFiles, environment: {} });
+    expect(changedHelper).not.toBe(baseline);
+    for (const environment of [
+      { CONTEXT: 'production' },
+      { GITHUB_SHA: 'abcdef1' },
+      { COMMIT_REF: 'abcdef2' },
+    ]) {
+      expect(await fingerprintGate({ root, gate, inputFiles, environment })).not.toBe(
+        changedHelper,
+      );
+    }
+  });
+
   it('invalidates font, WASM and check configuration inputs', async () => {
     const root = await createRoot();
     await mkdir(path.join(root, 'public', 'fonts'), { recursive: true });

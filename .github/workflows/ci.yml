@@ -86,6 +86,16 @@ jobs:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           VITE_APP_VERSION: ${{ github.sha }}
+      - name: Install Chromium for production journey
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Verify production artifact user journey and exports
+        run: pnpm test:e2e:journey
+        env:
+          PLAYWRIGHT_BASE_URL: ''
+          PLAYWRIGHT_USE_EXISTING_BUILD: 'true'
+          VITE_HOSTED_MODE: 'false'
+          PLAYWRIGHT_SMOKE: 'false'
+          PLAYWRIGHT_DEPLOYMENT: 'false'
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v4
         with:
           name: dist

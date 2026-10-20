@@ -493,3 +493,73 @@ content is inert and excluded from accessibility before visual removal. Animate 
 surface so Floating UI positioning never competes for transform. Social artwork and colors come
 from tree-shaken Simple Icons assets. Photo adds a mounted-only PNG/JPG radio choice, keeping PNG as
 the backward-compatible capture default; JPG uses image/jpeg, .jpg filenames and quality 0.92.
+
+## 2026-10-18 — Input-aware candidate scheduling and bounded validation
+
+Discrete geometry changes dispatch immediately; text uses 100 ms trailing debounce; continuous
+controls dispatch on the leading edge and coalesce within 32 ms windows. Only interactive candidate
+validation is latest-only: one active build and one queued latest request. Supersession settles caller
+promises while retaining the active worker slot/watchdog until the real response; synchronous WASM
+is never interrupted by terminating its worker during dragging. Independent validation and export
+retain their existing contracts. Acceptance, geometry-limit reconciliation and rejection rollback
+remain transactional. Local cache/queue and input-to-render timings are diagnostic only and do not
+add telemetry payloads. Cache-hit timings describe current lookup/clone work, not historical builds.
+
+Draw submission and ready-state DOM commit are separate local diagnostic phases. Performance
+acceptance uses input-to-ready commit, with DOM-observed event-to-generation comparisons as a
+cross-check. Neither timestamp claims GPU completion or physical display presentation. Headless
+Chromium traces can include substantial software-GPU/compositor cost outside geometry generation;
+do not label draw-submission latency as the full visible-update latency.
+
+## Validated, explicit Customizer recovery — 2026-10-19
+
+The central recovery catalog owns stable error codes and localized explanations/steps. A rejected
+candidate retains its requested parameters and fonts separately from the accepted design. Opening
+recovery checks at most two proposals in a separate disposable worker; only verified printable
+results can be applied, guarded against stale parameters and font identities. Applying is explicit
+and undoable. Font/edge conflicts first preserve the requested font with a smaller or sharp edge.
+
+Use an anchored popover in the editor and inline recovery inside existing dialogs. Operational
+failures use the same notice with feature-owned retry/manual actions. Unknown diagnostics remain
+behind a disclosure. This supersedes the earlier single manual-review action decision for rejected
+candidates; accepted-preview preservation, privacy and persistence contracts remain unchanged.
+
+## Preview lifecycle acknowledgement and bounded recovery — 2026-10-19
+
+Readiness is tied to renderer session plus installed geometry generation, and is acknowledged only
+after a valid camera and successful draw submission. It is not evidence of GPU completion. Rejected,
+lost-context or disposed sessions cannot acknowledge newer state. Geometry printability remains
+independent; Photo requires the current preview to be ready.
+
+Inspection snapshots retain validated orientation, zoom and pan only after model installation.
+They refit to current bounds instead of restoring unchecked absolute camera coordinates. This
+prevents development Strict Mode effect replay from saving/restoring the unfitted origin camera.
+An invalid camera falls back to Home; renderer/context failure gets one automatic restart per
+mounted editor session, followed by explicit retry/reload. Manual retry resets the allowance;
+successful frames do not. Existing accepted geometry, colors and preview surface remain intact.
+
+## 2026-10-20 — Explicit recovery after exhausted geometry worker replacement
+
+Keep the existing bounded automatic worker replacement; never automatically replay failed exports or
+increase the watchdog. A new user export or explicit preview/export Retry can re-arm an exhausted
+client once. Pending work settles on failure, worker generations stay isolated and accepted geometry
+is preserved. A failed manual restart remains an error with another explicit recovery action.
+Export attempts retain one ID and one terminal outcome; fixed stage/type diagnostics distinguish
+worker lifecycle, initialization, generation, serialization and download without model content.
+Production builds require a validated source SHA, with explicit CI metadata and Netlify/Git fallback.
+
+## 2026-10-20 — Mandatory critical journey before every shipping change
+
+Every push of a checked-out revision, routine CI selection (including docs/test-only or no changed
+paths), and standard/full validation must run an unskippable, uncached Browser journey against its
+verified local build. Remote branch deletion has no shipped revision and retains its existing skip.
+The journey covers landing entry, all setup steps, editor changes, a visible model, decoded STL and
+both distinct 3MF modes, subsequent editing/export, and explicit worker recovery on desktop/mobile/
+mobile-2x. Existing affected checks and exhaustive full regression remain available.
+Production build must test the actual Netlify-built artifact before upload; deploy depends on that
+job and consumes only its checked artifact. External preview URLs cannot substitute for this check.
+Missing validation tools or failed/skipped journey means failure, never a successful checkpoint.
+Do not bypass the required push checks with --no-verify or HUSKY=0. All six critical cases must
+finish as ordinary passes; focused, skipped, expected-failure or partial suites fail. Concurrent
+Browser gates isolate traces/downloads per run/gate rather than sharing Playwright output cleanup.
+This supersedes documentation-only formatting and geometry-only CI Browser exclusions.

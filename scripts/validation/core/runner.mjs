@@ -176,7 +176,7 @@ export const runValidationGates = async (
     const startedAt = Date.now();
     const gateLog = path.join(LOG_DIR, `${runId}-${gate.id.replaceAll(':', '_')}.log`);
     gate.logPath = gateLog;
-    const cacheable = gate.cacheable !== false;
+    const cacheable = gate.cacheable !== false && !gate.verificationRequired;
     let key;
     if (cache && cacheable) {
       const inputFiles = gate.inputFiles ?? validationInputsForGate(gate, allInputs, files);
@@ -213,7 +213,12 @@ export const runValidationGates = async (
     }
     if (gate.skipRequested) {
       statusEvent(gate, 'gate-skipped');
-      return { id: gate.id, ok: true, status: 'skipped', durationMs: Date.now() - startedAt };
+      return {
+        id: gate.id,
+        ok: !gate.verificationRequired,
+        status: 'skipped',
+        durationMs: Date.now() - startedAt,
+      };
     }
     if (stopping) {
       statusEvent(gate, 'gate-cancelled', { detail: 'validation cancelled before start' });
@@ -222,6 +227,14 @@ export const runValidationGates = async (
     statusEvent(gate, 'gate-started', { detail: gate.phase ?? gate.name, logPath: gateLog });
     const shell = process.platform === 'win32';
     const childEnvironment = { ...process.env, ...(gate.env ?? {}) };
+    if (gate.id.startsWith('browser'))
+      childEnvironment.PLAYWRIGHT_OUTPUT_DIR = path.join(
+        ROOT,
+        'artifacts',
+        'validation-browser',
+        runId,
+        gate.id.replaceAll(':', '_'),
+      );
     if (gate.id.startsWith('browser') && !childEnvironment.PLAYWRIGHT_PREVIEW_PORT) {
       try {
         childEnvironment.PLAYWRIGHT_PREVIEW_PORT = String(await selectBrowserPort());
@@ -347,7 +360,13 @@ export const runValidationGates = async (
     }
     if (gate.skipRequested) {
       statusEvent(gate, 'gate-skipped');
-      return { id: gate.id, ok: true, status: 'skipped', durationMs, tail };
+      return {
+        id: gate.id,
+        ok: !gate.verificationRequired,
+        status: 'skipped',
+        durationMs,
+        tail,
+      };
     }
     if (stopping && result.status !== 0) {
       statusEvent(gate, 'gate-cancelled', { detail: 'validation cancelled' });
@@ -406,7 +425,11 @@ export const runValidationGates = async (
         }
         if (gate.skipRequested) {
           gate.status = 'skipped';
-          results.set(gate.id, { id: gate.id, ok: true, status: 'skipped' });
+          results.set(gate.id, {
+            id: gate.id,
+            ok: !gate.verificationRequired,
+            status: 'skipped',
+          });
           statusEvent(gate, 'gate-skipped');
           madeProgress = true;
           continue;
@@ -455,7 +478,7 @@ export const runValidationGates = async (
   }
   await pruneValidationCache({ root: ROOT });
   const values = [...results.values()];
-  const failures = values.filter((result) => !result.ok && result.status !== 'skipped');
+  const failures = values.filter((result) => !result.ok);
   const partial = userSkipped && profile === 'push' && failures.length === 0;
   emit('validation', 'final-summary', {
     ok: failures.length === 0,
