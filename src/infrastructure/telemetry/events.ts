@@ -43,6 +43,8 @@ const SAFE_PROPERTY_KEYS = new Set([
   'enabled',
   'environment',
   'error_code',
+  'failure_stage',
+  'error_type',
   'export_attempt_id',
   'family',
   'format',
@@ -131,6 +133,8 @@ const EVENT_PROPERTY_KEYS: Partial<Record<AnalyticsEvent, ReadonlySet<string>>> 
     'duration_ms',
     'outcome',
     'error_code',
+    'failure_stage',
+    'error_type',
   ]),
   customizer_option_changed: new Set(['family', 'option_id']),
   setup_step_viewed: new Set(['step']),
@@ -207,6 +211,26 @@ export const sanitizeProperties = (
           );
         if (key === 'app_version')
           return typeof value === 'string' && /^[a-f0-9]{7,40}$/.test(value);
+        if (key === 'failure_stage')
+          return (
+            event === 'export_failed' &&
+            typeof value === 'string' &&
+            ['initialization', 'generation', 'serialization', 'transport', 'download'].includes(
+              value,
+            )
+          );
+        if (key === 'error_type')
+          return (
+            event === 'export_failed' &&
+            typeof value === 'string' &&
+            [
+              'timeout',
+              'worker_error',
+              'message_error',
+              'worker_unavailable',
+              'operation_error',
+            ].includes(value)
+          );
         if (key === 'error_code') return typeof value === 'string' && ERROR_CODES.has(value);
         if (key === 'outcome') return value === 'success' || value === 'error';
         if (key.endsWith('_id')) return typeof value === 'string' && SAFE_ID.test(value);

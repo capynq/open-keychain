@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
+import { resolveBuildVersion } from './scripts/build/build-version.ts';
 import { customizerBootPlugin } from './scripts/build/customizer-boot-plugin.ts';
 
 const appEnvironment =
@@ -9,7 +10,11 @@ const appEnvironment =
     : process.env.NODE_ENV === 'development'
       ? 'development'
       : 'preview';
-const appVersion = process.env.GITHUB_SHA ?? process.env.VITE_APP_VERSION ?? '';
+const appVersion = resolveBuildVersion({
+  env: process.env,
+  environment: appEnvironment,
+  repoRoot: fileURLToPath(new URL('.', import.meta.url)),
+});
 
 export default defineConfig({
   define: {

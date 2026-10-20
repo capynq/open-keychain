@@ -210,4 +210,26 @@ describe('analytics event properties', () => {
   it('preserves PostHog null events', () => {
     expect(sanitizePostHogEvent(null)).toBeNull();
   });
+  it('allows only fixed export failure diagnostics and rejects model data', () => {
+    expect(
+      sanitizeProperties('export_failed', {
+        failure_stage: 'serialization',
+        error_type: 'operation_error',
+        message: 'private model text',
+        text: 'private model text',
+      }),
+    ).toEqual({ failure_stage: 'serialization', error_type: 'operation_error' });
+    expect(
+      sanitizeProperties('export_failed', {
+        failure_stage: 'private model text',
+        error_type: 'RangeError: private model text',
+      }),
+    ).toEqual({});
+    expect(
+      sanitizeProperties('export_completed', {
+        failure_stage: 'serialization',
+        error_type: 'operation_error',
+      }),
+    ).toEqual({});
+  });
 });

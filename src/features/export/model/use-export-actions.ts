@@ -9,20 +9,43 @@ import type {
   PrintAppearanceOverrides,
 } from '../../../domain/keychain/model/types';
 import type { GeometryClient } from '../../../infrastructure/geometry/geometry-client';
+import type { RecoveryFailure } from '../../../shared/lib/recovery/failure';
 
 import { useAnalytics } from '../../../infrastructure/telemetry/useTelemetry';
+import { failureFrom } from '../../../shared/lib/recovery/failure';
+import {
+  GeometryOperationError,
+  type OperationDiagnostics,
+} from '../../../shared/lib/recovery/operation-diagnostics';
 
 export type ExportActionsState = {
   downloading: boolean;
   printable: boolean;
   status: 'idle' | 'exporting' | 'success' | 'error';
   error?: string;
+  failure?: RecoveryFailure;
   download: (format: ExportFormat, mode?: ThreeMfMode) => Promise<void>;
   retry: () => Promise<void>;
   clearStatus: () => void;
 };
 
-const exportErrorCode = (message: string): 'timeout' | 'worker_failed' | 'export_failed' => {
+const exportErrorCode = (
+  cause: unknown,
+  failure: RecoveryFailure,
+): 'timeout' | 'geometry_failed' | 'worker_failed' | 'export_failed' => {
+  if (cause instanceof GeometryOperationError) {
+    if (cause.diagnostics.type === 'timeout') return 'timeout';
+    if (['message_error', 'worker_error', 'worker_unavailable'].includes(cause.diagnostics.type))
+      return 'worker_failed';
+    if (cause.diagnostics.stage === 'initialization') return 'worker_failed';
+    if (cause.diagnostics.stage === 'generation') return 'geometry_failed';
+    return 'export_failed';
+  }
+  if (failure.code === 'geometry-request-timeout') return 'timeout';
+  if (failure.code === 'geometry-worker-failed') return 'worker_failed';
+  if (failure.code.startsWith('geometry-') && failure.code !== 'geometry-export-failed')
+    return 'geometry_failed';
+  const message = failure.message ?? (cause instanceof Error ? cause.message : '');
   if (/timed out/i.test(message)) return 'timeout';
   if (/worker/i.test(message)) return 'worker_failed';
   return 'export_failed';
@@ -64,6 +87,8 @@ export const useExportActions = ({
   const [downloading, setDownloading] = useState(false);
   const [status, setStatus] = useState<ExportActionsState['status']>('idle');
   const [error, setError] = useState<string>();
+  const [failure, setFailure] = useState<RecoveryFailure>();
+  const inFlight = useRef(false);
   const lastRequest = useRef<{
     format: ExportFormat;
     mode: ThreeMfMode;
@@ -76,14 +101,18 @@ export const useExportActions = ({
     mode: ThreeMfMode = 'separate-colors',
     requestedAppearanceOverrides: PrintAppearanceOverrides | undefined = appearanceOverrides,
   ): Promise<void> => {
-    if (!exportAllowed || geometry.current === false || downloading) return;
+    if (!exportAllowed || geometry.current === false || inFlight.current) return;
     lastRequest.current = { format, mode, appearanceOverrides: requestedAppearanceOverrides };
     const attemptId = crypto.randomUUID();
     const startedAt = performance.now();
 
+    inFlight.current = true;
     setDownloading(true);
     setStatus('exporting');
     setError(undefined);
+    setFailure(undefined);
+    let failureStage: OperationDiagnostics['stage'] = 'transport';
+
     track('export_started', {
       format,
       mode,
@@ -92,6 +121,7 @@ export const useExportActions = ({
       design_id: designId,
     });
     try {
+      geometry.clientRef.current?.recoverForUserRetry();
       const file = await geometry.clientRef.current?.export(
         params,
         format,
@@ -102,13 +132,27 @@ export const useExportActions = ({
         allowDisconnected,
       );
       if (!file) throw new Error('The file could not be created.');
-      const url = URL.createObjectURL(new Blob([file.data], { type: file.mimeType }));
+      failureStage = 'download';
+      let url: string | undefined;
+      const revokeUrl = () => {
+        if (!url) return;
+        URL.revokeObjectURL(url);
+        url = undefined;
+      };
+
+      url = URL.createObjectURL(new Blob([file.data], { type: file.mimeType }));
       const anchor = document.createElement('a');
 
       anchor.href = url;
       anchor.download = file.filename;
-      anchor.click();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      try {
+        anchor.click();
+      } catch (cause) {
+        revokeUrl();
+
+        throw cause;
+      }
+      window.setTimeout(revokeUrl, 1000);
       track('export_completed', {
         format,
         mode,
@@ -120,9 +164,15 @@ export const useExportActions = ({
       });
       setStatus('success');
     } catch (cause) {
-      const message = cause instanceof Error ? cause.message : 'The file could not be created.';
+      const recoveryFailure = failureFrom(cause, 'geometry-export-failed');
+      const diagnostics: OperationDiagnostics =
+        cause instanceof GeometryOperationError
+          ? cause.diagnostics
+          : { stage: failureStage, type: 'operation_error' };
+      const message = recoveryFailure.message ?? 'The file could not be created.';
 
       setError(message);
+      setFailure(recoveryFailure);
       setStatus('error');
       track('export_failed', {
         format,
@@ -134,9 +184,12 @@ export const useExportActions = ({
         design_id: designId,
         duration_ms: Math.round(performance.now() - startedAt),
         outcome: 'error',
-        error_code: exportErrorCode(message),
+        error_code: exportErrorCode(cause, recoveryFailure),
+        failure_stage: diagnostics.stage,
+        error_type: diagnostics.type,
       });
     } finally {
+      inFlight.current = false;
       setDownloading(false);
     }
   };
@@ -159,11 +212,13 @@ export const useExportActions = ({
     ),
     status,
     error,
+    failure,
     download,
     retry,
     clearStatus: () => {
       setStatus('idle');
       setError(undefined);
+      setFailure(undefined);
     },
   };
 };

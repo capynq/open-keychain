@@ -1,11 +1,12 @@
-import { RefreshCw, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 import { IconButton } from '@/shared/ui/IconButton';
+import { RecoveryNotice } from '@/shared/ui/RecoveryNotice';
 
 import type { Locale } from '../../../../infrastructure/i18n/config';
 import type { ExportActionsState } from '../../model/use-export-actions';
 
-import { t } from '../../../../infrastructure/i18n/utils';
+import { recoveryMessage, recoverySteps, t } from '../../../../infrastructure/i18n/utils';
 
 export const ExportStatus = ({
   locale,
@@ -42,14 +43,27 @@ export const ExportStatus = ({
       </div>
     )}
     {exportState.status === 'error' && (
-      <div className="export-inline-state error" role="alert">
-        <p>{t(locale, 'exportFailed')}</p>
-        <IconButton
-          action="retry-export"
-          icon={RefreshCw}
-          label={t(locale, 'retry')}
-          motion="rotate"
-          onClick={() => void exportState.retry()}
+      <div className="export-inline-state error">
+        <RecoveryNotice
+          role="alert"
+          message={recoveryMessage(
+            locale,
+            exportState.failure ?? { code: 'geometry-export-failed', message: exportState.error },
+          )}
+          detailsLabel={t(locale, 'recoveryDetails')}
+          diagnostic={exportState.failure?.message ?? exportState.error}
+          steps={recoverySteps(
+            locale,
+            exportState.failure ?? { code: 'geometry-export-failed', message: exportState.error },
+          )}
+          actions={[
+            {
+              id: 'retry-export',
+              label: t(locale, 'recoveryRetry'),
+              onAction: exportState.retry,
+              disabled: exportState.downloading,
+            },
+          ]}
         />
       </div>
     )}
