@@ -568,8 +568,12 @@
   "metaCreateDescription": "Design a personalized printable keychain or label, preview the geometry, and export STL or 3MF locally.",
   "analytics": {
     "consentTitle": "Help us improve Open Keychain",
-    "consentBody": "Allow pseudonymous product analytics about pages, referral source, setup progress, choices, and exports. We never send your name or design dimensions.",
+    "consentBody": "Allow pseudonymous analytics and session recording of your visit, including text you enter, editor settings, the 3D preview, interactions, errors, console logs, and performance. Recordings are kept for 30 days.",
     "privacyLink": "See the privacy note.",
+    "privacyDetailsTitle": "What analytics records",
+    "privacyDetailsBody": "After you allow analytics, PostHog receives product events, interaction autocapture, and Web Vitals. Session recordings can show page text and controls, the text entered for a design, its settings, and the live 3D/WebGL preview. Error reports and console logs may include messages and stack traces. Structured export events never include your design text or dimensions. We remove URL query strings, fragments, and referrers, and anonymize IP addresses. Session recordings are retained for 30 days. Collection starts only after consent; you can stop it here at any time.",
+    "consentActive": "Analytics and session recording are allowed in this browser.",
+    "consentInactive": "Analytics and session recording are disabled in this browser.",
     "accept": "Allow analytics",
     "decline": "No thanks"
   },
@@ -693,7 +697,7 @@
     "trustLabel": "Privacy and beta notes",
     "localFirstKicker": "Local-first by default",
     "localFirstTitle": "Your design work stays close to you.",
-    "localFirstBody": "Names and geometry stay in your browser. The MIT license allows commercial use of the software with its notice; bundled fonts keep their separate SIL Open Font License terms.",
+    "localFirstBody": "The model and export files are generated in your browser. If you allow analytics, a 30-day session recording may include the design text, settings, and preview visible in the editor. The MIT license allows commercial use of the software with its notice; bundled fonts keep their separate SIL Open Font License terms.",
     "betaKicker": "Beta, with honest limits",
     "betaTitle": "A generated file is not a physical-print guarantee.",
     "betaBody": "Check every export in your slicer and test it on your own printer. Printer, material and settings can all change the result.",

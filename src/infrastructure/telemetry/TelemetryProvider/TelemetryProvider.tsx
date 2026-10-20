@@ -8,6 +8,7 @@ import {
   type AnalyticsEvent,
   type AnalyticsProperties,
 } from '../events';
+import { registerReactExceptionCapture } from '../react-exceptions';
 import { readPortfolioReferral, type AcquisitionSource } from '../referral';
 import { AnalyticsContext, type AnalyticsConsent } from '../telemetry-context';
 import './TelemetryProvider.module.css';
@@ -33,6 +34,24 @@ let posthogClient: PostHogClient | undefined;
 let posthogLoad: Promise<PostHogClient> | undefined;
 let posthogInitStarted = false;
 const MAX_PENDING_EVENTS = 100;
+const pendingExceptions: Error[] = [];
+const startHighSignalRecording = (): void => {
+  if (
+    captureConsent === 'accepted' &&
+    posthogClient?.__loaded &&
+    !posthogClient.has_opted_out_capturing()
+  ) {
+    posthogClient.startSessionRecording({ sampling: true });
+  }
+};
+
+const capturePendingEvent = (
+  event: AnalyticsEvent,
+  properties: Record<string, string | number | boolean>,
+): void => {
+  if (event === 'export_failed') startHighSignalRecording();
+  posthogClient?.capture(event, properties);
+};
 const pendingEvents: Array<{
   event: AnalyticsEvent;
   properties: Record<string, string | number | boolean>;
@@ -48,7 +67,15 @@ const flushPendingEvents = (): void => {
   }
   for (const pending of pendingEvents.splice(0)) {
     try {
-      posthogClient.capture(pending.event, pending.properties);
+      capturePendingEvent(pending.event, pending.properties);
+    } catch {
+      continue;
+    }
+  }
+  for (const error of pendingExceptions.splice(0)) {
+    try {
+      startHighSignalRecording();
+      posthogClient.captureException(error, { error_boundary: 'route' });
     } catch {
       continue;
     }
@@ -105,6 +132,22 @@ const readInternalTraffic = (): boolean => {
   }
 };
 
+const sanitizeAndTagPostHogEvent = (event: Parameters<typeof sanitizePostHogEvent>[0]) => {
+  const sanitized = sanitizePostHogEvent(event);
+  if (!sanitized?.properties) return sanitized;
+  return {
+    ...sanitized,
+    properties: {
+      ...sanitized.properties,
+      environment: BUILD_ENV,
+      internal_traffic: readInternalTraffic(),
+      ...(/^[a-f0-9]{7,40}$/i.test(BUILD_VERSION)
+        ? { app_version: BUILD_VERSION.toLowerCase() }
+        : {}),
+    },
+  };
+};
+
 const syncPostHogConsent = (): void => {
   const client = posthogClient;
   if (!client?.__loaded) return;
@@ -116,6 +159,7 @@ const syncPostHogConsent = (): void => {
   }
 
   pendingEvents.length = 0;
+  pendingExceptions.length = 0;
   if (!client.has_opted_out_capturing()) {
     client.opt_out_capturing();
     client.reset();
@@ -155,19 +199,30 @@ const configurePostHog = async (): Promise<void> => {
       defaults: '2026-05-30',
       capture_pageview: false,
       capture_pageleave: false,
-      autocapture: false,
-      capture_dead_clicks: false,
-      capture_performance: false,
-      logs: { captureConsoleLogs: false },
+      autocapture: true,
+      capture_dead_clicks: true,
+      capture_performance: true,
+      capture_exceptions: {
+        capture_unhandled_errors: true,
+        capture_unhandled_rejections: true,
+        capture_console_errors: false,
+      },
+      logs: { captureConsoleLogs: true },
       save_campaign_params: false,
       save_referrer: false,
       disable_capture_url_hashes: true,
-      before_send: sanitizePostHogEvent,
+      before_send: sanitizeAndTagPostHogEvent,
       loaded: () => {
         posthogInitStarted = false;
         syncPostHogConsent();
       },
-      disable_session_recording: true,
+      disable_session_recording: false,
+      session_recording: {
+        sampleRate: 1,
+        maskAllInputs: false,
+        captureCanvas: { recordCanvas: true },
+        canvasCapture: { resolutionScale: 0.6 },
+      },
       persistence: 'localStorage',
       disable_cookie: true,
     });
@@ -185,6 +240,26 @@ export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
     if (consent === 'accepted') void configurePostHog();
   }, [consent]);
 
+  useEffect(() => {
+    const handleConsentStorage = (event: StorageEvent): void => {
+      if (event.key !== CONSENT_KEY) return;
+      const nextConsent: AnalyticsConsent =
+        event.newValue === 'accepted' || event.newValue === 'declined' ? event.newValue : 'unknown';
+      captureConsent = nextConsent;
+      syncReferralConsent();
+      if (nextConsent !== 'accepted') {
+        pendingEvents.length = 0;
+        pendingExceptions.length = 0;
+        syncPostHogConsent();
+      } else {
+        void configurePostHog();
+      }
+      setConsentState(nextConsent);
+    };
+    window.addEventListener('storage', handleConsentStorage);
+    return () => window.removeEventListener('storage', handleConsentStorage);
+  }, []);
+
   const setConsent = useCallback((nextConsent: Exclude<AnalyticsConsent, 'unknown'>): void => {
     captureConsent = nextConsent;
     syncReferralConsent();
@@ -198,10 +273,14 @@ export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
         void configurePostHog();
       } else {
         pendingEvents.length = 0;
+        pendingExceptions.length = 0;
         syncPostHogConsent();
       }
     } catch {
-      if (nextConsent === 'declined') pendingEvents.length = 0;
+      if (nextConsent === 'declined') {
+        pendingEvents.length = 0;
+        pendingExceptions.length = 0;
+      }
     }
     setConsentState(nextConsent);
   }, []);
@@ -224,7 +303,7 @@ export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
             pendingEvents.push({ event, properties: safeProperties });
           return;
         }
-        posthogClient.capture(event, safeProperties);
+        capturePendingEvent(event, safeProperties);
       } catch {
         return;
       }
@@ -235,3 +314,21 @@ export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
   const value = useMemo(() => ({ consent, setConsent, track }), [consent, setConsent, track]);
   return <AnalyticsContext.Provider value={value}>{children}</AnalyticsContext.Provider>;
 };
+
+/** Send a React boundary exception only after consent and include only fixed context. */
+const sendReactException = (error: Error): void => {
+  if (captureConsent !== 'accepted' || !POSTHOG_KEY) return;
+  try {
+    if (!posthogClient?.__loaded) {
+      if (pendingExceptions.length < MAX_PENDING_EVENTS) pendingExceptions.push(error);
+      return;
+    }
+    if (posthogClient.has_opted_out_capturing()) return;
+    startHighSignalRecording();
+    posthogClient.captureException(error, { error_boundary: 'route' });
+  } catch {
+    return;
+  }
+};
+
+registerReactExceptionCapture(sendReactException);

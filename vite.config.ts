@@ -45,7 +45,7 @@ export default defineConfig({
   build: {
     target: 'es2022',
     assetsInlineLimit: 0,
-    sourcemap: false,
+    sourcemap: process.env.POSTHOG_UPLOAD_SOURCEMAPS === 'true' ? 'hidden' : false,
     chunkSizeWarningLimit: 550,
     rolldownOptions: {
       input: {

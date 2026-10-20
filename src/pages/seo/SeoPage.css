@@ -314,9 +314,41 @@
 
 .seo-cta:focus-visible,
 .seo-main a:focus-visible,
+.seo-main button:focus-visible,
 .seo-faq summary:focus-visible {
   outline: 2px solid var(--seo-accent);
   outline-offset: 3px;
+}
+
+.seo-privacy-consent {
+  margin-block: 1.5rem;
+  border: 1px solid var(--seo-border);
+  border-radius: 0.8rem;
+  padding: 0.2rem 1rem 1rem;
+}
+
+.seo-privacy-consent p {
+  margin-bottom: 0;
+  color: var(--seo-muted);
+}
+
+.seo-privacy-consent .seo-cta {
+  margin: 0.8rem 0.6rem 0 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.seo-privacy-consent .seo-privacy-decline {
+  border: 1px solid var(--seo-border);
+  background: var(--seo-surface, #fff);
+  box-shadow: none;
+  color: var(--seo-ink);
+}
+
+.seo-privacy-consent .seo-privacy-decline:hover,
+.seo-privacy-consent .seo-privacy-decline:focus-visible {
+  background: var(--seo-surface, #fff);
+  box-shadow: 0 0 0 2px var(--seo-accent);
 }
 
 @media (max-width: 760px) {

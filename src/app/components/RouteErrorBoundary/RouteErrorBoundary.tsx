@@ -1,9 +1,10 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { Component, type ReactNode } from 'react';
 
 import { RecoveryNotice } from '@/shared/ui/RecoveryNotice';
 
 import { type Locale } from '../../../infrastructure/i18n/config';
 import { recoveryMessage, recoverySteps, t } from '../../../infrastructure/i18n/utils';
+import { captureReactException } from '../../../infrastructure/telemetry/react-exceptions';
 import { resetRetryableLazy } from '../../../shared/ui/RetryableLazy';
 
 type RouteErrorBoundaryProps = {
@@ -26,14 +27,15 @@ export class RouteErrorBoundary extends Component<
     return { hasError: true };
   }
 
-  override componentDidCatch(error: Error, info: ErrorInfo): void {
+  override componentDidCatch(error: Error): void {
     const root = document.getElementById('root');
 
     root?.removeAttribute('inert');
     root?.setAttribute('data-app-ready', 'true');
     document.documentElement.setAttribute('data-app-ready', 'true');
     resetRetryableLazy();
-    console.error('Route module failed to load.', error, info);
+    captureReactException(error);
+    console.error('Route module failed to load.');
   }
 
   override componentDidUpdate(previousProps: RouteErrorBoundaryProps): void {

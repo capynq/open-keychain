@@ -86,6 +86,24 @@ jobs:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           VITE_APP_VERSION: ${{ github.sha }}
+          POSTHOG_UPLOAD_SOURCEMAPS: 'true'
+      - name: Upload source maps to PostHog
+        run: |
+          if [ -z "$POSTHOG_CLI_API_KEY" ]; then
+            echo "::error::Set the POSTHOG_CLI_API_KEY production secret with error tracking write and organization read scopes."
+            exit 1
+          fi
+          pnpm dlx @posthog/cli sourcemap inject --directory ./dist
+          pnpm dlx @posthog/cli sourcemap upload --directory ./dist --release-name open-keychain --release-version "$GITHUB_SHA"
+          find dist -type f -name '*.map' -delete
+          if find dist -type f -name '*.map' -print -quit | grep -q .; then
+            echo "::error::Source maps must not be included in the deploy artifact."
+            exit 1
+          fi
+        env:
+          POSTHOG_CLI_API_KEY: ${{ secrets.POSTHOG_CLI_API_KEY }}
+          POSTHOG_CLI_HOST: https://eu.posthog.com
+          POSTHOG_CLI_PROJECT_ID: '251074'
       - name: Install Chromium for production journey
         run: pnpm exec playwright install --with-deps chromium
       - name: Verify production artifact user journey and exports

@@ -1,5 +1,26 @@
 # Agent handoff
 
+## Current work — consented PostHog analytics and replay, 2026-10-20
+
+- Expanded the consent-gated SDK to autocapture, dead clicks, Web Vitals/performance, console logs,
+  unhandled errors/rejections, canvas/WebGL replay and unmasked editor inputs. Consent revocation
+  clears queued events/errors and opts out; cross-tab changes are synchronized. React route
+  boundary errors are captured separately from structured `export_failed` events. High-signal
+  failures request a replay; baseline sampling is 100% based on 46 consented sessions in 30 days.
+- EN/RU/UK consent and privacy copy now describes captured text, settings, preview, errors/logs,
+  performance and 30-day retention; the privacy page includes persistent allow/revoke controls.
+  Dashboard 902571 received export failure, Web Vitals, recordings, logs and error issue widgets.
+  Current 30-day failure-stage/type fields are missing on existing records; new events should fill
+  them. Survey was verified active but English-only with zero impressions, so no survey tile added.
+- Production CI now generates hidden source maps, uploads by Git SHA to PostHog, removes maps before
+  artifact publication, and fails clearly when `POSTHOG_CLI_API_KEY` is absent. Secret and live
+  project sampling/billing controls remain external prerequisites; no release or deploy was run.
+- Validation: targeted Vitest 19/19, typecheck, Prettier, `pnpm build`, and `pnpm validate:changed`
+  passed. Browser visual verification and live source-map upload were unavailable/not run. Changes
+  remain uncommitted on `main`; no commit/push/deploy was performed.
+- Next action: add the `POSTHOG_CLI_API_KEY` GitHub secret and confirm replay trigger sampling,
+  billing alerts, and no-paid-overage settings in PostHog before the first production release.
+
 ## Current checkpoint — granular commits and authorized push, 2026-10-20
 
 - User approved committing all accumulated changes in four scoped Conventional Commits and pushing

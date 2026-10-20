@@ -53,6 +53,20 @@ describe('change-based CI workflow', () => {
     expect(workflow).toMatch(/deploy:\n\s+needs: \[quality, production-build\]/);
   });
 
+  it('uploads production source maps before removing them from the deploy artifact', () => {
+    const workflow = readFileSync('.github/workflows/ci.yml', 'utf8');
+    const upload = workflow.indexOf('pnpm dlx @posthog/cli sourcemap upload');
+    const removal = workflow.indexOf("find dist -type f -name '*.map' -delete");
+    const artifact = workflow.indexOf('actions/upload-artifact');
+
+    expect(workflow).toContain("POSTHOG_UPLOAD_SOURCEMAPS: 'true'");
+    expect(workflow).toContain('POSTHOG_CLI_API_KEY');
+    expect(workflow).toContain("POSTHOG_CLI_PROJECT_ID: '251074'");
+    expect(upload).toBeGreaterThan(-1);
+    expect(removal).toBeGreaterThan(upload);
+    expect(artifact).toBeGreaterThan(removal);
+  });
+
   it('does not count an empty static related-test selection as a passing Unit suite', () => {
     const result = spawnSync(
       process.execPath,

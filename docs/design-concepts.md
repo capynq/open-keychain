@@ -12,6 +12,10 @@ sections earn their shape from a story or decision; it is not a generic card gri
 useful. One page has one purpose, one primary CTA, readable line lengths, and no
 repeated landing-page persuasion.
 
+The privacy page states exactly what consent enables and keeps accept/revoke controls available.
+Never describe user-entered design text or the live preview as local-only when session replay is
+enabled; make its 30-day retention clear.
+
 **Workshop** is for `/create`, export, profile, and seller flows. It is calm but
 alive: selected choices, regenerated preview, progress, and print states show what
 changed. Make comes first; precision and manufacturing controls are contextual.

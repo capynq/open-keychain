@@ -1,6 +1,6 @@
 # Analytics and error monitoring
 
-Open Keychain keeps the editor local-first. Product analytics and error monitoring are optional integrations and are disabled until a visitor explicitly accepts analytics in the consent banner.
+Open Keychain generates designs and exports in the browser. PostHog does not initialize until a visitor explicitly accepts analytics in the consent banner. The same choice controls product events, autocapture, session replay, exceptions, console logs, and performance data; the privacy page provides a persistent way to accept or revoke consent, including across open tabs.
 
 ## Static-host environment variables
 
@@ -13,9 +13,16 @@ builds, set them in your environment or `.env` file:
 Never commit the project key to the repository. After changing either setting, trigger a new build
 and deploy because `VITE_*` values are embedded in the bundle.
 
+Production deployment also requires the GitHub Actions secret `POSTHOG_CLI_API_KEY`, a personal API
+key scoped to Error Tracking write and organization read. CI creates hidden source maps for the
+production build, injects the release metadata, uploads them to PostHog project `251074` under the
+Git SHA, then deletes every `.map` before the production journey and deploy artifact. Pull requests
+and local builds do not create source maps. Never add this API key to `VITE_*` variables or the
+client bundle.
+
 ## What is collected
 
-The app sends pseudonymous, coarse product events only after consent: page/landing views, language changes, template selection, generation success/failure, export dialog opens, export start/completion/failure, surface preset changes, and the primary call-to-action. `export_dialog_opened` records only the stable template ID and short-lived design ID; `export_started` additionally records the selected format and mode. In the Customizer, setup-step views/completions/abandonment use fixed step IDs. Option changes use only bundled font IDs, font category IDs, keyring position/opening preset IDs, and base/text finish profile IDs. Names, exact dimensions, slider values, colors, query strings, generated geometry, and exported files are not sent.
+The app sends pseudonymous, coarse product events only after consent: page/landing views, language changes, template selection, generation success/failure, export dialog opens, export start/completion/failure, surface preset changes, and the primary call-to-action. `export_dialog_opened` records only the stable template ID and short-lived design ID; `export_started` additionally records the selected format and mode. In the Customizer, setup-step views/completions/abandonment use fixed step IDs. Option changes use only bundled font IDs, font category IDs, keyring position/opening preset IDs, and base/text finish profile IDs. These structured events never include names, exact dimensions, slider values, colors, generated geometry, or exported files. Session replay and autocapture are separate: after consent, recordings can include the text and settings visible in the editor, entered input values, and the live 3D/WebGL preview.
 
 The app owns page-view events: landing routes emit `landing_view`; other routes emit `page_view`. PostHog automatic page capture stays disabled, so SPA navigation does not create a second page-view event. Customizer entry, geometry completion/failure, and export start/completion/failure include random short-lived attempt/design IDs, bounded durations, fixed outcomes, and allowlisted error codes. Geometry and export failures include a fixed operation label (`preview`, `validation`, or `export`) so those failure paths can be analyzed separately. Export failures additionally allow fixed `failure_stage` values (`initialization`, `generation`,
 `serialization`, `transport`, `download`) and `error_type` values (`timeout`, `worker_error`,
@@ -35,7 +42,11 @@ and a sanitized route identifier; CTA clicks to `page_type`, `page_id`, `locale`
 language changes to `from` and `to`. Names, raw query strings, geometry, and exported files are never
 included.
 
-PostHog autocapture, page capture, page-leave capture, web-vitals/performance capture, client-side console-log capture, campaign/referrer persistence, cookies, and session replay are disabled in the client configuration. The live project settings inspected on 2026-10-08 still enable project-level console-log, performance, and session-recording capture; keep session recording disabled in the client and do not describe the project as privacy-aligned until these project settings are switched off and independently rechecked. A `before_send` scrub keeps URL routes while removing query strings and fragments, and strips campaign/search attribution, referrers, raw user agents, viewport dimensions, and any GeoIP properties from event and person-property payloads. Server-side IP enrichment remains controlled by the PostHog project. The activity remains pseudonymous PostHog activity; disabling session recording does not make event activity fully anonymous.
+After consent, the client enables autocapture, dead-click capture, Web Vitals/performance, console logs, unhandled JavaScript exceptions, unhandled promise rejections, session replay, and canvas/WebGL capture. Console errors are not duplicated as exceptions. React route-boundary errors are sent as `$exception` events with only the fixed `error_boundary: route` property. High-signal `export_failed` and React-boundary events request a 100% recording; the baseline sample is currently 100% because the verified 30-day volume was 46 consented app sessions, below the 4,000-session monthly target and 5,000-session free allowance. Recheck the 30-day count monthly and lower the baseline only while preserving 100% high-signal triggers.
+
+Session recording deliberately unmasks input values and captures canvas because the accepted consent text names entered design text, settings, and the 3D preview. PostHog project settings currently retain recordings for 30 days. The project reports IP anonymization enabled. No cookies are used; client persistence is localStorage. A `before_send` scrub keeps URL routes while removing query strings and fragments, and strips campaign/search attribution, referrers, raw user agents, viewport dimensions, and GeoIP properties from event and person-property payloads. Session recordings, exceptions, and console logs can contain data visible in the editor or error messages, and remain pseudonymous PostHog activity rather than anonymous data.
+
+The live project settings last verified on 2026-10-20 enabled Web Vitals, console logs, performance capture, and session recording; project exception-capture opt-in was unset while this code enables SDK exception capture. Session recording retention is 30 days, `anonymize_ips` is true, and the PostHog project is in Europe/Riga. Project-level event-trigger sampling, billing alerts, and the no-paid-overage setting still require verification in project billing/replay settings before claiming the quota controls are complete.
 
 ## Portfolio referrals
 
@@ -61,19 +72,19 @@ pseudonymous identity remain unchanged; no new dashboard or production configura
 ## Customizer feedback survey
 
 The Customizer feedback widget is configured in PostHog project `251074` and targets the `/create`
-route. It asks for a required 1–5 usefulness rating and an optional single-choice reason. It has no
-free-text question, and the survey does not request names, design parameters, or generated geometry.
+route. On 2026-10-20 it was active, shown once, and had a 30-day wait period; it asks for a required
+1–5 usefulness rating and an optional single-choice reason. It has no free-text question and does
+not request names, design parameters, or generated geometry. It is English-only (`translations` is
+unset), and its internal targeting flag is inactive; verify consent-based delivery and targeting
+behavior before changing the survey or adding response results to the dashboard.
 The existing consent-gated SDK loads only after analytics is accepted; PostHog keeps surveys hidden
 while capture is disabled and after opt-out. The rating-and-reason widget is the only direct prompt;
 do not add another prompt until this one has impressions and the action data identifies a specific
 friction point.
 
-Verify the survey's live status, targeting, impression count, and response flow in PostHog before
-reporting it as operational. The last checked dashboard does not yet contain a Survey Results
-widget; add one to **Open Keychain Activation** after its status and consent-gated browser delivery
-have been verified. On 2026-10-08 it was active with zero impressions, dismissals, or responses.
-Its generated internal-targeting flag was inactive and did not resolve as a project feature flag;
-do not enable or replace it until its intended targeting is identified. The survey is currently
-English-only (`translations` is unset).
+The existing **Open Keychain Activation** dashboard (ID `902571`) covers the activation funnel,
+landing views, export outcomes, and template selection. Keep its 14-day ordered activation funnel.
+Extend it with export failure breakdowns (`format`, `failure_stage`, `error_type`), Web Vitals,
+exceptions, and a link to related session replay after live data is available.
 
 Visitors can decline analytics and can review the policy at `/privacy`.
