@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import type { RecoveryFailure } from '@/shared/lib/recovery/failure';
+
+import { failureFrom, RecoveryError } from '@/shared/lib/recovery/failure';
+
 import type { PhotoCaptureApi } from '../model/photo-capture';
 
 import { photoFilename, type PhotoDesign } from '../model/photo-filename';
@@ -10,7 +14,12 @@ export type PhotoDownloadState =
   | { status: 'idle' }
   | { status: 'preparing'; resolution: PhotoResolution; format: PhotoFormat }
   | { status: 'success'; resolution: PhotoResolution; format: PhotoFormat }
-  | { status: 'error'; resolution: PhotoResolution; format: PhotoFormat };
+  | {
+      status: 'error';
+      resolution: PhotoResolution;
+      format: PhotoFormat;
+      failure: RecoveryFailure;
+    };
 
 const cleanupURL = (url: string): void => {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -56,7 +65,10 @@ export const usePhotoDownload = ({
         const blob = await captureApi.capture(resolution, format);
         if (!mountedRef.current) return false;
         if (blob.type !== PHOTO_FORMAT_MIME[format]) {
-          throw new Error('The image format did not match the selected format.');
+          throw new RecoveryError({
+            code: 'photo-format-unsupported',
+            message: 'The image format did not match the selected format.',
+          });
         }
         const url = URL.createObjectURL(blob);
         try {
@@ -66,6 +78,11 @@ export const usePhotoDownload = ({
           document.body.append(link);
           try {
             link.click();
+          } catch (cause) {
+            throw new RecoveryError({
+              code: 'photo-download-blocked',
+              message: cause instanceof Error ? cause.message : undefined,
+            });
           } finally {
             link.remove();
           }
@@ -74,8 +91,14 @@ export const usePhotoDownload = ({
         }
         if (mountedRef.current) setState({ status: 'success', resolution, format });
         return true;
-      } catch {
-        if (mountedRef.current) setState({ status: 'error', resolution, format });
+      } catch (cause) {
+        if (mountedRef.current)
+          setState({
+            status: 'error',
+            resolution,
+            format,
+            failure: failureFrom(cause, 'photo-capture-failed'),
+          });
         return false;
       } finally {
         activeRef.current = false;

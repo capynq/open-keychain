@@ -1,5 +1,7 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 
+import type { RecoveryFailure } from '@/shared/lib/recovery/failure';
+
 import {
   FONT_CATEGORY_ORDER,
   FONT_CATALOG,
@@ -40,15 +42,20 @@ export const useFontBrowser = ({
     params.templateId,
     target === 'secondary' ? params.subtitle : params.text,
   ]);
-  const [loadErrorContext, setLoadErrorContext] = useState<string>();
+  const [loadError, setLoadError] = useState<{
+    context: string;
+    fontId: string;
+    failure: RecoveryFailure;
+  }>();
   const [loadingSelection, setLoadingSelection] = useState<{
     id: string;
     context: string;
     version: number;
   }>();
-  const fontLoadError = loadErrorContext === contextKey;
+  const fontLoadError = loadError?.context === contextKey ? loadError.failure : undefined;
+  const fontLoadErrorFontId = loadError?.context === contextKey ? loadError.fontId : undefined;
   const loadingFontId = loadingSelection?.context === contextKey ? loadingSelection.id : undefined;
-  const { loadFont } = useFontPreviewLoader();
+  const { loadFont, loadFontWithFailure } = useFontPreviewLoader();
   const [previewFontId, setPreviewFontId] = useState<string>();
   const [showAllFontCategories, setShowAllFontCategories] = useState(false);
   const [openCategories, setOpenCategories] = useState<Set<FontCategory>>(
@@ -132,17 +139,17 @@ export const useFontBrowser = ({
   const selectFont = async (font: FontDefinition): Promise<void> => {
     const version = ++selectionVersion.current;
 
-    setLoadErrorContext(undefined);
+    setLoadError(undefined);
     setLoadingSelection({ id: font.id, context: contextKey, version });
     const selectionTarget = target;
-    const loaded = await loadGoogleFont(font);
+    const loaded = await loadFontWithFailure(font);
     if (version !== selectionVersion.current) {
       if (mounted.current)
         setLoadingSelection((current) => (current?.version === version ? undefined : current));
       return;
     }
-    if (!loaded) {
-      setLoadErrorContext(contextKey);
+    if (!loaded.ok) {
+      setLoadError({ context: contextKey, fontId: font.id, failure: loaded.failure });
       setLoadingSelection(undefined);
       return;
     }
@@ -176,6 +183,7 @@ export const useFontBrowser = ({
     selectFont,
     loadGoogleFont,
     fontLoadError,
+    fontLoadErrorFontId,
     activeTargetText,
     activeTargetFontId,
   };

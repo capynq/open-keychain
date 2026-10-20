@@ -44,6 +44,7 @@ import { KeyringPositionPicker } from '../KeyringPositionPicker/KeyringPositionP
 import { KeyringPresetPicker } from '../KeyringPresetPicker/KeyringPresetPicker';
 import { RangeControl } from '../RangeControl/RangeControl';
 import { AppearanceControls } from './AppearanceControls';
+import { CandidateRecovery } from './CandidateRecovery';
 import styles from './ControlsPanel.module.css';
 import { EditorModeSwitch } from './EditorModeSwitch';
 import { FontBrowser } from './FontBrowser';
@@ -259,6 +260,7 @@ export const ControlsPanel = ({
     group: CandidateControlGroup,
     location: 'context' | 'adjustments' = 'context',
     subcategory?: ReturnType<typeof adjustmentSubcategoryForKey>,
+    inlineRecovery = false,
   ) => {
     if (!candidateFeedback || candidateFeedback.group !== group) return null;
     const belongsToAdjustments =
@@ -318,38 +320,33 @@ export const ControlsPanel = ({
         </p>
       );
     return (
-      <div className="candidate-feedback candidate-feedback-rejected" role="alert">
-        <p>{t(locale, 'candidateRejected', { setting })}</p>
-        <button
-          type="button"
-          className="candidate-review-action"
-          onClick={(event) => {
-            const controlGroup = event.currentTarget.closest<HTMLElement>('[data-control-group]');
-            const targetForCandidate = candidateFeedback.controlKey
-              ? event.currentTarget
-                  .closest('.controls-panel')
-                  ?.querySelector<HTMLElement>(
-                    `[data-candidate-key="${candidateFeedback.controlKey}"]:not(:disabled)`,
-                  )
-              : null;
-            const target =
-              targetForCandidate ??
-              controlGroup?.querySelector<HTMLElement>(
-                'input[type="range"]:not(:disabled), input:not([type="search"]):not(:disabled), select:not(:disabled), button:not(:disabled)',
-              );
-            target?.focus();
+      <CandidateRecovery
+        locale={locale}
+        customizer={customizer}
+        feedback={candidateFeedback}
+        inline={inlineRecovery}
+        onReview={() => {
+          if (inlineRecovery) {
+            document
+              .querySelector<HTMLElement>(
+                '[data-testid="font-chooser-dialog"] input[type="search"]',
+              )
+              ?.focus();
             clearCandidateFeedback();
-          }}
-        >
-          {t(locale, 'candidateReview')}
-        </button>
-        {candidateFeedback.diagnostic && (
-          <details>
-            <summary>{t(locale, 'candidateDiagnostics')}</summary>
-            <code>{candidateFeedback.diagnostic}</code>
-          </details>
-        )}
-      </div>
+            return;
+          }
+          const controls = document.querySelector<HTMLElement>('.controls-panel');
+          const target = candidateFeedback.controlKey
+            ? controls?.querySelector<HTMLElement>(
+                `[data-candidate-key="${candidateFeedback.controlKey}"]:not(:disabled)`,
+              )
+            : controls?.querySelector<HTMLElement>(
+                `[data-control-group="${group}"] input:not(:disabled), [data-control-group="${group}"] button:not(:disabled)`,
+              );
+          target?.focus();
+          clearCandidateFeedback();
+        }}
+      />
     );
   };
 
@@ -408,8 +405,8 @@ export const ControlsPanel = ({
                 option_id: 'custom',
               });
             }
-            updateMany({ [key]: value, keyringPreset: 'custom' }, 'template-details');
-          } else update(key, value as never);
+            updateMany({ [key]: value, keyringPreset: 'custom' }, 'template-details', 'continuous');
+          } else update(key, value as never, 'continuous');
         }}
       />
     );
@@ -804,7 +801,7 @@ export const ControlsPanel = ({
           onFontProposed={fontChooser.proposed}
           showReset={false}
         />
-        {renderCandidateFeedback('refine')}
+        {fontChooser.open && renderCandidateFeedback('refine', 'context', undefined, true)}
       </FontChooserDialog>
       {!bootFrame && <hr className="control-section-divider" />}
       {!bootFrame && mode === 'simple' && (
@@ -891,7 +888,7 @@ export const ControlsPanel = ({
                         max={12}
                         step={0.5}
                         unit="mm"
-                        onChange={(value) => update('subtitleTextSizeMm', value)}
+                        onChange={(value) => update('subtitleTextSizeMm', value, 'continuous')}
                       />
                       <RangeControl
                         candidateKey="subtitleFontWeightMm"
@@ -901,7 +898,7 @@ export const ControlsPanel = ({
                         max={1.5}
                         step={0.1}
                         unit="mm"
-                        onChange={(value) => update('subtitleFontWeightMm', value)}
+                        onChange={(value) => update('subtitleFontWeightMm', value, 'continuous')}
                       />
                       <RangeControl
                         candidateKey="subtitleLetterSpacingMm"
@@ -911,7 +908,7 @@ export const ControlsPanel = ({
                         max={4}
                         step={0.1}
                         unit="mm"
-                        onChange={(value) => update('subtitleLetterSpacingMm', value)}
+                        onChange={(value) => update('subtitleLetterSpacingMm', value, 'continuous')}
                       />
                       <RangeControl
                         candidateKey="subtitleGapMm"
@@ -921,7 +918,7 @@ export const ControlsPanel = ({
                         max={8}
                         step={0.1}
                         unit="mm"
-                        onChange={(value) => update('subtitleGapMm', value)}
+                        onChange={(value) => update('subtitleGapMm', value, 'continuous')}
                       />
                       <RangeControl
                         candidateKey="subtitleOffsetXRatio"
@@ -931,7 +928,9 @@ export const ControlsPanel = ({
                         max={100}
                         step={5}
                         unit="%"
-                        onChange={(value) => update('subtitleOffsetXRatio', value / 100)}
+                        onChange={(value) =>
+                          update('subtitleOffsetXRatio', value / 100, 'continuous')
+                        }
                       />
                       <RangeControl
                         candidateKey="subtitleOffsetYRatio"
@@ -941,7 +940,9 @@ export const ControlsPanel = ({
                         max={100}
                         step={5}
                         unit="%"
-                        onChange={(value) => update('subtitleOffsetYRatio', value / 100)}
+                        onChange={(value) =>
+                          update('subtitleOffsetYRatio', value / 100, 'continuous')
+                        }
                       />
                     </>
                   )}
@@ -1052,7 +1053,7 @@ export const ControlsPanel = ({
                 max={1.5}
                 step={0.1}
                 unit="mm"
-                onChange={(value) => update('subtitleReliefDepthMm', value)}
+                onChange={(value) => update('subtitleReliefDepthMm', value, 'continuous')}
               />
             )}
             <GeometryFinishControls

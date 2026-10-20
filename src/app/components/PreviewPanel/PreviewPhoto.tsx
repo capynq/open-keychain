@@ -4,6 +4,7 @@ import { useId, useState } from 'react';
 import { AnchoredPopover } from '@/shared/ui/AnchoredPopover';
 import { IconButton } from '@/shared/ui/IconButton';
 import { PopoverAction } from '@/shared/ui/PopoverAction';
+import { RecoveryNotice } from '@/shared/ui/RecoveryNotice';
 
 import type { PhotoCaptureApi } from '../../../features/preview/model/photo-capture';
 import type { PhotoDesign } from '../../../features/preview/model/photo-filename';
@@ -15,7 +16,7 @@ import {
   isPhotoResolutionSupported,
   PHOTO_RESOLUTIONS,
 } from '../../../features/preview/model/photo-resolution';
-import { t } from '../../../infrastructure/i18n/utils';
+import { recoveryMessage, recoverySteps, t } from '../../../infrastructure/i18n/utils';
 import './PreviewPhoto.css';
 
 export const PreviewPhoto = ({
@@ -45,6 +46,11 @@ export const PreviewPhoto = ({
       setOpen(false);
     }
   };
+
+  const retryResolution = state.status === 'error' ? state.resolution : undefined;
+  const smallerResolution = retryResolution
+    ? PHOTO_RESOLUTIONS.filter((candidate) => candidate < retryResolution).at(-1)
+    : undefined;
 
   const message =
     state.status === 'error'
@@ -114,9 +120,35 @@ export const PreviewPhoto = ({
               );
             })}
           </div>
-          <p className="preview-photo-status" role="status" aria-live="polite">
-            {state.status === 'error' || state.status === 'preparing' ? message : ''}
-          </p>
+          {state.status === 'error' ? (
+            <RecoveryNotice
+              role="alert"
+              message={recoveryMessage(locale, state.failure)}
+              detailsLabel={t(locale, 'recoveryDetails')}
+              diagnostic={state.failure.message}
+              steps={recoverySteps(locale, state.failure)}
+              actions={[
+                {
+                  id: 'retry-photo',
+                  label: t(locale, 'recoveryRetry'),
+                  onAction: () => handleDownload(state.resolution),
+                },
+                ...(smallerResolution
+                  ? [
+                      {
+                        id: 'retry-photo-smaller',
+                        label: t(locale, 'photoPixels', { resolution: smallerResolution }),
+                        onAction: () => handleDownload(smallerResolution),
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+          ) : (
+            <p className="preview-photo-status" role="status" aria-live="polite">
+              {state.status === 'preparing' ? message : ''}
+            </p>
+          )}
         </div>
       </AnchoredPopover>
       <span className="sr-only" role="status" aria-live="polite">

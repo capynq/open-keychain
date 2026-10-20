@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 
+import type { RecoveryFailure } from '@/shared/lib/recovery/failure';
+
+import { failureFrom } from '@/shared/lib/recovery/failure';
+
 import type { GeometryResult } from '../../../domain/keychain/model/types';
 import type { FontNotice } from '../model/customizer-types';
 
@@ -12,7 +16,10 @@ import {
   textUsesCyrillic,
   type FontDefinition,
 } from '../../../domain/keychain/fonts/catalog';
-import { createGoogleFontProvider } from '../../../domain/keychain/fonts/google-provider';
+import {
+  createGoogleFontProvider,
+  GoogleFontProviderError,
+} from '../../../domain/keychain/fonts/google-provider';
 import {
   createLocalFontStore,
   type LocalFontRecord,
@@ -35,6 +42,7 @@ import {
 } from '../../../domain/keychain/model/types';
 import { STYLE_CATALOG } from '../../../domain/keychain/styles/style-builder';
 import { TEMPLATE_CATALOG } from '../../../domain/keychain/templates/template-builder';
+import { CandidateScheduler, type CandidateIntent } from '../model/candidate-scheduler';
 import { reconcileGeometryParameterLimits } from '../model/geometry-parameter-limits';
 import {
   randomizeParams,
@@ -43,6 +51,11 @@ import {
   type RandomizeTransaction,
   type RandomizeValidation,
 } from '../model/randomizer';
+import {
+  recoveryRecipes,
+  recoveryFontSignature,
+  type RecoveryOption,
+} from '../model/recovery-recipes';
 import { resetParamsForSection, type CustomizerResetSection } from '../model/reset';
 
 export type CandidateControlGroup =
@@ -54,6 +67,7 @@ export type CandidateFeedback = {
   group: CandidateControlGroup;
   controlKey?: keyof KeychainParams;
   diagnostic?: string;
+  failure?: RecoveryFailure;
 };
 
 export type CandidateValidation = (
@@ -65,6 +79,8 @@ export type CandidateValidation = (
 export type CandidateCallbacks = {
   pending?: (params: KeychainParams, font: FontDefinition, subtitleFont: FontDefinition) => void;
   validate?: CandidateValidation;
+  validateRecovery?: CandidateValidation;
+  cancelRecovery?: () => void;
   accept?: (
     params: KeychainParams,
     result: GeometryResult,
@@ -82,15 +98,24 @@ export const useCustomizerParams = (
   acceptedParams: KeychainParams;
   candidateFeedback: CandidateFeedback | undefined;
   clearCandidateFeedback: () => void;
+  recoveryOptions: RecoveryOption[];
+  recoveryChecking: boolean;
+  prepareRecovery: (requestId: number) => Promise<void>;
+  cancelRecovery: () => void;
+  applyRecovery: (requestId: number, optionId: string) => boolean;
+  undoKind: 'randomize' | 'recovery' | undefined;
   selectedFont: FontDefinition;
   selectedSubtitleFont: FontDefinition;
   fontForId: (id: string) => FontDefinition;
   googleFonts: FontDefinition[];
   googleLoading: boolean;
   googleError: string | undefined;
+  googleFailure: RecoveryFailure | undefined;
   googleFontsConfigured: boolean;
   loadGoogleFonts: () => Promise<FontDefinition[] | undefined>;
   localFonts: LocalFontRecord[];
+  localFontFailure: RecoveryFailure | undefined;
+  clearLocalFontFailure: () => void;
   importLocalFonts: (files: FileList | File[]) => Promise<void>;
   pickLocalFonts: () => Promise<void>;
   reconnectLocalFont: (id: string) => Promise<void>;
@@ -99,8 +124,16 @@ export const useCustomizerParams = (
   availableStyles: typeof STYLE_CATALOG;
   usesCyrillic: boolean;
   fontNotice: FontNotice | undefined;
-  update: <K extends keyof KeychainParams>(key: K, value: KeychainParams[K]) => void;
-  updateMany: (changes: Partial<KeychainParams>, group?: CandidateControlGroup) => void;
+  update: <K extends keyof KeychainParams>(
+    key: K,
+    value: KeychainParams[K],
+    intent?: CandidateIntent,
+  ) => void;
+  updateMany: (
+    changes: Partial<KeychainParams>,
+    group?: CandidateControlGroup,
+    intent?: CandidateIntent,
+  ) => void;
   updateText: (text: string) => void;
   updateSubtitle: (subtitle: string) => void;
   updateSubtitleFont: (fontId: string) => void;
@@ -133,11 +166,46 @@ export const useCustomizerParams = (
     callbacksRef.current = candidateCallbacks;
   }, [candidateCallbacks]);
   const candidateRequestId = useRef(0);
-  const validationTimer = useRef<number | undefined>(undefined);
+  const [candidateScheduler] = useState(() => new CandidateScheduler());
   const [candidateFeedback, setCandidateFeedback] = useState<CandidateFeedback>();
 
   const previousParams = useRef<KeychainParams | undefined>(undefined);
   const [canUndo, setCanUndo] = useState(false);
+  const [undoKind, setUndoKind] = useState<'randomize' | 'recovery'>();
+  const [recoveryOptions, setRecoveryOptions] = useState<RecoveryOption[]>([]);
+  const [recoveryChecking, setRecoveryChecking] = useState(false);
+  const recoveryEpoch = useRef(0);
+  type RejectedAttempt = {
+    requestId: number;
+    params: KeychainParams;
+    acceptedSignature: string;
+    font: FontDefinition;
+    subtitleFont: FontDefinition;
+    failure: RecoveryFailure;
+    group: CandidateControlGroup;
+    controlKey?: keyof KeychainParams;
+  };
+  const rejectedAttempt = useRef<RejectedAttempt | undefined>(undefined);
+  const recoveryResults = useRef(
+    new Map<
+      string,
+      {
+        params: KeychainParams;
+        result: GeometryResult;
+        font: FontDefinition;
+        subtitleFont: FontDefinition;
+        fontSignature: string;
+        subtitleSignature: string;
+      }
+    >(),
+  );
+  const cancelRecovery = (): void => {
+    callbacksRef.current.cancelRecovery?.();
+    recoveryEpoch.current += 1;
+    recoveryResults.current.clear();
+    setRecoveryOptions([]);
+    setRecoveryChecking(false);
+  };
   const setParamsDirect: Dispatch<SetStateAction<KeychainParams>> = (next) => {
     previousParams.current = undefined;
     setCanUndo(false);
@@ -150,8 +218,10 @@ export const useCustomizerParams = (
   const [googleFonts, setGoogleFonts] = useState<FontDefinition[]>([]);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState<string>();
+  const [googleFailure, setGoogleFailure] = useState<RecoveryFailure>();
   const [localFonts, setLocalFonts] = useState<LocalFontRecord[]>([]);
-  const [localStore] = useState(() => createLocalFontStore());
+  const [localFontFailure, setLocalFontFailure] = useState<RecoveryFailure>();
+  const [localStore] = useState(() => createLocalFontStore({ onFailure: setLocalFontFailure }));
   const [provider] = useState(() =>
     createGoogleFontProvider({
       apiKey: import.meta.env.VITE_GOOGLE_FONTS_API_KEY,
@@ -162,6 +232,7 @@ export const useCustomizerParams = (
     if (googleRequestRef.current) return googleRequestRef.current;
     setGoogleLoading(true);
     setGoogleError(undefined);
+    setGoogleFailure(undefined);
     const request = (async () => {
       try {
         const fonts = await provider.list();
@@ -169,6 +240,11 @@ export const useCustomizerParams = (
         setGoogleFonts(fonts);
         return fonts;
       } catch (error) {
+        setGoogleFailure(
+          error instanceof GoogleFontProviderError
+            ? { code: `google-font-${error.code}`, message: error.message }
+            : failureFrom(error, 'font-load'),
+        );
         setGoogleError(error instanceof Error ? error.message : 'Google Fonts are unavailable.');
         return undefined;
       } finally {
@@ -205,9 +281,11 @@ export const useCustomizerParams = (
   useEffect(
     () => () => {
       candidateRequestId.current += 1;
-      if (validationTimer.current !== undefined) window.clearTimeout(validationTimer.current);
+      recoveryEpoch.current += 1;
+      callbacksRef.current.cancelRecovery?.();
+      candidateScheduler.cancel();
     },
-    [],
+    [candidateScheduler],
   );
 
   const selectedFont = useMemo(
@@ -250,7 +328,13 @@ export const useCustomizerParams = (
     const subtitleFont =
       allFonts.find((item) => item.id === normalized.subtitleFontId) ??
       fontDefinition(normalized.subtitleFontId);
-    if (result) callbacksRef.current.accept?.(normalized, result, font, subtitleFont);
+    if (result)
+      callbacksRef.current.accept?.(
+        normalized,
+        { ...result, timings: { ...result.timings, candidateAcceptedAt: performance.now() } },
+        font,
+        subtitleFont,
+      );
     paramsRef.current = normalized;
     acceptedParamsRef.current = normalized;
     setParams(normalized);
@@ -258,17 +342,159 @@ export const useCustomizerParams = (
     setCandidateFeedback(undefined);
   };
 
+  const recordRejectedAttempt = (
+    requestId: number,
+    candidate: KeychainParams,
+    group: CandidateControlGroup,
+    controlKey: keyof KeychainParams | undefined,
+    failure: RecoveryFailure,
+  ): void => {
+    rejectedAttempt.current = {
+      requestId,
+      params: candidate,
+      acceptedSignature: JSON.stringify(acceptedParamsRef.current),
+      font:
+        allFonts.find((item) => item.id === candidate.fontId) ?? fontDefinition(candidate.fontId),
+      subtitleFont:
+        allFonts.find((item) => item.id === candidate.subtitleFontId) ??
+        fontDefinition(candidate.subtitleFontId),
+      failure,
+      group,
+      controlKey,
+    };
+    setCandidateFeedback({
+      requestId,
+      status: 'rejected',
+      group,
+      controlKey,
+      failure,
+      diagnostic: failure.message ?? failure.code,
+    });
+  };
+
+  const prepareRecovery = async (requestId: number): Promise<void> => {
+    const attempt = rejectedAttempt.current;
+    if (!attempt || attempt.requestId !== requestId || candidateRequestId.current !== requestId)
+      return;
+    cancelRecovery();
+    const epoch = recoveryEpoch.current;
+    const recipes = recoveryRecipes(
+      attempt.params,
+      attempt.failure,
+      attempt.controlKey === 'subtitleFontId' ? attempt.subtitleFont : attempt.font,
+      attempt.controlKey,
+    );
+
+    setRecoveryOptions(
+      recipes.map(({ id, labelKey, values }) => ({ id, labelKey, values, status: 'checking' })),
+    );
+    const validate = callbacksRef.current.validateRecovery;
+    if (!validate) {
+      setRecoveryOptions(
+        recipes.map(({ id, labelKey, values }) => ({
+          id,
+          labelKey,
+          values,
+          status: 'unavailable',
+        })),
+      );
+      return;
+    }
+    setRecoveryChecking(true);
+    for (const recipe of recipes) {
+      if (epoch !== recoveryEpoch.current || requestId !== candidateRequestId.current) return;
+      let ready = false;
+      try {
+        let params = normalizeParams(recipe.params);
+        const font =
+          allFonts.find((item) => item.id === params.fontId) ?? fontDefinition(params.fontId);
+        const subtitleFont =
+          allFonts.find((item) => item.id === params.subtitleFontId) ??
+          fontDefinition(params.subtitleFontId);
+        let result = await validate(params, font, subtitleFont);
+        const corrected = reconcileGeometryParameterLimits(params, result.parameterLimits);
+        if (corrected !== params) {
+          params = normalizeParams(corrected);
+          if (epoch !== recoveryEpoch.current) return;
+          result = await validate(params, font, subtitleFont);
+        }
+        if (epoch !== recoveryEpoch.current || requestId !== candidateRequestId.current) return;
+        ready = result.printable && !result.issues.some((issue) => issue.severity === 'error');
+        if (ready)
+          recoveryResults.current.set(recipe.id, {
+            params,
+            result,
+            font,
+            subtitleFont,
+            fontSignature: recoveryFontSignature(font),
+            subtitleSignature: recoveryFontSignature(subtitleFont),
+          });
+      } catch {
+        // A failed proposal never replaces the accepted preview or its actionable failure.
+      }
+      if (epoch !== recoveryEpoch.current || requestId !== candidateRequestId.current) return;
+      setRecoveryOptions((options) =>
+        options.map((option) =>
+          option.id === recipe.id ? { ...option, status: ready ? 'ready' : 'unavailable' } : option,
+        ),
+      );
+    }
+    if (epoch === recoveryEpoch.current) setRecoveryChecking(false);
+  };
+
+  const applyRecovery = (requestId: number, optionId: string): boolean => {
+    const attempt = rejectedAttempt.current;
+    const prepared = recoveryResults.current.get(optionId);
+    if (
+      !attempt ||
+      !prepared ||
+      requestId !== candidateRequestId.current ||
+      attempt.requestId !== requestId ||
+      attempt.acceptedSignature !== JSON.stringify(acceptedParamsRef.current)
+    )
+      return false;
+    const currentFont =
+      allFonts.find((font) => font.id === prepared.params.fontId) ??
+      fontDefinition(prepared.params.fontId);
+    const currentSubtitle =
+      allFonts.find((font) => font.id === prepared.params.subtitleFontId) ??
+      fontDefinition(prepared.params.subtitleFontId);
+    if (
+      recoveryFontSignature(currentFont) !== prepared.fontSignature ||
+      currentFont.data !== prepared.font.data ||
+      recoveryFontSignature(currentSubtitle) !== prepared.subtitleSignature ||
+      currentSubtitle.data !== prepared.subtitleFont.data
+    )
+      return false;
+    const previous = acceptedParamsRef.current;
+    const nextId = ++candidateRequestId.current;
+
+    candidateScheduler.cancel();
+    cancelRecovery();
+    callbacksRef.current.pending?.(prepared.params, prepared.font, prepared.subtitleFont);
+    commitAccepted(prepared.params, prepared.result, nextId);
+    previousParams.current = previous;
+    setUndoKind('recovery');
+    setCanUndo(true);
+    rejectedAttempt.current = undefined;
+    return true;
+  };
+
   const proposeCandidate = (
     candidate: KeychainParams,
     group: CandidateControlGroup,
     controlKey?: keyof KeychainParams,
+    intent: CandidateIntent = 'immediate',
   ): void => {
+    const inputAt = performance.now();
     let normalized: KeychainParams;
     try {
       normalized = normalizeParams(reconcileCandidateParams(acceptedParamsRef.current, candidate));
     } catch (error) {
       const requestId = ++candidateRequestId.current;
-      if (validationTimer.current !== undefined) window.clearTimeout(validationTimer.current);
+
+      candidateScheduler.cancel();
+      cancelRecovery();
       setFontNotice(undefined);
       const accepted = acceptedParamsRef.current;
 
@@ -280,17 +506,20 @@ export const useCustomizerParams = (
       );
       paramsRef.current = accepted;
       setParams(accepted);
-      setCandidateFeedback({
+      recordRejectedAttempt(
         requestId,
-        status: 'rejected',
+        candidate,
         group,
         controlKey,
-        diagnostic: error instanceof Error ? error.message : String(error),
-      });
+        failureFrom(error, 'geometry-build-failed'),
+      );
       return;
     }
     if (JSON.stringify(normalized) === JSON.stringify(paramsRef.current)) return;
     const requestId = ++candidateRequestId.current;
+
+    cancelRecovery();
+    rejectedAttempt.current = undefined;
 
     previousParams.current = undefined;
     setCanUndo(false);
@@ -304,7 +533,7 @@ export const useCustomizerParams = (
 
     setCandidateFeedback({ requestId, status: 'checking', group, controlKey });
     callbacksRef.current.pending?.(normalized, font, subtitleFont);
-    if (validationTimer.current !== undefined) window.clearTimeout(validationTimer.current);
+    candidateScheduler.cancel();
 
     const validate = callbacksRef.current.validate;
     if (!validate) {
@@ -313,7 +542,9 @@ export const useCustomizerParams = (
       return;
     }
 
-    validationTimer.current = window.setTimeout(() => {
+    candidateScheduler.schedule(intent, () => {
+      const dispatchedAt = performance.now();
+
       void validate(normalized, font, subtitleFont)
         .then(async (result) => {
           if (requestId !== candidateRequestId.current) return;
@@ -327,6 +558,15 @@ export const useCustomizerParams = (
           const accepted =
             result.printable && !result.issues.some((issue) => issue.severity === 'error');
           if (accepted) {
+            result = {
+              ...result,
+              timings: {
+                ...result.timings,
+                candidateInputAt: inputAt,
+                candidateDispatchedAt: dispatchedAt,
+                candidateValidatedAt: performance.now(),
+              },
+            };
             commitAccepted(normalized, result, requestId);
             return;
           }
@@ -342,14 +582,18 @@ export const useCustomizerParams = (
           );
           paramsRef.current = acceptedParamsRef.current;
           setParams(acceptedParamsRef.current);
-          setCandidateFeedback({
+          const issue = result.issues.find((item) => item.severity === 'error');
+
+          recordRejectedAttempt(
             requestId,
-            status: 'rejected',
+            normalized,
             group,
             controlKey,
-            diagnostic:
-              result.issues.find((issue) => issue.severity === 'error')?.code ?? 'not-printable',
-          });
+            issue?.failure ?? {
+              code: issue?.code ?? 'geometry-build-failed',
+              message: issue?.message,
+            },
+          );
         })
         .catch((error: unknown) => {
           if (requestId !== candidateRequestId.current) return;
@@ -365,15 +609,15 @@ export const useCustomizerParams = (
           );
           paramsRef.current = acceptedParamsRef.current;
           setParams(acceptedParamsRef.current);
-          setCandidateFeedback({
+          recordRejectedAttempt(
             requestId,
-            status: 'rejected',
+            normalized,
             group,
             controlKey,
-            diagnostic: error instanceof Error ? error.message : String(error),
-          });
+            failureFrom(error, 'geometry-build-failed'),
+          );
         });
-    }, 120);
+    });
   };
 
   const groupForKey = (
@@ -406,14 +650,22 @@ export const useCustomizerParams = (
     return 'refine';
   };
 
-  const update = <K extends keyof KeychainParams>(key: K, value: KeychainParams[K]): void => {
+  const update = <K extends keyof KeychainParams>(
+    key: K,
+    value: KeychainParams[K],
+    intent: CandidateIntent = 'immediate',
+  ): void => {
     setFontNotice(undefined);
     const current = paramsRef.current;
 
-    proposeCandidate({ ...current, [key]: value }, groupForKey(key, current), key);
+    proposeCandidate({ ...current, [key]: value }, groupForKey(key, current), key, intent);
   };
 
-  const updateMany = (changes: Partial<KeychainParams>, group?: CandidateControlGroup): void => {
+  const updateMany = (
+    changes: Partial<KeychainParams>,
+    group?: CandidateControlGroup,
+    intent: CandidateIntent = 'immediate',
+  ): void => {
     setFontNotice(undefined);
     const current = paramsRef.current;
     const keys = Object.keys(changes) as (keyof KeychainParams)[];
@@ -422,6 +674,7 @@ export const useCustomizerParams = (
       { ...current, ...changes },
       group ?? groupForKey(keys[0] ?? 'textEdgeFinish', current),
       keys[0],
+      intent,
     );
   };
 
@@ -450,6 +703,7 @@ export const useCustomizerParams = (
       },
       'name',
       'text',
+      'text',
     );
   };
   const updateSubtitle = (subtitle: string): void => {
@@ -477,6 +731,7 @@ export const useCustomizerParams = (
       },
       'name',
       'subtitle',
+      'text',
     );
   };
   const updateSubtitleFont = (fontId: string): void => {
@@ -654,6 +909,7 @@ export const useCustomizerParams = (
     proposeCandidate({ ...DEFAULT_PARAMS }, 'template', 'templateId');
   };
   const importLocalFonts = async (files: FileList | File[]): Promise<void> => {
+    setLocalFontFailure(undefined);
     const imported = await localStore.importFiles(files);
     if (imported.length)
       setLocalFonts((current) => [
@@ -662,6 +918,7 @@ export const useCustomizerParams = (
       ]);
   };
   const pickLocalFonts = async (): Promise<void> => {
+    setLocalFontFailure(undefined);
     const imported = await localStore.pick();
     if (imported.length)
       setLocalFonts((current) => [
@@ -670,6 +927,7 @@ export const useCustomizerParams = (
       ]);
   };
   const reconnectLocalFont = async (id: string): Promise<void> => {
+    setLocalFontFailure(undefined);
     const record = await localStore.reconnect(id);
     if (record) setLocalFonts((current) => current.map((item) => (item.id === id ? record : item)));
   };
@@ -689,7 +947,15 @@ export const useCustomizerParams = (
     params,
     acceptedParams,
     candidateFeedback,
+    recoveryOptions,
+    recoveryChecking,
+    prepareRecovery,
+    cancelRecovery,
+    applyRecovery,
+    undoKind,
     clearCandidateFeedback: () => {
+      cancelRecovery();
+      rejectedAttempt.current = undefined;
       setCandidateFeedback(undefined);
     },
     selectedFont,
@@ -698,9 +964,12 @@ export const useCustomizerParams = (
     googleFonts,
     googleLoading,
     googleError,
+    googleFailure,
     googleFontsConfigured: Boolean(import.meta.env.VITE_GOOGLE_FONTS_API_KEY?.trim()),
     loadGoogleFonts,
     localFonts,
+    localFontFailure,
+    clearLocalFontFailure: () => setLocalFontFailure(undefined),
     importLocalFonts,
     pickLocalFonts,
     reconnectLocalFont,
@@ -722,9 +991,12 @@ export const useCustomizerParams = (
     rangeFor: (parameter) => parameterRange(params, parameter),
     setParams: setParamsDirect,
     randomize: async (random, validate) => {
+      cancelRecovery();
+      rejectedAttempt.current = undefined;
       const original = acceptedParamsRef.current;
       const requestId = ++candidateRequestId.current;
-      if (validationTimer.current !== undefined) window.clearTimeout(validationTimer.current);
+
+      candidateScheduler.cancel();
       const font =
         allFonts.find((item) => item.id === original.fontId) ?? fontDefinition(original.fontId);
       const subtitleFont =
@@ -753,6 +1025,7 @@ export const useCustomizerParams = (
       }
       if (transaction.status === 'accepted') {
         previousParams.current = original;
+        setUndoKind('randomize');
         setCanUndo(true);
         const normalized = normalizeParams(transaction.params);
         const font =

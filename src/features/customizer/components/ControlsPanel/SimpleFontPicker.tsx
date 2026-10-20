@@ -5,11 +5,13 @@ import type { FontDefinition } from '@/domain/keychain/fonts/catalog';
 import type { KeychainParams } from '@/domain/keychain/model/types';
 import type { useFontSuggestions } from '@/features/customizer/hooks/useFontSuggestions';
 import type { Locale } from '@/infrastructure/i18n';
+import type { RecoveryFailure } from '@/shared/lib/recovery/failure';
 
 import { useDiscoveryMotion } from '@/features/customizer/hooks/useDiscoveryMotion';
 import { useFontPreviewLoader } from '@/features/customizer/hooks/useFontPreviewLoader';
-import { t } from '@/infrastructure/i18n';
+import { recoveryMessage, recoverySteps, t } from '@/infrastructure/i18n';
 import { activationMotion, navigationMotion, type MotionIntent } from '@/shared/lib/motion';
+import { RecoveryNotice } from '@/shared/ui/RecoveryNotice';
 
 import carouselStyles from './SimpleFontCarousel.module.css';
 import styles from './SimpleOptions.module.css';
@@ -42,7 +44,7 @@ export const SimpleFontPicker = ({
       : params.fontId;
   const pagesRef = useRef<HTMLDivElement>(null);
   const currentPageRef = useRef(suggestions.page);
-  const { loadFont } = useFontPreviewLoader();
+  const { loadFont, loadFontWithFailure } = useFontPreviewLoader();
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const selectionVersion = useRef(0);
   const mounted = useRef(false);
@@ -54,6 +56,8 @@ export const SimpleFontPicker = ({
     version: number;
   }>();
   const [selectionErrorContext, setSelectionErrorContext] = useState<string>();
+  const [selectionFailure, setSelectionFailure] = useState<RecoveryFailure>();
+  const [selectionFailureFontId, setSelectionFailureFontId] = useState<string>();
   const loadingFontId = loadingSelection?.context === contextKey ? loadingSelection.id : undefined;
   const selectionError = selectionErrorContext === contextKey;
   const [loadedPreviews, setLoadedPreviews] = useState<Set<string>>(() => new Set());
@@ -71,15 +75,19 @@ export const SimpleFontPicker = ({
   const selectFont = async (font: FontDefinition): Promise<void> => {
     const version = ++selectionVersion.current;
     setLoadingSelection({ id: font.id, context: contextKey, version });
+    setSelectionFailure(undefined);
+    setSelectionFailureFontId(undefined);
     setSelectionErrorContext(undefined);
-    const loaded = await loadFont(font);
+    const loaded = await loadFontWithFailure(font);
     if (version !== selectionVersion.current) {
       if (mounted.current)
         setLoadingSelection((current) => (current?.version === version ? undefined : current));
       return;
     }
     setLoadingSelection(undefined);
-    if (!loaded) {
+    if (!loaded.ok) {
+      setSelectionFailure(loaded.failure);
+      setSelectionFailureFontId(font.id);
       setSelectionErrorContext(contextKey);
       return;
     }
@@ -261,10 +269,8 @@ export const SimpleFontPicker = ({
       </div>
       <div
         className={carouselStyles.dots}
-        aria-label={t(locale, 'simpleSuggestionSet', {
-          page: suggestions.page,
-          pages: suggestions.pages,
-        })}
+        role="group"
+        aria-label={t(locale, 'fontPagesNavigation')}
       >
         {Array.from({ length: suggestions.pages }, (_, pageIndex) => (
           <button
@@ -280,10 +286,27 @@ export const SimpleFontPicker = ({
           />
         ))}
       </div>
-      {selectionError && (
-        <p className={carouselStyles.error} role="alert">
-          {t(locale, 'fontRuntimeLoadFailed')}
-        </p>
+      {selectionError && selectionFailure && (
+        <RecoveryNotice
+          role="alert"
+          className={carouselStyles.error}
+          message={recoveryMessage(locale, selectionFailure)}
+          detailsLabel={t(locale, 'recoveryDetails')}
+          diagnostic={selectionFailure.message}
+          steps={recoverySteps(locale, selectionFailure)}
+          actions={[
+            {
+              id: 'retry-font-preview',
+              label: t(locale, 'recoveryRetry'),
+              onAction: async (): Promise<void> => {
+                const font = suggestions.pageFonts
+                  .flat()
+                  .find((item) => item.id === selectionFailureFontId);
+                if (font) await selectFont(font);
+              },
+            },
+          ]}
+        />
       )}
       <span className="sr-only" role="status" aria-live="polite">
         {t(

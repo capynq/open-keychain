@@ -1,3 +1,5 @@
+import type { RecoveryFailure } from '../../../shared/lib/recovery/failure';
+import type { OperationDiagnostics } from '../../../shared/lib/recovery/operation-diagnostics';
 import type { FontDefinition } from '../fonts/catalog';
 import type { ModelFeature } from './model-feature';
 
@@ -124,6 +126,7 @@ export type ValidationIssue = {
   severity: 'warning' | 'error';
   code: string;
   message: string;
+  failure?: RecoveryFailure;
 };
 /** Manufacturing limits carried alongside generated geometry. All values are millimetres. */
 export type GeometryConstraints = {
@@ -464,6 +467,8 @@ export type WorkerResponse =
       type: 'error';
       requestId: number;
       message: string;
+      failure?: RecoveryFailure;
+      diagnostics?: OperationDiagnostics;
     };
 export const DEFAULT_PARAMS: KeychainParams = {
   text: 'ALEX',

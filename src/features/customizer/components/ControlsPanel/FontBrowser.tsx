@@ -1,6 +1,5 @@
-import type { ReactNode } from 'react';
-
 import { ChevronLeft, ChevronRight, Info, RefreshCw } from 'lucide-react';
+import { useId, useRef, type ReactNode } from 'react';
 
 import type { FONT_CATALOG } from '@/domain/keychain/fonts/catalog';
 import type { useCustomizerParams } from '@/features/customizer/hooks/useCustomizerParams';
@@ -8,8 +7,9 @@ import type { FontTarget } from '@/features/customizer/model/font-browser';
 
 import { FONT_CATEGORY_ORDER, type FontCategory } from '@/domain/keychain/fonts/catalog';
 import { useFontBrowser } from '@/features/customizer/hooks/useFontBrowser';
-import { t, type Locale } from '@/infrastructure/i18n';
+import { recoveryMessage, recoverySteps, t, type Locale } from '@/infrastructure/i18n';
 import { IconButton } from '@/shared/ui/IconButton';
+import { RecoveryNotice } from '@/shared/ui/RecoveryNotice';
 import { ResetIconButton } from '@/shared/ui/ResetIconButton';
 
 type Props = {
@@ -39,7 +39,19 @@ export const FontBrowser = ({
   onFontProposed,
   showReset = true,
 }: Props) => {
-  const { params, selectedFont, selectedSubtitleFont, usesCyrillic, fontNotice } = customizer;
+  const instanceId = useId().replace(/:/g, '');
+  const tablistRef = useRef<HTMLDivElement>(null);
+  const localFileInputRef = useRef<HTMLInputElement>(null);
+  const {
+    params,
+    selectedFont,
+    selectedSubtitleFont,
+    usesCyrillic,
+    fontNotice,
+    googleFailure,
+    localFontFailure,
+    clearLocalFontFailure,
+  } = customizer;
   const activeFontTarget = target;
   const {
     fontSource,
@@ -65,6 +77,7 @@ export const FontBrowser = ({
     fontLoadError,
     activeTargetText,
     activeTargetFontId,
+    fontLoadErrorFontId,
   } = useFontBrowser({ customizer, target, favoriteFontCategories, onFontProposed });
   const renderFontGroups = (fonts: typeof FONT_CATALOG) => (
     <div className="font-groups">
@@ -223,14 +236,19 @@ export const FontBrowser = ({
         {showReset && <ResetIconButton label={resetActiveFontLabel} onClick={resetActiveFont} />}
       </div>
       {targetSwitch}
-      <div className="font-source-tabs" role="tablist" aria-label={t(locale, 'fontSources')}>
+      <div
+        ref={tablistRef}
+        className="font-source-tabs"
+        role="tablist"
+        aria-label={t(locale, 'fontSources')}
+      >
         {(['bundled', 'google', 'local'] as const).map((source, index) => (
           <button
             type="button"
             data-candidate-key={activeFontTarget === 'secondary' ? 'subtitleFontId' : 'fontId'}
             role="tab"
-            id={`font-tab-${source}`}
-            aria-controls={`font-panel-${source}`}
+            id={`font-tab-${instanceId}-${source}`}
+            aria-controls={`font-panel-${instanceId}-${source}`}
             aria-selected={fontSource === source}
             tabIndex={fontSource === source ? 0 : -1}
             className={fontSource === source ? 'active' : ''}
@@ -244,7 +262,9 @@ export const FontBrowser = ({
                 event.key === 'Home' ? 0 : event.key === 'End' ? 2 : (index + direction + 3) % 3;
               const nextSource = (['bundled', 'google', 'local'] as const)[nextIndex];
               activateFontSource(nextSource);
-              document.getElementById(`font-tab-${nextSource}`)?.focus();
+              tablistRef.current
+                ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
+                [nextIndex]?.focus();
             }}
           >
             {t(
@@ -260,9 +280,9 @@ export const FontBrowser = ({
       </div>
       <div
         className="font-panel"
-        id={`font-panel-${fontSource}`}
+        id={`font-panel-${instanceId}-${fontSource}`}
         role="tabpanel"
-        aria-labelledby={`font-tab-${fontSource}`}
+        aria-labelledby={`font-tab-${instanceId}-${fontSource}`}
       >
         {fontSource === 'google' ? (
           customizer.googleLoading ? (
@@ -270,16 +290,37 @@ export const FontBrowser = ({
               {t(locale, 'fontGoogleLoading')}
             </p>
           ) : customizer.googleError ? (
-            <div className="font-provider-state" role="status">
-              <p>{t(locale, 'fontGoogleUnavailable')}</p>
-              <IconButton
-                action="retry-google-fonts"
-                icon={RefreshCw}
-                label={t(locale, 'retry')}
-                motion="rotate"
-                onClick={() => void customizer.loadGoogleFonts()}
-              />
-            </div>
+            <RecoveryNotice
+              className="font-provider-state"
+              role="alert"
+              message={recoveryMessage(
+                locale,
+                googleFailure ?? { code: 'google-font-failed', message: customizer.googleError },
+              )}
+              detailsLabel={t(locale, 'recoveryDetails')}
+              diagnostic={googleFailure?.message ?? customizer.googleError}
+              steps={
+                googleFailure
+                  ? recoverySteps(locale, googleFailure)
+                  : t(locale, 'fontGoogleUnavailable')
+              }
+              actions={[
+                ...(customizer.googleFontsConfigured
+                  ? [
+                      {
+                        id: 'retry-google-fonts',
+                        label: t(locale, 'recoveryRetry'),
+                        onAction: () => customizer.loadGoogleFonts().then(() => undefined),
+                      },
+                    ]
+                  : []),
+                {
+                  id: 'use-built-in-fonts',
+                  label: t(locale, 'fontSourceLocal'),
+                  onAction: (): void => activateFontSource('bundled'),
+                },
+              ]}
+            />
           ) : (
             <>
               <label className="font-search">
@@ -334,10 +375,39 @@ export const FontBrowser = ({
           <>
             {fontSource === 'local' && (
               <div className="font-provider-state font-local-provider-state">
+                {localFontFailure && (
+                  <RecoveryNotice
+                    role="alert"
+                    message={recoveryMessage(locale, localFontFailure)}
+                    detailsLabel={t(locale, 'recoveryDetails')}
+                    diagnostic={localFontFailure.message}
+                    steps={recoverySteps(locale, localFontFailure)}
+                    actions={[
+                      {
+                        id: 'retry-local-font',
+                        label: t(locale, 'fontLocalChoose'),
+                        onAction: async (): Promise<void> => {
+                          clearLocalFontFailure();
+                          if (fileSystemPickerAvailable) await customizer.pickLocalFonts();
+                          else localFileInputRef.current?.click();
+                        },
+                      },
+                      {
+                        id: 'use-built-in-fonts',
+                        label: t(locale, 'fontSourceLocal'),
+                        onAction: (): void => {
+                          clearLocalFontFailure();
+                          activateFontSource('bundled');
+                        },
+                      },
+                    ]}
+                  />
+                )}
                 <p>{t(locale, 'fontLocalDescription')}</p>
                 <div className="font-local-actions">
                   {!fileSystemPickerAvailable && (
                     <input
+                      ref={localFileInputRef}
                       type="file"
                       accept=".ttf,.otf,font/ttf,font/otf"
                       multiple
@@ -366,21 +436,26 @@ export const FontBrowser = ({
                 {customizer.localFonts
                   .filter((record) => record.status === 'unavailable')
                   .map((record) => (
-                    <p key={record.id} role="status">
-                      {record.name} · {t(locale, 'fontLocalUnavailable')}{' '}
-                      <button
-                        type="button"
-                        onClick={() => void customizer.reconnectLocalFont(record.id)}
-                      >
-                        {t(locale, 'fontLocalReconnect')}
-                      </button>{' '}
-                      <button
-                        type="button"
-                        onClick={() => void customizer.removeLocalFont(record.id)}
-                      >
-                        {t(locale, 'remove')}
-                      </button>
-                    </p>
+                    <RecoveryNotice
+                      key={record.id}
+                      role="alert"
+                      message={`${record.name} · ${t(locale, 'fontLocalUnavailable')}`}
+                      detailsLabel={t(locale, 'recoveryDetails')}
+                      diagnostic={record.failure?.message}
+                      steps={record.failure ? recoverySteps(locale, record.failure) : undefined}
+                      actions={[
+                        {
+                          id: `reconnect-${record.id}`,
+                          label: t(locale, 'fontLocalReconnect'),
+                          onAction: () => customizer.reconnectLocalFont(record.id),
+                        },
+                        {
+                          id: `remove-${record.id}`,
+                          label: t(locale, 'remove'),
+                          onAction: () => customizer.removeLocalFont(record.id),
+                        },
+                      ]}
+                    />
                   ))}
               </div>
             )}
@@ -471,9 +546,24 @@ export const FontBrowser = ({
         </p>
       )}
       {fontLoadError && (
-        <p className="font-notice" role="alert">
-          {t(locale, 'fontRuntimeLoadFailed')}
-        </p>
+        <RecoveryNotice
+          className="font-notice"
+          role="alert"
+          message={recoveryMessage(locale, fontLoadError)}
+          detailsLabel={t(locale, 'recoveryDetails')}
+          diagnostic={fontLoadError.message}
+          steps={recoverySteps(locale, fontLoadError)}
+          actions={[
+            {
+              id: 'retry-font-preview',
+              label: t(locale, 'recoveryRetry'),
+              onAction: async (): Promise<void> => {
+                const font = visibleFonts.find((item) => item.id === fontLoadErrorFontId);
+                if (font) await selectFont(font);
+              },
+            },
+          ]}
+        />
       )}
     </div>
   );

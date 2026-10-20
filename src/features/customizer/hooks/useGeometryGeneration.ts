@@ -8,10 +8,17 @@ import {
   type SetStateAction,
 } from 'react';
 
+import type { RecoveryFailure } from '@/shared/lib/recovery/failure';
+
+import { failureFrom } from '@/shared/lib/recovery/failure';
+
 import type { FontDefinition } from '../../../domain/keychain/fonts/catalog';
 import type { GeometryResult, KeychainParams } from '../../../domain/keychain/model/types';
 
-import { GeometryClient } from '../../../infrastructure/geometry/geometry-client';
+import {
+  GeometryClient,
+  GeometryCandidateSupersededError,
+} from '../../../infrastructure/geometry/geometry-client';
 
 export const geometryInputKey = (
   params: KeychainParams,
@@ -46,6 +53,8 @@ export const useGeometryGeneration = (
   result: GeometryResult | undefined;
   busy: boolean;
   error: string | undefined;
+  failure: RecoveryFailure | undefined;
+  retry: () => void;
   current: boolean;
   paramsKey: string;
   adoptResult: (
@@ -61,6 +70,8 @@ export const useGeometryGeneration = (
   const [result, setResult] = useState<GeometryResult>();
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string>();
+  const [failure, setFailure] = useState<RecoveryFailure>();
+  const [retryId, setRetryId] = useState(0);
   const paramsKey = geometryInputKey(params, fontDefinition, subtitleFontDefinition);
   const [resultParamsKey, setResultParamsKey] = useState<string>();
   const adoptedKeyRef = useRef<string | undefined>(undefined);
@@ -79,6 +90,7 @@ export const useGeometryGeneration = (
       setResultParamsKey(key);
       setBusy(false);
       setError(undefined);
+      setFailure(undefined);
     },
     [fontDefinition, params, subtitleFontDefinition],
   );
@@ -100,32 +112,70 @@ export const useGeometryGeneration = (
       adoptedKeyRef.current = undefined;
       return;
     }
+    let active = true;
     const timer = window.setTimeout(
       () => {
         setBusy(true);
         setError(undefined);
+        setFailure(undefined);
         clientRef.current
           ?.request(params, fontDefinition, subtitleFontDefinition)
           .then((next) => {
+            if (!active) return;
             adoptResult(next, params, fontDefinition, subtitleFontDefinition);
           })
           .catch((cause: Error) => {
-            if (cause.message === 'Preview generation superseded.') return;
+            if (
+              !active ||
+              cause instanceof GeometryCandidateSupersededError ||
+              cause.message === 'Preview generation superseded.'
+            )
+              return;
             setBusy(false);
+            const failure = failureFrom(cause, 'geometry-build-failed');
+
+            setFailure(failure);
             setError(cause.message);
           });
       },
       resultRef.current ? 90 : 0,
     );
 
-    return () => window.clearTimeout(timer);
-  }, [adoptResult, fontDefinition, params, paramsKey, skipRequestKey, subtitleFontDefinition]);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [
+    adoptResult,
+    fontDefinition,
+    params,
+    paramsKey,
+    retryId,
+    skipRequestKey,
+    subtitleFontDefinition,
+  ]);
 
   return {
     clientRef,
     result,
     busy,
     error,
+    failure,
+    retry: () => {
+      try {
+        clientRef.current?.recoverForUserRetry();
+      } catch (cause) {
+        const nextFailure = failureFrom(cause, 'geometry-worker-failed');
+
+        setFailure(nextFailure);
+        setError(nextFailure.message ?? 'Geometry worker failed.');
+        setBusy(false);
+
+        return;
+      }
+      adoptedKeyRef.current = undefined;
+      setRetryId((value) => value + 1);
+    },
     current: !busy && !error && resultParamsKey === paramsKey,
     paramsKey,
     adoptResult,

@@ -1,5 +1,9 @@
 import * as opentype from 'opentype.js';
 
+import type { RecoveryFailure } from '@/shared/lib/recovery/failure';
+
+import { failureFrom } from '@/shared/lib/recovery/failure';
+
 import type { FontDefinition, FontScript } from './catalog';
 
 declare global {
@@ -22,6 +26,7 @@ export type LocalFontRecord = {
   handle?: FileSystemFileHandle;
   font?: FontDefinition;
   status: 'available' | 'unavailable';
+  failure?: RecoveryFailure;
 };
 
 type StoredLocalFontRecord = Omit<LocalFontRecord, 'font'> & {
@@ -33,6 +38,13 @@ const STORE_NAME = 'files';
 const supportsFilePicker = (): boolean =>
   typeof window !== 'undefined' && typeof window.showOpenFilePicker === 'function';
 export const isLocalFontId = (id: string): boolean => id.startsWith('local-');
+
+export type LocalFontStoreOptions = {
+  onFailure?: (failure: RecoveryFailure) => void;
+};
+
+const isPickerAbort = (error: unknown): boolean =>
+  error instanceof DOMException && error.name === 'AbortError';
 
 const mergeRecords = (
   current: LocalFontRecord[],
@@ -74,7 +86,10 @@ const readRecords = async (): Promise<LocalFontRecord[]> => {
   }
 };
 
-const writeRecord = async (record: LocalFontRecord): Promise<void> => {
+const writeRecord = async (
+  record: LocalFontRecord,
+  onFailure?: (failure: RecoveryFailure) => void,
+): Promise<void> => {
   if (!record.handle) return;
   try {
     const font = Object.fromEntries(
@@ -90,16 +105,21 @@ const writeRecord = async (record: LocalFontRecord): Promise<void> => {
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
-  } catch {
+  } catch (error) {
+    onFailure?.(failureFrom(error, 'local-font-restore-failed'));
     return;
   }
 };
 
-const deleteRecord = async (id: string): Promise<void> => {
+const deleteRecord = async (
+  id: string,
+  onFailure?: (failure: RecoveryFailure) => void,
+): Promise<void> => {
   try {
     const db = await openDatabase();
     db.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).delete(id);
-  } catch {
+  } catch (error) {
+    onFailure?.(failureFrom(error, 'local-font-restore-failed'));
     return;
   }
 };
@@ -179,10 +199,13 @@ const makeRecord = async (file: File, handle?: FileSystemFileHandle): Promise<Lo
   };
 };
 
-export const createLocalFontStore = () => {
+export const createLocalFontStore = (options: LocalFontStoreOptions = {}) => {
   let records: LocalFontRecord[] = [];
   let restored = false;
   let restoring: Promise<LocalFontRecord[]> | undefined;
+  const reportFailure = (error: unknown, fallbackCode: string): void => {
+    if (!isPickerAbort(error)) options.onFailure?.(failureFrom(error, fallbackCode));
+  };
   return {
     supportsFilePicker,
     async restore(): Promise<LocalFontRecord[]> {
@@ -209,8 +232,10 @@ export const createLocalFontStore = () => {
               await file.arrayBuffer(),
             );
             record.status = 'available';
-          } catch {
+          } catch (error) {
             record.status = 'unavailable';
+            record.failure = failureFrom(error, 'local-font-restore-failed');
+            reportFailure(error, 'local-font-restore-failed');
           }
         }
         records = mergeRecords(records, stored);
@@ -228,7 +253,8 @@ export const createLocalFontStore = () => {
           if (records.some((existing) => existing.id === record.id)) continue;
           records.push(record);
           imported.push(record);
-        } catch {
+        } catch (error) {
+          reportFailure(error, 'local-font-import-failed');
           continue;
         }
       }
@@ -244,7 +270,8 @@ export const createLocalFontStore = () => {
           multiple: true,
           types: [{ description: 'Fonts', accept: { 'font/ttf': ['.ttf'], 'font/otf': ['.otf'] } }],
         });
-      } catch {
+      } catch (error) {
+        reportFailure(error, 'local-font-import-failed');
         return [];
       }
       const imported: LocalFontRecord[] = [];
@@ -254,8 +281,9 @@ export const createLocalFontStore = () => {
           if (records.some((existing) => existing.id === record.id)) continue;
           records.push(record);
           imported.push(record);
-          await writeRecord(record);
-        } catch {
+          await writeRecord(record, options.onFailure);
+        } catch (error) {
+          reportFailure(error, 'local-font-import-failed');
           continue;
         }
       }
@@ -296,15 +324,21 @@ export const createLocalFontStore = () => {
           return undefined;
         }
         record.status = 'available';
-        await writeRecord(record);
+        await writeRecord(record, options.onFailure);
         return record;
-      } catch {
+      } catch (error) {
+        const record = records.find((item) => item.id === id);
+        if (record) {
+          record.status = 'unavailable';
+          record.failure = failureFrom(error, 'local-font-restore-failed');
+        }
+        reportFailure(error, 'local-font-restore-failed');
         return undefined;
       }
     },
     async remove(id: string): Promise<void> {
       records = records.filter((record) => record.id !== id);
-      await deleteRecord(id);
+      await deleteRecord(id, options.onFailure);
     },
   };
 };

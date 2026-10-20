@@ -1,0 +1,39 @@
+.root {
+  display: grid;
+  min-width: 0;
+  gap: var(--workshop-space-2);
+  color: var(--workshop-text-strong);
+  overflow-wrap: anywhere;
+}
+.message,
+.steps {
+  margin: 0;
+}
+.steps {
+  color: var(--workshop-text);
+  font-size: var(--workshop-font-description);
+}
+.actions {
+  display: grid;
+  min-width: 0;
+  gap: var(--workshop-space-1);
+}
+.root details {
+  font-size: var(--workshop-font-description);
+}
+.root summary {
+  box-sizing: border-box;
+  min-height: var(--workshop-touch-target);
+  padding-block: var(--workshop-space-3);
+  cursor: pointer;
+}
+.root summary:focus-visible {
+  outline: var(--workshop-focus-ring);
+  outline-offset: 2px;
+}
+.root code {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding-block-start: var(--workshop-space-2);
+}

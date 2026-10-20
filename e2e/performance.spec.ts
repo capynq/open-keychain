@@ -101,80 +101,115 @@ if (process.env.PLAYWRIGHT_PERFORMANCE === 'true') {
     expect(idleRafCount, `idle preview scheduled ${idleRafCount} animation frames`).toBeLessThan(8);
   });
 
-  test('records candidate-to-render timing for repeated range edits', async ({
-    page,
-  }, testInfo) => {
+  for (const scenario of ['range', 'discrete', 'text'] as const) {
+    test(`records candidate-to-render timing for repeated ${scenario} edits`, async ({
+      page,
+    }, testInfo) => {
+      test.setTimeout(60_000);
+      await page.goto('/create');
+      await waitForReadyGeometry(page);
+      await page.getByTestId('editor-mode').getByText('Pro', { exact: true }).click();
+      const preview = page.locator('.preview-panel[data-model-ready="true"]');
+      const textSize = page
+        .getByTestId('adjustment-settings')
+        .locator('[data-candidate-key="textSizeMm"]');
+      if (scenario === 'range') await textSize.focus();
+      const samples: Record<string, number | undefined>[] = [];
+      let generationId = await preview.getAttribute('data-generation-id');
+      for (let index = 0; index < 32; index += 1) {
+        if (scenario === 'range')
+          await textSize.press(index % 2 === 0 ? 'ArrowRight' : 'ArrowLeft');
+        else if (scenario === 'discrete')
+          await page
+            .getByRole('button', { name: index % 2 === 0 ? 'Capsule' : 'Contour', exact: true })
+            .click();
+        else
+          await page
+            .getByLabel('Name or text', { exact: true })
+            .fill(index % 2 === 0 ? 'ALEXA' : 'ALEX');
+        await expect.poll(() => preview.getAttribute('data-generation-id')).not.toBe(generationId);
+        generationId = await preview.getAttribute('data-generation-id');
+        await expect(preview).toHaveAttribute('data-rendered-generation-id', generationId ?? '');
+        const sample = await preview.evaluate((element) => {
+          const metric = (name: string): number | undefined => {
+            const value = element.getAttribute(name);
+            return value === null || value === '' ? undefined : Number(value);
+          };
+          return {
+            inputToRenderedMs: metric('data-candidate-to-ready-ms'),
+            inputToDrawSubmittedMs: metric('data-candidate-to-render-ms'),
+            inputAt: metric('data-candidate-input-at'),
+            dispatchedAt: metric('data-candidate-dispatched-at'),
+            validatedAt: metric('data-candidate-validated-at'),
+            acceptedAt: metric('data-candidate-accepted-at'),
+            drawSubmittedAt: metric('data-preview-rendered-at'),
+            renderedAt: metric('data-preview-ready-committed-at'),
+            clientCacheHit: metric('data-geometry-client-cache-hit'),
+            workerCacheHit: metric('data-geometry-worker-cache-hit'),
+            clientQueueMs: metric('data-geometry-client-queue-ms'),
+            workerComputeMs: metric('data-geometry-worker-compute-ms'),
+            meshSetupMs: metric('data-viewer-mesh-setup-ms'),
+            drawSubmitMs: metric('data-viewer-draw-submit-ms'),
+          };
+        });
+        expect(sample.inputToRenderedMs).toBeGreaterThanOrEqual(0);
+        expect(sample.dispatchedAt!).toBeGreaterThanOrEqual(sample.inputAt!);
+        expect(sample.acceptedAt!).toBeGreaterThanOrEqual(sample.validatedAt!);
+        expect(sample.drawSubmittedAt!).toBeGreaterThanOrEqual(sample.acceptedAt!);
+        expect(sample.renderedAt!).toBeGreaterThanOrEqual(sample.drawSubmittedAt!);
+        if (sample.clientCacheHit === 1) expect(sample.workerComputeMs).toBeUndefined();
+        samples.push(sample);
+      }
+      const warmSamples = samples.slice(2);
+      const sorted = warmSamples.map((sample) => sample.inputToRenderedMs!).sort((a, b) => a - b);
+      await testInfo.attach('customizer-model-change-timings.json', {
+        body: JSON.stringify(
+          {
+            scenario,
+            coldSamples: samples.slice(0, 2),
+            samples: warmSamples,
+            medianInputToRenderedMs: sorted[14],
+            p95InputToRenderedMs: sorted[28],
+          },
+          null,
+          2,
+        ),
+        contentType: 'application/json',
+      });
+      expect(warmSamples).toHaveLength(30);
+      expect(
+        warmSamples.every(
+          (sample) => sample.meshSetupMs !== undefined && sample.drawSubmitMs !== undefined,
+        ),
+      ).toBe(true);
+    });
+  }
+
+  test('renders the final value after a rapid continuous edit burst', async ({ page }) => {
     await page.goto('/create');
     await waitForReadyGeometry(page);
-    await page
-      .locator('#root')
-      .getByTestId('editor-mode')
-      .getByText('Pro', { exact: true })
-      .click();
-    await waitForReadyGeometry(page);
-
-    const preview = page.locator('.preview-panel[data-model-ready="true"]');
-    const textSize = page
+    await page.getByTestId('editor-mode').getByText('Pro', { exact: true }).click();
+    const preview = page.locator('.preview-panel');
+    const previous = await preview.getAttribute('data-generation-id');
+    const slider = page
       .getByTestId('adjustment-settings')
       .locator('[data-candidate-key="textSizeMm"]');
-    const samples: {
-      inputToRenderedMs: number;
-      workerComputeMs?: number;
-      workerCacheLookupMs?: number;
-      meshSetupMs?: number;
-      drawSubmitMs?: number;
-    }[] = [];
-    let generationId = await preview.getAttribute('data-generation-id');
-
-    await textSize.focus();
-    for (let index = 0; index < 5; index += 1) {
-      const startedAt = await page.evaluate(() => performance.now());
-
-      await textSize.press(index % 2 === 0 ? 'ArrowRight' : 'ArrowLeft');
-      await expect.poll(() => preview.getAttribute('data-generation-id')).not.toBe(generationId);
-      generationId = await preview.getAttribute('data-generation-id');
-      await expect(preview).toHaveAttribute('data-rendered-generation-id', generationId ?? '');
-
-      const sample = await page.evaluate((started) => {
-        const element = document.querySelector('.preview-panel[data-model-ready="true"]');
-        if (!element) throw new Error('Preview panel is missing.');
-        const metric = (name: string): number | undefined => {
-          const value = element.getAttribute(name);
-          return value === null || value === '' ? undefined : Number(value);
-        };
-        return {
-          inputToRenderedMs: performance.now() - started,
-          workerComputeMs: metric('data-geometry-worker-compute-ms'),
-          workerCacheLookupMs: metric('data-geometry-cache-lookup-ms'),
-          meshSetupMs: metric('data-viewer-mesh-setup-ms'),
-          drawSubmitMs: metric('data-viewer-draw-submit-ms'),
-        };
-      }, startedAt);
-
-      samples.push(sample);
-    }
-
-    const sortedTotals = samples.map((sample) => sample.inputToRenderedMs).sort((a, b) => a - b);
-    const percentile = (fraction: number): number =>
-      sortedTotals[
-        Math.min(sortedTotals.length - 1, Math.ceil(fraction * sortedTotals.length) - 1)
-      ];
-
-    await testInfo.attach('customizer-model-change-timings.json', {
-      body: JSON.stringify(
-        {
-          samples,
-          medianInputToRenderedMs: percentile(0.5),
-          p95InputToRenderedMs: percentile(0.95),
-        },
-        null,
-        2,
-      ),
-      contentType: 'application/json',
+    const final = await slider.evaluate((element) => {
+      const input = element as HTMLInputElement;
+      const initial = Number(input.value);
+      const step = Number(input.step);
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+      for (let index = 1; index <= 12; index += 1) {
+        setter.call(input, String(initial + index * step));
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      return input.value;
     });
-
-    expect(samples).toHaveLength(5);
-    expect(samples.every((sample) => sample.meshSetupMs !== undefined)).toBe(true);
-    expect(samples.every((sample) => sample.drawSubmitMs !== undefined)).toBe(true);
+    await expect.poll(() => preview.getAttribute('data-generation-id')).not.toBe(previous);
+    await waitForReadyGeometry(page);
+    await expect(slider).toHaveValue(final);
+    await expect(page.locator('.candidate-feedback-rejected')).toHaveCount(0);
+    const generation = await preview.getAttribute('data-generation-id');
+    await expect(preview).toHaveAttribute('data-rendered-generation-id', generation!);
   });
 }

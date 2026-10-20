@@ -1,39 +1,11 @@
 import type { TFunction } from 'i18next';
 
+import type { RecoveryFailure } from '../../shared/lib/recovery/failure';
 import type { Locale } from './config';
 
+import { recoveryDefinition } from '../../shared/lib/recovery/catalog';
 import i18n from './config';
 export type { Locale } from './config';
-const keyByIssueCode: Record<string, string> = {
-  'empty-text': 'errorEmptyText',
-  'text-too-long': 'errorTooLong',
-  'font-load': 'errorFontLoad',
-  'missing-glyph': 'errorMissingGlyph',
-  'subtitle-font-load': 'errorSubtitleFontLoad',
-  'subtitle-missing-glyph': 'errorSubtitleMissingGlyph',
-  'articulated-font': 'errorArticulatedFont',
-  'empty-outline': 'errorEmptyOutline',
-  'text-too-wide': 'errorTooWide',
-  'subtitle-too-long': 'errorSubtitleTooLong',
-  'magnet-base-adjusted': 'warningMagnetBaseAdjusted',
-  'magnet-pocket-adjusted': 'warningMagnetPocketAdjusted',
-  'magnet-pocket-unsafe': 'errorMagnetPocketUnsafe',
-  disconnected: 'warningDisconnected',
-  'relief-outside-backing': 'errorReliefOutsideBacking',
-  'nameplate-text-outside-plate': 'errorNameplateTextOutside',
-  'nameplate-embedding': 'errorNameplateEmbedding',
-  'scaled-to-fit': 'warningScaled',
-  'text-over-width': 'warningTextOverWidth',
-  'dense-mesh': 'warningDense',
-  'shallow-relief': 'warningShallow',
-  'articulated-base-adjusted': 'warningArticulatedBaseAdjusted',
-  'articulated-captive': 'errorArticulatedJoint',
-  'articulated-counter': 'errorArticulatedJoint',
-  'articulated-manifold': 'errorArticulatedJoint',
-  'articulated-body-collision': 'errorArticulatedJoint',
-  'articulated-connector-collision': 'errorArticulatedJoint',
-  'articulated-motion-collision': 'errorArticulatedJoint',
-};
 export const detectLocale = (): Locale => {
   const language = i18n.resolvedLanguage ?? i18n.language;
   return language.startsWith('uk') ? 'uk' : language.startsWith('ru') ? 'ru' : 'en';
@@ -55,14 +27,27 @@ export const issueMessage = (
     message: string;
   },
 ): string => {
-  const key = keyByIssueCode[issue.code];
-  if (!key) return issue.message;
+  const failure = { code: issue.code, message: issue.message } satisfies RecoveryFailure;
+  return recoveryMessage(locale, failure);
+};
+const recoveryVariables = (failure: RecoveryFailure): Record<string, string | number> => ({
+  glyph: failure.message?.match(/[“«]([^”»]+)[”»]/)?.[1] ?? '',
+  height: failure.message?.match(/(?:to|remains) ([\d.]+) mm/)?.[1] ?? '',
+  width: failure.message?.match(/is ([\d.]+) mm wide/)?.[1] ?? '',
+  target: failure.context?.target ?? '',
+  profile: failure.context?.profile ?? '',
+  maximumMm: failure.context?.maximumMm ?? '',
+  requestedMm: failure.context?.requestedMm ?? '',
+});
+export const recoveryMessage = (locale: Locale, failure: RecoveryFailure): string => {
+  const definition = recoveryDefinition(failure.code);
   const translate: TFunction = i18n.getFixedT(locale, 'translation');
-  return translate(key, {
-    glyph: issue.message.match(/[“«]([^”»]+)[”»]/)?.[1] ?? '',
-    height: issue.message.match(/(?:to|remains) ([\d.]+) mm/)?.[1] ?? '',
-    width: issue.message.match(/is ([\d.]+) mm wide/)?.[1] ?? '',
-  });
+  return translate(definition.messageKey, recoveryVariables(failure));
+};
+export const recoverySteps = (locale: Locale, failure: RecoveryFailure): string => {
+  const stepsKey = recoveryDefinition(failure.code).stepsKey;
+  if (!stepsKey) return '';
+  return i18n.getFixedT(locale, 'translation')(stepsKey, recoveryVariables(failure));
 };
 export const styleName = (locale: Locale, styleId: string, fallback: string): string => {
   const translate: TFunction = i18n.getFixedT(locale, 'styles');

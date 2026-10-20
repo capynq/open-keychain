@@ -1,7 +1,9 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 
+import { RecoveryNotice } from '@/shared/ui/RecoveryNotice';
+
 import { type Locale } from '../../../infrastructure/i18n/config';
-import { t } from '../../../infrastructure/i18n/utils';
+import { recoveryMessage, recoverySteps, t } from '../../../infrastructure/i18n/utils';
 import { resetRetryableLazy } from '../../../shared/ui/RetryableLazy';
 
 type RouteErrorBoundaryProps = {
@@ -44,11 +46,20 @@ export class RouteErrorBoundary extends Component<
     if (!this.state.hasError) return this.props.children;
 
     return (
-      <div role="alert" className="route-load-error">
-        <p>{t(this.props.locale, 'routeLoadError')}</p>
-        <button type="button" onClick={() => window.location.reload()}>
-          {t(this.props.locale, 'retry')}
-        </button>
+      <div className="route-load-error">
+        <RecoveryNotice
+          role="alert"
+          message={recoveryMessage(this.props.locale, { code: 'route-load-failed' })}
+          steps={recoverySteps(this.props.locale, { code: 'route-load-failed' })}
+          detailsLabel={t(this.props.locale, 'recoveryDetails')}
+          actions={[
+            {
+              id: 'reload',
+              label: t(this.props.locale, 'recoveryReload'),
+              onAction: () => window.location.reload(),
+            },
+          ]}
+        />
       </div>
     );
   }

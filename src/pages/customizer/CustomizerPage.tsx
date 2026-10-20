@@ -1,9 +1,9 @@
 import { useLocation, useNavigate } from 'react-router';
 
 import { CustomizerNavigationHeader } from '@/app/components/CustomizerNavigationHeader/CustomizerNavigationHeader';
+import { CustomizerNotices } from '@/app/components/CustomizerNotices/CustomizerNotices';
 import { CustomizerWorkspace } from '@/app/components/CustomizerWorkspace/CustomizerWorkspace';
 import { QuickSetupDialog } from '@/app/components/QuickSetupDialog/QuickSetupDialog';
-import { Toast, type ToastVariant } from '@/app/components/Toast/Toast';
 import { useCustomizerPageState } from '@/app/hooks/useCustomizerPageState';
 import { selectAcceptedMetrics } from '@/domain/keychain/model/accepted-metrics';
 import { TEMPLATE_CATALOG } from '@/domain/keychain/templates/template-builder';
@@ -12,12 +12,12 @@ import { useQuickSetup } from '@/features/customizer/hooks/useQuickSetup';
 import { setupAppearance } from '@/features/customizer/model/quick-setup';
 import { SharePopover } from '@/features/share/components/SharePopover';
 import { useWebMcp } from '@/features/webmcp/hooks/useWebMcp';
+import { recoveryMessage } from '@/infrastructure/i18n/utils';
 
 import type { Locale } from '../../infrastructure/i18n/config';
 
 import { ExportDialog } from '../../features/export/components/ExportDialog/ExportDialog';
 import { buildPreflightReport } from '../../features/export/model/preflight';
-import { t } from '../../infrastructure/i18n/utils';
 import { parseCustomizerRoute } from './model/parseCustomizerRoute';
 import './CustomizerPage.module.css';
 import '../../app/styles/customizer.css';
@@ -80,23 +80,25 @@ export const CustomizerPage = ({
         onRandomize={state.randomize}
         onUndo={state.undo}
         canUndo={state.customizer.canUndo}
+        undoKind={state.customizer.undoKind}
         randomizing={state.randomizing}
         exportDisabled={!state.canExport}
         hosted={state.hosted}
         currentParams={state.customizer.params}
       />
-      {(routeModel.hasInvalidDesign || routeModel.sharedFontFallback || state.randomizeFailure) &&
-        (() => {
-          const variant: ToastVariant =
-            routeModel.hasInvalidDesign || state.randomizeFailure ? 'error' : 'success';
-          const message = routeModel.hasInvalidDesign
-            ? t(locale, 'shareInvalid')
-            : state.randomizeFailure
-              ? t(locale, 'randomizeFailed')
-              : t(locale, 'shareFontFallback');
-
-          return <Toast variant={variant}>{message}</Toast>;
-        })()}
+      <CustomizerNotices
+        locale={locale}
+        invalidDesign={routeModel.hasInvalidDesign}
+        fontFallback={routeModel.sharedFontFallback}
+        randomizeFailure={state.randomizeFailure}
+        recoveryApplied={state.customizer.canUndo && state.customizer.undoKind === 'recovery'}
+        onNewDesign={() => {
+          void navigate('/create', { replace: true });
+        }}
+        onRetryRandomize={() => {
+          state.randomize();
+        }}
+      />
       <CustomizerWorkspace
         locale={locale}
         state={state}
@@ -107,7 +109,19 @@ export const CustomizerPage = ({
         open={quickSetup.setupOpen}
         submitting={quickSetup.setupSubmitting}
         checking={state.customizer.candidateFeedback?.status === 'checking'}
-        error={quickSetup.setupError ? t(locale, 'quickSetupRejected') : undefined}
+        error={
+          quickSetup.setupError
+            ? recoveryMessage(
+                locale,
+                state.customizer.candidateFeedback?.failure ?? { code: 'setup-rejected' },
+              )
+            : undefined
+        }
+        recoveryFailure={
+          quickSetup.setupError
+            ? (state.customizer.candidateFeedback?.failure ?? { code: 'setup-rejected' })
+            : undefined
+        }
         onClose={quickSetup.closeSetup}
         onApply={quickSetup.applySetup}
         initialText={state.customizer.params.text}

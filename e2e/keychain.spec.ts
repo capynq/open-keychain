@@ -738,8 +738,9 @@ test('keeps the accepted preview when candidate geometry validation rejects an e
 
   const backingProfile = page.getByRole('radiogroup', { name: 'Text profile', exact: true });
   const chamfer = backingProfile.getByRole('radio', { name: 'Chamfer' });
-  await chamfer.check();
-  await expect(page.getByRole('alert')).toContainText('Your previous design is kept.');
+  // Rejection can now restore Sharp before Playwright's check() postcondition.
+  await chamfer.click();
+  await expect(page.getByRole('alert')).toContainText('The design could not be generated');
   await expect(backingProfile.getByRole('radio', { name: 'Sharp', exact: true })).toBeChecked();
   await expect(page.locator('.status-pill:visible').first()).toHaveText(/Ready/);
   await expect(
@@ -748,17 +749,16 @@ test('keeps the accepted preview when candidate geometry validation rejects an e
       .first(),
   ).toHaveAttribute('data-generation-id', acceptedGeneration);
 
+  await page.getByRole('button', { name: 'Fix this', exact: true }).click();
   const review = page
-    .getByRole('button', { name: 'Review this setting' })
+    .getByRole('button', { name: 'Edit this setting', exact: true })
     .filter({ visible: true })
     .first();
   await review.click();
   await expect(backingProfile.getByRole('radio', { name: 'Sharp', exact: true })).toBeFocused();
 });
 
-test('ignores a stale candidate rejection after a newer geometry candidate is accepted', async ({
-  page,
-}) => {
+test('keeps the latest candidate when an obsolete active validation rejects', async ({ page }) => {
   await page.addInitScript(() => {
     const NativeWorker = window.Worker;
     let rejectDelayedRequest: (() => void) | undefined;
@@ -817,6 +817,11 @@ test('ignores a stale candidate rejection after a newer geometry candidate is ac
   await expect(customizer.locator('.candidate-feedback[role="status"]')).toBeVisible();
   await expect(exportButton).toBeDisabled();
   await heartSize.fill('26');
+  // The active WASM job finishes before the newest queued candidate is dispatched.
+  await expect(exportButton).toBeDisabled();
+  await page.evaluate(() => {
+    (window as Window & { releaseStaleCandidate?: () => void }).releaseStaleCandidate?.();
+  });
   await expect(customizer.locator('.candidate-feedback')).toBeHidden({ timeout: 10000 });
   await expect(heartSize).toHaveValue('26');
   await expect(exportButton).toBeEnabled();

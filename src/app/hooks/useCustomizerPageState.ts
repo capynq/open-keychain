@@ -20,6 +20,7 @@ import { useExportActions } from '../../features/export/model/use-export-actions
 import { useHostedAccount } from '../../features/hosted/hooks/useHostedAccount';
 import { previewStatus } from '../../features/preview/model/preview-status';
 import { useShareDesign } from '../../features/share/useShareDesign';
+import { GeometryClient } from '../../infrastructure/geometry/geometry-client';
 import { styleName, templateName } from '../../infrastructure/i18n/utils';
 import { useAnalytics } from '../../infrastructure/telemetry/useTelemetry';
 
@@ -43,21 +44,40 @@ export const useCustomizerPageState = (
   const [randomizeFailure, setRandomizeFailure] = useState(false);
   const [skipRequestKey, setSkipRequestKey] = useState<string>();
   const geometryRef = useRef<ReturnType<typeof useGeometryGeneration> | undefined>(undefined);
+  const recoveryClientRef = useRef<GeometryClient | undefined>(undefined);
+
+  useEffect(() => () => recoveryClientRef.current?.dispose(), []);
   const [candidateCallbacks] = useState<CandidateCallbacks>(() => ({
-    pending: (params, font, subtitleFont) =>
-      setSkipRequestKey(geometryInputKey(params, font, subtitleFont)),
+    pending: (params, font, subtitleFont) => {
+      geometryRef.current?.clientRef.current?.cancelCandidate();
+      setSkipRequestKey(geometryInputKey(params, font, subtitleFont));
+    },
     validate: (params, font, subtitleFont) => {
       const client = geometryRef.current?.clientRef.current;
 
       return client
-        ? client.validate(params, font, subtitleFont)
+        ? client.validateCandidate(params, font, subtitleFont)
         : Promise.reject(new Error('Geometry validation is not ready.'));
+    },
+    validateRecovery: async (params, font, subtitleFont) => {
+      const client = geometryRef.current?.clientRef.current;
+      if (!client) throw new Error('Geometry validation is not ready.');
+      // Disposable background work must not queue ahead of interactive edits or export.
+      recoveryClientRef.current ??= new GeometryClient();
+      const result = await recoveryClientRef.current.validate(params, font, subtitleFont);
+
+      return client.identifyValidatedResult(result);
+    },
+    cancelRecovery: () => {
+      recoveryClientRef.current?.dispose();
+      recoveryClientRef.current = undefined;
     },
     accept: (params, result, font, subtitleFont) => {
       geometryRef.current?.adoptResult(result, params, font, subtitleFont);
       setSkipRequestKey(undefined);
     },
     reject: (params, font, subtitleFont) => {
+      geometryRef.current?.clientRef.current?.cancelCandidate();
       const currentGeometry = geometryRef.current;
       if (currentGeometry?.result)
         currentGeometry.adoptResult(currentGeometry.result, params, font, subtitleFont);

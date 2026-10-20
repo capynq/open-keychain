@@ -124,7 +124,12 @@ describe('usePhotoDownload', () => {
     await act(async () => {
       await download(4096);
     });
-    expect(state).toEqual({ status: 'error', resolution: 4096, format: 'png' });
+    expect(state).toMatchObject({
+      status: 'error',
+      resolution: 4096,
+      format: 'png',
+      failure: { code: 'photo-capture-failed', message: 'capture failed' },
+    });
   });
 
   it('rejects a capture blob whose MIME does not match the selected format', async () => {
@@ -140,7 +145,12 @@ describe('usePhotoDownload', () => {
     });
 
     expect(createObjectURL).not.toHaveBeenCalled();
-    expect(state).toEqual({ status: 'error', resolution: 1024, format: 'jpg' });
+    expect(state).toMatchObject({
+      status: 'error',
+      resolution: 1024,
+      format: 'jpg',
+      failure: { code: 'photo-format-unsupported' },
+    });
   });
 
   it('rejects resolutions above the renderer texture limit', async () => {
@@ -204,6 +214,11 @@ describe('usePhotoDownload', () => {
     expect(URL.revokeObjectURL).not.toHaveBeenCalled();
     vi.runOnlyPendingTimers();
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:photo');
-    expect(state).toEqual({ status: 'error', resolution: 1024, format: 'png' });
+    expect(state).toMatchObject({
+      status: 'error',
+      resolution: 1024,
+      format: 'png',
+      failure: { code: 'photo-download-blocked', message: 'download blocked' },
+    });
   });
 });

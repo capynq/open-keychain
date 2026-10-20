@@ -11,7 +11,8 @@ export const useFontChooser = (customizer: ReturnType<typeof useCustomizerParams
 
   useEffect(() => {
     if (!pending || candidateFeedback?.status === 'checking') return;
-    // A font choice closes only after its geometry has been accepted.
+    if (candidateFeedback?.status === 'rejected') return;
+    // Retain a failed font intent so a validated repair can still complete this choice.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPending(undefined);
     const acceptedId =
@@ -28,6 +29,7 @@ export const useFontChooser = (customizer: ReturnType<typeof useCustomizerParams
     },
     close: () => {
       if (!busy) {
+        customizer.cancelRecovery();
         setPending(undefined);
         setOpen(false);
       }

@@ -11,6 +11,7 @@ import {
   asMesh,
   validateMesh,
 } from '../../../infrastructure/geometry/manifold-utils';
+import { RecoveryError, type RecoveryFailureContext } from '../../../shared/lib/recovery/failure';
 import { EDGE_FINISH_GRID_MM, EDGE_FINISH_TEXT_CLEARANCE_MM } from '../model/edge-finish';
 
 type Point = readonly [number, number];
@@ -22,6 +23,8 @@ const OVERLAP = 1;
 const LIMIT_CACHE_SIZE = 64;
 const limitCache = new Map<string, TextFinishLimits>();
 const baseLimitCache = new Map<string, BaseFinishLimits>();
+const recovery = (code: string, message: string, context?: RecoveryFailureContext): RecoveryError =>
+  new RecoveryError({ code, message, ...(context ? { context } : {}) });
 
 /** Consume a solid and remove only machine-resolution, zero-volume Boolean residues.
  * One scaled cubic unit is 1e-9 mm³; every real glyph component is retained.
@@ -51,7 +54,7 @@ export const regularizeFinishedSolid = (
     if (volumetric.length === components.length) return solid;
     if (!volumetric.length) {
       solid.delete();
-      throw new Error('Text edge produced an empty solid.');
+      throw recovery('text-edge-invalid', 'Text edge produced an empty solid.');
     }
     const cutters: Manifold[] = [];
     const bodies: Manifold[] = [];
@@ -136,7 +139,7 @@ const assertTopology = (section: CrossSection, inset: CrossSection): void => {
   const reduced = inset.decompose();
   try {
     if (original.length !== reduced.length)
-      throw new Error('Text edge would collapse a contour or counter.');
+      throw recovery('text-edge-topology', 'Text edge would collapse a contour or counter.');
     const matched = new Set<number>();
     for (const component of original) {
       const index = reduced.findIndex((candidate, candidateIndex) => {
@@ -152,7 +155,8 @@ const assertTopology = (section: CrossSection, inset: CrossSection): void => {
           overlap.delete();
         }
       });
-      if (index < 0) throw new Error('Text edge would collapse a contour or counter.');
+      if (index < 0)
+        throw recovery('text-edge-topology', 'Text edge would collapse a contour or counter.');
       matched.add(index);
     }
   } finally {
@@ -176,11 +180,13 @@ export const extrudeTextFinished = (
   minimumDivisions = 0,
 ): Manifold => {
   if (!Number.isFinite(height) || height <= 0 || !Number.isFinite(topMm) || topMm < 0)
-    throw new Error('Text edge dimensions must be finite and non-negative.');
+    throw recovery('text-edge-dimensions', 'Text edge dimensions must be finite and non-negative.');
   if (style === 'sharp' || topMm === 0) return section.extrude(height, minimumDivisions);
-  if (style !== 'chamfer' && style !== 'round') throw new Error('Unknown text edge profile.');
+  if (style !== 'chamfer' && style !== 'round')
+    throw recovery('text-edge-profile', 'Unknown text edge profile.');
   const radius = Math.round(topMm * MANIFOLD_SCALE);
-  if (radius >= height) throw new Error('Text edge must be thinner than the relief.');
+  if (radius >= height)
+    throw recovery('text-edge-dimensions', 'Text edge must be thinner than the relief.');
   const steps = style === 'round' ? segmentCount(radius) : 1;
   const clean = section.simplify(10);
   const sections: CrossSection[] = [];
@@ -241,11 +247,11 @@ export const extrudeTextFinished = (
     const result = regularizeFinishedSolid(wasm, wasm.Manifold.union(solids));
     try {
       if (result.status() !== 'NoError' || result.numTri() === 0 || !validateMesh(asMesh(result)))
-        throw new Error('Text edge produced an invalid solid.');
+        throw recovery('text-edge-invalid', 'Text edge produced an invalid solid.');
       const upper = result.slice(height - radius / 2);
       try {
         if (section.area() - upper.area() < Math.max(10, section.area() * 0.00001))
-          throw new Error('Text edge has no measurable effect.');
+          throw recovery('text-edge-no-effect', 'Text edge has no measurable effect.');
       } finally {
         upper.delete();
       }
@@ -271,7 +277,10 @@ export const extrudeFinished = (
   const top = finish.style === 'sharp' ? 0 : Math.round(finish.topMm * MANIFOLD_SCALE);
   const bottom = finish.style === 'sharp' ? 0 : Math.round(finish.bottomMm * MANIFOLD_SCALE);
   if (!Number.isFinite(height) || height <= 0 || top < 0 || bottom < 0 || top + bottom >= height)
-    throw new Error('Backing edge dimensions must be finite and leave a printable core.');
+    throw recovery(
+      'base-edge-invalid',
+      'Backing edge dimensions must be finite and leave a printable core.',
+    );
   if (finish.style === 'sharp' || (top === 0 && bottom === 0)) return section.extrude(height);
   const bodies: Manifold[] = [];
   try {
@@ -293,7 +302,7 @@ export const extrudeFinished = (
     const result = regularizeFinishedSolid(wasm, combined);
     if (result.status() !== 'NoError' || result.numTri() === 0 || !validateMesh(asMesh(result))) {
       result.delete();
-      throw new Error('Backing edge produced an invalid solid.');
+      throw recovery('base-edge-invalid', 'Backing edge produced an invalid solid.');
     }
     return result;
   } catch (error) {
@@ -374,12 +383,27 @@ export const assertBaseFinishAmount = (
   minimumWallMm: number,
 ): void => {
   if (style === 'sharp' && (topMm !== 0 || bottomMm !== 0))
-    throw new Error('Sharp backing edges cannot have a finish amount.');
+    throw recovery('base-edge-invalid', 'Sharp backing edges cannot have a finish amount.', {
+      target: 'base',
+      profile: style,
+      requestedMm: Math.max(topMm, bottomMm),
+      maximumMm: 0,
+    });
   const maximum = style === 'chamfer' ? limits.chamferMaxMm : limits.roundMaxMm;
   if (style !== 'sharp' && (topMm > maximum + 1e-8 || bottomMm > maximum + 1e-8))
-    throw new Error('Backing edge is too large for this foundation.');
+    throw recovery('base-edge-too-large', 'Backing edge is too large for this foundation.', {
+      target: 'base',
+      profile: style,
+      requestedMm: Math.max(topMm, bottomMm),
+      maximumMm: maximum,
+    });
   if (topMm + bottomMm > heightMm - minimumWallMm + 1e-8)
-    throw new Error('Backing edge leaves too little wall thickness.');
+    throw recovery('base-edge-wall-too-thin', 'Backing edge leaves too little wall thickness.', {
+      target: 'base',
+      profile: style,
+      requestedMm: topMm + bottomMm,
+      maximumMm: heightMm - minimumWallMm,
+    });
 };
 
 /** Verify consecutive printer-visible amounts, caching values only (never WASM objects). */
@@ -434,5 +458,14 @@ export const assertTextFinishAmount = (
     style !== 'sharp' &&
     amount > (style === 'chamfer' ? limits.chamferMaxMm : limits.roundMaxMm) + 1e-8
   )
-    throw new Error('Text edge is too large for these letters. Increase text size.');
+    throw recovery(
+      'text-edge-too-large',
+      'Text edge is too large for these letters. Increase text size.',
+      {
+        target: 'text',
+        profile: style,
+        requestedMm: amount,
+        maximumMm: style === 'chamfer' ? limits.chamferMaxMm : limits.roundMaxMm,
+      },
+    );
 };

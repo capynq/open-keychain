@@ -4,6 +4,7 @@ import { CornerDownRight, Radius, TriangleRight } from 'lucide-react';
 
 import type { KeychainParams, GeometryResult } from '@/domain/keychain/model/types';
 import type { CandidateControlGroup } from '@/features/customizer/hooks/useCustomizerParams';
+import type { CandidateIntent } from '@/features/customizer/model/candidate-scheduler';
 import type { Locale } from '@/infrastructure/i18n/config';
 
 import { EDGE_FINISH_GRID_MM } from '@/domain/keychain/model/edge-finish';
@@ -36,7 +37,11 @@ export const GeometryFinishControls = ({
   params: KeychainParams;
   baseFinishLimits?: GeometryResult['baseFinishLimits'];
   limits?: GeometryResult['textFinishLimits'];
-  updateMany: (changes: Partial<KeychainParams>, group?: CandidateControlGroup) => void;
+  updateMany: (
+    changes: Partial<KeychainParams>,
+    group?: CandidateControlGroup,
+    intent?: CandidateIntent,
+  ) => void;
   simple?: boolean;
   baseFeedback?: ReactNode;
   textFeedback?: ReactNode;
@@ -153,7 +158,7 @@ export const GeometryFinishControls = ({
                     max={Math.min(baseTopMaximum, verifiedBaseMaximum)}
                     step={EDGE_FINISH_GRID_MM}
                     unit="mm"
-                    onChange={(value) => updateMany({ topEdgeMm: value }, 'print')}
+                    onChange={(value) => updateMany({ topEdgeMm: value }, 'print', 'continuous')}
                   />
                   <RangeControl
                     candidateKey="bottomEdgeMm"
@@ -163,7 +168,7 @@ export const GeometryFinishControls = ({
                     max={Math.min(baseBottomMaximum, verifiedBaseMaximum)}
                     step={EDGE_FINISH_GRID_MM}
                     unit="mm"
-                    onChange={(value) => updateMany({ bottomEdgeMm: value }, 'print')}
+                    onChange={(value) => updateMany({ bottomEdgeMm: value }, 'print', 'continuous')}
                   />
                 </div>
               </div>
@@ -248,7 +253,7 @@ export const GeometryFinishControls = ({
               max={maximum}
               step={EDGE_FINISH_GRID_MM}
               unit="mm"
-              onChange={(value) => updateMany({ textEdgeMm: value }, 'print')}
+              onChange={(value) => updateMany({ textEdgeMm: value }, 'print', 'continuous')}
             />
           </div>
         )}

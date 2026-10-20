@@ -19,9 +19,12 @@ import type { KeyringOpeningShape, KeyringPresetId } from '@/domain/keychain/mod
 import type { PrintAppearanceOverrides, SizeEnvelope } from '@/domain/keychain/model/types';
 import type { QuickSetupChanges } from '@/features/customizer/model/quick-setup';
 import type { Locale } from '@/infrastructure/i18n';
+import type { RecoveryFailure } from '@/shared/lib/recovery/failure';
 
 import { t } from '@/infrastructure/i18n';
+import { recoverySteps } from '@/infrastructure/i18n/utils';
 import { useAnalytics } from '@/infrastructure/telemetry/useTelemetry';
+import { RecoveryNotice } from '@/shared/ui/RecoveryNotice';
 
 import { ColorStep } from './ColorStep';
 import { FontStep } from './FontStep';
@@ -48,6 +51,7 @@ type Props = {
   submitting?: boolean;
   checking?: boolean;
   error?: string;
+  recoveryFailure?: RecoveryFailure;
   acceptedMetrics?: AcceptedMetrics;
   acceptedText?: string;
   supportsKeyring: boolean;
@@ -70,6 +74,7 @@ export const QuickSetupDialog = ({
   submitting = false,
   checking = false,
   error,
+  recoveryFailure,
   acceptedMetrics,
   acceptedText,
   supportsKeyring,
@@ -310,9 +315,27 @@ export const QuickSetupDialog = ({
             )}
           </div>
           {error && (
-            <p className={styles.error} role="alert">
-              {error}
-            </p>
+            <div className={styles.error}>
+              <RecoveryNotice
+                role="alert"
+                message={error}
+                steps={recoveryFailure ? recoverySteps(locale, recoveryFailure) : undefined}
+                diagnostic={recoveryFailure?.message}
+                detailsLabel={t(locale, 'recoveryDetails')}
+                actions={[
+                  {
+                    id: 'review-name-size',
+                    label: t(locale, 'recoverySetupSize'),
+                    onAction: () => edit('name-size'),
+                  },
+                  {
+                    id: 'review-fonts',
+                    label: t(locale, 'recoverySetupFonts'),
+                    onAction: () => edit('fonts'),
+                  },
+                ]}
+              />
+            </div>
           )}
         </div>
         <footer className={styles.actions}>

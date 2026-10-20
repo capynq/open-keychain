@@ -5,10 +5,15 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
 
+import { recoveryMessage, recoverySteps } from '@/infrastructure/i18n/utils';
+import { RecoveryError, type RecoveryFailure } from '@/shared/lib/recovery/failure';
+import { RecoveryNotice } from '@/shared/ui/RecoveryNotice';
+
 import type { GeometryResult, PrintAppearance } from '../../../../domain/keychain/model/types';
 import type { Locale } from '../../../../infrastructure/i18n/config';
 import type { PhotoCaptureApi } from '../../model/photo-capture';
 import type { PhotoFormat } from '../../model/photo-format';
+import type { PreviewRenderState } from '../../model/render-state';
 
 import { t } from '../../../../infrastructure/i18n/utils';
 import {
@@ -19,6 +24,11 @@ import {
   scaleInspectionZoom,
   type InspectionPan,
 } from '../../camera/inspection';
+import {
+  inspectionSnapshot,
+  validInspectionCamera,
+  type InspectionSnapshot,
+} from '../../camera/inspection-snapshot';
 import {
   applyCameraPose,
   fittedCameraPose,
@@ -40,15 +50,11 @@ type ViewerProps = {
   surfacePreset?: SurfacePresetId;
   locale?: Locale;
   templateId?: string;
-  onRendered?: (generationId: number, timings?: ViewerRenderTimings) => void;
-  onUnavailable?: () => void;
+  onStateChange?: (state: PreviewRenderState) => void;
+  onRetry?: () => void;
+  restartKey?: number;
   toolbarAction?: ReactNode;
   onPhotoCaptureChange?: (capture: PhotoCaptureApi | undefined) => void;
-};
-export type ViewerRenderTimings = {
-  meshSetupMs: number;
-  drawSubmitMs: number;
-  initializationMs?: number;
 };
 type ViewerState = {
   camera: THREE.PerspectiveCamera;
@@ -69,6 +75,8 @@ type ViewerState = {
   panHalfWidth: number;
   panHalfHeight: number;
   displayOffsetZ: number;
+  installedGenerationId?: number;
+  fail: (code: string, message?: string) => void;
   invalidate?: () => void;
 };
 const DEFAULT_INSPECTION_ZOOM = 1;
@@ -119,6 +127,7 @@ const fitViewer = (
   selected: ViewId | 'custom',
   resetInspection = false,
   onInspectionChange?: (zoom: number, pan: InspectionPan) => void,
+  orientation?: Pick<InspectionSnapshot, 'direction' | 'up'>,
 ): void => {
   if (resetInspection) {
     state.inspectionZoom = DEFAULT_INSPECTION_ZOOM;
@@ -135,10 +144,20 @@ const fitViewer = (
   );
   // Surface scenery must never change model framing or the inspection pan frame.
   const direction =
-    selected === 'custom'
+    orientation?.direction ??
+    (selected === 'custom'
       ? state.camera.position.clone().sub(state.controls.target).normalize()
-      : viewDefinition(selected).direction;
-  const up = selected === 'custom' ? state.camera.up : viewDefinition(selected).up;
+      : viewDefinition(selected).direction);
+  const up =
+    orientation?.up ?? (selected === 'custom' ? state.camera.up : viewDefinition(selected).up);
+  if (
+    !direction.toArray().every(Number.isFinite) ||
+    direction.lengthSq() < 1e-8 ||
+    direction.clone().normalize().cross(up.clone().normalize()).lengthSq() < 1e-8
+  ) {
+    fitViewer(state, result, 'home', true, onInspectionChange);
+    return;
+  }
   const inspectionZoom = state.inspectionZoom;
 
   state.camera.zoom = DEFAULT_INSPECTION_ZOOM;
@@ -189,22 +208,24 @@ export const Viewer = ({
   surfacePreset = 'matte',
   locale = 'en',
   templateId,
-  onRendered,
-  onUnavailable,
+  onStateChange,
+  onRetry,
+  restartKey = 0,
   onPhotoCaptureChange,
   toolbarAction,
 }: ViewerProps) => {
   const hostRef = useRef<HTMLDivElement>(null);
 
   const stateRef = useRef<ViewerState | undefined>(undefined);
+  const recoveryPose = useRef<InspectionSnapshot | undefined>(undefined);
+  const sessionCounter = useRef(0);
 
   const resultRef = useRef<GeometryResult | undefined>(result);
   const renderedGenerationRef = useRef<number | undefined>(undefined);
   const pendingRenderTimingsRef = useRef<{ generationId: number; meshSetupMs: number } | undefined>(
     undefined,
   );
-  const onRenderedRef = useRef(onRendered);
-  const onUnavailableRef = useRef(onUnavailable);
+  const onStateChangeRef = useRef(onStateChange);
   const onPhotoCaptureChangeRef = useRef(onPhotoCaptureChange);
   const initializationMsRef = useRef<number | undefined>(undefined);
 
@@ -214,6 +235,7 @@ export const Viewer = ({
   const [activeView, setActiveView] = useState<ViewId | 'custom'>('home');
   const [inspectionZoom, setInspectionZoom] = useState(DEFAULT_INSPECTION_ZOOM);
   const [, setInspectionPan] = useState<InspectionPan>({ x: 0, y: 0 });
+  const [previewFailure, setPreviewFailure] = useState<RecoveryFailure>();
   const [previewCapability, setPreviewCapability] = useState<'available' | 'unavailable'>(
     'available',
   );
@@ -223,12 +245,8 @@ export const Viewer = ({
   }, [result]);
 
   useEffect(() => {
-    onRenderedRef.current = onRendered;
-  }, [onRendered]);
-
-  useEffect(() => {
-    onUnavailableRef.current = onUnavailable;
-  }, [onUnavailable]);
+    onStateChangeRef.current = onStateChange;
+  }, [onStateChange]);
 
   useEffect(() => {
     onPhotoCaptureChangeRef.current = onPhotoCaptureChange;
@@ -303,6 +321,27 @@ export const Viewer = ({
     const host = hostRef.current;
     if (!host) return undefined;
     const initializationStartedAt = performance.now();
+    const sessionId = ++sessionCounter.current;
+    let disposed = false;
+    let failed = false;
+    let frame = 0;
+    const publish = (state: PreviewRenderState): void => {
+      if (!disposed && sessionId === sessionCounter.current) onStateChangeRef.current?.(state);
+    };
+    const fail = (code: string, message?: string): void => {
+      if (disposed || failed) return;
+      failed = true;
+      cancelAnimationFrame(frame);
+      frame = 0;
+      onPhotoCaptureChangeRef.current?.(undefined);
+      setPreviewCapability('unavailable');
+      setPreviewFailure({ code, message });
+      publish({ status: 'failed', sessionId, failure: { code, message } });
+    };
+
+    publish({ status: restartKey > 0 ? 'recovering' : 'initializing', sessionId });
+
+    renderedGenerationRef.current = undefined;
     const scene = new THREE.Scene();
 
     scene.background = new THREE.Color('#eee8df');
@@ -314,20 +353,16 @@ export const Viewer = ({
         alpha: false,
         powerPreference: 'high-performance',
       });
-    } catch {
-      queueMicrotask(() => {
-        setPreviewCapability('unavailable');
-        onUnavailableRef.current?.();
-      });
-      return undefined;
+    } catch (cause) {
+      fail('preview-render-failed', cause instanceof Error ? cause.message : undefined);
+      return () => {
+        disposed = true;
+      };
     }
 
     const handleContextLost = (event: Event): void => {
       event.preventDefault();
-      setPreviewCapability('unavailable');
-      onUnavailableRef.current?.();
-      stateRef.current?.controls.dispose();
-      stateRef.current = undefined;
+      fail('preview-context-lost', 'The WebGL context was lost.');
     };
 
     renderer.domElement.addEventListener('webglcontextlost', handleContextLost, false);
@@ -480,6 +515,7 @@ export const Viewer = ({
       panHalfWidth: 1,
       panHalfHeight: 1,
       displayOffsetZ: 0,
+      fail,
     };
     const resize = () => {
       const width = Math.max(host.clientWidth, 1);
@@ -499,9 +535,9 @@ export const Viewer = ({
     const resizeObserver = new ResizeObserver(resize);
 
     resizeObserver.observe(host);
-    let frame = 0;
     const render = () => {
       frame = 0;
+      if (disposed || failed) return;
       controls.update();
       const current = resultRef.current;
       const pendingTimings =
@@ -510,29 +546,64 @@ export const Viewer = ({
           : undefined;
       const drawStartedAt = pendingTimings ? performance.now() : undefined;
 
-      renderer.render(scene, camera);
+      if (
+        current &&
+        viewerState.installedGenerationId === current.generationId &&
+        !validInspectionCamera(camera, controls.target)
+      ) {
+        fitViewer(viewerState, current, 'home', true, (zoom, pan) => {
+          setInspectionZoom(zoom);
+          setInspectionPan(pan);
+        });
+        activeViewRef.current = 'home';
+        setActiveView('home');
+        if (!validInspectionCamera(camera, controls.target)) {
+          fail('preview-camera-invalid', 'Camera fitting did not produce a valid inspection pose.');
+          return;
+        }
+      }
+      try {
+        if (renderer.getContext().isContextLost()) {
+          fail('preview-context-lost');
+          return;
+        }
+        renderer.render(scene, camera);
+      } catch (cause) {
+        fail('preview-render-failed', cause instanceof Error ? cause.message : undefined);
+        return;
+      }
       renderer.domElement.dataset.renderedWidth = String(renderer.domElement.width);
       renderer.domElement.dataset.renderedHeight = String(renderer.domElement.height);
       const drawSubmitMs =
         drawStartedAt === undefined ? undefined : performance.now() - drawStartedAt;
 
-      if (current && renderedGenerationRef.current !== current.generationId) {
+      if (
+        current &&
+        viewerState.installedGenerationId === current.generationId &&
+        viewerState.group.children.length >= 2 &&
+        validInspectionCamera(camera, controls.target) &&
+        renderedGenerationRef.current !== current.generationId
+      ) {
         renderedGenerationRef.current = current.generationId;
-        onRenderedRef.current?.(
-          current.generationId,
-          pendingTimings && drawSubmitMs !== undefined
-            ? {
-                meshSetupMs: pendingTimings.meshSetupMs,
-                drawSubmitMs,
-                initializationMs: initializationMsRef.current,
-              }
-            : undefined,
-        );
+        publish({
+          status: 'ready',
+          sessionId,
+          generationId: current.generationId,
+          timings:
+            pendingTimings && drawSubmitMs !== undefined
+              ? {
+                  renderedAt: performance.now(),
+                  meshSetupMs: pendingTimings.meshSetupMs,
+                  drawSubmitMs,
+                  initializationMs: initializationMsRef.current,
+                }
+              : undefined,
+        });
         if (pendingTimings) pendingRenderTimingsRef.current = undefined;
       }
     };
     const invalidate = () => {
-      if (frame === 0) frame = requestAnimationFrame(render);
+      if (!disposed && !failed && frame === 0) frame = requestAnimationFrame(render);
     };
     let suppressControlsChange = false;
     const handleControlsChange = () => {
@@ -590,7 +661,10 @@ export const Viewer = ({
 
     const capturePreview = async (longEdge: number, format: PhotoFormat = 'png'): Promise<Blob> => {
       if (
+        disposed ||
+        failed ||
         !resultRef.current ||
+        viewerState.installedGenerationId !== resultRef.current.generationId ||
         stateRef.current !== viewerState ||
         renderer.getContext().isContextLost()
       )
@@ -656,7 +730,11 @@ export const Viewer = ({
         canvas.width = width;
         canvas.height = height;
         const context = canvas.getContext('2d');
-        if (!context) throw new Error('Canvas 2D is unavailable.');
+        if (!context)
+          throw new RecoveryError({
+            code: 'canvas-unavailable',
+            message: 'Canvas 2D is unavailable.',
+          });
         context.putImageData(
           new ImageData(new Uint8ClampedArray(pixels.buffer), width, height),
           0,
@@ -664,7 +742,14 @@ export const Viewer = ({
         );
         return await new Promise<Blob>((resolve, reject) => {
           const handleBlob = (blob: Blob | null): void =>
-            blob ? resolve(blob) : reject(new Error('Image encoding failed.'));
+            blob
+              ? resolve(blob)
+              : reject(
+                  new RecoveryError({
+                    code: 'image-encoding-failed',
+                    message: 'Image encoding failed.',
+                  }),
+                );
           if (format === 'jpg') canvas.toBlob(handleBlob, 'image/jpeg', 0.92);
           else canvas.toBlob(handleBlob, 'image/png');
         });
@@ -706,12 +791,27 @@ export const Viewer = ({
       },
     };
 
-    onPhotoCaptureChangeRef.current?.(captureApi);
+    if (!failed && !disposed) onPhotoCaptureChangeRef.current?.(captureApi);
+    queueMicrotask(() => {
+      if (!disposed && !failed) {
+        setPreviewCapability('available');
+        setPreviewFailure(undefined);
+      }
+    });
     resize();
     initializationMsRef.current = performance.now() - initializationStartedAt;
     invalidate();
 
     return () => {
+      disposed = true;
+      const snapshot = inspectionSnapshot(
+        camera,
+        controls.target,
+        viewerState.inspectionPan,
+        activeViewRef.current,
+        viewerState.installedGenerationId !== undefined,
+      );
+      if (snapshot) recoveryPose.current = snapshot;
       cancelAnimationFrame(frame);
       resizeObserver.disconnect();
       controls.removeEventListener('change', handleControlsChange);
@@ -735,63 +835,95 @@ export const Viewer = ({
       renderer.domElement.remove();
       stateRef.current = undefined;
     };
-  }, []);
+  }, [restartKey]);
 
   useEffect(() => {
     const state = stateRef.current;
     if (!state || !result) return;
     const meshSetupStartedAt = performance.now();
 
-    disposeChildren(state.group);
-    state.group.add(
-      makeMesh(result.baseMesh, result.appearance.base.color, 0.42, result.baseShading === 'flat'),
-    );
-    state.group.add(makeMesh(result.reliefMesh, result.appearance.relief.color, 0.3));
-    const center = new THREE.Vector3(...result.dimensions.centerMm);
+    try {
+      disposeChildren(state.group);
+      state.installedGenerationId = undefined;
+      state.group.add(
+        makeMesh(
+          result.baseMesh,
+          result.appearance.base.color,
+          0.42,
+          result.baseShading === 'flat',
+        ),
+      );
+      state.group.add(makeMesh(result.reliefMesh, result.appearance.relief.color, 0.3));
+      const center = new THREE.Vector3(...result.dimensions.centerMm);
 
-    state.floor.position.set(
-      center.x,
-      center.y,
-      state.platform.visible ? -BOARD_DISPLAY_OFFSET : -0.08,
-    );
-    state.grid.position.set(
-      center.x,
-      center.y,
-      state.platform.visible ? -BOARD_DISPLAY_OFFSET + 0.02 : -0.06,
-    );
-    state.displayOffsetZ = state.platform.visible ? BOARD_DISPLAY_OFFSET : 0;
-    state.group.position.z = state.displayOffsetZ;
-    syncPlatform(state, result);
-    const maxDimension = Math.max(
-      result.dimensions.widthMm,
-      result.dimensions.heightMm,
-      result.dimensions.thicknessMm,
-    );
-    const shadowSpan = maxDimension * 0.72;
+      state.floor.position.set(
+        center.x,
+        center.y,
+        state.platform.visible ? -BOARD_DISPLAY_OFFSET : -0.08,
+      );
+      state.grid.position.set(
+        center.x,
+        center.y,
+        state.platform.visible ? -BOARD_DISPLAY_OFFSET + 0.02 : -0.06,
+      );
+      state.displayOffsetZ = state.platform.visible ? BOARD_DISPLAY_OFFSET : 0;
+      state.group.position.z = state.displayOffsetZ;
+      syncPlatform(state, result);
+      const maxDimension = Math.max(
+        result.dimensions.widthMm,
+        result.dimensions.heightMm,
+        result.dimensions.thicknessMm,
+      );
+      const shadowSpan = maxDimension * 0.72;
 
-    state.key.shadow.camera.left = -shadowSpan;
-    state.key.shadow.camera.right = shadowSpan;
-    state.key.shadow.camera.top = shadowSpan;
-    state.key.shadow.camera.bottom = -shadowSpan;
-    state.key.shadow.camera.near = 0.1;
-    state.key.shadow.camera.far = Math.max(300, maxDimension * 4);
-    state.key.shadow.camera.updateProjectionMatrix();
-    if (templateIdRef.current !== templateId) {
-      templateIdRef.current = templateId;
-      state.inspectionZoom = DEFAULT_INSPECTION_ZOOM;
-      state.inspectionPan = { x: 0, y: 0 };
-      state.controls.enablePan = false;
+      state.key.shadow.camera.left = -shadowSpan;
+      state.key.shadow.camera.right = shadowSpan;
+      state.key.shadow.camera.top = shadowSpan;
+      state.key.shadow.camera.bottom = -shadowSpan;
+      state.key.shadow.camera.near = 0.1;
+      state.key.shadow.camera.far = Math.max(300, maxDimension * 4);
+      state.key.shadow.camera.updateProjectionMatrix();
+      if (templateIdRef.current !== templateId) {
+        templateIdRef.current = templateId;
+        state.inspectionZoom = DEFAULT_INSPECTION_ZOOM;
+        state.inspectionPan = { x: 0, y: 0 };
+        state.controls.enablePan = false;
+      }
+      const pose = recoveryPose.current;
+      if (pose) {
+        state.inspectionZoom = pose.zoom;
+        state.inspectionPan = { ...pose.pan };
+        activeViewRef.current = pose.view;
+        setActiveView(pose.view);
+      }
+      fitViewer(
+        state,
+        result,
+        activeViewRef.current,
+        false,
+        (zoom, pan) => {
+          setInspectionZoom(zoom);
+          setInspectionPan(pan);
+        },
+        pose,
+      );
+      recoveryPose.current = undefined;
+      if (!validInspectionCamera(state.camera, state.controls.target)) {
+        throw new RecoveryError({ code: 'preview-camera-invalid' });
+      }
+      state.installedGenerationId = result.generationId;
+      pendingRenderTimingsRef.current = {
+        generationId: result.generationId,
+        meshSetupMs: performance.now() - meshSetupStartedAt,
+      };
+      state.invalidate?.();
+    } catch (cause) {
+      state.fail(
+        cause instanceof RecoveryError ? cause.failure.code : 'preview-render-failed',
+        cause instanceof Error ? cause.message : undefined,
+      );
     }
-    fitViewer(state, result, activeViewRef.current, false, (zoom, pan) => {
-      setInspectionZoom(zoom);
-      setInspectionPan(pan);
-    });
-    pendingRenderTimingsRef.current = {
-      generationId: result.generationId,
-      meshSetupMs: performance.now() - meshSetupStartedAt,
-    };
-    state.invalidate?.();
-  }, [result, templateId]);
+  }, [result, templateId, restartKey]);
 
   useEffect(() => {
     const state = stateRef.current;
@@ -805,7 +937,7 @@ export const Viewer = ({
       (relief.material as THREE.MeshStandardMaterial).color.set(appearance.relief.color);
     }
     state.invalidate?.();
-  }, [appearance]);
+  }, [appearance, restartKey]);
 
   useEffect(() => {
     const state = stateRef.current;
@@ -914,11 +1046,12 @@ export const Viewer = ({
       });
     }
     state.invalidate?.();
-  }, [surfacePreset]);
+  }, [surfacePreset, restartKey]);
   return (
     <div
       className={`${styles.root} viewer`}
-      aria-label="Interactive 3D preview"
+      role="region"
+      aria-label={t(locale, 'livePreview')}
       data-view={activeView}
       data-zoom-scale={inspectionZoom.toFixed(3)}
       data-surface={surfacePreset}
@@ -932,8 +1065,13 @@ export const Viewer = ({
         className="viewer-surface"
         ref={hostRef}
         tabIndex={0}
-        aria-label={t(locale, 'viewerInstructions')}
+        role="group"
+        aria-label={t(
+          locale,
+          previewCapability === 'unavailable' ? 'previewUnavailableTitle' : 'viewerInstructions',
+        )}
         onKeyDown={(event) => {
+          if (previewCapability === 'unavailable') return;
           if (event.ctrlKey || event.metaKey || event.altKey) return;
           if (event.key === '+' || event.key === '=') {
             event.preventDefault();
@@ -960,18 +1098,35 @@ export const Viewer = ({
         }}
       >
         {previewCapability === 'unavailable' ? (
-          <div className="viewer-unavailable" role="status">
+          <div className="viewer-unavailable">
             <span className="viewer-unavailable-icon" aria-hidden="true">
               !
             </span>
-            <strong>{t(locale, 'previewUnavailableTitle')}</strong>
-            <p>{t(locale, 'previewUnavailable')}</p>
+            <RecoveryNotice
+              role="alert"
+              message={recoveryMessage(locale, previewFailure ?? { code: 'preview-unavailable' })}
+              steps={recoverySteps(locale, previewFailure ?? { code: 'preview-unavailable' })}
+              detailsLabel={t(locale, 'recoveryDetails')}
+              diagnostic={previewFailure?.message}
+              actions={
+                onRetry
+                  ? [
+                      { id: 'retry-preview', label: t(locale, 'recoveryRetry'), onAction: onRetry },
+                      {
+                        id: 'reload',
+                        label: t(locale, 'recoveryReload'),
+                        onAction: () => window.location.reload(),
+                      },
+                    ]
+                  : []
+              }
+            />
           </div>
         ) : (
           <p className="viewer-caption">{t(locale, 'dragRotate')}</p>
         )}
       </div>
-      <div className="viewer-toolbar" aria-label="Preview camera views">
+      <div className="viewer-toolbar" role="group" aria-label={t(locale, 'previewCameraControls')}>
         <div className="viewer-toolbar-controls">
           {VIEW_DEFINITIONS.map((view) => (
             <button

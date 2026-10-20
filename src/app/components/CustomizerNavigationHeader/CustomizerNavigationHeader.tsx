@@ -27,6 +27,7 @@ export const CustomizerNavigationHeader = ({
   onRandomize,
   onUndo,
   canUndo,
+  undoKind,
   randomizing = false,
   exportDisabled = false,
   hosted,
@@ -43,6 +44,7 @@ export const CustomizerNavigationHeader = ({
   onRandomize?: () => void;
   onUndo?: () => void;
   canUndo?: boolean;
+  undoKind?: 'randomize' | 'recovery';
   randomizing?: boolean;
   exportDisabled?: boolean;
   hosted?: HostedAccountState;
@@ -108,7 +110,7 @@ export const CustomizerNavigationHeader = ({
           className="undo-header-button"
           icon={Undo2}
           iconSize={22}
-          label={t(locale, 'undo')}
+          label={t(locale, undoKind === 'recovery' ? 'recoveryUndo' : 'undo')}
           motion="rotate"
           onClick={onUndo}
           disabled={randomizing}

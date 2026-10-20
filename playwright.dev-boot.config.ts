@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: /dev-boot\.spec\.ts/,
+  testMatch: /(dev-boot|preview-lifecycle)\.spec\.ts/,
   timeout: 45_000,
   fullyParallel: false,
   use: {
@@ -25,6 +25,10 @@ export default defineConfig({
     {
       name: 'mobile',
       use: { hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } },
+    },
+    {
+      name: 'firefox-desktop',
+      use: { browserName: 'firefox', viewport: { width: 1440, height: 900 } },
     },
   ],
 });

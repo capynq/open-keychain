@@ -49,6 +49,23 @@ export const CustomizerWorkspace = ({
         surfacePreset={state.surfacePreset}
         status={state.status}
         exportOpen={state.exportOpen}
+        onReviewIssue={() => {
+          const controls = document.querySelector<HTMLElement>('.controls-panel');
+
+          const section =
+            controls?.querySelector<HTMLElement>(
+              state.status.fixTarget === 'print'
+                ? '[data-control-group="print"]'
+                : state.status.fixTarget === 'design'
+                  ? '[data-control-group="refine"]'
+                  : '[data-control-group="name"]',
+            ) ?? controls;
+
+          section?.scrollIntoView({ block: 'start' });
+          section
+            ?.querySelector<HTMLElement>('input:not(:disabled), button:not(:disabled)')
+            ?.focus();
+        }}
         modelInfo={state.modelInfo}
         photoDesign={state.customizer.acceptedParams}
         appearanceOverrides={state.appearanceOverrides}

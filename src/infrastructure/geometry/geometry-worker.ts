@@ -1,3 +1,5 @@
+import type { OperationDiagnostics } from '../../shared/lib/recovery/operation-diagnostics';
+
 import { buildKeychain, createWasm } from '../../domain/keychain/build/keychain-builder';
 import {
   sanitizeFilename,
@@ -6,6 +8,7 @@ import {
   type WorkerRequest,
   type WorkerResponse,
 } from '../../domain/keychain/model/types';
+import { failureFrom } from '../../shared/lib/recovery/failure';
 import { serializeBinaryStl } from '../export/stl-serializer';
 import { serializeThreeMf } from '../export/three-mf-serializer';
 import { BoundedResultCache } from './result-cache';
@@ -91,9 +94,9 @@ const transferBuffers = (result: BuiltGeometry['result']): ArrayBuffer[] => {
   }
   return [...buffers].filter((buffer): buffer is ArrayBuffer => buffer instanceof ArrayBuffer);
 };
-void getWasm();
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   const request = event.data;
+  let stage: OperationDiagnostics['stage'] = 'initialization';
   try {
     if (request.type === 'warmup') {
       await getWasm();
@@ -102,6 +105,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     const wasmStartedAt = performance.now();
     const wasm = await getWasm();
     const wasmWaitMs = performance.now() - wasmStartedAt;
+    stage = 'generation';
     if (request.type === 'generate' || request.type === 'validate') {
       const startedAt = performance.now();
       const key = await cacheKey('preview', request);
@@ -129,6 +133,9 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       output.timings = {
         ...output.timings,
         wasmWaitMs,
+        workerCacheHit: cacheHit ? 1 : 0,
+        workerComputeMs: cacheHit ? 0 : (result.timings?.workerComputeMs ?? 0),
+        generationMs: cacheHit ? 0 : (result.timings?.generationMs ?? 0),
         workerResponsePreparationMs: performance.now() - preparationStartedAt,
       };
       if (cacheHit) {
@@ -177,11 +184,18 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         const message =
           result.issues.find((issue) => issue.severity === 'error')?.message ??
           'This model is not ready to download.';
-        const response: WorkerResponse = { type: 'error', requestId: request.requestId, message };
+        const issue = result.issues.find((candidate) => candidate.severity === 'error');
+        const response: WorkerResponse = {
+          type: 'error',
+          requestId: request.requestId,
+          message,
+          ...(issue?.failure ? { failure: issue.failure } : {}),
+        };
         self.postMessage(response);
         return;
       }
       if (!cacheHit) finalCache.set(key, built);
+      stage = 'serialization';
       const appearance = applyPrintAppearanceOverrides(
         result.appearance,
         request.appearanceOverrides,
@@ -205,14 +219,17 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         mimeType: format === '3mf' ? 'model/3mf' : 'model/stl',
         data,
       };
+      stage = 'transport';
       self.postMessage(response, { transfer: [data] });
     }
   } catch (error) {
+    const failure = failureFrom(error, 'geometry-build-failed');
     const response: WorkerResponse = {
       type: 'error',
       requestId: request.type === 'warmup' ? 0 : request.requestId,
-      message:
-        error instanceof Error ? error.message : 'The geometry engine could not create this model.',
+      message: failure.message ?? 'The geometry engine could not create this model.',
+      failure,
+      diagnostics: { stage, type: 'operation_error' },
     };
     self.postMessage(response);
   }

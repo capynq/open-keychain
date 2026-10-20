@@ -1,7 +1,9 @@
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { fontDefinitionFromBytes, isLocalFontId } from './local-provider';
+import { createLocalFontStore, fontDefinitionFromBytes, isLocalFontId } from './local-provider';
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe('local font metadata', () => {
   it('uses OpenType names and marks imported fonts as non-articulated', () => {
@@ -18,5 +20,32 @@ describe('local font metadata', () => {
   it('recognizes ids that must not be persisted as hosted params', () => {
     expect(isLocalFontId('local-abc')).toBe(true);
     expect(isLocalFontId('nunito')).toBe(false);
+  });
+
+  it('reports imported font parse failures through the operational callback', async () => {
+    const onFailure = vi.fn();
+    const store = createLocalFontStore({ onFailure });
+    const file = {
+      name: 'broken.ttf',
+      arrayBuffer: async () => new ArrayBuffer(4),
+    } as unknown as File;
+
+    await store.importFiles([file]);
+
+    expect(onFailure).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 'local-font-import-failed' }),
+    );
+  });
+
+  it('treats native picker cancellation as neutral', async () => {
+    const onFailure = vi.fn();
+    vi.stubGlobal('window', {
+      showOpenFilePicker: vi.fn().mockRejectedValue(new DOMException('cancelled', 'AbortError')),
+    });
+    const store = createLocalFontStore({ onFailure });
+
+    await store.pick();
+
+    expect(onFailure).not.toHaveBeenCalled();
   });
 });

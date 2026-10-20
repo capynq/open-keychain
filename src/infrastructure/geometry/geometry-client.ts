@@ -10,16 +10,40 @@ import type {
 } from '../../domain/keychain/model/types';
 
 import { validateGeometryResult } from '../../domain/keychain/model/types';
+import { RecoveryError, failureFrom } from '../../shared/lib/recovery/failure';
+import {
+  GeometryOperationError,
+  type OperationDiagnostics,
+} from '../../shared/lib/recovery/operation-diagnostics';
 import { BoundedResultCache } from './result-cache';
 
-const disposedError = () => new Error('Geometry client disposed.');
-const failedError = () => new Error('Geometry worker failed.');
+const disposedError = () =>
+  new RecoveryError({ code: 'geometry-client-disposed', message: 'Geometry client disposed.' });
+const failedError = (type: OperationDiagnostics['type'] = 'worker_unavailable') =>
+  new GeometryOperationError(
+    { code: 'geometry-worker-failed', message: 'Geometry worker failed.' },
+    { stage: 'transport', type },
+  );
 export const DEFAULT_GEOMETRY_REQUEST_TIMEOUT_MS = 30_000;
 
-export class GeometryRequestTimeoutError extends Error {
+export class GeometryRequestTimeoutError extends GeometryOperationError {
   constructor() {
-    super('Geometry worker request timed out.');
+    super(
+      { code: 'geometry-request-timeout', message: 'Geometry worker request timed out.' },
+      { stage: 'transport', type: 'timeout' },
+    );
     this.name = 'GeometryRequestTimeoutError';
+  }
+}
+
+export class GeometryCandidateSupersededError extends Error {
+  constructor() {
+    super('Geometry candidate was superseded.');
+    this.name = 'GeometryCandidateSupersededError';
+    Object.defineProperty(this, 'failure', {
+      value: { code: 'geometry-candidate-superseded', message: this.message },
+      enumerable: true,
+    });
   }
 }
 
@@ -97,8 +121,23 @@ export class GeometryClient {
   >();
   private readonly pendingValidations = new Map<
     number,
-    { resolve: (result: GeometryResult) => void; reject: (error: Error) => void; startedAt: number }
+    {
+      resolve: (result: GeometryResult) => void;
+      reject: (error: Error) => void;
+      startedAt: number;
+      queueMs?: number;
+    }
   >();
+  private activeCandidateRequestId: number | undefined;
+  private queuedCandidate:
+    | {
+        params: KeychainParams;
+        fontDefinition?: FontDefinition;
+        subtitleFontDefinition?: FontDefinition;
+        requestId: number;
+        cacheKey?: string;
+      }
+    | undefined;
   private disposed = false;
   private workerFailed = false;
   private recoveryAvailable = true;
@@ -129,17 +168,17 @@ export class GeometryClient {
     const cacheKey = this.cacheKey('preview', params, fontDefinition, subtitleFontDefinition);
     const cacheable = !hasInlineFontData(fontDefinition, subtitleFontDefinition);
     const cached = cacheable ? this.resultCache.get(cacheKey) : undefined;
-    if (cached) return Promise.resolve(cloneResult(cached, requestId));
+    if (cached) return Promise.resolve(this.cloneCachedResult(cached, requestId));
     const promise = new Promise<GeometryResult>((resolve, reject) => {
       this.pendingGeometry.set(requestId, { resolve, reject, startedAt: performance.now() });
     });
     if (this.activePreviewRequestId !== undefined) {
       const stale = this.pendingGeometry.get(this.activePreviewRequestId);
-      stale?.reject(new Error('Preview generation superseded.'));
+      stale?.reject(new GeometryCandidateSupersededError());
       this.pendingGeometry.delete(this.activePreviewRequestId);
       if (this.queuedPreview) {
         const superseded = this.pendingGeometry.get(this.queuedPreview.requestId);
-        superseded?.reject(new Error('Preview generation superseded.'));
+        superseded?.reject(new GeometryCandidateSupersededError());
         this.pendingGeometry.delete(this.queuedPreview.requestId);
       }
       this.queuedPreview = { params, fontDefinition, requestId, subtitleFontDefinition, cacheKey };
@@ -206,27 +245,68 @@ export class GeometryClient {
     const cacheKey = this.cacheKey('validation', params, fontDefinition, subtitleFontDefinition);
     const cacheable = !hasInlineFontData(fontDefinition, subtitleFontDefinition);
     const cached = cacheable ? this.resultCache.get(cacheKey) : undefined;
-    if (cached) return Promise.resolve(cloneResult(cached, requestId));
+    if (cached) return Promise.resolve(this.cloneCachedResult(cached, requestId));
     const promise = new Promise<GeometryResult>((resolve, reject) => {
       this.pendingValidations.set(requestId, { resolve, reject, startedAt: performance.now() });
     });
     if (cacheable) this.validationCacheKeys.set(requestId, cacheKey);
-    try {
-      this.worker.postMessage({
-        type: 'validate',
-        requestId,
-        params,
-        fontDefinition: this.fontForWorker(fontDefinition),
-        subtitleFontDefinition: this.fontForWorker(subtitleFontDefinition),
-      } satisfies WorkerRequest);
-    } catch (error) {
-      this.pendingValidations.delete(requestId);
-      this.validationCacheKeys.delete(requestId);
-      return Promise.reject(error instanceof Error ? error : failedError());
-    }
-    this.startRequestTimer(requestId, this.worker);
+    this.sendValidate(params, fontDefinition, subtitleFontDefinition, requestId);
     return promise;
   }
+  /** Validate the latest interactive candidate, coalescing work to one active and one queued request. */
+  validateCandidate(
+    params: KeychainParams,
+    fontDefinition?: FontDefinition,
+    subtitleFontDefinition?: FontDefinition,
+  ): Promise<GeometryResult> {
+    if (this.disposed || this.workerFailed) return Promise.reject(this.currentError());
+    const requestId = this.nextRequestId++;
+    const cacheKey = this.cacheKey('validation', params, fontDefinition, subtitleFontDefinition);
+    const cacheable = !hasInlineFontData(fontDefinition, subtitleFontDefinition);
+    const lookupStartedAt = performance.now();
+    const cached = cacheable ? this.resultCache.get(cacheKey) : undefined;
+    if (this.activeCandidateRequestId !== undefined)
+      this.supersedeCandidate(this.activeCandidateRequestId);
+    if (this.queuedCandidate) this.supersedeCandidate(this.queuedCandidate.requestId);
+    this.queuedCandidate = undefined;
+    if (cached) return Promise.resolve(this.cloneCachedResult(cached, requestId, lookupStartedAt));
+    const promise = new Promise<GeometryResult>((resolve, reject) => {
+      this.pendingValidations.set(requestId, { resolve, reject, startedAt: lookupStartedAt });
+    });
+    if (cacheable) this.validationCacheKeys.set(requestId, cacheKey);
+    const request = { params, fontDefinition, subtitleFontDefinition, requestId, cacheKey };
+    if (this.activeCandidateRequestId !== undefined) {
+      this.queuedCandidate = request;
+    } else {
+      this.activeCandidateRequestId = requestId;
+      this.sendValidate(params, fontDefinition, subtitleFontDefinition, requestId, true);
+    }
+    return promise;
+  }
+
+  cancelCandidate(): void {
+    if (this.activeCandidateRequestId !== undefined)
+      this.supersedeCandidate(this.activeCandidateRequestId);
+    if (this.queuedCandidate) this.supersedeCandidate(this.queuedCandidate.requestId);
+    this.queuedCandidate = undefined;
+  }
+  /** Give a validated external/background result a unique generation in this editor session. */
+  identifyValidatedResult(result: GeometryResult): GeometryResult {
+    if (this.disposed || this.workerFailed) throw this.currentError();
+    if (!validateGeometryResult(result))
+      throw new RecoveryError({ code: 'geometry-invalid-result' });
+    return { ...result, generationId: this.nextRequestId++ };
+  }
+
+  /** Re-arm a failed client only in response to an explicit user retry. Never replay old work. */
+  recoverForUserRetry(): void {
+    if (this.disposed) throw disposedError();
+    if (!this.workerFailed) return;
+    this.recoveryAvailable = false;
+    this.replaceWorker();
+    if (this.workerFailed) throw failedError();
+  }
+
   dispose(): void {
     this.disposed = true;
     const error = disposedError();
@@ -239,6 +319,8 @@ export class GeometryClient {
     this.clearRequestTimers();
     this.queuedPreview = undefined;
     this.activePreviewRequestId = undefined;
+    this.queuedCandidate = undefined;
+    this.activeCandidateRequestId = undefined;
     this.resultCache.clear();
     this.worker.terminate();
   }
@@ -268,16 +350,62 @@ export class GeometryClient {
     this.startRequestTimer(requestId, this.worker);
     if (cacheKey) this.previewCacheKeys.set(requestId, cacheKey);
   }
+  private sendValidate(
+    params: KeychainParams,
+    fontDefinition: FontDefinition | undefined,
+    subtitleFontDefinition: FontDefinition | undefined,
+    requestId: number,
+    candidate = false,
+  ): void {
+    try {
+      this.worker.postMessage({
+        type: 'validate',
+        requestId,
+        params,
+        fontDefinition: this.fontForWorker(fontDefinition),
+        subtitleFontDefinition: this.fontForWorker(subtitleFontDefinition),
+      } satisfies WorkerRequest);
+    } catch (error) {
+      this.pendingValidations
+        .get(requestId)
+        ?.reject(error instanceof Error ? error : failedError());
+      this.pendingValidations.delete(requestId);
+      this.validationCacheKeys.delete(requestId);
+      if (candidate) {
+        this.activeCandidateRequestId = undefined;
+        this.rejectQueuedCandidate(error instanceof Error ? error : failedError());
+      }
+      return;
+    }
+    this.startRequestTimer(requestId, this.worker);
+    const pending = this.pendingValidations.get(requestId);
+    if (pending) pending.queueMs = Math.max(0, performance.now() - pending.startedAt);
+  }
   private handleResponse(worker: Worker, response: WorkerResponse): void {
     if (this.disposed || worker !== this.worker) return;
     this.clearRequestTimer(response.requestId);
+    if (response.type === 'error' && response.requestId === 0) {
+      this.handleWorkerFailure(
+        worker,
+        new GeometryOperationError(
+          response.failure ?? { code: 'geometry-worker-failed', message: response.message },
+          { stage: 'initialization', type: 'operation_error' },
+        ),
+      );
+      return;
+    }
     this.recoveryAvailable = true;
     if (response.type === 'geometry') {
       const pending = this.pendingGeometry.get(response.requestId);
       if (pending) {
         const result = { ...response.result, generationId: response.requestId };
         if (!validateGeometryResult(result)) {
-          pending.reject(new Error('Geometry worker returned an invalid result.'));
+          pending.reject(
+            new RecoveryError({
+              code: 'geometry-invalid-result',
+              message: 'Geometry worker returned an invalid result.',
+            }),
+          );
         } else {
           const cacheKey = this.previewCacheKeys.get(response.requestId);
           const cloneStartedAt = performance.now();
@@ -313,7 +441,12 @@ export class GeometryClient {
       const result = { ...response.result, generationId: response.requestId };
       if (pending) {
         if (!validateGeometryResult(result))
-          pending.reject(new Error('Geometry worker returned an invalid validation result.'));
+          pending.reject(
+            new RecoveryError({
+              code: 'geometry-invalid-result',
+              message: 'Geometry worker returned an invalid validation result.',
+            }),
+          );
         else {
           const cacheKey = this.validationCacheKeys.get(response.requestId);
           const cloneStartedAt = performance.now();
@@ -322,12 +455,17 @@ export class GeometryClient {
             ...result.timings,
             clientCacheCloneMs: performance.now() - cloneStartedAt,
             clientRoundTripMs: performance.now() - pending.startedAt,
+            clientQueueMs: pending.queueMs ?? 0,
           };
           pending.resolve(result);
         }
       }
       this.pendingValidations.delete(response.requestId);
       this.validationCacheKeys.delete(response.requestId);
+      if (this.activeCandidateRequestId === response.requestId) {
+        this.activeCandidateRequestId = undefined;
+        this.dispatchQueuedCandidate();
+      }
       return;
     }
     if (response.type === 'export') {
@@ -340,7 +478,10 @@ export class GeometryClient {
       this.pendingExports.delete(response.requestId);
       return;
     }
-    const error = new Error(response.message);
+    const error = new GeometryOperationError(
+      response.failure ?? failureFrom({ code: 'geometry-build-failed', message: response.message }),
+      response.diagnostics ?? { stage: 'generation', type: 'operation_error' },
+    );
     const geometry = this.pendingGeometry.get(response.requestId);
     geometry?.reject(error);
     this.pendingGeometry.delete(response.requestId);
@@ -351,6 +492,10 @@ export class GeometryClient {
     validation?.reject(error);
     this.pendingValidations.delete(response.requestId);
     this.validationCacheKeys.delete(response.requestId);
+    if (this.activeCandidateRequestId === response.requestId) {
+      this.activeCandidateRequestId = undefined;
+      this.dispatchQueuedCandidate();
+    }
     if (this.activePreviewRequestId === response.requestId) {
       this.activePreviewRequestId = undefined;
       const latest = this.queuedPreview;
@@ -396,15 +541,21 @@ export class GeometryClient {
     this.validationCacheKeys.clear();
     this.queuedPreview = undefined;
     this.activePreviewRequestId = undefined;
+    this.rejectQueuedCandidate(error);
+    this.activeCandidateRequestId = undefined;
     worker.terminate();
     if (!this.recoveryAvailable) return;
     this.recoveryAvailable = false;
+    this.replaceWorker();
+  }
+
+  private replaceWorker(): void {
     let replacement: Worker | undefined;
     try {
       replacement = this.createWorker();
-      replacement.postMessage({ type: 'warmup' } satisfies WorkerRequest);
       this.worker = replacement;
       this.workerFailed = false;
+      replacement.postMessage({ type: 'warmup' } satisfies WorkerRequest);
     } catch {
       replacement?.terminate();
       this.workerFailed = true;
@@ -415,8 +566,8 @@ export class GeometryClient {
     const worker = new Worker(new URL('./geometry-worker.ts', import.meta.url), { type: 'module' });
     worker.onmessage = (event: MessageEvent<WorkerResponse>) =>
       this.handleResponse(worker, event.data);
-    worker.onerror = () => this.handleWorkerFailure(worker, failedError());
-    worker.onmessageerror = () => this.handleWorkerFailure(worker, failedError());
+    worker.onerror = () => this.handleWorkerFailure(worker, failedError('worker_error'));
+    worker.onmessageerror = () => this.handleWorkerFailure(worker, failedError('message_error'));
     return worker;
   }
 
@@ -444,5 +595,76 @@ export class GeometryClient {
 
   private fontForWorker(fontDefinition: FontDefinition | undefined): FontDefinition | undefined {
     return fontDefinition;
+  }
+
+  private cloneCachedResult(
+    cached: GeometryResult,
+    generationId: number,
+    lookupStartedAt = performance.now(),
+    queueMs = 0,
+  ): GeometryResult {
+    const lookupMs = performance.now() - lookupStartedAt;
+    const cloneStartedAt = performance.now();
+    const result = cloneResult(cached, generationId);
+    const cloneMs = performance.now() - cloneStartedAt;
+    const timings = Object.fromEntries(
+      Object.entries(result.timings ?? {}).filter(([key]) => !key.endsWith('Ms')),
+    );
+    result.timings = {
+      ...timings,
+      clientCacheHit: 1,
+      clientCacheLookupMs: lookupMs,
+      clientCacheCloneMs: cloneMs,
+      clientRoundTripMs: lookupMs + cloneMs + queueMs,
+      clientQueueMs: queueMs,
+    };
+    return result;
+  }
+
+  private supersedeCandidate(requestId: number): void {
+    const pending = this.pendingValidations.get(requestId);
+    pending?.reject(new GeometryCandidateSupersededError());
+    this.pendingValidations.delete(requestId);
+    this.validationCacheKeys.delete(requestId);
+  }
+
+  private rejectQueuedCandidate(error: Error): void {
+    if (!this.queuedCandidate) return;
+    this.supersedeCandidateWithError(this.queuedCandidate.requestId, error);
+    this.queuedCandidate = undefined;
+  }
+
+  private supersedeCandidateWithError(requestId: number, error: Error): void {
+    const pending = this.pendingValidations.get(requestId);
+    pending?.reject(error);
+    this.pendingValidations.delete(requestId);
+    this.validationCacheKeys.delete(requestId);
+  }
+
+  private dispatchQueuedCandidate(): void {
+    const queued = this.queuedCandidate;
+    this.queuedCandidate = undefined;
+    if (!queued || this.disposed || this.workerFailed) return;
+    if (queued.cacheKey && this.validationCacheKeys.has(queued.requestId)) {
+      const cached = this.resultCache.get(queued.cacheKey);
+      if (cached) {
+        const pending = this.pendingValidations.get(queued.requestId);
+        const queueMs = pending ? Math.max(0, performance.now() - pending.startedAt) : 0;
+        this.pendingValidations
+          .get(queued.requestId)
+          ?.resolve(this.cloneCachedResult(cached, queued.requestId, performance.now(), queueMs));
+        this.pendingValidations.delete(queued.requestId);
+        this.validationCacheKeys.delete(queued.requestId);
+        return;
+      }
+    }
+    this.activeCandidateRequestId = queued.requestId;
+    this.sendValidate(
+      queued.params,
+      queued.fontDefinition,
+      queued.subtitleFontDefinition,
+      queued.requestId,
+      true,
+    );
   }
 }
