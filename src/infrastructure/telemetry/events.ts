@@ -38,6 +38,7 @@ const SAFE_PROPERTY_KEYS = new Set([
   'acquisition_source',
   'category',
   'app_version',
+  'app_release',
   'count',
   'cta',
   'enabled',
@@ -150,6 +151,7 @@ const SAFE_ID = /^[a-z0-9_-]{1,64}$/;
 const ERROR_CODES = new Set(['timeout', 'geometry_failed', 'export_failed', 'worker_failed']);
 const CONTEXT_PROPERTY_KEYS = new Set([
   'acquisition_source',
+  'app_release',
   'environment',
   'internal_traffic',
   'app_version',
@@ -209,8 +211,9 @@ export const sanitizeProperties = (
           return (
             typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 600_000
           );
-        if (key === 'app_version')
-          return typeof value === 'string' && /^[a-f0-9]{7,40}$/.test(value);
+        if (key === 'app_version') return typeof value === 'string' && /^[a-f0-9]{40}$/.test(value);
+        if (key === 'app_release')
+          return typeof value === 'string' && /^[a-z0-9][a-z0-9._+-]{0,127}$/i.test(value);
         if (key === 'failure_stage')
           return (
             event === 'export_failed' &&

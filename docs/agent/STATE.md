@@ -1,5 +1,13 @@
 # Agent handoff
 
+## Current work — automatic per-commit frontend release attribution, 2026-10-21
+
+- `app_release` is derived as `<package.json version>+<full source SHA>` (or `+local` for a development build without Git metadata); manual `VITE_APP_RELEASE` overrides were removed. Routine pushes require no package-version bump.
+- The durable release rule is in `docs/agent/DECISIONS.md`. Root `AGENTS.md` is ignored by `.gitignore`, so that local instruction file is not part of the tracked change.
+- App and SDK events continue to receive bundle-bound `app_version` and `app_release`. Added deterministic release-label tests and extended provider coverage for forged release values.
+- Validation: focused build/telemetry tests passed (40/40), `pnpm validate:changed`, typecheck, ESLint, Prettier, `git diff --check`, and production build passed. The built app bundle contains `0.1.0-beta.1+efa4062529dc72def1354195254655078cfe0cd7`, matching the source HEAD used for the build. The build used a dummy PostHog key and sent no events. No browser ingestion or live production traffic was verified.
+- This implementation is based on `main` at `efa4062529dc72def1354195254655078cfe0cd7`; the user authorized a single commit and push of this change set. No live analytics traffic or browser ingestion was verified. Next action: after the production workflow completes, verify the documented per-event/day coverage query with fresh-client events.
+
 ## Current work — consented PostHog analytics and replay, 2026-10-20
 
 - Expanded the consent-gated SDK to autocapture, dead clicks, Web Vitals/performance, console logs,

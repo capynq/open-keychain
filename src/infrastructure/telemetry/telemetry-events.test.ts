@@ -96,7 +96,8 @@ describe('analytics event properties', () => {
         design_id: '8fbad08e-7287-4a03-8be5-56ddfec47839',
         export_attempt_id: '7e76c249-8b61-465c-8b5f-b687d7284d44',
         duration_ms: 523,
-        app_version: 'abcdef0123456',
+        app_version: 'abcdef0123456789abcdef0123456789abcdef01',
+        app_release: `0.1.0-beta.1+${'abcdef0123456789abcdef0123456789abcdef01'}`,
         outcome: 'success',
         name: 'ALEX',
         width: 80,
@@ -107,7 +108,8 @@ describe('analytics event properties', () => {
       design_id: '8fbad08e-7287-4a03-8be5-56ddfec47839',
       export_attempt_id: '7e76c249-8b61-465c-8b5f-b687d7284d44',
       duration_ms: 523,
-      app_version: 'abcdef0123456',
+      app_version: 'abcdef0123456789abcdef0123456789abcdef01',
+      app_release: `0.1.0-beta.1+${'abcdef0123456789abcdef0123456789abcdef01'}`,
       outcome: 'success',
     });
     expect(
@@ -117,6 +119,7 @@ describe('analytics event properties', () => {
         export_attempt_id: 'ALEX 80mm',
         duration_ms: Number.POSITIVE_INFINITY,
         app_version: 'local',
+        app_release: 'not a safe release',
         error_code: 'ALEX not manifold',
       }),
     ).toEqual({});

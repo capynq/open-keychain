@@ -1,25 +1,27 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import packageJson from './package.json' with { type: 'json' };
 import { fileURLToPath, URL } from 'node:url';
-import { resolveBuildVersion } from './scripts/build/build-version.ts';
+import {
+  resolveBuildEnvironment,
+  resolveBuildRelease,
+  resolveBuildVersion,
+} from './scripts/build/build-version.ts';
 import { customizerBootPlugin } from './scripts/build/customizer-boot-plugin.ts';
 
-const appEnvironment =
-  process.env.CONTEXT === 'production'
-    ? 'production'
-    : process.env.NODE_ENV === 'development'
-      ? 'development'
-      : 'preview';
+const appEnvironment = resolveBuildEnvironment(process.env);
 const appVersion = resolveBuildVersion({
   env: process.env,
   environment: appEnvironment,
   repoRoot: fileURLToPath(new URL('.', import.meta.url)),
 });
+const appRelease = resolveBuildRelease(packageJson.version, appVersion);
 
 export default defineConfig({
   define: {
     __OPEN_KEYCHAIN_ENV__: JSON.stringify(appEnvironment),
     __OPEN_KEYCHAIN_VERSION__: JSON.stringify(appVersion),
+    __OPEN_KEYCHAIN_RELEASE__: JSON.stringify(appRelease),
   },
   plugins: [react(), customizerBootPlugin()],
   cacheDir: process.env.OPEN_KEYCHAIN_VITE_CACHE_DIR,

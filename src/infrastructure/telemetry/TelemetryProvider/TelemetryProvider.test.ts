@@ -25,6 +25,7 @@ const posthogMock = vi.hoisted(() => ({
     startSessionRecording: vi.fn(),
   },
 }));
+const testBundleRelease = `0.1.0-beta.1+${'a'.repeat(40)}`;
 
 vi.mock('posthog-js', () => ({ default: posthogMock.client }));
 
@@ -104,6 +105,8 @@ describe('AnalyticsProvider consent and startup', () => {
                 name: 'ALEX',
                 width: 80,
                 acquisition_source: 'forged',
+                app_version: 'f'.repeat(40),
+                app_release: 'forged-release',
               }),
           },
           'track',
@@ -146,6 +149,7 @@ describe('AnalyticsProvider consent and startup', () => {
 
   beforeEach(async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.stubGlobal('__OPEN_KEYCHAIN_RELEASE__', testBundleRelease);
     vi.stubEnv('VITE_POSTHOG_KEY', 'test-project-key');
     vi.resetModules();
     vi.clearAllMocks();
@@ -201,6 +205,8 @@ describe('AnalyticsProvider consent and startup', () => {
       properties: {
         $current_url: 'https://open-keychain.com/create?name=PRIVATE',
         $referrer: 'https://private.example/',
+        app_version: 'e'.repeat(40),
+        app_release: 'forged-sdk-release',
       },
     }) as { properties: Record<string, unknown> };
     expect(sdkEvent.properties).toMatchObject({
@@ -208,6 +214,8 @@ describe('AnalyticsProvider consent and startup', () => {
       environment: expect.stringMatching(/^(development|preview)$/),
       internal_traffic: true,
     });
+    expect(sdkEvent.properties.app_version).not.toBe('e'.repeat(40));
+    expect(sdkEvent.properties.app_release).toBe(testBundleRelease);
     expect(sdkEvent.properties).not.toHaveProperty('$referrer');
     expect(initConfig?.save_campaign_params).toBe(false);
     expect(initConfig?.save_referrer).toBe(false);
@@ -226,6 +234,14 @@ describe('AnalyticsProvider consent and startup', () => {
         internal_traffic: true,
       }),
     );
+    expect(posthogMock.client.capture.mock.calls[0]?.[1]?.app_version).not.toBe('f'.repeat(40));
+    expect(posthogMock.client.capture.mock.calls[0]?.[1]?.app_release).toBe(testBundleRelease);
+    const automaticException = initConfig?.before_send?.({
+      event: '$exception',
+      properties: { app_version: 'd'.repeat(40), app_release: 'forged-exception-release' },
+    }) as { properties: Record<string, unknown> };
+    expect(automaticException.properties.app_version).not.toBe('d'.repeat(40));
+    expect(automaticException.properties.app_release).toBe(testBundleRelease);
   });
 
   it('does not initialize or send events if consent is declined during SDK loading', async () => {

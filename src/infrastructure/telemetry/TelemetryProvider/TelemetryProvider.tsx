@@ -15,6 +15,7 @@ import './TelemetryProvider.module.css';
 
 declare const __OPEN_KEYCHAIN_ENV__: 'development' | 'preview' | 'production';
 declare const __OPEN_KEYCHAIN_VERSION__: string;
+declare const __OPEN_KEYCHAIN_RELEASE__: string;
 const BUILD_ENV: 'development' | 'preview' | 'production' =
   typeof __OPEN_KEYCHAIN_ENV__ === 'undefined'
     ? import.meta.env.DEV
@@ -23,6 +24,8 @@ const BUILD_ENV: 'development' | 'preview' | 'production' =
     : __OPEN_KEYCHAIN_ENV__;
 const BUILD_VERSION =
   typeof __OPEN_KEYCHAIN_VERSION__ === 'undefined' ? '' : __OPEN_KEYCHAIN_VERSION__;
+const BUILD_RELEASE =
+  typeof __OPEN_KEYCHAIN_RELEASE__ === 'undefined' ? 'local' : __OPEN_KEYCHAIN_RELEASE__;
 
 const CONSENT_KEY = 'open-keychain.analytics-consent';
 const INTERNAL_TRAFFIC_KEY = 'open-keychain.internal-traffic';
@@ -135,15 +138,19 @@ const readInternalTraffic = (): boolean => {
 const sanitizeAndTagPostHogEvent = (event: Parameters<typeof sanitizePostHogEvent>[0]) => {
   const sanitized = sanitizePostHogEvent(event);
   if (!sanitized?.properties) return sanitized;
+  const properties = { ...sanitized.properties };
+  delete properties.app_version;
+  delete properties.app_release;
   return {
     ...sanitized,
     properties: {
-      ...sanitized.properties,
+      ...properties,
       environment: BUILD_ENV,
       internal_traffic: readInternalTraffic(),
-      ...(/^[a-f0-9]{7,40}$/i.test(BUILD_VERSION)
+      ...(/^[a-f0-9]{40}$/i.test(BUILD_VERSION)
         ? { app_version: BUILD_VERSION.toLowerCase() }
         : {}),
+      app_release: BUILD_RELEASE,
     },
   };
 };
@@ -294,9 +301,10 @@ export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
           acquisition_source: acquisitionSource,
           environment: BUILD_ENV,
           internal_traffic: readInternalTraffic(),
-          app_version: /^[a-f0-9]{7,40}$/i.test(BUILD_VERSION)
+          app_version: /^[a-f0-9]{40}$/i.test(BUILD_VERSION)
             ? BUILD_VERSION.toLowerCase()
             : undefined,
+          app_release: BUILD_RELEASE,
         });
         if (!posthogClient?.__loaded || posthogClient.has_opted_out_capturing()) {
           if (pendingEvents.length < MAX_PENDING_EVENTS)

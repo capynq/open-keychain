@@ -31,7 +31,59 @@ The app owns page-view events: landing routes emit `landing_view`; other routes 
 Repeated clicks during an active operation do not create additional attempts.
 Candidate validation telemetry records bounded error codes only; raw geometry diagnostics remain local. A completed export means the file was created and the browser download was invoked, not that it was written to disk.
 
-Every app-generated event passed through `track` includes a fixed `environment` value (`development`, `preview`, or `production`) and an `internal_traffic` boolean. Development and preview are marked internal automatically. For a production QA browser, set `localStorage.setItem('open-keychain.internal-traffic', 'true')` before the next event; remove that key to reset it. This marker is local to that browser and is not based on email, identity, or design content. The build embeds a validated Git SHA as `app_version`: the first valid `GITHUB_SHA`, `VITE_APP_VERSION`, or Netlify `COMMIT_REF`, then the repository HEAD. CI explicitly passes `VITE_APP_VERSION`. Production builds fail when no valid SHA is available; this identifies the source revision, not uncommitted local edits.
+Every app-generated event passed through `track` includes a fixed `environment` value (`development`, `preview`, or `production`) and an `internal_traffic` boolean. Development and preview are marked internal automatically. For a production QA browser, set `localStorage.setItem('open-keychain.internal-traffic', 'true')` before the next event; remove that key to reset it. This marker is local to that browser and is not based on email, identity, or design content.
+
+`app_version` is the full 40-character lowercase Git commit SHA embedded in the loaded frontend bundle. `app_release` is derived automatically as `<package.json version>+<app_version>`, for example `0.1.0-beta.1+efa4062529dc72def1354195254655078cfe0cd7`. Each distinct source commit therefore has its own release label, while retries of the same commit keep the same label. A development build with no Git SHA uses `<package.json version>+local`. Routine updates and pushes need no manual package-version bump or release environment variable; change the package version only for an intentional named software release. App events receive both values before they are queued; PostHog's `before_send` hook overwrites any event-level or persisted values for SDK-generated events, including autocapture, Web Vitals, and exceptions.
+
+Non-development builds require a full SHA. Resolution order is `VITE_APP_VERSION`, Netlify `COMMIT_REF`, GitHub `GITHUB_SHA`, then local Git `HEAD`. The GitHub production workflow explicitly supplies `VITE_APP_VERSION: ${{ github.sha }}`. Direct Netlify production builds need `COMMIT_REF` or an explicit full-SHA `VITE_APP_VERSION`; no additional secret is required. A development build without Git metadata may opt into `VITE_APP_VERSION=local`. The SHA identifies the source revision, not uncommitted local edits.
+
+Older open tabs continue to report the version embedded when they loaded; do not infer a missing version from the current deployment or assign a guessed SHA to historical events. For a fresh release, verify per-event, per-day coverage with this query (Riga-local days, browser SDK events, production traffic only, excluding internal traffic and the configured test cohort):
+
+```sql
+WITH frontend_events AS (
+  SELECT
+    toDate(toTimeZone(timestamp, 'Europe/Riga')) AS day,
+    event,
+    lower(ifNull(properties.app_version, '')) AS raw_app_version,
+    match(lower(ifNull(properties.app_version, '')), '^[0-9a-f]{40}$') AS usable_version,
+    ifNull(properties.app_release, '(missing)') AS app_release
+  FROM events
+  WHERE timestamp >= now() - INTERVAL 7 DAY
+    AND properties.$lib = 'web'
+    AND properties.environment = 'production'
+    AND properties.internal_traffic = false
+    AND person.id NOT IN COHORT 'Internal / Test users'
+),
+version_counts AS (
+  SELECT
+    day,
+    event,
+    app_release,
+    if(usable_version, raw_app_version, '(missing/invalid)') AS app_version,
+    count() AS version_event_count,
+    countIf(NOT usable_version) AS missing_count
+  FROM frontend_events
+  GROUP BY day, event, app_release, app_version
+)
+SELECT
+  day,
+  event,
+  app_release,
+  app_version,
+  version_event_count AS events_in_version,
+  sum(version_event_count) OVER (PARTITION BY day, event) AS total_events,
+  sum(missing_count) OVER (PARTITION BY day, event) AS events_missing_usable_version,
+  round(
+    100.0 * sum(version_event_count - missing_count) OVER (PARTITION BY day, event)
+      / sum(version_event_count) OVER (PARTITION BY day, event),
+    2
+  ) AS coverage_percentage
+FROM version_counts
+ORDER BY day DESC, event, app_version
+LIMIT 500
+```
+
+Pass when fresh-client production events have the expected full SHA and release label, and each production event/day has 100% usable-version coverage. No rows means there was no matching traffic and is inconclusive. Older clients can continue reporting their own bundle version and release label until they reload.
 
 SEO pages and indexable customizer entry points are rendered by the same React application and emit
 `seo_page_view`, `seo_cta_clicked`, and `seo_language_changed` after consent. Customizer entry points

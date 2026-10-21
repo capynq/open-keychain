@@ -11,6 +11,7 @@ const ENV_KEYS = [
   'CONTEXT',
   'GITHUB_SHA',
   'COMMIT_REF',
+  'VITE_APP_VERSION',
   'NODE_ENV',
   'TZ',
   'LANG',

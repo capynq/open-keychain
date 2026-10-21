@@ -1,5 +1,15 @@
 # Open Keychain decisions
 
+## Frontend analytics releases identify the exact source commit
+
+**Status:** active
+
+**Decision:** Derive each frontend bundle's `app_release` as `<package.json version>+<full 40-character source SHA>`. Use `<package.json version>+local` only for development builds without Git metadata. Do not set a per-push release variable or bump the package version for routine code updates; change the package version only for an intentional named software release.
+
+**Rationale:** A source commit uniquely identifies the deployed frontend revision without requiring a manual release step on every push. Rebuilding the same commit produces the same label, while a later commit produces a different label.
+
+**Consequences:** Preserve full-SHA validation, bundle-bound `app_version` and `app_release` stamping on app and SDK events, and tests/docs for the attribution path. Production build workflows need to provide the source SHA through the supported CI metadata or Git metadata.
+
 ## Preview geometry and export geometry have separate cache entries
 
 **Status:** active
