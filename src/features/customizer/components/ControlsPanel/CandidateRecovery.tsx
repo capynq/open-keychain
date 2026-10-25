@@ -35,6 +35,28 @@ export const CandidateRecovery = ({
       else void customizer.prepareRecovery(feedback.requestId);
     },
   }));
+  if (feedback.status === 'failed') {
+    return (
+      <div
+        className="candidate-feedback candidate-feedback-rejected"
+        data-recovery-code={failure.code}
+      >
+        <RecoveryNotice
+          role="alert"
+          message={recoveryMessage(locale, failure)}
+          detailsLabel={t(locale, 'recoveryDetails')}
+          diagnostic={feedback.diagnostic}
+          actions={[
+            {
+              id: 'retry',
+              label: t(locale, 'recoveryRetry'),
+              onAction: () => customizer.retryCandidate(feedback.requestId),
+            },
+          ]}
+        />
+      </div>
+    );
+  }
   actions.push({
     id: 'review',
     label: t(locale, 'recoveryReview'),

@@ -573,3 +573,23 @@ Do not bypass the required push checks with --no-verify or HUSKY=0. All six crit
 finish as ordinary passes; focused, skipped, expected-failure or partial suites fail. Concurrent
 Browser gates isolate traces/downloads per run/gate rather than sharing Playwright output cleanup.
 This supersedes documentation-only formatting and geometry-only CI Browser exclusions.
+
+## 2026-10-24 — Bounded interactive geometry recovery and structured outcomes
+
+Keep one automatic worker replacement per failure episode. A successful warmup/ready message does not
+reset that budget; only a normal geometry, validation, or export response does. After exhaustion, an
+explicit Retry or the next user candidate edit may replace the worker once. Never replay obsolete
+requests, recreate a disposed client, or let slider/text activity create an automatic restart loop.
+Worker generations keep monotonic request IDs, ignore stale replies, and settle their pending work on
+failure or disposal.
+
+Candidate rejection preserves accepted params, font identities, geometry and export eligibility.
+Measured geometry-dependent parameter corrections are shown as explicit, fully revalidated recovery
+options. Export eligibility compares the retained result key with accepted params and fonts, so a
+transient preview worker error does not discard an exportable accepted design.
+
+New geometry analytics use paired `geometry_attempt_started` / `geometry_attempt_finished` events.
+Expected rejection, technical error, supersession and cancellation remain distinct. Structured failure
+codes/stages and fixed control IDs replace message-regex classification; no text, exact settings, font
+bytes, geometry or file contents are collected. Historical `geometry_error` data remains unchanged
+and must not be interpreted as proof of an engine crash.

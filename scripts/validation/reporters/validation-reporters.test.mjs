@@ -85,10 +85,10 @@ describe('validation runner reporters', () => {
     );
   });
 
-  it('allows exactly six strict journey passes', () => {
+  it('allows exactly nine strict journey passes', () => {
     vi.stubEnv('PLAYWRIGHT_REQUIRED_JOURNEY', 'true');
     const reporter = new PlaywrightReporter();
-    const tests = Array.from({ length: 6 }, (_, index) => ({
+    const tests = Array.from({ length: 9 }, (_, index) => ({
       id: `journey-${index}`,
       expectedStatus: 'passed',
       titlePath: () => ['journey', String(index)],
@@ -100,15 +100,15 @@ describe('validation runner reporters', () => {
   });
 
   it.each([
-    ['a skipped case', (index) => (index === 5 ? 'skipped' : 'passed'), () => 'passed'],
+    ['a skipped case', (index) => (index === 8 ? 'skipped' : 'passed'), () => 'passed'],
     ['an expected failure', () => 'failed', () => 'failed'],
-    ['fewer than six cases', () => 'passed', () => 'passed'],
+    ['fewer than nine cases', () => 'passed', () => 'passed'],
   ])('rejects strict journeys with %s', (_label, statusFor, expectedStatusFor) => {
     vi.stubEnv('PLAYWRIGHT_REQUIRED_JOURNEY', 'true');
     const errorSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
-    const count = _label === 'fewer than six cases' ? 5 : 6;
+    const count = _label === 'fewer than nine cases' ? 8 : 9;
     const reporter = new PlaywrightReporter();
-    const tests = Array.from({ length: 6 }, (_, index) => ({
+    const tests = Array.from({ length: 9 }, (_, index) => ({
       id: `journey-${index}`,
       expectedStatus: expectedStatusFor(index),
       titlePath: () => ['journey', String(index)],

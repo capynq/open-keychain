@@ -75,6 +75,8 @@ export const RECOVERY_CATALOG: Record<string, RecoveryDefinition> = {
   'text-edge-dimensions': issue('recovery.textEdgeDimensions', 'text-edge'),
   'text-edge-profile': issue('recovery.textEdgeProfile', 'text-edge'),
   'geometry-build-failed': issue('recovery.geometryBuildFailed', 'geometry'),
+  'geometry-parameter-limit': issue('recovery.geometryParameterLimit', 'geometry'),
+  'geometry-worker-init-failed': issue('recovery.geometryWorkerFailed', 'retry'),
   'geometry-worker-failed': issue('recovery.geometryWorkerFailed', 'retry'),
   'geometry-request-timeout': issue('recovery.geometryRequestTimeout', 'retry'),
   'geometry-invalid-result': issue('recovery.geometryInvalidResult', 'geometry'),

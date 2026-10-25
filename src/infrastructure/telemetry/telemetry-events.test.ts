@@ -235,4 +235,56 @@ describe('analytics event properties', () => {
       }),
     ).toEqual({});
   });
+
+  it('keeps structured validation outcomes and fixed control IDs while rejecting design data', () => {
+    expect(
+      sanitizeProperties('geometry_attempt_finished', {
+        template: 'heart',
+        operation: 'validation',
+        geometry_attempt_id: '35cc5a1a-276c-4fe7-83cd-a92ee8f44931',
+        outcome: 'rejected',
+        failure_code: 'wall-too-thin',
+        failure_stage: 'generation',
+        control_group: 'print',
+        control_key: 'baseThicknessMm',
+        text: 'PRIVATE TEXT',
+        font_file: 'PRIVATE FONT',
+      }),
+    ).toEqual({
+      template: 'heart',
+      operation: 'validation',
+      geometry_attempt_id: '35cc5a1a-276c-4fe7-83cd-a92ee8f44931',
+      outcome: 'rejected',
+      failure_code: 'wall-too-thin',
+      failure_stage: 'generation',
+      control_group: 'print',
+      control_key: 'baseThicknessMm',
+    });
+    expect(
+      sanitizeProperties('geometry_attempt_finished', {
+        outcome: 'rejected',
+        failure_code: 'PRIVATE TEXT',
+        control_group: 'PRIVATE TEXT',
+        control_key: 'text',
+      }),
+    ).toEqual({ outcome: 'rejected', control_key: 'text' });
+  });
+
+  it('keeps the preview generation ID on the correlated ready event', () => {
+    expect(
+      sanitizeProperties('geometry_ready', {
+        template: 'heart',
+        locale: 'en',
+        geometry_attempt_id: '35cc5a1a-276c-4fe7-83cd-a92ee8f44931',
+        geometry_generation_id: 14,
+        outcome: 'success',
+      }),
+    ).toEqual({
+      template: 'heart',
+      locale: 'en',
+      geometry_attempt_id: '35cc5a1a-276c-4fe7-83cd-a92ee8f44931',
+      geometry_generation_id: 14,
+      outcome: 'success',
+    });
+  });
 });

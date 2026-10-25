@@ -3,7 +3,13 @@ import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { DEFAULT_PARAMS, type ExportFormat, type ThreeMfMode } from '@/domain/keychain/model/types';
+import {
+  DEFAULT_PARAMS,
+  DEFAULT_PRINT_APPEARANCE,
+  type ExportFormat,
+  type GeometryResult,
+  type ThreeMfMode,
+} from '@/domain/keychain/model/types';
 import { GeometryOperationError } from '@/shared/lib/recovery/operation-diagnostics';
 
 import type { GeometryClient } from '../../../infrastructure/geometry/geometry-client';
@@ -28,14 +34,18 @@ const file = (filename = 'design.stl') => ({
   data: new ArrayBuffer(1),
 });
 
-const mount = (overrides: Partial<Parameters<typeof useExportActions>[0]> = {}) => {
+const mount = (
+  overrides: Partial<Parameters<typeof useExportActions>[0]> = {},
+  geometryCurrent = true,
+  geometryResult?: GeometryResult,
+) => {
   exportMethod = vi.fn().mockResolvedValue(file());
   recoverForUserRetry = vi.fn();
   const client = { export: exportMethod, recoverForUserRetry } as unknown as GeometryClient;
   const geometry = {
     clientRef: { current: client },
-    result: undefined,
-    current: true,
+    result: geometryResult,
+    current: geometryCurrent,
   } as Parameters<typeof useExportActions>[0]['geometry'];
 
   root = createRoot(host);
@@ -113,12 +123,21 @@ describe('useExportActions', () => {
     expect(telemetry.track).toHaveBeenNthCalledWith(
       3,
       'export_started',
-      expect.objectContaining({ export_attempt_id: 'attempt-2' }),
+      expect.objectContaining({
+        export_attempt_id: 'attempt-2',
+        retry_of_attempt_id: 'attempt-1',
+        recovery_trigger: 'user_retry',
+      }),
     );
     expect(telemetry.track).toHaveBeenNthCalledWith(
       4,
       'export_completed',
-      expect.objectContaining({ export_attempt_id: 'attempt-2', outcome: 'success' }),
+      expect.objectContaining({
+        export_attempt_id: 'attempt-2',
+        outcome: 'success',
+        retry_of_attempt_id: 'attempt-1',
+        recovery_outcome: 'not_needed',
+      }),
     );
     expect(telemetry.track).toHaveBeenCalledTimes(4);
   });
@@ -159,6 +178,40 @@ describe('useExportActions', () => {
     expect(telemetry.track).toHaveBeenLastCalledWith(
       'export_completed',
       expect.objectContaining({ format: '3mf', mode: 'merged', outcome: 'success' }),
+    );
+  });
+
+  it('uses the accepted-design eligibility supplied by the page when preview has a transient error', async () => {
+    mount({ exportAllowed: true }, false, {
+      baseMesh: {
+        positions: new Float32Array([0, 0, 0]),
+        indices: new Uint32Array([0, 0, 0]),
+      },
+      reliefMesh: {
+        positions: new Float32Array([0, 0, 0]),
+        indices: new Uint32Array([0, 0, 0]),
+      },
+      dimensions: {
+        widthMm: 1,
+        heightMm: 1,
+        thicknessMm: 1,
+        centerMm: [0, 0, 0] as [number, number, number],
+      },
+      appearance: DEFAULT_PRINT_APPEARANCE,
+      generationId: 42,
+      issues: [],
+      printable: true,
+    });
+    exportMethod.mockResolvedValue(file());
+
+    await download('stl');
+
+    expect(exportMethod).toHaveBeenCalledTimes(1);
+    expect(current.status).toBe('success');
+    expect(telemetry.track).toHaveBeenNthCalledWith(
+      1,
+      'export_started',
+      expect.objectContaining({ geometry_generation_id: 42 }),
     );
   });
 

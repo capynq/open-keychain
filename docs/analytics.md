@@ -24,12 +24,9 @@ client bundle.
 
 The app sends pseudonymous, coarse product events only after consent: page/landing views, language changes, template selection, generation success/failure, export dialog opens, export start/completion/failure, surface preset changes, and the primary call-to-action. `export_dialog_opened` records only the stable template ID and short-lived design ID; `export_started` additionally records the selected format and mode. In the Customizer, setup-step views/completions/abandonment use fixed step IDs. Option changes use only bundled font IDs, font category IDs, keyring position/opening preset IDs, and base/text finish profile IDs. These structured events never include names, exact dimensions, slider values, colors, generated geometry, or exported files. Session replay and autocapture are separate: after consent, recordings can include the text and settings visible in the editor, entered input values, and the live 3D/WebGL preview.
 
-The app owns page-view events: landing routes emit `landing_view`; other routes emit `page_view`. PostHog automatic page capture stays disabled, so SPA navigation does not create a second page-view event. Customizer entry, geometry completion/failure, and export start/completion/failure include random short-lived attempt/design IDs, bounded durations, fixed outcomes, and allowlisted error codes. Geometry and export failures include a fixed operation label (`preview`, `validation`, or `export`) so those failure paths can be analyzed separately. Export failures additionally allow fixed `failure_stage` values (`initialization`, `generation`,
-`serialization`, `transport`, `download`) and `error_type` values (`timeout`, `worker_error`,
-`message_error`, `worker_unavailable`, `operation_error`). Each accepted export action has one
-`export_attempt_id` shared by its start and terminal event; an explicit retry gets a new ID.
-Repeated clicks during an active operation do not create additional attempts.
-Candidate validation telemetry records bounded error codes only; raw geometry diagnostics remain local. A completed export means the file was created and the browser download was invoked, not that it was written to disk.
+The app owns page-view events: landing routes emit `landing_view`; other routes emit `page_view`. PostHog automatic page capture stays disabled, so SPA navigation does not create a second page-view event. New geometry work emits `geometry_attempt_started` and one `geometry_attempt_finished` terminal event with a shared random `geometry_attempt_id`. Randomization records one attempt for each generated candidate validation, including subsequent candidates and any measured-limit revalidation. Terminal outcomes are `success`, `rejected`, `error`, `superseded`, or `cancelled`; only technical errors include `error_type`. The events include fixed operation, template, control group/key IDs, bounded duration, structured failure code/stage, and accepted geometry generation ID when available. They never include design text, exact settings, font data, or geometry.
+
+`geometry_ready` remains available for historical reporting; new bundles no longer emit the ambiguous `geometry_error`. They use the attempt events as the reliable geometry funnel: expected validation rejection is `outcome = rejected`, while worker, timeout, initialization, and execution failures are `outcome = error` with structured diagnostics. This creates a reporting break: historical `geometry_error` rows cannot be reclassified, and `geometry_failed` must not be treated as proof of an engine crash. Export events retain one `export_attempt_id` per invocation; retries get a new ID and carry `retry_of_attempt_id`. Start and terminal rows include the accepted `geometry_generation_id` when available. Repeated clicks during an active operation do not create additional attempts. Export failures allow fixed `failure_stage` values (`initialization`, `generation`, `serialization`, `transport`, `download`) and `error_type` values (`timeout`, `worker_error`, `message_error`, `worker_unavailable`, `operation_error`). A completed export means the file was created and the browser download was invoked, not that it was written to disk.
 
 Every app-generated event passed through `track` includes a fixed `environment` value (`development`, `preview`, or `production`) and an `internal_traffic` boolean. Development and preview are marked internal automatically. For a production QA browser, set `localStorage.setItem('open-keychain.internal-traffic', 'true')` before the next event; remove that key to reset it. This marker is local to that browser and is not based on email, identity, or design content.
 
@@ -84,6 +81,53 @@ LIMIT 500
 ```
 
 Pass when fresh-client production events have the expected full SHA and release label, and each production event/day has 100% usable-version coverage. No rows means there was no matching traffic and is inconclusive. Older clients can continue reporting their own bundle version and release label until they reload.
+
+## Geometry and export reliability rollout
+
+Use `geometry_attempt_finished` for geometry outcome rates and group by `app_version`, `app_release`, `operation`, `outcome`, `failure_code`, `failure_stage`, and `error_type`. Count distinct `geometry_attempt_id`, not event rows. Expected printable rejections (`outcome = rejected`) are separate from technical errors (`outcome = error`). Calculate recovery success from distinct attempts with `recovery_trigger` set, grouped by `recovery_outcome`.
+
+```sql
+SELECT
+  properties.app_version AS app_version,
+  properties.app_release AS app_release,
+  properties.operation AS operation,
+  properties.outcome AS outcome,
+  properties.failure_code AS failure_code,
+  properties.failure_stage AS failure_stage,
+  properties.error_type AS error_type,
+  countDistinct(properties.geometry_attempt_id) AS attempts
+FROM events
+WHERE event = 'geometry_attempt_finished'
+  AND timestamp >= now() - INTERVAL 30 DAY
+  AND properties.environment = 'production'
+  AND properties.internal_traffic = false
+  AND person.id NOT IN COHORT 'Internal / Test users'
+GROUP BY app_version, app_release, operation, outcome, failure_code, failure_stage, error_type
+ORDER BY app_version, operation, outcome, attempts DESC
+```
+
+```sql
+SELECT
+  properties.app_version AS app_version,
+  properties.operation AS operation,
+  properties.recovery_trigger AS recovery_trigger,
+  properties.recovery_outcome AS recovery_outcome,
+  countDistinct(properties.geometry_attempt_id) AS attempts
+FROM events
+WHERE event = 'geometry_attempt_finished'
+  AND timestamp >= now() - INTERVAL 30 DAY
+  AND properties.environment = 'production'
+  AND properties.internal_traffic = false
+  AND properties.recovery_trigger IS NOT NULL
+  AND person.id NOT IN COHORT 'Internal / Test users'
+GROUP BY app_version, operation, recovery_trigger, recovery_outcome
+```
+
+For export completion rates, query `export_started`, `export_completed`, and `export_failed`; use `countDistinct(export_attempt_id)` per event, format, mode, and bundle SHA. Retries are separate attempts linked by `retry_of_attempt_id` and must remain visible as retries rather than being collapsed into the original attempt.
+
+For exports, compare distinct `export_attempt_id` values in `export_started` with the distinct IDs in `export_completed` and `export_failed`, grouped by `app_version`, `format`, and `mode`. A retry has a new ID and points to its prior ID with `retry_of_attempt_id`, so count each invocation once and report retries separately. Join export outcome to `geometry_generation_id` only when present; never infer a generated geometry from a matching design name or timestamp.
+
+Every production query must filter `environment = production`, `internal_traffic = false`, and exclude the `Internal / Test users` cohort. Segment by bundle SHA/release to account for old tabs during rollout. Do not send synthetic events to production. Treat fewer than 200 validation attempts or fewer than 100 export attempts per format in a 30-day window as insufficient production evidence; a low count or zero observed errors is inconclusive. Release checks also require the supported template/style/font fixture matrix and Chromium desktop, mobile, and DPR 2 journeys to pass locally. This browser matrix exercises Chromium contexts only; it does not claim Firefox or WebKit export coverage and it cannot eliminate failures from arbitrary inputs or browser resource exhaustion.
 
 SEO pages and indexable customizer entry points are rendered by the same React application and emit
 `seo_page_view`, `seo_cta_clicked`, and `seo_language_changed` after consent. Customizer entry points

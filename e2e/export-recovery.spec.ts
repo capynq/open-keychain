@@ -71,3 +71,68 @@ test('retries a failed export after recovery is exhausted and switches formats w
     ),
   ).toBe(3);
 });
+
+test('a new edit recovers validation after both worker recovery attempts fail', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('open-keychain.analytics-consent', 'declined');
+    const workers: Worker[] = [];
+    const OriginalWorker = window.Worker;
+    const control = { workers, failuresRemaining: 2 };
+    Object.assign(window, { candidateRecoveryTest: control });
+    window.Worker = class extends OriginalWorker {
+      constructor(url: string | URL, options?: WorkerOptions) {
+        super(url, options);
+        if (String(url).includes('geometry-worker')) workers.push(this);
+      }
+      override postMessage(
+        message: unknown,
+        options?: StructuredSerializeOptions | Transferable[],
+      ): void {
+        if (control.failuresRemaining > 0 && (message as { type?: string }).type === 'validate') {
+          const failureNumber = 3 - control.failuresRemaining;
+          control.failuresRemaining -= 1;
+          queueMicrotask(() => {
+            if (failureNumber === 1) this.onerror?.(new ErrorEvent('error'));
+            else this.onmessageerror?.(new MessageEvent('messageerror'));
+          });
+          return;
+        }
+        if (Array.isArray(options)) super.postMessage(message, options);
+        else super.postMessage(message, options);
+      }
+    };
+  });
+  await page.goto('/create');
+  await expect(page.locator('.status-pill')).toHaveText('Ready to print', { timeout: 15_000 });
+
+  const textInput = page.getByLabel('Name or text');
+  await textInput.fill('NORA');
+  await expect(page.locator('.candidate-feedback [role="alert"]')).toContainText('worker', {
+    timeout: 15_000,
+  });
+  await textInput.fill('MILA');
+  await expect(page.locator('.candidate-feedback [role="alert"]')).toContainText('worker', {
+    timeout: 15_000,
+  });
+
+  await textInput.fill('LENA');
+  await expect(page.locator('.candidate-feedback [role="alert"]')).toHaveCount(0, {
+    timeout: 30_000,
+  });
+  await expect(page.locator('.status-pill')).toHaveText('Ready to print', { timeout: 30_000 });
+  await page.locator('.export-header-button').click();
+  const dialog = page.getByRole('dialog', { name: 'Choose an export' });
+  const download = page.waitForEvent('download');
+  await dialog.getByRole('button', { name: /STL file/ }).click();
+  expect((await download).suggestedFilename()).toMatch(/\.stl$/);
+  await expect(dialog).toContainText('Download ready');
+  expect(
+    await page.evaluate(
+      () =>
+        (window as unknown as { candidateRecoveryTest: { workers: Worker[] } })
+          .candidateRecoveryTest.workers.length,
+    ),
+  ).toBe(3);
+});

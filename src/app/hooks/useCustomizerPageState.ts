@@ -1,4 +1,12 @@
-import { useEffect, useReducer, useRef, useState, type SetStateAction } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+  type SetStateAction,
+} from 'react';
 
 import type { CandidateCallbacks } from '../../features/customizer/hooks/useCustomizerParams';
 import type { SurfacePresetId } from '../../features/preview/components/Viewer/Viewer';
@@ -14,6 +22,7 @@ import { STYLE_CATALOG } from '../../domain/keychain/styles/style-builder';
 import { useCustomizerParams } from '../../features/customizer/hooks/useCustomizerParams';
 import {
   geometryInputKey,
+  type GeometryAttemptCallbacks,
   useGeometryGeneration,
 } from '../../features/customizer/hooks/useGeometryGeneration';
 import { useExportActions } from '../../features/export/model/use-export-actions';
@@ -42,22 +51,101 @@ export const useCustomizerPageState = (
   );
   const [randomizing, setRandomizing] = useState(false);
   const [randomizeFailure, setRandomizeFailure] = useState(false);
+  const { consent, track } = useAnalytics();
   const [skipRequestKey, setSkipRequestKey] = useState<string>();
   const geometryRef = useRef<ReturnType<typeof useGeometryGeneration> | undefined>(undefined);
   const recoveryClientRef = useRef<GeometryClient | undefined>(undefined);
+  const geometryAttemptStartedAt = useRef(
+    new Map<
+      string,
+      {
+        startedAt: number;
+        template: string;
+        group: string;
+        controlKey?: string;
+        retryOfAttemptId?: string;
+        recoveryTrigger?: 'user_retry' | 'user_edit';
+        recoveryOutcome?: 'recovered' | 'not_needed' | 'failed';
+      }
+    >(),
+  );
 
   useEffect(() => () => recoveryClientRef.current?.dispose(), []);
   const [candidateCallbacks] = useState<CandidateCallbacks>(() => ({
+    attemptStarted: (attemptId, template, group, controlKey, retryOfAttemptId) => {
+      geometryAttemptStartedAt.current.set(attemptId, {
+        startedAt: performance.now(),
+        template,
+        group,
+        controlKey,
+        retryOfAttemptId,
+        recoveryTrigger: retryOfAttemptId ? 'user_retry' : undefined,
+        recoveryOutcome: retryOfAttemptId ? 'not_needed' : undefined,
+      });
+      track('geometry_attempt_started', {
+        template,
+        operation: 'validation',
+        geometry_attempt_id: attemptId,
+        control_group: group,
+        control_key: controlKey,
+        retry_of_attempt_id: retryOfAttemptId,
+        recovery_trigger: retryOfAttemptId ? 'user_retry' : undefined,
+      });
+    },
+    attemptFinished: (attemptId, outcome, failure, diagnostics, generationId) => {
+      const attempt = geometryAttemptStartedAt.current.get(attemptId);
+
+      geometryAttemptStartedAt.current.delete(attemptId);
+      track('geometry_attempt_finished', {
+        template: attempt?.template,
+        operation: 'validation',
+        geometry_attempt_id: attemptId,
+        outcome:
+          outcome === 'accepted'
+            ? 'success'
+            : outcome === 'rejected'
+              ? 'rejected'
+              : outcome === 'superseded' || outcome === 'cancelled'
+                ? outcome
+                : 'error',
+        duration_ms:
+          attempt === undefined ? undefined : Math.round(performance.now() - attempt.startedAt),
+        failure_code: failure?.code,
+        failure_stage: diagnostics?.stage ?? (failure ? 'generation' : undefined),
+        error_type: outcome === 'failed' ? diagnostics?.type : undefined,
+        control_group: attempt?.group,
+        control_key: attempt?.controlKey,
+        geometry_generation_id: generationId,
+        retry_of_attempt_id: attempt?.retryOfAttemptId,
+        recovery_trigger: attempt?.recoveryTrigger,
+        recovery_outcome: attempt?.recoveryOutcome,
+      });
+    },
     pending: (params, font, subtitleFont) => {
       geometryRef.current?.clientRef.current?.cancelCandidate();
       setSkipRequestKey(geometryInputKey(params, font, subtitleFont));
     },
-    validate: (params, font, subtitleFont) => {
+    validate: (params, font, subtitleFont, attemptId, userRetry) => {
       const client = geometryRef.current?.clientRef.current;
-
-      return client
-        ? client.validateCandidate(params, font, subtitleFont)
-        : Promise.reject(new Error('Geometry validation is not ready.'));
+      if (!client) return Promise.reject(new Error('Geometry validation is not ready.'));
+      const attempt = attemptId ? geometryAttemptStartedAt.current.get(attemptId) : undefined;
+      try {
+        const recovered = userRetry ? client.recoverForUserRetry() : client.recoverForUserEdit();
+        if (attempt && userRetry) {
+          attempt.recoveryTrigger = 'user_retry';
+          attempt.recoveryOutcome = recovered ? 'recovered' : 'not_needed';
+        } else if (attempt && recovered) {
+          attempt.recoveryTrigger = 'user_edit';
+          attempt.recoveryOutcome = 'recovered';
+        }
+        return client.validateCandidate(params, font, subtitleFont);
+      } catch (error) {
+        if (attempt) {
+          attempt.recoveryTrigger = userRetry ? 'user_retry' : 'user_edit';
+          attempt.recoveryOutcome = 'failed';
+        }
+        return Promise.reject(error);
+      }
     },
     validateRecovery: async (params, font, subtitleFont) => {
       const client = geometryRef.current?.clientRef.current;
@@ -84,11 +172,13 @@ export const useCustomizerPageState = (
       setSkipRequestKey(undefined);
     },
   }));
-  const { consent, track } = useAnalytics();
   const [designId, setDesignId] = useState(() => crypto.randomUUID());
+  const analyticsContextRef = useRef({ locale, track, designId });
+
+  useLayoutEffect(() => {
+    analyticsContextRef.current = { locale, track, designId };
+  }, [designId, locale, track]);
   const lastOpenedDesignId = useRef<string | undefined>(undefined);
-  const lastValidationErrorRequestId = useRef<number | undefined>(undefined);
-  const geometryClock = useRef<{ paramsKey: string; startedAt: number } | undefined>(undefined);
   const customizer = useCustomizerParams(initialParams, candidateCallbacks);
   const activeStyle = STYLE_CATALOG.find((style) => style.id === customizer.acceptedParams.styleId);
   const geometryInputSignature = JSON.stringify([
@@ -101,19 +191,66 @@ export const useCustomizerPageState = (
   const setDisconnectedExportAcknowledged = (acknowledged: boolean): void => {
     setDisconnectedAcknowledgedSignature(acknowledged ? geometryInputSignature : undefined);
   };
+  const geometryAttemptCallbacks = useMemo<GeometryAttemptCallbacks>(
+    () => ({
+      started: (attemptId, params) => {
+        geometryAttemptStartedAt.current.set(attemptId, {
+          startedAt: performance.now(),
+          template: params.templateId,
+          group: 'preview',
+        });
+        analyticsContextRef.current.track('geometry_attempt_started', {
+          template: params.templateId,
+          operation: 'preview',
+          geometry_attempt_id: attemptId,
+        });
+      },
+      finished: (attemptId, outcome, details) => {
+        const attempt = geometryAttemptStartedAt.current.get(attemptId);
+
+        geometryAttemptStartedAt.current.delete(attemptId);
+        analyticsContextRef.current.track('geometry_attempt_finished', {
+          template: attempt?.template,
+          operation: 'preview',
+          geometry_attempt_id: attemptId,
+          duration_ms:
+            attempt === undefined ? undefined : Math.round(performance.now() - attempt.startedAt),
+          outcome,
+          failure_code: details?.failure?.code,
+          failure_stage:
+            details?.diagnostics?.stage ?? (details?.failure ? 'generation' : undefined),
+          error_type: details?.diagnostics?.type,
+          geometry_generation_id: details?.generationId,
+        });
+        if (outcome === 'success') {
+          analyticsContextRef.current.track('geometry_ready', {
+            template: attempt?.template,
+            locale: analyticsContextRef.current.locale,
+            design_id: analyticsContextRef.current.designId,
+            geometry_attempt_id: attemptId,
+            duration_ms:
+              attempt === undefined ? undefined : Math.round(performance.now() - attempt.startedAt),
+            geometry_generation_id: details?.generationId,
+            outcome: 'success',
+          });
+        }
+      },
+    }),
+    [],
+  );
   const geometry = useGeometryGeneration(
     customizer.params,
     customizer.selectedFont,
     customizer.selectedSubtitleFont,
     skipRequestKey,
+    geometryAttemptCallbacks,
   );
-  const {
-    busy: geometryBusy,
-    current: geometryIsCurrent,
-    error: geometryError,
-    paramsKey: geometryParamsKey,
-    result: geometryResult,
-  } = geometry;
+  const { resultParamsKey: geometryResultParamsKey } = geometry;
+  const acceptedGeometryParamsKey = geometryInputKey(
+    customizer.acceptedParams,
+    customizer.fontForId(customizer.acceptedParams.fontId),
+    customizer.fontForId(customizer.acceptedParams.subtitleFontId),
+  );
 
   useEffect(() => {
     geometryRef.current = geometry;
@@ -142,11 +279,9 @@ export const useCustomizerPageState = (
   const canExport =
     !randomizing &&
     customizer.candidateFeedback?.status !== 'checking' &&
-    !geometry.busy &&
-    !geometry.error &&
     Boolean(
       geometry.result &&
-      geometry.current !== false &&
+      geometryResultParamsKey === acceptedGeometryParamsKey &&
       (geometry.result.printable || disconnectedOnly),
     );
   const exportState = useExportActions({
@@ -187,8 +322,6 @@ export const useCustomizerPageState = (
   }, [customizer, initialAppearanceOverrides, initialParams, routeInputKey]);
 
   const lastTemplate = useRef(customizer.acceptedParams.templateId);
-  const lastGeometryError = useRef<string | undefined>(undefined);
-  const lastGeometryReadyId = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     if (consent !== 'accepted' || lastOpenedDesignId.current === designId) return;
@@ -202,95 +335,6 @@ export const useCustomizerPageState = (
       lastTemplate.current = customizer.acceptedParams.templateId;
     }
   }, [customizer.acceptedParams.templateId, locale, track]);
-
-  useEffect(() => {
-    if (geometryBusy) {
-      if (geometryClock.current?.paramsKey !== geometryParamsKey)
-        geometryClock.current = { paramsKey: geometryParamsKey, startedAt: performance.now() };
-      return;
-    }
-    if (
-      geometryIsCurrent &&
-      geometryResult &&
-      geometryResult.generationId !== lastGeometryReadyId.current
-    ) {
-      const elapsed =
-        geometryClock.current?.paramsKey === geometryParamsKey
-          ? Math.round(performance.now() - geometryClock.current.startedAt)
-          : undefined;
-      const attemptId = crypto.randomUUID();
-
-      track('geometry_ready', {
-        template: customizer.acceptedParams.templateId,
-        locale,
-        design_id: designId,
-        geometry_attempt_id: attemptId,
-        duration_ms: elapsed ?? geometryResult.timings?.workerComputeMs,
-        outcome: 'success',
-      });
-      lastGeometryReadyId.current = geometryResult.generationId;
-
-      geometryClock.current = undefined;
-    }
-    const geometryErrorKey = geometryError ? `${geometryParamsKey}:${geometryError}` : undefined;
-    if (geometryError && geometryErrorKey !== lastGeometryError.current) {
-      const elapsed =
-        geometryClock.current?.paramsKey === geometryParamsKey
-          ? Math.round(performance.now() - geometryClock.current.startedAt)
-          : undefined;
-
-      track('geometry_error', {
-        template: customizer.acceptedParams.templateId,
-        locale,
-        category: 'generation',
-        design_id: designId,
-        geometry_attempt_id: crypto.randomUUID(),
-        duration_ms: elapsed,
-        outcome: 'error',
-        operation: 'preview',
-        error_code: /timed out/i.test(geometryError) ? 'timeout' : 'geometry_failed',
-      });
-
-      geometryClock.current = undefined;
-      lastGeometryError.current = geometryErrorKey;
-    }
-  }, [
-    customizer.acceptedParams.templateId,
-    designId,
-    geometryBusy,
-    geometryError,
-    geometryIsCurrent,
-    geometryParamsKey,
-    geometryResult,
-    locale,
-    track,
-  ]);
-
-  useEffect(() => {
-    const feedback = customizer.candidateFeedback;
-    if (
-      feedback?.status !== 'rejected' ||
-      feedback.requestId === lastValidationErrorRequestId.current
-    ) {
-      return;
-    }
-    lastValidationErrorRequestId.current = feedback.requestId;
-    const diagnostic = feedback.diagnostic ?? '';
-
-    track('geometry_error', {
-      locale,
-      design_id: designId,
-      geometry_attempt_id: crypto.randomUUID(),
-      outcome: 'error',
-      category: 'generation',
-      operation: 'validation',
-      error_code: /timed out/i.test(diagnostic)
-        ? 'timeout'
-        : /worker/i.test(diagnostic)
-          ? 'worker_failed'
-          : 'geometry_failed',
-    });
-  }, [customizer.candidateFeedback, designId, locale, track]);
 
   const randomize = (): void => {
     if (randomizing) return;

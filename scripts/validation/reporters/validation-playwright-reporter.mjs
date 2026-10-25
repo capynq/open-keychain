@@ -52,15 +52,15 @@ export default class ValidationPlaywrightReporter {
   onEnd() {
     if (process.env.PLAYWRIGHT_REQUIRED_JOURNEY !== 'true') return undefined;
     const valid =
-      this.total === 6 &&
-      this.completed === 6 &&
-      this.results.length === 6 &&
+      this.total === 9 &&
+      this.completed === 9 &&
+      this.results.length === 9 &&
       this.results.every(
         ({ status, expectedStatus }) => status === 'passed' && expectedStatus === 'passed',
       );
     if (valid) return undefined;
     process.stderr.write(
-      `Critical journey verification failed: expected 6 passed tests, received ${this.completed}/${this.total} completed; statuses: ${this.results.map(({ status, expectedStatus }) => `${status}/${expectedStatus}`).join(', ') || 'none'}\n`,
+      `Critical journey verification failed: expected 9 passed tests, received ${this.completed}/${this.total} completed; statuses: ${this.results.map(({ status, expectedStatus }) => `${status}/${expectedStatus}`).join(', ') || 'none'}\n`,
     );
     return { status: 'failed' };
   }

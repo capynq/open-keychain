@@ -3,6 +3,7 @@ export type RecoveryFailureContext = {
   profile?: 'sharp' | 'round' | 'chamfer';
   maximumMm?: number;
   requestedMm?: number;
+  parameter?: 'cornerRadiusMm' | 'stakeShoulderMm';
   [key: string]: string | number | undefined;
 };
 
@@ -38,6 +39,9 @@ const recoveryContext = (value: unknown): RecoveryFailureContext | undefined => 
   for (const key of ['maximumMm', 'requestedMm'] as const) {
     if (typeof value[key] === 'number' && Number.isFinite(value[key])) context[key] = value[key];
   }
+
+  if (value.parameter === 'cornerRadiusMm' || value.parameter === 'stakeShoulderMm')
+    context.parameter = value.parameter;
 
   return Object.keys(context).length ? context : undefined;
 };

@@ -93,7 +93,9 @@ export const useExportActions = ({
     format: ExportFormat;
     mode: ThreeMfMode;
     appearanceOverrides?: PrintAppearanceOverrides;
+    attemptId: string;
   }>(undefined);
+  const retryOfAttemptId = useRef<string | undefined>(undefined);
   const { track } = useAnalytics();
 
   const download = async (
@@ -101,9 +103,15 @@ export const useExportActions = ({
     mode: ThreeMfMode = 'separate-colors',
     requestedAppearanceOverrides: PrintAppearanceOverrides | undefined = appearanceOverrides,
   ): Promise<void> => {
-    if (!exportAllowed || geometry.current === false || inFlight.current) return;
-    lastRequest.current = { format, mode, appearanceOverrides: requestedAppearanceOverrides };
+    if (!exportAllowed || inFlight.current) return;
     const attemptId = crypto.randomUUID();
+
+    lastRequest.current = {
+      format,
+      mode,
+      appearanceOverrides: requestedAppearanceOverrides,
+      attemptId,
+    };
     const startedAt = performance.now();
 
     inFlight.current = true;
@@ -119,9 +127,23 @@ export const useExportActions = ({
       template: params.templateId,
       export_attempt_id: attemptId,
       design_id: designId,
+      geometry_generation_id: geometry.result?.generationId,
+      retry_of_attempt_id: retryOfAttemptId.current,
+      recovery_trigger: retryOfAttemptId.current ? 'user_retry' : undefined,
     });
+    const retryParent = retryOfAttemptId.current;
+
+    retryOfAttemptId.current = undefined;
+    let recoveryOutcome: 'recovered' | 'not_needed' | 'failed' = 'not_needed';
     try {
-      geometry.clientRef.current?.recoverForUserRetry();
+      let recovered: boolean;
+      try {
+        recovered = geometry.clientRef.current?.recoverForUserRetry() ?? false;
+        recoveryOutcome = recovered ? 'recovered' : 'not_needed';
+      } catch (cause) {
+        recoveryOutcome = 'failed';
+        throw cause;
+      }
       const file = await geometry.clientRef.current?.export(
         params,
         format,
@@ -161,6 +183,10 @@ export const useExportActions = ({
         design_id: designId,
         duration_ms: Math.round(performance.now() - startedAt),
         outcome: 'success',
+        geometry_generation_id: geometry.result?.generationId,
+        retry_of_attempt_id: retryParent,
+        recovery_trigger: recovered || retryParent ? 'user_retry' : undefined,
+        recovery_outcome: recoveryOutcome,
       });
       setStatus('success');
     } catch (cause) {
@@ -187,6 +213,12 @@ export const useExportActions = ({
         error_code: exportErrorCode(cause, recoveryFailure),
         failure_stage: diagnostics.stage,
         error_type: diagnostics.type,
+        failure_code: recoveryFailure.code,
+        geometry_generation_id: geometry.result?.generationId,
+        retry_of_attempt_id: retryParent,
+        recovery_trigger:
+          recoveryOutcome !== 'not_needed' || retryParent ? 'user_retry' : undefined,
+        recovery_outcome: recoveryOutcome,
       });
     } finally {
       inFlight.current = false;
@@ -195,20 +227,20 @@ export const useExportActions = ({
   };
 
   const retry = async (): Promise<void> => {
-    if (lastRequest.current)
+    if (lastRequest.current) {
+      retryOfAttemptId.current = lastRequest.current.attemptId;
       await download(
         lastRequest.current.format,
         lastRequest.current.mode,
         lastRequest.current.appearanceOverrides,
       );
+    }
   };
 
   return {
     downloading,
     printable: Boolean(
-      exportAllowed &&
-      geometry.current !== false &&
-      (geometry.result?.printable || (allowDisconnected && disconnectedOnly)),
+      exportAllowed && (geometry.result?.printable || (allowDisconnected && disconnectedOnly)),
     ),
     status,
     error,

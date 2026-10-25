@@ -91,6 +91,13 @@ describe('geometry worker build quality and cache boundaries', () => {
     );
   });
 
+  it('signals readiness only after WASM warmup resolves', async () => {
+    await handler({ data: { type: 'warmup' } } as MessageEvent);
+
+    expect(createWasm).toHaveBeenCalledOnce();
+    expect(postMessage).toHaveBeenCalledExactlyOnceWith({ type: 'ready', requestId: 0 });
+  });
+
   it('serializes structured recovery failures from the build', async () => {
     buildKeychain.mockRejectedValueOnce(
       new RecoveryError({

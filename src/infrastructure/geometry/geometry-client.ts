@@ -24,6 +24,14 @@ const failedError = (type: OperationDiagnostics['type'] = 'worker_unavailable') 
     { code: 'geometry-worker-failed', message: 'Geometry worker failed.' },
     { stage: 'transport', type },
   );
+const workerInitializationError = (error: unknown) =>
+  new GeometryOperationError(
+    {
+      code: 'geometry-worker-init-failed',
+      message: error instanceof Error ? error.message : 'Geometry worker could not start.',
+    },
+    { stage: 'initialization', type: 'worker_unavailable' },
+  );
 export const DEFAULT_GEOMETRY_REQUEST_TIMEOUT_MS = 30_000;
 
 export class GeometryRequestTimeoutError extends GeometryOperationError {
@@ -94,7 +102,7 @@ const geometryResultWeight = (result: GeometryResult): number => {
 };
 
 export class GeometryClient {
-  private worker: Worker;
+  private worker!: Worker;
   private readonly requestTimeoutMs: number;
   private readonly requestTimers = new Map<number, ReturnType<typeof setTimeout>>();
   private nextRequestId = 1;
@@ -141,6 +149,8 @@ export class GeometryClient {
   private disposed = false;
   private workerFailed = false;
   private recoveryAvailable = true;
+  private editRecoveryAvailable = true;
+  private workerFailure: Error | undefined;
   private readonly resultCache = new BoundedResultCache<GeometryResult>(
     8,
     64 * 1024 * 1024,
@@ -151,11 +161,13 @@ export class GeometryClient {
       options.requestTimeoutMs && Number.isFinite(options.requestTimeoutMs)
         ? Math.max(1, options.requestTimeoutMs)
         : DEFAULT_GEOMETRY_REQUEST_TIMEOUT_MS;
-    this.worker = this.createWorker();
     try {
+      this.worker = this.createWorker();
       this.worker.postMessage({ type: 'warmup' } satisfies WorkerRequest);
     } catch (error) {
-      this.handleWorkerFailure(this.worker, error instanceof Error ? error : failedError());
+      this.workerFailed = true;
+      this.workerFailure = workerInitializationError(error);
+      this.worker?.terminate();
     }
   }
   request(
@@ -299,12 +311,26 @@ export class GeometryClient {
   }
 
   /** Re-arm a failed client only in response to an explicit user retry. Never replay old work. */
-  recoverForUserRetry(): void {
+  recoverForUserRetry(): boolean {
     if (this.disposed) throw disposedError();
-    if (!this.workerFailed) return;
+    if (!this.workerFailed) return false;
+    this.recoveryAvailable = false;
+    this.editRecoveryAvailable = false;
+    this.replaceWorker();
+    if (this.workerFailed) throw this.currentError();
+    return true;
+  }
+
+  /** Allow one recovery after exhausted automatic recovery when a new edit arrives. */
+  recoverForUserEdit(): boolean {
+    if (this.disposed) throw disposedError();
+    if (!this.workerFailed) return false;
+    if (!this.editRecoveryAvailable) throw this.currentError();
+    this.editRecoveryAvailable = false;
     this.recoveryAvailable = false;
     this.replaceWorker();
-    if (this.workerFailed) throw failedError();
+    if (this.workerFailed) throw this.currentError();
+    return true;
   }
 
   dispose(): void {
@@ -322,7 +348,7 @@ export class GeometryClient {
     this.queuedCandidate = undefined;
     this.activeCandidateRequestId = undefined;
     this.resultCache.clear();
-    this.worker.terminate();
+    this.worker?.terminate();
   }
   private sendGenerate(
     params: KeychainParams,
@@ -383,6 +409,11 @@ export class GeometryClient {
   }
   private handleResponse(worker: Worker, response: WorkerResponse): void {
     if (this.disposed || worker !== this.worker) return;
+    if (response.type === 'ready') {
+      this.workerFailure = undefined;
+      this.workerFailed = false;
+      return;
+    }
     this.clearRequestTimer(response.requestId);
     if (response.type === 'error' && response.requestId === 0) {
       this.handleWorkerFailure(
@@ -395,6 +426,8 @@ export class GeometryClient {
       return;
     }
     this.recoveryAvailable = true;
+    this.editRecoveryAvailable = true;
+    this.workerFailure = undefined;
     if (response.type === 'geometry') {
       const pending = this.pendingGeometry.get(response.requestId);
       if (pending) {
@@ -485,6 +518,7 @@ export class GeometryClient {
     const geometry = this.pendingGeometry.get(response.requestId);
     geometry?.reject(error);
     this.pendingGeometry.delete(response.requestId);
+    this.previewCacheKeys.delete(response.requestId);
     const exportRequest = this.pendingExports.get(response.requestId);
     exportRequest?.reject(error);
     this.pendingExports.delete(response.requestId);
@@ -524,12 +558,13 @@ export class GeometryClient {
   }
 
   private currentError(): Error {
-    return this.disposed ? disposedError() : failedError();
+    return this.disposed ? disposedError() : (this.workerFailure ?? failedError());
   }
 
   private handleWorkerFailure(worker: Worker, error: Error): void {
     if (this.disposed || this.workerFailed || worker !== this.worker) return;
     this.workerFailed = true;
+    this.workerFailure = error;
     for (const pending of this.pendingGeometry.values()) pending.reject(error);
     for (const pending of this.pendingExports.values()) pending.reject(error);
     for (const pending of this.pendingValidations.values()) pending.reject(error);
@@ -556,9 +591,10 @@ export class GeometryClient {
       this.worker = replacement;
       this.workerFailed = false;
       replacement.postMessage({ type: 'warmup' } satisfies WorkerRequest);
-    } catch {
+    } catch (error) {
       replacement?.terminate();
       this.workerFailed = true;
+      this.workerFailure = workerInitializationError(error);
     }
   }
 

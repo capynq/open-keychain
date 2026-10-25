@@ -83,6 +83,38 @@ it('does not turn a superseded preview into a user-facing failure', async () => 
   });
 });
 
+it('reports a preview attempt only when dispatched and finishes it with the generation ID', async () => {
+  const started = vi.fn();
+  const finished = vi.fn();
+  const callbacks = { started, finished };
+
+  vi.stubGlobal('Worker', MockWorker);
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  vi.useFakeTimers();
+  root = createRoot(host);
+  const Harness = () => {
+    current = useGeometryGeneration(DEFAULT_PARAMS, undefined, undefined, undefined, callbacks);
+    return null;
+  };
+
+  act(() => root!.render(createElement(Harness)));
+  expect(started).not.toHaveBeenCalled();
+  await act(async () => {
+    vi.advanceTimersByTime(0);
+  });
+  expect(started).toHaveBeenCalledTimes(1);
+  expect(started).toHaveBeenCalledWith(expect.any(String), DEFAULT_PARAMS);
+  await act(async () => {
+    MockWorker.instances[0].emit({
+      type: 'geometry',
+      requestId: 1,
+      result: geometry(),
+    });
+  });
+  expect(finished).toHaveBeenCalledTimes(1);
+  expect(finished).toHaveBeenCalledWith(expect.any(String), 'success', { generationId: 1 });
+});
+
 it('retries a failed worker operation with the current design', async () => {
   mount();
   await act(async () => {

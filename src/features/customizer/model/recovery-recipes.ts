@@ -8,6 +8,7 @@ import {
   fontSupportsArticulatedName,
 } from '@/domain/keychain/fonts/catalog';
 import { EDGE_FINISH_GRID_MM } from '@/domain/keychain/model/edge-finish';
+import { parameterRange } from '@/domain/keychain/model/parameters';
 import { recoveryDefinition } from '@/shared/lib/recovery/catalog';
 
 import { simpleOptionGroups } from './simple-options';
@@ -39,7 +40,21 @@ export const recoveryRecipes = (
   ): void => {
     recipes.push({ id, labelKey, values, params: { ...params, ...changes } });
   };
-  if (strategy === 'text-edge' || strategy === 'base-edge') {
+  if (failure.code === 'geometry-parameter-limit' && failure.context?.parameter) {
+    const parameter = failure.context.parameter;
+    const maximum = failure.context.maximumMm;
+    if (maximum !== undefined) {
+      const range = parameterRange(params, parameter);
+      const value = Math.floor((maximum + 1e-8) / range.step) * range.step;
+      if (value >= range.min && value < params[parameter])
+        add(
+          'within-geometry-limit',
+          'recoveryApplyParameterLimit',
+          { [parameter]: value },
+          { value: Number(value.toFixed(3)) },
+        );
+    }
+  } else if (strategy === 'text-edge' || strategy === 'base-edge') {
     const base = strategy === 'base-edge';
     const maximum = failure.context?.maximumMm;
     const amount =

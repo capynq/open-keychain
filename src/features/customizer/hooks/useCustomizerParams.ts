@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 
 import type { RecoveryFailure } from '@/shared/lib/recovery/failure';
+import type { OperationDiagnostics } from '@/shared/lib/recovery/operation-diagnostics';
 
-import { failureFrom } from '@/shared/lib/recovery/failure';
+import { failureFrom, RecoveryError } from '@/shared/lib/recovery/failure';
+import { GeometryOperationError } from '@/shared/lib/recovery/operation-diagnostics';
 
 import type { GeometryResult } from '../../../domain/keychain/model/types';
 import type { FontNotice } from '../model/customizer-types';
@@ -63,23 +65,41 @@ export type CandidateControlGroup =
 
 export type CandidateFeedback = {
   requestId: number;
-  status: 'checking' | 'rejected';
+  attemptId?: string;
+  status: 'checking' | 'rejected' | 'failed';
   group: CandidateControlGroup;
   controlKey?: keyof KeychainParams;
   diagnostic?: string;
   failure?: RecoveryFailure;
+  diagnostics?: OperationDiagnostics;
 };
 
 export type CandidateValidation = (
   params: KeychainParams,
   font: FontDefinition,
   subtitleFont: FontDefinition,
+  attemptId?: string,
+  userRetry?: boolean,
 ) => Promise<GeometryResult>;
 
 export type CandidateCallbacks = {
   pending?: (params: KeychainParams, font: FontDefinition, subtitleFont: FontDefinition) => void;
   validate?: CandidateValidation;
   validateRecovery?: CandidateValidation;
+  attemptStarted?: (
+    attemptId: string,
+    templateId: TemplateId,
+    group: CandidateControlGroup,
+    controlKey?: keyof KeychainParams,
+    retryOfAttemptId?: string,
+  ) => void;
+  attemptFinished?: (
+    attemptId: string,
+    outcome: 'accepted' | 'rejected' | 'failed' | 'superseded' | 'cancelled',
+    failure?: RecoveryFailure,
+    diagnostics?: OperationDiagnostics,
+    geometryGenerationId?: number,
+  ) => void;
   cancelRecovery?: () => void;
   accept?: (
     params: KeychainParams,
@@ -98,6 +118,7 @@ export const useCustomizerParams = (
   acceptedParams: KeychainParams;
   candidateFeedback: CandidateFeedback | undefined;
   clearCandidateFeedback: () => void;
+  retryCandidate: (requestId: number) => void;
   recoveryOptions: RecoveryOption[];
   recoveryChecking: boolean;
   prepareRecovery: (requestId: number) => Promise<void>;
@@ -166,8 +187,19 @@ export const useCustomizerParams = (
     callbacksRef.current = candidateCallbacks;
   }, [candidateCallbacks]);
   const candidateRequestId = useRef(0);
+  const activeCandidateAttemptId = useRef<string | undefined>(undefined);
   const [candidateScheduler] = useState(() => new CandidateScheduler());
   const [candidateFeedback, setCandidateFeedback] = useState<CandidateFeedback>();
+
+  useEffect(
+    () => () => {
+      candidateScheduler.cancel();
+      if (activeCandidateAttemptId.current)
+        callbacksRef.current.attemptFinished?.(activeCandidateAttemptId.current, 'cancelled');
+      activeCandidateAttemptId.current = undefined;
+    },
+    [candidateScheduler],
+  );
 
   const previousParams = useRef<KeychainParams | undefined>(undefined);
   const [canUndo, setCanUndo] = useState(false);
@@ -177,6 +209,7 @@ export const useCustomizerParams = (
   const recoveryEpoch = useRef(0);
   type RejectedAttempt = {
     requestId: number;
+    attemptId: string;
     params: KeychainParams;
     acceptedSignature: string;
     font: FontDefinition;
@@ -320,6 +353,7 @@ export const useCustomizerParams = (
     candidate: KeychainParams,
     result?: GeometryResult,
     requestId = candidateRequestId.current,
+    attemptId?: string,
   ): void => {
     if (requestId !== candidateRequestId.current) return;
     const normalized = normalizeParams(candidate);
@@ -340,6 +374,17 @@ export const useCustomizerParams = (
     setParams(normalized);
     setAcceptedParams(normalized);
     setCandidateFeedback(undefined);
+    if (attemptId) {
+      callbacksRef.current.attemptFinished?.(
+        attemptId,
+        'accepted',
+        undefined,
+        undefined,
+        result?.generationId,
+      );
+      if (activeCandidateAttemptId.current === attemptId)
+        activeCandidateAttemptId.current = undefined;
+    }
   };
 
   const recordRejectedAttempt = (
@@ -348,9 +393,13 @@ export const useCustomizerParams = (
     group: CandidateControlGroup,
     controlKey: keyof KeychainParams | undefined,
     failure: RecoveryFailure,
+    status: 'rejected' | 'failed' = 'rejected',
+    diagnostics?: OperationDiagnostics,
+    attemptId = crypto.randomUUID(),
   ): void => {
     rejectedAttempt.current = {
       requestId,
+      attemptId,
       params: candidate,
       acceptedSignature: JSON.stringify(acceptedParamsRef.current),
       font:
@@ -364,12 +413,40 @@ export const useCustomizerParams = (
     };
     setCandidateFeedback({
       requestId,
-      status: 'rejected',
+      status,
       group,
       controlKey,
       failure,
       diagnostic: failure.message ?? failure.code,
+      diagnostics,
     });
+    callbacksRef.current.attemptFinished?.(
+      attemptId,
+      status === 'failed' ? 'failed' : 'rejected',
+      failure,
+      diagnostics,
+    );
+    if (activeCandidateAttemptId.current === attemptId)
+      activeCandidateAttemptId.current = undefined;
+  };
+
+  const retryCandidate = (requestId: number): void => {
+    const attempt = rejectedAttempt.current;
+    if (!attempt || attempt.requestId !== requestId) return;
+    proposeCandidate(
+      attempt.params,
+      attempt.group,
+      attempt.controlKey,
+      'immediate',
+      true,
+      attempt.attemptId,
+    );
+  };
+
+  const supersedeActiveCandidateAttempt = (): void => {
+    if (!activeCandidateAttemptId.current) return;
+    callbacksRef.current.attemptFinished?.(activeCandidateAttemptId.current, 'superseded');
+    activeCandidateAttemptId.current = undefined;
   };
 
   const prepareRecovery = async (requestId: number): Promise<void> => {
@@ -485,13 +562,26 @@ export const useCustomizerParams = (
     group: CandidateControlGroup,
     controlKey?: keyof KeychainParams,
     intent: CandidateIntent = 'immediate',
+    userRetry = false,
+    retryOfAttemptId?: string,
   ): void => {
     const inputAt = performance.now();
     let normalized: KeychainParams;
     try {
       normalized = normalizeParams(reconcileCandidateParams(acceptedParamsRef.current, candidate));
     } catch (error) {
+      supersedeActiveCandidateAttempt();
       const requestId = ++candidateRequestId.current;
+      const attemptId = crypto.randomUUID();
+
+      activeCandidateAttemptId.current = attemptId;
+      callbacksRef.current.attemptStarted?.(
+        attemptId,
+        candidate.templateId,
+        group,
+        controlKey,
+        retryOfAttemptId,
+      );
 
       candidateScheduler.cancel();
       cancelRecovery();
@@ -512,11 +602,25 @@ export const useCustomizerParams = (
         group,
         controlKey,
         failureFrom(error, 'geometry-build-failed'),
+        'rejected',
+        { stage: 'normalization', type: 'operation_error' },
+        attemptId,
       );
       return;
     }
     if (JSON.stringify(normalized) === JSON.stringify(paramsRef.current)) return;
+    supersedeActiveCandidateAttempt();
     const requestId = ++candidateRequestId.current;
+    const attemptId = crypto.randomUUID();
+
+    activeCandidateAttemptId.current = attemptId;
+    callbacksRef.current.attemptStarted?.(
+      attemptId,
+      normalized.templateId,
+      group,
+      controlKey,
+      retryOfAttemptId,
+    );
 
     cancelRecovery();
     rejectedAttempt.current = undefined;
@@ -531,29 +635,62 @@ export const useCustomizerParams = (
       allFonts.find((item) => item.id === normalized.subtitleFontId) ??
       fontDefinition(normalized.subtitleFontId);
 
-    setCandidateFeedback({ requestId, status: 'checking', group, controlKey });
+    setCandidateFeedback({ requestId, attemptId, status: 'checking', group, controlKey });
     callbacksRef.current.pending?.(normalized, font, subtitleFont);
     candidateScheduler.cancel();
 
     const validate = callbacksRef.current.validate;
     if (!validate) {
       callbacksRef.current.reject?.(normalized, font, subtitleFont);
-      commitAccepted(normalized, undefined, requestId);
+      commitAccepted(normalized, undefined, requestId, attemptId);
       return;
     }
 
     candidateScheduler.schedule(intent, () => {
       const dispatchedAt = performance.now();
 
-      void validate(normalized, font, subtitleFont)
+      void validate(normalized, font, subtitleFont, attemptId, userRetry)
         .then(async (result) => {
           if (requestId !== candidateRequestId.current) return;
           // Revalidate the actual applied values when new text changes geometry-dependent limits.
-          const corrected = reconcileGeometryParameterLimits(normalized, result.parameterLimits);
-          if (corrected !== normalized) {
-            normalized = normalizeParams(corrected);
-            result = await validate(normalized, font, subtitleFont);
-            if (requestId !== candidateRequestId.current) return;
+          const controlKey = (['cornerRadiusMm', 'stakeShoulderMm'] as const).find((key) => {
+            const maximum = result.parameterLimits?.[key];
+
+            return (
+              maximum !== undefined && Number.isFinite(maximum) && normalized[key] > maximum + 1e-8
+            );
+          });
+          if (controlKey) {
+            const failure = new RecoveryError({
+              code: 'geometry-parameter-limit',
+              context: {
+                parameter: controlKey,
+                maximumMm: result.parameterLimits?.[controlKey],
+                requestedMm: normalized[controlKey],
+              },
+            });
+            const acceptedParams = acceptedParamsRef.current;
+
+            callbacksRef.current.reject?.(
+              acceptedParams,
+              allFonts.find((item) => item.id === acceptedParams.fontId) ??
+                fontDefinition(acceptedParams.fontId),
+              allFonts.find((item) => item.id === acceptedParams.subtitleFontId) ??
+                fontDefinition(acceptedParams.subtitleFontId),
+            );
+            paramsRef.current = acceptedParams;
+            setParams(acceptedParams);
+            recordRejectedAttempt(
+              requestId,
+              normalized,
+              group,
+              controlKey,
+              failure.failure,
+              'rejected',
+              undefined,
+              attemptId,
+            );
+            return;
           }
           const accepted =
             result.printable && !result.issues.some((issue) => issue.severity === 'error');
@@ -567,7 +704,7 @@ export const useCustomizerParams = (
                 candidateValidatedAt: performance.now(),
               },
             };
-            commitAccepted(normalized, result, requestId);
+            commitAccepted(normalized, result, requestId, attemptId);
             return;
           }
           setFontNotice(undefined);
@@ -593,6 +730,9 @@ export const useCustomizerParams = (
               code: issue?.code ?? 'geometry-build-failed',
               message: issue?.message,
             },
+            'rejected',
+            undefined,
+            attemptId,
           );
         })
         .catch((error: unknown) => {
@@ -615,6 +755,9 @@ export const useCustomizerParams = (
             group,
             controlKey,
             failureFrom(error, 'geometry-build-failed'),
+            'failed',
+            error instanceof GeometryOperationError ? error.diagnostics : undefined,
+            attemptId,
           );
         });
     });
@@ -956,8 +1099,13 @@ export const useCustomizerParams = (
     clearCandidateFeedback: () => {
       cancelRecovery();
       rejectedAttempt.current = undefined;
+      if (activeCandidateAttemptId.current) {
+        callbacksRef.current.attemptFinished?.(activeCandidateAttemptId.current, 'cancelled');
+        activeCandidateAttemptId.current = undefined;
+      }
       setCandidateFeedback(undefined);
     },
+    retryCandidate,
     selectedFont,
     selectedSubtitleFont,
     fontForId: (id) => allFonts.find((font) => font.id === id) ?? fontDefinition(id),
@@ -993,6 +1141,7 @@ export const useCustomizerParams = (
     randomize: async (random, validate) => {
       cancelRecovery();
       rejectedAttempt.current = undefined;
+      supersedeActiveCandidateAttempt();
       const original = acceptedParamsRef.current;
       const requestId = ++candidateRequestId.current;
 
@@ -1006,11 +1155,59 @@ export const useCustomizerParams = (
       callbacksRef.current.reject?.(original, font, subtitleFont);
       paramsRef.current = original;
       setParams(original);
-      setCandidateFeedback({ requestId, status: 'checking', group: 'refine' });
+      setCandidateFeedback({
+        requestId,
+        attemptId: crypto.randomUUID(),
+        status: 'checking',
+        group: 'refine',
+      });
       previousParams.current = undefined;
       setCanUndo(false);
+      const trackedValidation: RandomizeValidation | undefined = validate
+        ? async (candidate) => {
+            const attemptId = crypto.randomUUID();
+
+            callbacksRef.current.attemptStarted?.(attemptId, candidate.templateId, 'refine');
+
+            try {
+              const result = await validate(candidate);
+              const accepted =
+                typeof result === 'boolean'
+                  ? result
+                  : result.printable &&
+                    (!('issues' in result) ||
+                      !result.issues.some((issue) => issue.severity === 'error'));
+              const issue =
+                !accepted && typeof result !== 'boolean' && 'issues' in result
+                  ? result.issues.find((item) => item.severity === 'error')
+                  : undefined;
+
+              callbacksRef.current.attemptFinished?.(
+                attemptId,
+                accepted ? 'accepted' : 'rejected',
+                accepted
+                  ? undefined
+                  : { code: issue?.code ?? 'geometry-build-failed', message: issue?.message },
+                undefined,
+                typeof result === 'object' && 'generationId' in result
+                  ? result.generationId
+                  : undefined,
+              );
+
+              return result;
+            } catch (error) {
+              callbacksRef.current.attemptFinished?.(
+                attemptId,
+                'failed',
+                failureFrom(error, 'geometry-build-failed'),
+                error instanceof GeometryOperationError ? error.diagnostics : undefined,
+              );
+              throw error;
+            }
+          }
+        : undefined;
       const transaction = validate
-        ? await randomizeWithValidation(original, validate, { random, fonts: allFonts })
+        ? await randomizeWithValidation(original, trackedValidation!, { random, fonts: allFonts })
         : {
             status: 'accepted' as const,
             params: randomizeParams(original, { random, fonts: allFonts }),
@@ -1046,6 +1243,7 @@ export const useCustomizerParams = (
         setParams(original);
         setCandidateFeedback({
           requestId,
+          attemptId: crypto.randomUUID(),
           status: 'rejected',
           group: 'refine',
           diagnostic: 'randomize-failed',

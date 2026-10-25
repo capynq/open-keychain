@@ -54,6 +54,45 @@ afterEach(() => {
 });
 
 describe('GeometryClient lifecycle', () => {
+  it('allows one new-edit recovery after automatic recovery is exhausted', async () => {
+    vi.stubGlobal('Worker', MockWorker);
+    const client = new GeometryClient();
+    MockWorker.instances[0].onerror?.();
+    MockWorker.instances[1].onmessageerror?.();
+
+    expect(MockWorker.instances).toHaveLength(2);
+    expect(() => client.recoverForUserEdit()).not.toThrow();
+    expect(MockWorker.instances).toHaveLength(3);
+    const pending = client.validateCandidate(DEFAULT_PARAMS);
+    MockWorker.instances[2].onerror?.();
+    expect(() => client.recoverForUserEdit()).toThrow('Geometry worker failed.');
+    await expect(pending).rejects.toMatchObject({ failure: { code: 'geometry-worker-failed' } });
+    client.dispose();
+  });
+
+  it('keeps worker-construction failures retryable with initialization diagnostics', async () => {
+    vi.stubGlobal(
+      'Worker',
+      class {
+        constructor() {
+          throw new Error('Worker construction blocked');
+        }
+      },
+    );
+    const client = new GeometryClient();
+    await expect(client.validateCandidate(DEFAULT_PARAMS)).rejects.toMatchObject({
+      diagnostics: { stage: 'initialization', type: 'worker_unavailable' },
+      failure: { code: 'geometry-worker-init-failed' },
+    });
+
+    vi.stubGlobal('Worker', MockWorker);
+    expect(() => client.recoverForUserRetry()).not.toThrow();
+    const pending = client.validateCandidate(DEFAULT_PARAMS);
+    MockWorker.instances[0].emit({ type: 'validation', requestId: 1, result: result() });
+    await expect(pending).resolves.toMatchObject({ printable: true });
+    client.dispose();
+  });
+
   it('allocates unique editor generations for verified background results', async () => {
     vi.stubGlobal('Worker', MockWorker);
     const client = new GeometryClient();
@@ -366,9 +405,10 @@ describe('GeometryClient lifecycle', () => {
     const client = new GeometryClient();
     const original = MockWorker.instances[0];
     original.onerror?.();
+    MockWorker.instances[1].emit({ type: 'ready', requestId: 0 });
     MockWorker.instances[1].onmessageerror?.();
     await expect(client.export(DEFAULT_PARAMS)).rejects.toMatchObject({
-      diagnostics: { type: 'worker_unavailable' },
+      diagnostics: { type: 'message_error' },
     });
     expect(MockWorker.instances).toHaveLength(2);
     client.recoverForUserRetry();

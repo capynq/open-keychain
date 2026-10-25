@@ -100,6 +100,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   try {
     if (request.type === 'warmup') {
       await getWasm();
+      self.postMessage({ type: 'ready', requestId: 0 } satisfies WorkerResponse);
       return;
     }
     const wasmStartedAt = performance.now();

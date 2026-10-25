@@ -13,6 +13,7 @@ import {
 } from '../../../domain/keychain/model/types';
 import { GeometryClient } from '../../../infrastructure/geometry/geometry-client';
 import { RecoveryError } from '../../../shared/lib/recovery/failure';
+import { GeometryOperationError } from '../../../shared/lib/recovery/operation-diagnostics';
 import { useCustomizerParams, type CandidateCallbacks } from './useCustomizerParams';
 
 class MockWorker {
@@ -113,6 +114,74 @@ describe('useCustomizerParams candidate scheduling', () => {
     return { accepted, rejected, callbacks };
   };
 
+  it('tracks every randomized geometry validation outcome', async () => {
+    const started: string[] = [];
+    const finished: unknown[][] = [];
+    const callbacks: CandidateCallbacks = {
+      attemptStarted: (attemptId) => started.push(attemptId),
+      attemptFinished: (...args) => finished.push(args),
+    };
+    const getApi = renderHook(callbacks);
+    const validate = vi
+      .fn()
+      .mockResolvedValueOnce(invalidResult())
+      .mockResolvedValueOnce({ ...validResult(), generationId: 81 } as GeometryResult);
+    let transactionStatus: string | undefined;
+
+    await act(async () => {
+      transactionStatus = (await getApi().randomize(() => 0, validate)).status;
+    });
+
+    expect(transactionStatus).toBe('accepted');
+    expect(validate).toHaveBeenCalledTimes(2);
+    expect(started).toHaveLength(2);
+    expect(new Set(started).size).toBe(2);
+    expect(finished).toEqual([
+      [
+        started[0],
+        'rejected',
+        { code: 'candidate-invalid', message: 'Candidate is invalid.' },
+        undefined,
+        undefined,
+      ],
+      [started[1], 'accepted', undefined, undefined, 81],
+    ]);
+  });
+
+  it('finishes an in-flight candidate attempt as superseded when randomization begins', async () => {
+    const started: string[] = [];
+    const finished: unknown[][] = [];
+    let resolveCandidate!: (result: GeometryResult) => void;
+    const pendingCandidate = new Promise<GeometryResult>((resolve) => {
+      resolveCandidate = resolve;
+    });
+    const getApi = renderHook({
+      validate: () => pendingCandidate,
+      attemptStarted: (attemptId) => started.push(attemptId),
+      attemptFinished: (...args) => finished.push(args),
+    });
+
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    expect(started).toHaveLength(1);
+    expect(finished).toHaveLength(0);
+
+    await act(async () => {
+      await getApi().randomize(
+        () => 0,
+        async () => ({ ...validResult(), generationId: 81 }) as GeometryResult,
+      );
+    });
+
+    expect(finished[0]).toEqual([started[0], 'superseded']);
+    await act(async () => {
+      resolveCandidate({ ...validResult(), generationId: 80 } as GeometryResult);
+      await Promise.resolve();
+    });
+    expect(finished.filter(([attemptId]) => attemptId === started[0])).toEqual([
+      [started[0], 'superseded'],
+    ]);
+  });
+
   it('keeps one active request and one latest queued request across continuous updates', async () => {
     const { accepted, rejected, callbacks } = createCallbacks();
     const getApi = renderHook(callbacks);
@@ -185,6 +254,70 @@ describe('useCustomizerParams candidate scheduling', () => {
     expect(accepted).toEqual([]);
     expect(rejected).toEqual([DEFAULT_PARAMS.text]);
     expect(getApi().candidateFeedback?.status).toBe('rejected');
+  });
+
+  it('asks before applying a geometry measured parameter correction', async () => {
+    const getApi = renderHook({
+      validate: async () => ({
+        ...validResult(),
+        generationId: 40,
+        parameterLimits: { cornerRadiusMm: 2 },
+      }),
+      validateRecovery: async () => ({ ...validResult(), generationId: 50 }),
+    });
+    const acceptedRadius = getApi().acceptedParams.cornerRadiusMm;
+
+    act(() => getApi().update('cornerRadiusMm', 4));
+    await act(async () => Promise.resolve());
+
+    expect(getApi().params.cornerRadiusMm).toBe(acceptedRadius);
+    expect(getApi().acceptedParams.cornerRadiusMm).toBe(acceptedRadius);
+    expect(getApi().candidateFeedback).toMatchObject({
+      status: 'rejected',
+      failure: {
+        code: 'geometry-parameter-limit',
+        context: { parameter: 'cornerRadiusMm', maximumMm: 2, requestedMm: 4 },
+      },
+    });
+    const requestId = getApi().candidateFeedback!.requestId;
+
+    await act(async () => getApi().prepareRecovery(requestId));
+    expect(getApi().recoveryOptions).toHaveLength(1);
+    expect(getApi().recoveryOptions[0].status).toBe('ready');
+    act(() => expect(getApi().applyRecovery(requestId, 'within-geometry-limit')).toBe(true));
+    expect(getApi().acceptedParams.cornerRadiusMm).toBeLessThanOrEqual(2);
+  });
+
+  it('keeps a technical candidate failure distinct and retries the retained candidate explicitly', async () => {
+    const retryFlags: boolean[] = [];
+    const validate = vi.fn(async (...args: unknown[]) => {
+      retryFlags.push(args[4] === true);
+      if (retryFlags.length === 1)
+        throw new GeometryOperationError(
+          { code: 'geometry-request-timeout' },
+          { stage: 'transport', type: 'timeout' },
+        );
+      return { ...validResult(), generationId: 12 };
+    });
+    const getApi = renderHook({ validate });
+
+    act(() => getApi().update('text', 'NORA'));
+    await act(async () => Promise.resolve());
+    const feedback = getApi().candidateFeedback!;
+
+    expect(feedback).toMatchObject({
+      status: 'failed',
+      failure: { code: 'geometry-request-timeout' },
+      diagnostics: { stage: 'transport', type: 'timeout' },
+    });
+    expect(getApi().acceptedParams.text).toBe(DEFAULT_PARAMS.text);
+
+    act(() => getApi().retryCandidate(feedback.requestId));
+    await act(async () => Promise.resolve());
+    expect(retryFlags).toEqual([false, true]);
+    expect(validate).toHaveBeenCalledTimes(2);
+    expect(getApi().acceptedParams.text).toBe('NORA');
+    expect(getApi().candidateFeedback).toBeUndefined();
   });
 
   it('prepares measured recovery options and applies the proved result without another validation', async () => {

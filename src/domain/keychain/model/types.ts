@@ -447,6 +447,10 @@ export type WorkerRequest =
     };
 export type WorkerResponse =
   | {
+      type: 'ready';
+      requestId: 0;
+    }
+  | {
       type: 'geometry';
       requestId: number;
       result: Omit<GeometryResult, 'generationId'>;

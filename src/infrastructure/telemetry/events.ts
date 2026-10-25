@@ -13,6 +13,8 @@ export type AnalyticsEvent =
   | 'customizer_opened'
   | 'geometry_ready'
   | 'geometry_error'
+  | 'geometry_attempt_started'
+  | 'geometry_attempt_finished'
   | 'export_dialog_opened'
   | 'export_started'
   | 'export_completed'
@@ -69,6 +71,13 @@ const SAFE_PROPERTY_KEYS = new Set([
   'step',
   'template',
   'geometry_attempt_id',
+  'failure_code',
+  'control_group',
+  'control_key',
+  'recovery_trigger',
+  'recovery_outcome',
+  'retry_of_attempt_id',
+  'geometry_generation_id',
   'to',
 ]);
 
@@ -99,6 +108,7 @@ const EVENT_PROPERTY_KEYS: Partial<Record<AnalyticsEvent, ReadonlySet<string>>> 
     'design_id',
     'geometry_attempt_id',
     'duration_ms',
+    'geometry_generation_id',
     'outcome',
   ]),
   geometry_error: new Set([
@@ -112,8 +122,42 @@ const EVENT_PROPERTY_KEYS: Partial<Record<AnalyticsEvent, ReadonlySet<string>>> 
     'outcome',
     'error_code',
   ]),
+  geometry_attempt_started: new Set([
+    'template',
+    'operation',
+    'geometry_attempt_id',
+    'control_group',
+    'control_key',
+    'retry_of_attempt_id',
+    'recovery_trigger',
+  ]),
+  geometry_attempt_finished: new Set([
+    'template',
+    'operation',
+    'geometry_attempt_id',
+    'outcome',
+    'duration_ms',
+    'failure_code',
+    'failure_stage',
+    'error_type',
+    'control_group',
+    'control_key',
+    'recovery_trigger',
+    'recovery_outcome',
+    'retry_of_attempt_id',
+    'geometry_generation_id',
+  ]),
   export_dialog_opened: new Set(['template', 'design_id']),
-  export_started: new Set(['format', 'mode', 'template', 'export_attempt_id', 'design_id']),
+  export_started: new Set([
+    'format',
+    'mode',
+    'template',
+    'export_attempt_id',
+    'design_id',
+    'geometry_generation_id',
+    'retry_of_attempt_id',
+    'recovery_trigger',
+  ]),
   export_completed: new Set([
     'format',
     'mode',
@@ -122,6 +166,10 @@ const EVENT_PROPERTY_KEYS: Partial<Record<AnalyticsEvent, ReadonlySet<string>>> 
     'design_id',
     'duration_ms',
     'outcome',
+    'geometry_generation_id',
+    'retry_of_attempt_id',
+    'recovery_trigger',
+    'recovery_outcome',
   ]),
   export_failed: new Set([
     'format',
@@ -136,6 +184,11 @@ const EVENT_PROPERTY_KEYS: Partial<Record<AnalyticsEvent, ReadonlySet<string>>> 
     'error_code',
     'failure_stage',
     'error_type',
+    'failure_code',
+    'geometry_generation_id',
+    'retry_of_attempt_id',
+    'recovery_trigger',
+    'recovery_outcome',
   ]),
   customizer_option_changed: new Set(['family', 'option_id']),
   setup_step_viewed: new Set(['step']),
@@ -194,6 +247,8 @@ export const sanitizeProperties = (
           return value === 'development' || value === 'preview' || value === 'production';
         if (key === 'operation') {
           if (event === 'geometry_error') return value === 'preview' || value === 'validation';
+          if (event === 'geometry_attempt_started' || event === 'geometry_attempt_finished')
+            return value === 'validation' || value === 'preview';
           if (event === 'export_failed') return value === 'export';
           return false;
         }
@@ -207,6 +262,30 @@ export const sanitizeProperties = (
         if (key === 'internal_traffic') return typeof value === 'boolean';
         if (key === 'format') return value === 'stl' || value === '3mf';
         if (key === 'mode') return value === 'separate-colors' || value === 'merged';
+        if (key === 'outcome')
+          return ['success', 'rejected', 'error', 'superseded', 'cancelled'].includes(
+            String(value),
+          );
+        if (key === 'control_group')
+          return [
+            'name',
+            'template',
+            'template-details',
+            'style',
+            'style-details',
+            'refine',
+            'print',
+          ].includes(String(value));
+        if (key === 'control_key')
+          return typeof value === 'string' && /^[a-z][A-Za-z0-9]{0,63}$/.test(value);
+        if (key === 'failure_code') return typeof value === 'string' && SAFE_ID.test(value);
+        if (key === 'recovery_trigger') return value === 'user_retry' || value === 'user_edit';
+        if (key === 'recovery_outcome')
+          return value === 'recovered' || value === 'failed' || value === 'not_needed';
+        if (key === 'retry_of_attempt_id')
+          return typeof value === 'string' && /^[a-f0-9-]{36}$/.test(value);
+        if (key === 'geometry_generation_id')
+          return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
         if (key === 'duration_ms')
           return (
             typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 600_000
@@ -216,15 +295,20 @@ export const sanitizeProperties = (
           return typeof value === 'string' && /^[a-z0-9][a-z0-9._+-]{0,127}$/i.test(value);
         if (key === 'failure_stage')
           return (
-            event === 'export_failed' &&
+            (event === 'export_failed' || event === 'geometry_attempt_finished') &&
             typeof value === 'string' &&
-            ['initialization', 'generation', 'serialization', 'transport', 'download'].includes(
-              value,
-            )
+            [
+              'initialization',
+              'normalization',
+              'generation',
+              'serialization',
+              'transport',
+              'download',
+            ].includes(value)
           );
         if (key === 'error_type')
           return (
-            event === 'export_failed' &&
+            (event === 'export_failed' || event === 'geometry_attempt_finished') &&
             typeof value === 'string' &&
             [
               'timeout',
