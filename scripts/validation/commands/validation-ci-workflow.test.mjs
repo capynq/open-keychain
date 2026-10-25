@@ -38,30 +38,38 @@ describe('change-based CI workflow', () => {
 
   it('installs browser coverage for changed journeys and verifies the exact production artifact', () => {
     const workflow = readFileSync('.github/workflows/ci.yml', 'utf8');
+    const productionBuild = workflow.slice(
+      workflow.indexOf('\n  production-build:'),
+      workflow.indexOf('\n  deploy:'),
+    );
     expect(workflow).toContain("if: steps.changes.outputs.needs_browser == 'true'");
-    expect(workflow).toContain('name: Verify production artifact user journey and exports');
-    expect(workflow).toContain('run: pnpm test:e2e:journey');
-    const productionSmoke = workflow.slice(
-      workflow.indexOf('name: Verify production artifact user journey and exports'),
-      workflow.indexOf('uses: actions/upload-artifact@'),
+    expect(productionBuild).toContain('name: Verify production artifact user journey and exports');
+    expect(productionBuild).toContain('run: pnpm test:e2e:journey');
+    const productionSmoke = productionBuild.slice(
+      productionBuild.indexOf('name: Verify production artifact user journey and exports'),
+      productionBuild.indexOf('uses: actions/upload-artifact@'),
     );
     expect(productionSmoke).toContain("PLAYWRIGHT_BASE_URL: ''");
     expect(productionSmoke).toContain("PLAYWRIGHT_USE_EXISTING_BUILD: 'true'");
-    expect(workflow.indexOf('run: pnpm test:e2e:journey')).toBeLessThan(
-      workflow.indexOf('actions/upload-artifact'),
+    expect(productionBuild.indexOf('run: pnpm test:e2e:journey')).toBeLessThan(
+      productionBuild.indexOf('actions/upload-artifact'),
     );
     expect(workflow).toMatch(/deploy:\n\s+needs: \[quality, production-build\]/);
   });
 
   it('uploads production source maps before removing them from the deploy artifact', () => {
     const workflow = readFileSync('.github/workflows/ci.yml', 'utf8');
-    const upload = workflow.indexOf('pnpm dlx @posthog/cli sourcemap upload');
-    const removal = workflow.indexOf("find dist -type f -name '*.map' -delete");
-    const artifact = workflow.indexOf('actions/upload-artifact');
+    const productionBuild = workflow.slice(
+      workflow.indexOf('\n  production-build:'),
+      workflow.indexOf('\n  deploy:'),
+    );
+    const upload = productionBuild.indexOf('pnpm dlx @posthog/cli sourcemap upload');
+    const removal = productionBuild.indexOf("find dist -type f -name '*.map' -delete");
+    const artifact = productionBuild.indexOf('actions/upload-artifact');
 
-    expect(workflow).toContain("POSTHOG_UPLOAD_SOURCEMAPS: 'true'");
-    expect(workflow).toContain('POSTHOG_CLI_API_KEY');
-    expect(workflow).toContain("POSTHOG_CLI_PROJECT_ID: '251074'");
+    expect(productionBuild).toContain("POSTHOG_UPLOAD_SOURCEMAPS: 'true'");
+    expect(productionBuild).toContain('POSTHOG_CLI_API_KEY');
+    expect(productionBuild).toContain("POSTHOG_CLI_PROJECT_ID: '251074'");
     expect(upload).toBeGreaterThan(-1);
     expect(removal).toBeGreaterThan(upload);
     expect(artifact).toBeGreaterThan(removal);
