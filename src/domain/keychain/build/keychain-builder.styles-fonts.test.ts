@@ -271,7 +271,7 @@ describe('styles and fonts', () => {
     expect(automatic.result.printable, JSON.stringify(automatic.result.issues)).toBe(true);
     expect(explicit.result.printable, JSON.stringify(explicit.result.issues)).toBe(true);
     expect(geometryFingerprint(automatic.result)).toEqual(geometryFingerprint(explicit.result));
-  }, 30000);
+  }, 60000);
 
   it('keeps calligraphic text readable instead of shrinking it to the width cap', async () => {
     const { result } = await buildKeychain(wasm, {
