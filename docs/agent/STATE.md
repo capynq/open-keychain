@@ -1,5 +1,81 @@
 # Agent handoff
 
+## Released — geometry reliability, 2026-10-25
+
+- Candidate validation now recovers an exhausted worker on explicit Retry or one new edit per failed
+  worker episode. Warmup-ready does not reset the automatic replacement budget; only a normal
+  operation response does. Requests are not replayed, stale worker replies stay ignored, and disposed
+  clients remain disposed.
+- Technical candidate failures have a Retry state with structured diagnostics. Expected geometry
+  rejection and measured parameter-limit correction preserve accepted params, fonts and geometry;
+  parameter corrections are offered as explicit revalidated recovery options. Export eligibility is
+  keyed to retained accepted geometry plus accepted params/fonts, so transient preview errors do not
+  disable a still-valid accepted design.
+- Added paired geometry attempt telemetry with accepted/rejected/error/superseded/cancelled outcomes,
+  fixed operation/template/control IDs, structured failure code/stage/type, retry/recovery links and
+  accepted geometry generation correlation. Updated allowlists and `docs/analytics.md`; old
+  `geometry_error` events remain historical and new bundles no longer emit them.
+- Randomization validation now emits one paired attempt per generated candidate validation,
+  including subsequent candidates and measured-limit revalidation, so its outcomes join the same
+  geometry funnel. Starting randomization closes an in-flight candidate attempt as superseded
+  before invalidating its request ID.
+- Validation: typecheck, full ESLint, `validate:changed`, production build, and `git diff --check`
+  passed. Final focused geometry/customizer/export/telemetry coverage passed 60/60; strict journey
+  reporter coverage passed 7/7. The configured browser journey passed 9/9 across desktop, mobile
+  and DPR 2 Chromium contexts, including real-WASM STL plus both 3MF modes, exhausted-worker
+  recovery, new-edit recovery, repeated exports and format changes. The journey reporter was aligned
+  from its stale expected count of 6 with the actual 9-test configuration.
+- `pnpm validate` reached 856/857 unit cases; the sole failure was the missing catalog entry for the
+  new `geometry-worker-init-failed` code, now added and verified by the catalog test. The gate also
+  reports Prettier on the pre-existing untracked user file `result.json` and cannot allocate its
+  internal browser port in the sandbox. Targeted Playwright runs passed with approved localhost
+  access. No Firefox/WebKit export journey was run.
+- Geometry reliability was committed at `ca0db9a`, followed by CI log and workflow-test fixes at
+  `105ffa1` and `8acce11`, and evidence-based geometry timing adjustments at `81795b4`. GitHub CI
+  passed and the production site served the `81795b4` release SHA. The current task is the separate
+  neutral-3MF/slicer slice below.
+- Follow-up review fix: randomized attempt telemetry passed the focused customizer, randomizer, and
+  telemetry suites (30/30), TypeScript, and targeted ESLint. The supersession interleaving regression
+  then passed the customizer hook suite (11/11), TypeScript, and targeted ESLint.
+
+## Current work — neutral multi-slicer 3MF, 2026-10-21
+
+- Separate-color export carries a Materials Extension color group, Core materials, and Prusa named
+  volumes in one aligned mesh, without printer/process settings. The export dialog recommends this
+  format and provides localized collapsible filament-assignment and Bambu geometry-only guidance.
+- Added a slicer compatibility manifest for seven application families plus Bambu Studio 2.8.4.57
+  beta, expanded generated manual rows to 26 fixtures × 8 targets × 3 formats, and added
+  `pnpm validate:slicers` structural checks plus the existing Prusa CLI gate.
+- Local slicer validation: official macOS packages were checksum-verified and run from temporary
+  storage. Bambu Studio 2.8.2.61, Bambu beta 2.8.4.57, and OrcaSlicer 2.4.2 each imported all 52
+  generated 3MFs with `--info` (26 separate-color + 26 merged; all manifold). PrusaSlicer 2.9.6
+  sliced 78/78 generated STL/3MF fixtures; all 26 separate-color exports round-tripped with named
+  volumes and aligned bounds. `pnpm validate:slicers` passed structural ZIP/XML and Prusa CLI
+  checks. Prusa emitted 24 nonfatal generic print-stability warnings; no repair, invalid/manifold,
+  or path-conflict warning occurred. Bambu/Orca CLI `--export-3mf` attempts aborted (signal 6).
+- GUI import/material assignment and exact slicer GUI round-trip remain unverified; the local UI
+  automation surface exposes no native applications. Cura/Creality/Anycubic/Flash Studio were not
+  validated: Cura requires GUI import, Creality's macOS CLI rejects `--info`, Anycubic was not
+  acquired, and Flash Studio 1.7.15's bundled binary is incompatible with this Apple Silicon host.
+  Exact versions and official installer SHA-256 values are recorded in `docs/slicer-compatibility.json`;
+  all application statuses remain pending, with no complete compatibility claim established.
+- On the user's narrowed request, reran Bambu Studio stable alone: all 52 generated 3MFs passed
+  CLI `--info` import with manifold geometry. No GUI import/material assignment was possible because
+  native app control is unavailable. Removed all temporary slicer downloads, extracted apps, data,
+  and mounted images afterward; no slicer app remains installed by this run.
+- Earlier validation remains: serializer tests 5/5, typecheck, lint, generated 26 fixtures, six
+  critical journey/recovery browser cases across desktop/mobile/mobile-2x, and focused export-dialog
+  browser coverage passed.
+- Release preparation is based on `origin/main` at `81795b4`. In this run, serializer tests (5/5),
+  typecheck, formatting, source ESLint, and the export-dialog browser case passed on Chromium desktop,
+  mobile, and mobile-2x. The first lint command included unsupported Markdown/package paths and exited
+  on ignored-file warnings; rerunning ESLint on source paths passed. A mistakenly broad Vitest
+  invocation was stopped after it stalled in geometry contracts; the direct serializer test passed.
+  Generated 26 fixture cases / 78 files; structural archive/XML checks passed. `pnpm validate:slicers`
+  then failed at its external slicer phase because PrusaSlicer is not installed here. Earlier
+  PrusaSlicer 2.9.6 CLI evidence remains documented above, but was not rerun. GUI import, assignment,
+  slicing, and round-trip checks remain pending. Do not claim complete multi-slicer compatibility.
+
 ## Current work — automatic per-commit frontend release attribution, 2026-10-21
 
 - `app_release` is derived as `<package.json version>+<full source SHA>` (or `+local` for a development build without Git metadata); manual `VITE_APP_RELEASE` overrides were removed. Routine pushes require no package-version bump.

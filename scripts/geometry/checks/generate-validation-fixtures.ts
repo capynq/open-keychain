@@ -90,7 +90,16 @@ const manifest = {
 };
 await fs.writeFile(path.join(outputDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 
-const slicers = ['PrusaSlicer', 'OrcaSlicer'];
+const slicers = [
+  'Bambu Studio',
+  'Bambu Studio beta 2.8.4.57',
+  'OrcaSlicer',
+  'PrusaSlicer',
+  'Ultimaker Cura',
+  'Creality Print',
+  'Anycubic Slicer Next',
+  'Orca-Flashforge',
+];
 const formats = ['stl', 'threeMfSeparate', 'threeMfMerged'];
 const manualTemplate = {
   schemaVersion: 1,

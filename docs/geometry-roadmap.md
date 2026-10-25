@@ -23,10 +23,12 @@ Three.js bevel triangulation. Text preserves its flat underside; base top/bottom
 separate amounts. Per-profile limits are verified on fitted outlines at 0.2 mm steps.
 Legacy base finishes are restored independently; v8 documents default to a sharp base.
 
-Separate-colors 3MF keeps one mesh/model with Core material regions plus named Prusa material
-volumes. Volume names include the selected hex references because PrusaSlicer uses assigned
-filament colors instead of Core display colors. The slicer gate checks import roundtrips for volume
-names, alignment, and repairs; users still assign matching filaments.
+Separate-colors 3MF keeps one mesh/model with a Materials Extension color group for Bambu Studio,
+Core base materials, and named Prusa material volumes. Volume names include the selected hex
+references because PrusaSlicer uses assigned filament colors instead of Core display colors. The
+slicer gate checks import roundtrips for volume names, alignment, and repairs; users still assign
+matching filaments. Printer profiles are not embedded, so Bambu Studio may show its generic
+geometry-only configuration notice.
 
 Seller batch work adds optional subtitles, format selection, exception review,
 cancellation, and a customer-text-free recipe. The labor estimate is based on user

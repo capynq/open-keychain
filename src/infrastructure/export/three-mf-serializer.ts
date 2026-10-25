@@ -18,6 +18,9 @@ const normalizeColor = (color: string): string => {
   }
   return normalized;
 };
+// Bambu reads the Materials Extension group; keep Core materials on a distinct resource ID.
+const colorGroupId = 10;
+const separateModeBaseMaterialsId = 11;
 const escapeXml = (value: string): string => {
   return value.replace(
     /[&<>"']/g,
@@ -43,26 +46,35 @@ const meshXml = (parts: ThreeMfPart[]): string => {
   for (const [partIndex, part] of parts.entries()) {
     for (let index = 0; index < part.mesh.indices.length; index += 3) {
       const properties =
-        partIndex === 0 ? '' : ` pid="10" p1="${partIndex}" p2="${partIndex}" p3="${partIndex}"`;
+        partIndex === 0
+          ? ''
+          : ` pid="${colorGroupId}" p1="${partIndex}" p2="${partIndex}" p3="${partIndex}"`;
       triangles += `<triangle v1="${part.mesh.indices[index] + triangleVertexOffset}" v2="${part.mesh.indices[index + 1] + triangleVertexOffset}" v3="${part.mesh.indices[index + 2] + triangleVertexOffset}"${properties}/>`;
     }
     triangleVertexOffset += part.mesh.positions.length / 3;
   }
   return `<mesh><vertices>${vertices}</vertices><triangles>${triangles}</triangles></mesh>`;
 };
-const modelXml = (parts: ThreeMfPart[]): string => {
-  const object = `<object id="1" type="model" name="Keychain" pid="10" pindex="0">${meshXml(parts)}</object>`;
+const modelXml = (parts: ThreeMfPart[], mode: ThreeMfMode): string => {
+  const hasSeparateColors = mode === 'separate-colors';
+  const baseMaterialsId = hasSeparateColors ? separateModeBaseMaterialsId : colorGroupId;
+  const object = `<object id="1" type="model" name="Keychain" pid="${colorGroupId}" pindex="0">${meshXml(parts)}</object>`;
   const materials = parts
     .map(
       (part) =>
         `<base name="${escapeXml(part.name)}" displaycolor="${normalizeColor(part.color)}"/>`,
     )
     .join('');
+  const colorGroup = hasSeparateColors
+    ? `<m:colorgroup id="${colorGroupId}">${parts
+        .map((part) => `<m:color color="${normalizeColor(part.color)}"/>`)
+        .join('')}</m:colorgroup>`
+    : '';
   return `<?xml version="1.0" encoding="UTF-8"?>
-<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
+<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:m="http://schemas.microsoft.com/3dmanufacturing/material/2015/02">
   <metadata name="Title">Open Keychain</metadata>
   <metadata name="Description">Printable keychain generated locally in the browser.</metadata>
-  <resources><basematerials id="10">${materials}</basematerials>${object}</resources>
+  <resources><basematerials id="${baseMaterialsId}">${materials}</basematerials>${colorGroup}${object}</resources>
   <build><item objectid="1"/></build>
 </model>`;
 };
@@ -107,7 +119,7 @@ export const serializeThreeMf = (
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Target="/3D/3dmodel.model" Id="rel-1" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>
 </Relationships>`),
-    '3D/3dmodel.model': strToU8(modelXml(parts)),
+    '3D/3dmodel.model': strToU8(modelXml(parts, mode)),
   };
   if (mode === 'separate-colors')
     files['Metadata/Slic3r_PE_model.config'] = strToU8(prusaModelConfig(parts));

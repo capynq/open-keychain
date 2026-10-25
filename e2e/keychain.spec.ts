@@ -321,9 +321,13 @@ test('uses a native export dialog with contained focus, Escape, backdrop close, 
   const exportButton = page.getByRole('button', { name: 'Export' });
   await exportButton.click();
   const dialog = page.getByRole('dialog', { name: 'Choose an export' });
-  const firstChoice = dialog.getByRole('button', { name: /STL file/ });
+  const firstChoice = dialog.getByRole('button', { name: /3MF · separate colors/ });
   await expect(dialog).toBeVisible();
   await expect(firstChoice).toBeFocused();
+  const slicerHelp = dialog.locator('.export-slicer-help');
+  await expect(slicerHelp.locator('p').first()).toBeHidden();
+  await slicerHelp.locator('summary').click();
+  await expect(slicerHelp.getByText(/Bambu Studio may ask to load geometry only/)).toBeVisible();
 
   await dialog.getByRole('button', { name: 'Close' }).focus();
   await page.keyboard.press('Shift+Tab');

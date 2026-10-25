@@ -45,6 +45,7 @@
     "seo:sitemap": "node --import tsx scripts/generators/generate-seo-sitemap.ts",
     "validate:seo": "pnpm seo:sitemap --check && vitest run src/infrastructure/seo/app-metadata.test.ts src/infrastructure/seo/sitemap.test.ts",
     "validate:slicer": "node --import tsx scripts/geometry/checks/validate-slicer.ts",
+    "validate:slicers": "node --import tsx scripts/geometry/checks/validate-slicers.ts",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "validate:changed": "node scripts/validation/commands/validate-changed.mjs",

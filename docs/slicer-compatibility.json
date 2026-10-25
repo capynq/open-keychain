@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "policy": "Only exact application builds with a passing recorded import and slice matrix are verified.",
+  "applications": [
+    {
+      "id": "bambu-studio",
+      "name": "Bambu Studio",
+      "version": "2.8.2.61",
+      "build": "BambuStudio-02.08.02.61",
+      "installerSha256": "cf648a95858fb630e1353c4987038df60d6caab693f18411fb95fb809f2d6926",
+      "status": "pending",
+      "verification": "CLI --info passed for 52/52 generated 3MFs; GUI import, filament assignment, slice, project round-trip pending"
+    },
+    {
+      "id": "bambu-studio-beta",
+      "name": "Bambu Studio beta",
+      "version": "2.8.4.57",
+      "build": "BambuStudio-02.08.04.57",
+      "installerSha256": "6d0099f60bb4449ee9066160cb65a8a1f639650a3f48cddf13566fe0c520ac66",
+      "status": "pending",
+      "verification": "CLI --info passed for 52/52 generated 3MFs; GUI import, filament assignment, slice, project round-trip pending"
+    },
+    {
+      "id": "orcaslicer",
+      "name": "OrcaSlicer",
+      "version": "2.4.2",
+      "build": "OrcaSlicer-2.4.2",
+      "installerSha256": "e15e7bb1b66214ec6e96b169b388004179c4f5f705effcdaf8c80d4992ee0366",
+      "status": "pending",
+      "verification": "CLI --info passed for 52/52 generated 3MFs; GUI import, filament assignment, slice, project round-trip pending"
+    },
+    {
+      "id": "prusaslicer",
+      "name": "PrusaSlicer",
+      "version": "2.9.6",
+      "build": "PrusaSlicer-2.9.6 based on Slic3r (with GUI support)",
+      "installerSha256": "94fd7b8a9f87c9631e1c71739b15b184fc5f4c0ceabd69072f1c78f229a4fe40",
+      "status": "pending",
+      "verification": "CLI slice passed for 78/78 generated STL/3MF fixtures; 26/26 separate-color 3MF round-trips retained named volumes and aligned bounds; GUI assignment pending"
+    },
+    {
+      "id": "cura",
+      "name": "Ultimaker Cura",
+      "version": "5.13.0",
+      "build": null,
+      "installerSha256": "85fd200674c4d414091e26a008c5dd4760fc869fc54abb68726e47bca6193239",
+      "status": "pending",
+      "verification": "GUI import, manual extruder assignment, slice, project round-trip"
+    },
+    {
+      "id": "creality-print",
+      "name": "Creality Print",
+      "version": "7.3.0.6157",
+      "build": "CrealityPrint-7.3.0.6157",
+      "installerSha256": "db54dd6d48940e569e66905a4ae4ecd5738e600e000077a30f19195b9ce217b7",
+      "status": "pending",
+      "verification": "CLI --info unsupported by this macOS build; GUI import and slice pending"
+    },
+    {
+      "id": "anycubic-slicer-next",
+      "name": "Anycubic Slicer Next",
+      "version": null,
+      "build": null,
+      "installerSha256": null,
+      "status": "pending",
+      "verification": "GUI import, filament assignment, slice, project round-trip"
+    },
+    {
+      "id": "orca-flashforge",
+      "name": "Orca-Flashforge",
+      "version": null,
+      "build": null,
+      "installerSha256": "ea157e17a7de2b1b967e11117f6ee57c298acd396b2f47661ba6afc6011c9778",
+      "status": "pending",
+      "verification": "Official Flash Studio Desktop 1.7.15 package was acquired; bundled binary reports Bad CPU type on Apple Silicon, so import not run"
+    }
+  ],
+  "fixtureContract": {
+    "source": "scripts/geometry/checks/validation-fixtures.ts",
+    "expectedCases": 26,
+    "formats": ["separate-colors 3MF", "merged 3MF"],
+    "dimensionToleranceMm": 0.01,
+    "guiEvidenceRequired": true
+  }
+}

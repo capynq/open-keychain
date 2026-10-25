@@ -325,17 +325,23 @@ shown separately from one accepted-state metrics selector; maximum dimensions ne
 
 **Status:** active
 
-**Decision:** Separate-colors export keeps one model and mesh with Core material regions. Add
-Prusa-compatible named volume ranges carrying each selected hex color. Do not export the backing
-and relief as independent build objects or inject a printer configuration to force display colors.
+**Decision:** Separate-colors export keeps one model and mesh with selected color regions. Encode
+the regions with a 3MF Materials Extension color group for Bambu Studio, retain Core base materials,
+and add Prusa-compatible named volume ranges carrying each selected hex color. Do not export the
+backing and relief as independent build objects or inject a printer configuration to force display
+colors.
 
 **Evidence:** PrusaSlicer 2.9.6 CLI drops Core display colors, imports independent component objects
 as separate models, and preserves the named-volume form as one aligned model. The 30-file slicer
 gate and ten separate-color roundtrips preserve volume bounds and color references with no repairs.
+The supplied Bambu Studio file had only Core materials and Prusa volume metadata; Bambu's importer
+reads Materials Extension color groups to map triangle colors, so separate-color output now carries
+that group too.
 
 **Consequences:** The file carries the selected palette, while users assign matching filaments in
-PrusaSlicer. Export details show the hex references. Geometry/slicer validation is not physical-print
-or automatic filament-mapping proof.
+their slicer. Printer profiles stay outside the export; Bambu Studio may still show its generic
+geometry-only configuration notice. Export details show the hex references. Geometry/slicer
+validation is not physical-print or automatic filament-mapping proof.
 
 ## Private hosted operations are a separate blocked workstream
 

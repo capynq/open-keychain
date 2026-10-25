@@ -20,15 +20,9 @@ export const ExportChoices = ({
 }) => {
   const disabled = !printable || exportState.downloading;
   return (
-    <div className="export-choice-grid">
-      <button type="button" disabled={disabled} onClick={() => onDownload('stl')}>
-        <Box className="export-choice-icon" aria-hidden="true" />
-        <span className="export-choice-copy">
-          <strong>{t(locale, 'exportStl')}</strong>
-          <small>{t(locale, 'exportStlDescription')}</small>
-        </span>
-      </button>
+    <div className="export-choice-list">
       <button
+        className="export-choice-recommended"
         type="button"
         disabled={disabled}
         onClick={() => onDownload('3mf', 'separate-colors')}
@@ -39,13 +33,27 @@ export const ExportChoices = ({
           <small>{t(locale, 'export3mfSeparateDescription')}</small>
         </span>
       </button>
-      <button type="button" disabled={disabled} onClick={() => onDownload('3mf', 'merged')}>
-        <Combine className="export-choice-icon" aria-hidden="true" />
-        <span className="export-choice-copy">
-          <strong>{t(locale, 'export3mfMerged')}</strong>
-          <small>{t(locale, 'export3mfMergedDescription')}</small>
-        </span>
-      </button>
+      <details className="export-slicer-help">
+        <summary>{t(locale, 'exportSlicerHelpTitle')}</summary>
+        <p>{t(locale, 'exportSlicerHelpBody')}</p>
+        <p>{t(locale, 'exportBambuHelp')}</p>
+      </details>
+      <div className="export-choice-grid">
+        <button type="button" disabled={disabled} onClick={() => onDownload('stl')}>
+          <Box className="export-choice-icon" aria-hidden="true" />
+          <span className="export-choice-copy">
+            <strong>{t(locale, 'exportStl')}</strong>
+            <small>{t(locale, 'exportStlDescription')}</small>
+          </span>
+        </button>
+        <button type="button" disabled={disabled} onClick={() => onDownload('3mf', 'merged')}>
+          <Combine className="export-choice-icon" aria-hidden="true" />
+          <span className="export-choice-copy">
+            <strong>{t(locale, 'export3mfMerged')}</strong>
+            <small>{t(locale, 'export3mfMergedDescription')}</small>
+          </span>
+        </button>
+      </div>
     </div>
   );
 };

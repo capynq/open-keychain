@@ -16,9 +16,17 @@ describe('3MF export', () => {
     expect(model).toContain('name="Raised text"');
     expect(model).toContain('displaycolor="#B84838"');
     expect(model).toContain('displaycolor="#FAF4E9"');
+    expect(model).toContain(
+      'xmlns:m="http://schemas.microsoft.com/3dmanufacturing/material/2015/02"',
+    );
+    expect(model).toContain('<basematerials id="11">');
+    expect(model).toContain(
+      '<m:colorgroup id="10"><m:color color="#B84838"/><m:color color="#FAF4E9"/></m:colorgroup>',
+    );
     expect(model).toContain('pid="10" pindex="0"');
     expect(model).toContain('pid="10" p1="1" p2="1" p3="1"');
     expect(model).toContain('<object id="1" type="model" name="Keychain"');
+    expect(files['Metadata/project_settings.config']).toBeUndefined();
     const volumes = strFromU8(files['Metadata/Slic3r_PE_model.config']);
     expect(volumes).toContain('value="Backing (#B84838)"');
     expect(volumes).toContain('value="Raised text (#FAF4E9)"');
@@ -41,6 +49,7 @@ describe('3MF export', () => {
     expect(model.match(/<item objectid=/g)).toHaveLength(1);
     expect(model).toContain('<object id="1" type="model" name="Keychain"');
     expect(model).not.toContain('<components>');
+    expect(model).not.toContain('<m:colorgroup');
     expect(model).toContain('displaycolor="#B84838"');
     expect(model).toContain('Keychain');
   });
@@ -90,6 +99,9 @@ describe('3MF export', () => {
     const model = strFromU8(files['3D/3dmodel.model']);
     expect(model).toContain('<base name="Backing" displaycolor="#123456"/>');
     expect(model).toContain('<base name="Raised text" displaycolor="#FEDCBA"/>');
+    expect(model).toContain(
+      '<m:colorgroup id="10"><m:color color="#123456"/><m:color color="#FEDCBA"/></m:colorgroup>',
+    );
     expect(model).toContain('pid="10" pindex="0"');
     expect(model).toContain('pid="10" p1="1" p2="1" p3="1"');
     const volumes = strFromU8(files['Metadata/Slic3r_PE_model.config']);

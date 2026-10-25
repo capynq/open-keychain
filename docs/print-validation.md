@@ -20,6 +20,13 @@ The same check is available from the manually dispatched and weekly
 `.github/workflows/slicer-validation.yml` workflow. Record the exact slicer version and
 profile in the manual evidence template for release decisions.
 
+For the multi-slicer matrix, `pnpm validate:slicers` first checks all 26 generated 3MF pairs for
+archive/XML structure, millimeter units, one build item, and both separate-color regions, then runs
+the PrusaSlicer CLI smoke check. It fails when PrusaSlicer is unavailable and writes
+`slicer-validation/compatibility.json` with the result and remaining pending application rows.
+Import, filament/extruder assignment, slicing, and round-trip checks in the GUI still need recorded
+evidence for each exact build listed in `docs/slicer-compatibility.json`; pending rows are not passes.
+
 | Fixture | Template/style           | Printer/profile | Dimensions | Holes/joints/stake | Relief | Supports | Status  | Evidence |
 | ------- | ------------------------ | --------------- | ---------- | ------------------ | ------ | -------- | ------- | -------- |
 | ALEX    | name-keychain / contour  |                 |            |                    |        | no       | pending |          |

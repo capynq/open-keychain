@@ -54,7 +54,7 @@ export const ExportDialog = ({
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     dialog.showModal();
     const initialFocus = printableWhenClosed.current
-      ? dialog.querySelector<HTMLButtonElement>('.export-choice-grid button:not(:disabled)')
+      ? dialog.querySelector<HTMLButtonElement>('.export-choice-recommended:not(:disabled)')
       : dialog.querySelector<HTMLButtonElement>('.modal-close');
     initialFocus?.focus();
 

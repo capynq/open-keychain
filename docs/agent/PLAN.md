@@ -67,7 +67,7 @@ candidate must never leave the controls describing a different design from the p
 
 The feedback slice adds independent base and front-only text finishes, sidebar colors, optional
 focused setup with persistent size envelopes/font preferences, configurable keyring openings and
-attachment edges, and verified Prusa-compatible 3MF material volumes. Selected
+attachment edges, and printer-neutral 3MF material regions for Bambu Studio and PrusaSlicer. Selected
 palette references survive import; matching physical filaments remains a slicer action.
 
 ## Setup wizard slice
