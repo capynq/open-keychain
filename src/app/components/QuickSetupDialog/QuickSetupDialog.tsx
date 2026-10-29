@@ -347,7 +347,7 @@ export const QuickSetupDialog = ({
               onClick={() => setStep((value) => value - 1)}
             >
               <ArrowLeft data-icon-motion="nudge" size={17} aria-hidden="true" />
-              {t(locale, 'wizardBack')}
+              <span>{t(locale, 'wizardBack')}</span>
             </button>
           )}
           {step < steps.length - 1 ? (
@@ -357,7 +357,7 @@ export const QuickSetupDialog = ({
               disabled={submitting || (stepKey === 'name-size' && !valid)}
               onClick={next}
             >
-              {t(locale, 'wizardNext')}
+              <span>{t(locale, 'wizardNext')}</span>
               <ArrowRight data-icon-motion="nudge" size={17} aria-hidden="true" />
             </button>
           ) : (
@@ -368,7 +368,7 @@ export const QuickSetupDialog = ({
               onClick={apply}
             >
               <Check size={17} aria-hidden="true" />
-              {t(locale, submitting || checking ? 'updating' : 'quickSetupApply')}
+              <span>{t(locale, submitting || checking ? 'updating' : 'quickSetupApply')}</span>
             </button>
           )}
         </footer>

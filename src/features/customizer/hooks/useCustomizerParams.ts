@@ -749,13 +749,15 @@ export const useCustomizerParams = (
           );
           paramsRef.current = acceptedParamsRef.current;
           setParams(acceptedParamsRef.current);
+          const failure = failureFrom(error, 'geometry-build-failed');
+
           recordRejectedAttempt(
             requestId,
             normalized,
             group,
             controlKey,
-            failureFrom(error, 'geometry-build-failed'),
-            'failed',
+            failure,
+            failure.code === 'text-edge-too-large' ? 'rejected' : 'failed',
             error instanceof GeometryOperationError ? error.diagnostics : undefined,
             attemptId,
           );

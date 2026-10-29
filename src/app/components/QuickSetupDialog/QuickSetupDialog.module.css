@@ -75,6 +75,7 @@
   align-items: flex-start;
   gap: 12px;
   min-width: 0;
+  overflow: hidden;
 }
 .headingLine > svg {
   flex: none;
@@ -84,11 +85,14 @@
   height: 28px;
 }
 .header h2 {
+  flex: 1 1 auto;
   margin: 0;
   min-width: 0;
+  max-width: 100%;
   font-size: clamp(1.125rem, 3vw, 2rem);
   line-height: 1.18;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 .header h2:focus {
   outline: none;
@@ -547,7 +551,41 @@
     right: 10px;
   }
 }
+@media (max-height: 520px) and (orientation: landscape) {
+  .backdrop {
+    padding: 8px;
+  }
+  .dialog {
+    max-height: calc(100dvh - 16px);
+  }
+  .header {
+    padding: 10px 18px;
+  }
+  .header h2 {
+    font-size: clamp(1rem, 4.5vw, 1.5rem);
+  }
+  .close {
+    top: 10px;
+    right: 18px;
+  }
+  .progress {
+    min-height: 44px;
+    margin-bottom: 4px;
+  }
+  .body {
+    padding: 12px 18px;
+  }
+  :global(.keyring-setup-step) :global([class*='illustration']) {
+    max-width: 340px;
+  }
+  .actions {
+    padding: 8px 18px max(8px, env(safe-area-inset-bottom));
+  }
+}
 @media (max-width: 380px) {
+  .headingLine > svg {
+    display: none;
+  }
   .choiceCard {
     flex: 1 1 100%;
     min-width: 0;

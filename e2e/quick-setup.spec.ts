@@ -11,7 +11,7 @@ const advance = async (dialog: Locator) => {
   await next(dialog).click();
   for (let count = 0; count < 2; count += 1) {
     const keyringStep = dialog.getByRole('heading', {
-      name: /Position|Opening/,
+      name: /Position|Opening/i,
     });
     if (!(await keyringStep.isVisible().catch(() => false))) break;
     await next(dialog).click();
@@ -195,7 +195,7 @@ test('walks through six focused steps and applies accepted keyring, colors, and 
   await expect
     .poll(() => dialog.evaluate((element) => element.clientWidth))
     .toBeLessThanOrEqual(600);
-  await expect(dialog.getByRole('heading', { name: 'Name & size' })).toBeVisible();
+  await expect(dialog.getByRole('heading', { name: 'Name and model size' })).toBeVisible();
   await expect(dialog.locator('input[type="radio"]:checked')).toHaveCount(0);
   await expect(next(dialog)).toBeDisabled();
   await expect(fontCategory(dialog, 'Calligraphic')).toHaveCount(0);
@@ -206,7 +206,7 @@ test('walks through six focused steps and applies accepted keyring, colors, and 
   await dialog.screenshot({ path: testInfo.outputPath('step-1.png') });
   await checkFit(dialog);
   await next(dialog).click();
-  await expect(dialog.getByRole('heading', { name: 'Position' })).toBeFocused();
+  await expect(dialog.getByRole('heading', { name: 'Keyring hole position' })).toBeFocused();
   await expectPositionIllustration(dialog);
   for (const position of ['Left', 'Right', 'Bottom', 'Top', 'Top left', 'Top right']) {
     const choice = dialog.getByRole('radio', { name: position, exact: true });
@@ -217,7 +217,9 @@ test('walks through six focused steps and applies accepted keyring, colors, and 
   await dialog.screenshot({ path: testInfo.outputPath('step-keyring-position.png') });
   await checkFit(dialog);
   await next(dialog).click();
-  await expect(dialog.getByRole('heading', { name: 'Opening' })).toBeFocused();
+  await expect(
+    dialog.getByRole('heading', { name: 'Keyring opening shape and size' }),
+  ).toBeFocused();
   const ovalSlot = dialog.getByRole('radio', { name: /Oval slot/ });
   await ovalSlot.check();
   await expect(ovalSlot).toBeChecked();
@@ -234,7 +236,7 @@ test('walks through six focused steps and applies accepted keyring, colors, and 
   await dialog.screenshot({ path: testInfo.outputPath('step-keyring-opening.png') });
   await checkFit(dialog);
   await next(dialog).click();
-  await expect(dialog.getByRole('heading', { name: 'Choose font styles' })).toBeFocused();
+  await expect(dialog.getByRole('heading', { name: 'Choose font categories' })).toBeFocused();
   const calligraphic = fontCategory(dialog, 'Calligraphic');
   const calligraphicCard = calligraphic.locator('..');
   const calligraphicSpecimen = calligraphicCard.locator('[class*="categorySpecimen"]');
@@ -286,7 +288,7 @@ test('walks through six focused steps and applies accepted keyring, colors, and 
   await expect(dialog).toContainText('Calligraphic');
   await dialog.screenshot({ path: testInfo.outputPath('step-6.png') });
   await checkFit(dialog);
-  await dialog.getByRole('button', { name: 'Edit name and size' }).click();
+  await dialog.getByLabel('Edit name and size').click();
   await expect(dialog.getByLabel(/80 × 30/)).toBeChecked();
   await advance(dialog);
   await expect(dialog.getByRole('heading', { name: 'Ready to create' })).toBeVisible();
@@ -321,8 +323,8 @@ test('walks through six focused steps and applies accepted keyring, colors, and 
   await page.getByRole('button', { name: 'Open quick setup' }).click();
   await expect(dialog.getByLabel(/80 × 30/)).toBeChecked();
   await dialog.getByLabel('Custom size', { exact: true }).check();
-  await dialog.getByLabel('Width', { exact: true }).fill('10');
-  await dialog.getByLabel('Height', { exact: true }).fill('20');
+  await dialog.getByLabel('Max. width', { exact: true }).fill('10');
+  await dialog.getByLabel('Max. height', { exact: true }).fill('20');
   await expect(next(dialog)).toBeDisabled();
   await expect(dialog.getByRole('alert')).toContainText('20 to 120');
   await dialog.getByRole('button', { name: 'Close', exact: true }).click();
@@ -470,11 +472,11 @@ test('keeps rejected setup drafts without committing colors or font preferences'
   await dialog.getByLabel('Base color', { exact: true }).fill('#123456');
   await advance(dialog);
   await dialog.getByRole('button', { name: 'Start designing' }).click();
-  await expect(dialog.getByRole('alert')).toContainText('Try a larger size');
+  await expect(dialog.getByRole('alert')).toContainText('design could not be generated');
   expect(
     await page.evaluate(() => localStorage.getItem('open-keychain.favorite-font-categories')),
   ).toBeNull();
-  await dialog.getByRole('button', { name: 'Edit name and size' }).click();
+  await dialog.getByLabel('Edit name and size').click();
   await expect(dialog.getByLabel('Name or text')).toHaveValue('REJECT');
   await dialog.getByLabel('Name or text').fill('ALEX');
   await advance(dialog);
@@ -583,16 +585,80 @@ test('shows accepted print measurements, the saved maximum, and fit status below
 test('keeps actions reachable with a keyboard-sized viewport', async ({ page }) => {
   await page.goto('/create?setup=1');
   const dialog = setup(page);
+  await dialog.getByLabel('Name or text').fill('MOBILE');
+  await dialog.getByLabel('Custom size', { exact: true }).check();
   await dialog.getByLabel('Name or text').focus();
   await page.setViewportSize({ width: 390, height: 420 });
   await dialog.getByLabel('Custom size', { exact: true }).check();
-  await dialog.getByLabel('Width', { exact: true }).fill('80');
-  await dialog.getByLabel('Height', { exact: true }).fill('30');
+  await dialog.getByLabel('Max. width', { exact: true }).fill('80');
+  await dialog.getByLabel('Max. height', { exact: true }).fill('30');
   await checkFit(dialog);
   await expect(next(dialog)).toBeEnabled();
   await advance(dialog);
-  await expect(dialog.getByRole('heading', { name: 'Choose font styles' })).toBeFocused();
+  await expect(dialog.getByRole('heading', { name: 'Choose font categories' })).toBeFocused();
   await checkFit(dialog);
+});
+
+test('keeps setup content and actions reachable in portrait and landscape', async ({ page }) => {
+  const browserErrors = watchBrowserErrors(page);
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 844, height: 390 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto('/create?setup=1');
+    const dialog = setup(page);
+    await expect(dialog).toBeVisible();
+    await dialog.getByLabel('Name or text').fill('MARINA');
+    await dialog.getByLabel(/40 × 20/).check();
+    const assertFooter = async () => {
+      const footer = dialog.locator('footer');
+      await expect(footer).toBeInViewport();
+      const bounds = await footer.boundingBox();
+      expect(bounds).toBeTruthy();
+      expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(viewport.height + 1);
+    };
+
+    await assertFooter();
+    await next(dialog).click();
+    for (const position of ['Top left', 'Left', 'Top left', 'Left']) {
+      const choice = dialog.getByRole('radio', { name: position, exact: true });
+      await choice.check();
+      await expect(choice).toBeChecked();
+    }
+    await assertFooter();
+    await next(dialog).click();
+    const compactRound = dialog.getByRole('radio', { name: /Compact round/i });
+    await compactRound.check();
+    await expect(compactRound).toBeChecked();
+    await assertFooter();
+    await next(dialog).click();
+    const decorative = fontCategory(dialog, 'Decorative');
+    await decorative.check();
+    await expect(decorative).toBeChecked();
+    await assertFooter();
+    await next(dialog).click();
+    await dialog.getByLabel('Base color', { exact: true }).fill('#123456');
+    await dialog.getByLabel('Text color', { exact: true }).fill('#fedcba');
+    await assertFooter();
+    const translatedNodes = await next(dialog).evaluate((button) => {
+      const label = button.querySelector('span') ?? button;
+      let count = 0;
+      for (const node of [...label.childNodes]) {
+        if (node.nodeType !== Node.TEXT_NODE || !node.textContent?.trim()) continue;
+        const translated = document.createElement('font');
+        translated.textContent = node.textContent;
+        label.replaceChild(translated, node);
+        count += 1;
+      }
+      return count;
+    });
+    expect(translatedNodes).toBe(1);
+    await next(dialog).click();
+    await expect(dialog.getByRole('heading', { name: 'Ready to create' })).toBeVisible();
+    await assertFooter();
+  }
+  browserErrors();
 });
 
 test('keeps sidebar colors balanced at narrow enlarged text', async ({ page }) => {

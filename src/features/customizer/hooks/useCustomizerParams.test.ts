@@ -325,10 +325,13 @@ describe('useCustomizerParams candidate scheduling', () => {
     const callbacks: CandidateCallbacks = {
       validate: () =>
         Promise.reject(
-          new RecoveryError({
-            code: 'text-edge-too-large',
-            context: { target: 'text', profile: 'round', maximumMm: 0.2, requestedMm: 0.6 },
-          }),
+          new GeometryOperationError(
+            {
+              code: 'text-edge-too-large',
+              context: { target: 'text', profile: 'round', maximumMm: 0.2, requestedMm: 0.6 },
+            },
+            { stage: 'generation', type: 'operation_error' },
+          ),
         ),
       validateRecovery: (params) => {
         recoveryValidations.push(`${params.fontId}:${params.textEdgeFinish ?? ''}`);
@@ -347,6 +350,7 @@ describe('useCustomizerParams candidate scheduling', () => {
     const requestId = getApi().candidateFeedback?.requestId;
 
     expect(requestId).toEqual(expect.any(Number));
+    expect(getApi().candidateFeedback?.status).toBe('rejected');
     expect(getApi().params.fontId).toBe(DEFAULT_PARAMS.fontId);
     await act(async () => getApi().prepareRecovery(requestId!));
     expect(getApi().recoveryOptions.map((option) => option.status)).toEqual(['ready', 'ready']);

@@ -1,5 +1,20 @@
 # Agent handoff
 
+## Current work — setup translation and mobile layout, 2026-10-29
+
+- A translator-like replacement of the Next button text reproduces the route error during the
+  Colors → Review transition. Stable label elements preserve the transition under this mutation.
+  The supplied Android recording shows mixed translated and English text; its exact translation
+  provider and reproduction on real hardware remain unverified.
+- The setup dialog uses a compact landscape layout; its mobile tests cover the recorded sequence,
+  translation-like mutation, both orientations and enlarged EN/RU/UK text. Known excessive text
+  edge amounts are reported as rejected candidates rather than technical failures.
+- Production CI checks PostHog source-map injection markers before upload and deploy. Actual
+  source-map resolution of a new production exception remains to be verified after deployment.
+- Validation: `pnpm validate` passed on the release checkout, including all unit tests and nine
+  critical browser journeys. Mobile setup passed 18/18; the translated-text regression passed in
+  desktop, mobile and mobile-2x.
+
 ## Released — geometry reliability, 2026-10-25
 
 - Candidate validation now recovers an exhausted worker on explicit Retry or one new edit per failed
