@@ -11,6 +11,8 @@
   edge amounts are reported as rejected candidates rather than technical failures.
 - Production CI checks PostHog source-map injection markers before upload and deploy. Actual
   source-map resolution of a new production exception remains to be verified after deployment.
+- The first production build found one CSS-only JavaScript stub without a source map; the marker
+  guard now checks mapped bundles and requires a main app map rather than rejecting the stub.
 - Validation: `pnpm validate` passed on the release checkout, including all unit tests and nine
   critical browser journeys. Mobile setup passed 18/18; the translated-text regression passed in
   desktop, mobile and mobile-2x.

@@ -104,12 +104,19 @@ jobs:
           pnpm dlx @posthog/cli@0.19.0 sourcemap inject --directory ./dist
           missing_chunk_id=0
           for file in dist/assets/*.js; do
+            if [ ! -f "$file.map" ]; then
+              continue
+            fi
             if ! grep -q '//# chunkId=' "$file"; then
               echo "::error::PostHog source-map injection marker is missing from $file"
               missing_chunk_id=1
             fi
           done
           if [ "$missing_chunk_id" -ne 0 ]; then
+            exit 1
+          fi
+          if ! find dist/assets -name 'app-*.js.map' -print -quit | grep -q .; then
+            echo "::error::The main application source map is missing."
             exit 1
           fi
           pnpm dlx @posthog/cli@0.19.0 sourcemap upload --directory ./dist --release-name open-keychain --release-version "$GITHUB_SHA"
