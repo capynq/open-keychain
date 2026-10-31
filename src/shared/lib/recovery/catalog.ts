@@ -3,6 +3,7 @@ export type RecoveryStrategy =
   | 'base-edge'
   | 'font'
   | 'size'
+  | 'size-envelope'
   | 'connectivity'
   | 'geometry'
   | 'retry'
@@ -61,7 +62,7 @@ export const RECOVERY_CATALOG: Record<string, RecoveryDefinition> = {
   'articulated-shell-count': issue('errorArticulatedJoint', 'connectivity'),
   'heart-cut-unsafe': issue('errorHeartCutUnsafe', 'connectivity'),
   'size-envelope-fit': issue('warningSizeEnvelopeFit', 'size'),
-  'size-envelope-unavailable': issue('errorSizeEnvelopeUnavailable', 'size'),
+  'size-envelope-unavailable': issue('errorSizeEnvelopeUnavailable', 'size-envelope'),
   'feature-unsupported-template': issue('errorFeatureUnsupportedTemplate', 'manual'),
   'feature-manufacturing-unverified': issue('warningFeatureManufacturingUnverified', 'manual'),
   'feature-geometry': issue('errorFeatureGeometry', 'geometry'),

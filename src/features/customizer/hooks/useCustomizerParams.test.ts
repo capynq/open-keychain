@@ -8,6 +8,7 @@ import {
   DEFAULT_PARAMS,
   DEFAULT_PRINT_APPEARANCE,
   type GeometryResult,
+  type KeychainParams,
   type GeometryValidation,
   type WorkerResponse,
 } from '../../../domain/keychain/model/types';
@@ -365,6 +366,68 @@ describe('useCustomizerParams candidate scheduling', () => {
     expect(getApi().acceptedParams.textEdgeMm).toBe(0.2);
     expect(getApi().undoKind).toBe('recovery');
     expect(recoveryValidations).toHaveLength(2);
+  });
+
+  it('keeps rejected text for envelope recovery and retains the accepted design until apply', async () => {
+    const initialParams = { ...DEFAULT_PARAMS, sizeEnvelope: { widthMm: 40, heightMm: 20 } };
+    const rejectedText = 'A LONG PLANT NAME';
+    const accepted = vi.fn();
+    const validateRecovery = vi.fn(async (params: KeychainParams) => ({
+      ...validResult(),
+      generationId: 91,
+      printable: !params.sizeEnvelope,
+      issues: params.sizeEnvelope
+        ? [{ severity: 'error' as const, code: 'size-envelope-unavailable', message: 'Too small' }]
+        : [],
+    }));
+    const getApi = renderHook(
+      {
+        accept: accepted,
+        validate: async (params) =>
+          params.text === initialParams.text
+            ? { ...validResult(), generationId: 92 }
+            : {
+                ...invalidResult(),
+                generationId: 90,
+                issues: [
+                  { severity: 'error', code: 'size-envelope-unavailable', message: 'Too small' },
+                ],
+              },
+        validateRecovery,
+      },
+      initialParams,
+    );
+
+    act(() => getApi().updateText(rejectedText));
+    await act(async () => vi.advanceTimersByTimeAsync(100));
+    const requestId = getApi().candidateFeedback!.requestId;
+
+    expect(getApi().candidateFeedback?.status).toBe('rejected');
+    expect(getApi().acceptedParams).toEqual(initialParams);
+    expect(getApi().selectedFont.id).toBe(initialParams.fontId);
+    expect(accepted).not.toHaveBeenCalled();
+
+    await act(async () => getApi().prepareRecovery(requestId));
+    expect(validateRecovery.mock.calls.every(([params]) => params.text === rejectedText)).toBe(
+      true,
+    );
+    expect(getApi().recoveryOptions.map((option) => option.status)).toEqual([
+      'unavailable',
+      'ready',
+    ]);
+    expect(getApi().acceptedParams).toEqual(initialParams);
+    expect(getApi().applyRecovery(requestId, 'larger-envelope')).toBe(false);
+    act(() => expect(getApi().applyRecovery(requestId, 'natural-size')).toBe(true));
+    expect(getApi().acceptedParams.text).toBe(rejectedText);
+    expect(getApi().acceptedParams.sizeEnvelope).toBeUndefined();
+    expect(accepted).toHaveBeenCalledTimes(1);
+    expect(getApi().undoKind).toBe('recovery');
+    await act(async () => {
+      getApi().undo();
+      await Promise.resolve();
+    });
+    expect(getApi().params.text).toBe(initialParams.text);
+    expect(getApi().params.sizeEnvelope).toEqual(initialParams.sizeEnvelope);
   });
 
   it('invalidates delayed recovery validation after a new edit', async () => {

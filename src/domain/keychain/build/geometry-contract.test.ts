@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
+import { recoveryRecipes } from '@/features/customizer/model/recovery-recipes';
 import { validateMesh } from '@/infrastructure/geometry/manifold-utils';
 import { asMesh, manifoldFromMesh } from '@/infrastructure/geometry/manifold-utils';
 
@@ -401,6 +402,30 @@ describe('finished geometry contracts', () => {
       expect.objectContaining({ code: 'size-envelope-unavailable', severity: 'error' }),
     );
   });
+
+  it('validates envelope recovery against fixed template hardware for preview and export', async () => {
+    const params = normalizeParams({
+      ...DEFAULT_PARAMS,
+      templateId: 'plant-label',
+      sizeEnvelope: { widthMm: 40, heightMm: 20 },
+    });
+    const original = await buildKeychain(wasm, params);
+    const failure = original.result.issues.find(
+      (issue) => issue.code === 'size-envelope-unavailable',
+    );
+    expect(failure).toBeDefined();
+    const font = FONT_CATALOG.find((item) => item.id === params.fontId)!;
+    const recipes = recoveryRecipes(params, { code: failure!.code }, font);
+    for (const recipe of recipes) {
+      const preview = await buildKeychain(wasm, recipe.params);
+      const exported = await buildKeychain(wasm, recipe.params, true);
+      expect(preview.result.printable, recipe.id).toBe(true);
+      expect(exported.result.printable, recipe.id).toBe(true);
+      expect(exported.exportMesh?.indices.length).toBeGreaterThan(0);
+      expect(exported.result.dimensions).toEqual(preview.result.dimensions);
+      expect(exported.result.issues.some((issue) => issue.severity === 'error')).toBe(false);
+    }
+  }, 30000);
 
   it('rejects malformed triangle buffers consistently', () => {
     expect(

@@ -57,4 +57,40 @@ describe('recovery recipes', () => {
     expect(recipes.every((recipe) => Number(recipe.values?.size) < 30)).toBe(true);
     expect(recipes.every((recipe) => recipe.params.textSizeMm === recipe.values?.size)).toBe(true);
   });
+
+  it('changes the envelope rather than the already fitted text or fixed hardware', () => {
+    const params = {
+      ...DEFAULT_PARAMS,
+      templateId: 'plant-label' as const,
+      text: 'A LONG PLANT NAME',
+      sizeEnvelope: { widthMm: 40, heightMm: 20 },
+    };
+    const recipes = recoveryRecipes(
+      params,
+      { code: 'size-envelope-unavailable' },
+      fontDefinition(params.fontId),
+    );
+    expect(recipes.map((recipe) => recipe.id)).toEqual(['larger-envelope', 'natural-size']);
+    expect(recipes[0].params.sizeEnvelope).toEqual({ widthMm: 120, heightMm: 80 });
+    expect(recipes[1].params.sizeEnvelope).toBeUndefined();
+    for (const recipe of recipes)
+      expect(recipe.params).toMatchObject({
+        text: params.text,
+        templateId: params.templateId,
+        fontId: params.fontId,
+        textSizeMm: params.textSizeMm,
+        stakeLengthMm: params.stakeLengthMm,
+      });
+    expect(params.sizeEnvelope).toEqual({ widthMm: 40, heightMm: 20 });
+  });
+
+  it('does not offer an unchanged envelope at the supported maximum', () => {
+    const params = { ...DEFAULT_PARAMS, sizeEnvelope: { widthMm: 120, heightMm: 80 } };
+    const recipes = recoveryRecipes(
+      params,
+      { code: 'size-envelope-unavailable' },
+      fontDefinition(params.fontId),
+    );
+    expect(recipes.map((recipe) => recipe.id)).toEqual(['natural-size']);
+  });
 });
