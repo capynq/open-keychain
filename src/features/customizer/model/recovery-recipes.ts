@@ -94,6 +94,17 @@ export const recoveryRecipes = (
         : { textEdgeFinish: 'sharp', textEdgeMm: 0 },
       { font: font.name },
     );
+  } else if (strategy === 'size-envelope' && params.sizeEnvelope) {
+    // Text has already been fitted to the builder's minimum height. Changing the
+    // envelope can make room for fixed hardware and final feature dimensions.
+    if (params.sizeEnvelope.widthMm < 120 || params.sizeEnvelope.heightMm < 80)
+      add(
+        'larger-envelope',
+        'recoveryApplyLargerEnvelope',
+        { sizeEnvelope: { widthMm: 120, heightMm: 80 } },
+        { width: 120, height: 80 },
+      );
+    add('natural-size', 'recoveryApplyNaturalSize', { sizeEnvelope: undefined });
   } else if (strategy === 'size') {
     const choices =
       simpleOptionGroups(params).find((group) => group.id === 'textSizeMm')?.choices ?? [];

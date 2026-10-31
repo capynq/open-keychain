@@ -187,7 +187,7 @@
   "recoverySharpFont": "Apply {font} with sharp edges",
   "errorHeartCutUnsafe": "This heart opening is too close to the edge.",
   "warningSizeEnvelopeFit": "The design was scaled to fit the selected size.",
-  "errorSizeEnvelopeUnavailable": "This design cannot fit the selected size.",
+  "errorSizeEnvelopeUnavailable": "This design cannot fit the selected size. Try a larger size limit or natural size; the current design is kept.",
   "errorFeatureUnsupportedTemplate": "This feature is unavailable for the selected template.",
   "warningFeatureManufacturingUnverified": "This feature has not been verified for every print setup.",
   "errorFeatureGeometry": "This feature could not produce printable geometry.",
@@ -263,7 +263,8 @@
       "shareClipboardFailed": "Select the link and copy it manually, or try copying again.",
       "shareNativeFailed": "Copy the link or try device sharing again.",
       "googleFontPayloadTooLarge": "Use built-in fonts while the online collection is unavailable.",
-      "googleFontInvalidPayload": "Use built-in fonts while the online collection is unavailable."
+      "googleFontInvalidPayload": "Use built-in fonts while the online collection is unavailable.",
+      "size-envelope": "Use a larger size limit, remove the size limit, or shorten the text. The finished design may become larger; check its preview dimensions. Each proposal is checked before applying."
     }
   },
   "close": "Close",
@@ -1044,5 +1045,7 @@
   "photoResolution": "Photo resolution",
   "photoPixels": "{resolution} px",
   "previewCameraControls": "Preview camera controls",
-  "fontPagesNavigation": "Font pages"
+  "fontPagesNavigation": "Font pages",
+  "recoveryApplyLargerEnvelope": "Apply within {width} × {height} mm",
+  "recoveryApplyNaturalSize": "Apply at natural size (remove size limit)"
 }
