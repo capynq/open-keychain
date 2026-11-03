@@ -44,7 +44,6 @@ describe('validation gate selection', () => {
     expect(relatedArgs).toContain(
       'src/domain/keychain/build/keychain-builder.keyring-articulated.test.ts',
     );
-    // Every sharded builder suite stays related to the builder source.
     for (const style of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'])
       expect(relatedArgs).toContain(
         `src/domain/keychain/build/keychain-builder.styles-fonts.${style}.test.ts`,
@@ -180,10 +179,15 @@ describe('validation gate selection', () => {
       'unit:fast',
       'build',
       'browser',
+      'browser:regression',
       'browser:journey',
     ]);
     expect(plan.find(({ id }) => id === 'browser').dependsOn).toEqual(['build']);
     expect(plan.find(({ id }) => id === 'browser').required).toBe(true);
+    expect(plan.find(({ id }) => id === 'browser:regression')).toMatchObject({
+      args: ['test:e2e:regression'],
+      dependsOn: ['build'],
+    });
   });
 
   it('typechecks UI stylesheet changes because they can affect component contracts', () => {
@@ -211,6 +215,7 @@ describe('validation gate selection', () => {
       'unit:fast',
       'build',
       'browser',
+      'browser:regression',
       'browser:journey',
     ]);
     expect(plan.find(({ id }) => id === 'unit:fast').args).toEqual([
@@ -275,7 +280,19 @@ describe('validation gate selection', () => {
     ).toContain('build');
     expect(
       createGatePlan(['scripts/validation/core/validation-plan.mjs']).map(({ id }) => id),
-    ).toEqual(['format', 'lint', 'typecheck', 'unit:fast', 'build', 'browser', 'browser:journey']);
+    ).toEqual([
+      'format',
+      'lint',
+      'typecheck',
+      'unit:fast',
+      'build',
+      'browser',
+      'browser:regression',
+      'browser:journey',
+    ]);
+    expect(
+      createGatePlan(['src/domain/keychain/build/keychain-builder.ts']).map(({ id }) => id),
+    ).not.toContain('browser:regression');
   });
 
   it('runs full required checks in CI and lets the workflow add conditional gates', () => {

@@ -6,8 +6,6 @@ import { serializeThreeMf } from '../../../infrastructure/export/three-mf-serial
 import { buildKeychain } from './keychain-builder';
 import { DEFAULT_PARAMS, wasm } from './keychain-builder-test-helpers';
 
-// Split out of geometry-contract.test.ts: Vitest runs files in parallel but the
-// tests inside one file serially, and the fixture sweep dominated that file.
 describe('finished geometry contracts', () => {
   it.each(VALIDATION_FIXTURES)(
     'serializes the $id fixture as one model with two named colored material volumes',

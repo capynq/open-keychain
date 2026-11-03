@@ -5,14 +5,6 @@ import { type StyleId } from '../model/types';
 import { buildKeychain } from './keychain-builder';
 import { DEFAULT_PARAMS, topSurfaceArea, wasm } from './keychain-builder-test-helpers';
 
-/**
- * Registers the per-style font coverage of the "styles and fonts" suite.
- *
- * Vitest parallelises across files but runs the tests inside a file serially, so
- * these style x font cases live in one file per style
- * (`keychain-builder.styles-fonts.<style>.test.ts`) instead of a single file that
- * used to be the whole critical path of the unit gate. Test names are unchanged.
- */
 export const describeStyleFontCases = (styleId: StyleId) =>
   describe('styles and fonts', () => {
     it(`changes ${styleId} geometry across the full backing-size range`, async () => {

@@ -89,9 +89,6 @@ type Worker = {
   heapUsedBytes: number;
   externalBytes: number;
 };
-// Per-case wall times from earlier local runs drive longest-first scheduling and
-// slowdown warnings. The file is a local cache: missing or corrupt history only
-// falls back to a heuristic order and never changes which cases run.
 const durationsFile = path.resolve(
   process.env.MATRIX_DURATIONS_FILE ??
     path.join(

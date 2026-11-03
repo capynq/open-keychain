@@ -7,8 +7,6 @@ import { VALIDATION_FIXTURES } from '../../../../scripts/geometry/checks/validat
 import { buildKeychain } from './keychain-builder';
 import { DEFAULT_PARAMS, wasm } from './keychain-builder-test-helpers';
 
-// Split out of geometry-contract.test.ts: Vitest runs files in parallel but the
-// tests inside one file serially, and the fixture sweep dominated that file.
 describe('finished geometry contracts', () => {
   it.each(VALIDATION_FIXTURES)(
     'partitions the $id fixture into non-overlapping material solids without changing its model',

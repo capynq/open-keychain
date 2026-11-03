@@ -6,6 +6,7 @@ import path from 'node:path';
 import process from 'node:process';
 import {
   fingerprintGate,
+  pruneValidationArtifacts,
   pruneValidationCache,
   readSuccessfulResult,
   restoreBuildArtifact,
@@ -477,6 +478,8 @@ export const runValidationGates = async (
     process.removeListener('SIGTERM', handleSignal);
   }
   await pruneValidationCache({ root: ROOT });
+  // Runner tests write throwaway runs here; they must not evict real run logs.
+  if (!process.env.VITEST) await pruneValidationArtifacts({ root: ROOT });
   const values = [...results.values()];
   const failures = values.filter((result) => !result.ok);
   const partial = userSkipped && profile === 'push' && failures.length === 0;

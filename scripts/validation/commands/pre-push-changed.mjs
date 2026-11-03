@@ -6,7 +6,6 @@ const result = spawnSync(
   ['scripts/validation/commands/run-validation-gates.mjs', 'push'],
   {
     stdio: 'inherit',
-    // git pipes the pushed refs on stdin and closes it; opt in to reading them.
     env: { ...process.env, VALIDATION_PRE_PUSH_STDIN: '1' },
   },
 );

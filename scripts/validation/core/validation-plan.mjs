@@ -31,15 +31,22 @@ const CONSERVATIVE_FILES = new Set([
 ]);
 
 const normalize = (file) => file.replaceAll('\\', '/').replace(/^\.\//, '');
-// The matrix is CPU-bound and scales linearly with workers (peak RSS ~1–2.3 GB each).
 const MAX_MATRIX_CONCURRENCY = 8;
 const matrixWorkerCount = () =>
   Math.min(
     boundedConcurrency('MATRIX_CONCURRENCY', validationConcurrency(), MAX_MATRIX_CONCURRENCY),
     validationConcurrency(),
   );
-// unit:fast shares the budget with the cheap push gates; the full suite is the
-// long pole of its profiles, so it takes the whole budget (never fewer than two).
+const browserRegressionGate = () => ({
+  id: 'browser:regression',
+  name: 'Browser regression',
+  required: true,
+  workerSlots: 2,
+  command: 'pnpm',
+  args: ['test:e2e:regression'],
+  env: { PLAYWRIGHT_USE_EXISTING_BUILD: 'true', PLAYWRIGHT_SMOKE: 'false' },
+  dependsOn: ['build'],
+});
 const unitGate = (id, script) => {
   const workers = id === 'unit' ? Math.max(2, validationConcurrency()) : unitWorkerCount();
   return {
@@ -163,8 +170,6 @@ export const requiresFullCIRegression = (inputFiles, conservative = false) => {
 };
 
 const BUILDER_DIRECTORY = 'src/domain/keychain/build';
-// The heavy builder suites are sharded into several files (Vitest parallelises
-// across files only); `test:fast` excludes the same `keychain-builder.*.test.ts` set.
 export const keychainBuilderSuites = () =>
   existsSync(BUILDER_DIRECTORY)
     ? readdirSync(BUILDER_DIRECTORY)
@@ -528,7 +533,8 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
   if (profile === 'bench-docs') return createGatePlan(['CONTRIBUTING.md'], 'push');
 
   if (profile !== 'push') throw new Error(`Unknown validation profile: ${profile}`);
-  if (classification.conservative) return appendJourneyGate(createFastPushPlan());
+  if (classification.conservative)
+    return appendJourneyGate([...createFastPushPlan(), browserRegressionGate()]);
   if (classification.documentationOnly) {
     return appendJourneyGate([
       {
@@ -591,8 +597,7 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
       dependsOn: ['build'],
     },
   );
-  // The complete geometry and export matrix is a CI release gate. The whole fast
-  // unit suite and browser smoke remain local checks for geometry-affecting edits.
+  if (classification.needsBrowser) gates.push(browserRegressionGate());
   if (classification.needsHosting && !classification.needsBuild)
     gates.push({
       id: 'hosting',

@@ -19,10 +19,7 @@ const parseMode = () => {
   return mode;
 };
 
-// Only the Husky pre-push wrapper hands us git's ref lines on stdin. A manual or
-// agent-launched run may inherit a stdin that never reaches EOF (for example a
-// socket), so reading it unconditionally would hang forever before any gate starts.
-// Without hook input, collectPushChanges falls back to the upstream merge-base diff.
+// Only the pre-push hook provides a stdin that closes; other callers may pass a socket that never does.
 export const PRE_PUSH_STDIN_ENV = 'VALIDATION_PRE_PUSH_STDIN';
 export const readPushHookInput = async ({ stdin = process.stdin, env = process.env } = {}) => {
   if (env[PRE_PUSH_STDIN_ENV] !== '1' || stdin.isTTY) return '';

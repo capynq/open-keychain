@@ -152,17 +152,10 @@ export const selectMatrixBenchmarkSample = (
   );
 };
 
-/** Last observed wall time per matrix case ID, in milliseconds. */
 export type MatrixCaseDurations = Readonly<Record<string, number>>;
 
-/**
- * Orders matrix work longest-first so the slowest cases (script fonts with wide
- * or long texts take ~30 s each) start early instead of forming a tail on one
- * worker at the end. Packages stay contiguous catalog slices, so a package mostly
- * shares one font and the builder's bounded font cache is not thrashed. The
- * heaviest share of packages is split into single cases to spread them across
- * workers. Only the order changes: every case is scheduled exactly once.
- */
+// Packages stay contiguous catalog slices so each mostly shares one font and the
+// builder's 16-entry font cache is not thrashed by longest-first ordering.
 export const scheduleMatrixPackages = (
   cases: MatrixCase[],
   packageSize: number,
@@ -171,7 +164,6 @@ export const scheduleMatrixPackages = (
 ) => {
   const known = Object.values(history).filter((value) => Number.isFinite(value) && value > 0);
   const average = known.length ? known.reduce((sum, value) => sum + value, 0) / known.length : 0;
-  // Without history, longer texts are the best cheap proxy for more glyph geometry.
   const cost = (item: MatrixCase) =>
     Number.isFinite(history[item.id]) && history[item.id] > 0
       ? history[item.id]
@@ -195,7 +187,6 @@ export const scheduleMatrixPackages = (
   );
 };
 
-/** Cases that ran much slower than their recorded history (likely regressions). */
 export const findMatrixSlowdowns = (
   durations: MatrixCaseDurations,
   history: MatrixCaseDurations,

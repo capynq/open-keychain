@@ -6,7 +6,6 @@ describe('push hook input', () => {
   it('ignores a never-ending stdin unless the pre-push wrapper opted in', async () => {
     const stdin = new PassThrough();
     stdin.write('refs/heads/main abc refs/heads/main def\n');
-    // The stream is intentionally never ended: reading it would hang the run.
     await expect(readPushHookInput({ stdin, env: {} })).resolves.toBe('');
     stdin.destroy();
   });
