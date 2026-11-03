@@ -1,6 +1,34 @@
 # Agent handoff
 
-## Current work — setup translation and mobile layout, 2026-10-29
+## Current work — code-review follow-up, 2026-11-03
+
+Rebased onto `origin/main` at `140ef3b`; nothing from this run is pushed yet.
+
+- 3MF separate-colors output adds `recommendedextensions="m"` on `<model>`. Unverified: the
+  attribute name against the 3MF spec, and how Core-only slicers or Bambu read the colors
+  (PrusaSlicer is not installed here). A triangle `pid` can reference only one resource, so
+  `basematerials id=11` is a declared but unreferenced fallback.
+- `validate-slicers.ts` uses an attribute-order-independent parser (`three-mf-structure.ts`), checks
+  the object-level `pid`, asserts merged output has no `m:colorgroup`, and prints the pending-slicer
+  count. `generate-validation-fixtures.ts` reads slicers from `docs/slicer-compatibility.json`.
+- `isRecoverableCandidateFailure` (`recovery-recipes.ts`) maps `text-edge-too-large` and
+  `base-edge-too-large` to `rejected` (Fix popover); other failures stay `failed` (Retry only).
+- The source-map gate is `scripts/validation/commands/check-sourcemaps.mjs`; it exempts only
+  unmapped CSS-only JS stubs (the `customizerBootStyles` `/* empty css */` file, see `140ef3b`).
+  The real GitHub Actions run has not happened.
+- QuickSetup heading wraps again (`overflow-wrap: anywhere`); export choice CSS is deduplicated via
+  `--export-choice-border` and `--export-choice-outline-offset`. Not visually inspected at 320 px /
+  200% zoom / RU / UK.
+- e2e: the edge-finish rejection test injects a structured `text-edge-too-large` failure.
+- Validation after the rebase: desktop `quick-setup.spec.ts` and `keychain.spec.ts` 47 passed,
+  4 failed. The 4 failures are pre-existing (identical on clean `ca0db9a`): NIKITA Bubble "Ready ·
+  adjusted" status, Magnet ribbon and subtitle "Secondary" radio (2 tests), Heart "Your previous
+  design is kept." alert. Mobile `keychain.spec.ts` failures (~193, ~226) were seen but not
+  baselined. Not run after the rebase: `pnpm validate`, mobile / mobile-2x e2e, `pnpm capture:ui`.
+- `AGENTS.md` and `CLAUDE.md` are intentionally local-only (listed in `.gitignore`, untracked).
+- Next action: run `pnpm validate:push`, then push.
+
+## Setup translation and mobile layout, 2026-10-29
 
 - A translator-like replacement of the Next button text reproduces the route error during the
   Colors → Review transition. Stable label elements preserve the transition under this mutation.
