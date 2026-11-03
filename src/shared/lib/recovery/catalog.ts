@@ -60,6 +60,7 @@ export const RECOVERY_CATALOG: Record<string, RecoveryDefinition> = {
   'articulated-motion-collision': issue('errorArticulatedJoint', 'connectivity'),
   'articulated-shell-count': issue('errorArticulatedJoint', 'connectivity'),
   'heart-cut-unsafe': issue('errorHeartCutUnsafe', 'connectivity'),
+  'heart-empty': issue('errorHeartEmpty', 'manual'),
   'size-envelope-fit': issue('warningSizeEnvelopeFit', 'size'),
   'size-envelope-unavailable': issue('errorSizeEnvelopeUnavailable', 'size'),
   'feature-unsupported-template': issue('errorFeatureUnsupportedTemplate', 'manual'),

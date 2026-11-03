@@ -63,6 +63,16 @@ describe('recovery failures', () => {
 
       for (const match of source.matchAll(/failureFrom\([^,]+,\s*['"]([^'"]+)['"]\s*\)/g))
         producerCodes.add(match[1]);
+
+      for (const match of source.matchAll(/\binvalidResult\(\s*[^,]+,\s*([^,]+),/g)) {
+        const argument = match[1].trim();
+        const plain = /^['"]([^'"]+)['"]$/.exec(argument);
+
+        if (plain) producerCodes.add(plain[1]);
+
+        for (const branch of argument.matchAll(/[?:]\s*['"]([^'"]+)['"]/g))
+          producerCodes.add(branch[1]);
+      }
     }
 
     expect(scannedFiles).toBeGreaterThan(100);

@@ -28,7 +28,7 @@ const RECOVERABLE_CANDIDATE_FAILURE_CODES: ReadonlySet<string> = new Set([
   'base-edge-too-large',
 ]);
 
-/** Only these measured edge failures open the Fix popover; other failures offer Retry only. */
+/** Thrown build failures with these codes open the Fix popover; other thrown failures offer Retry. */
 export const isRecoverableCandidateFailure = (failure: RecoveryFailure): boolean =>
   RECOVERABLE_CANDIDATE_FAILURE_CODES.has(failure.code);
 
