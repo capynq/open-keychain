@@ -1,5 +1,42 @@
 # Agent handoff
 
+## Validation speed-up, 2026-11-03
+
+Uncommitted on `main` (on top of `3d7b92d`); nothing pushed.
+
+- Root cause of a "20+ minute" `pnpm validate:push`: it was hung, not slow. It read stdin to EOF
+  whenever stdin was not a TTY; agent shells hand it a socket that never closes, so no gate ever
+  started. Only the Husky wrapper (`pre-push-changed.mjs`) now sets `VALIDATION_PRE_PUSH_STDIN=1`;
+  manual runs diff against the upstream merge-base. Verified: a manual run from an agent shell
+  reaches the clean-tree check in under a second.
+- `keychain-builder.styles-fonts.test.ts` sharded into one file per style plus the remainder
+  (`keychain-builder-style-font-cases.ts` registers the per-style cases); the two
+  `VALIDATION_FIXTURES` sweeps moved out of `geometry-contract.test.ts` into
+  `geometry-contract.fixture-{solids,3mf}.test.ts`. Test names verified identical before/after
+  (892 full / 605 fast via a collect-only run). `test:fast` excludes `keychain-builder.*.test.ts`
+  by glob; `relatedInputsForCi` derives the builder suites from the directory.
+- Concurrency (`scripts/validation/core/concurrency.mjs`): default is all but two cores (max 8) on
+  large machines, unchanged `min(4, cores)` on small ones. Full Unit uses the whole budget,
+  `unit:fast` and full Browser half (min 2). Matrix cap raised 5 → 8. CI pins concurrency to 1 and
+  `PLAYWRIGHT_WORKERS` defaults to 2, so CI is unchanged.
+- Matrix packages are scheduled longest-first from `node_modules/.cache/open-keychain-validation/
+matrix/case-durations.json`; the heaviest 5% run singly. The summary lists `slowdowns` (>3× and
+  ≥5 s over history).
+- Measured on the 10-core M1 Pro (8 workers): full Unit 322 s → 96 s (`vitest`, 95 files / 900 passed);
+  `unit:fast` 77 s → 36 s (612 passed); `pnpm validate` (ci) ~6 min → 2m26s, passed; full
+  geometry matrix 22 min (4 workers) → 11m53s, 4,264 passed + 3 expected-invalid, 0 failed, peak
+  worker RSS 0.9 GB.
+- Open observation: the slowdown report flagged `comforter-brush` wide/long-text cases at ~24 s
+  versus ~1.5 s in the 2026-10-16 run used to seed history (for example
+  `magnet/ribbon/comforter-brush/wide-glyphs`). Not investigated; may be a real builder cost change
+  since then or a seeding artefact. History now holds today's values.
+- Not done: profiling whether per-(font, text) relief work could be memoized across templates
+  (plan step 5); `validate:full` browser timing (pre-existing e2e failures listed below would stop
+  it under fail-fast).
+- `CONTRIBUTING.md` rewritten to be shorter and task-oriented (same rules, 1,259 → 914 words).
+- Next action: verify the e2e regressions below (`keychain.spec.ts`: Secondary radio, Heart
+  alert, NIKITA Bubble status, mobile icon hover shadow).
+
 ## Current work — code-review follow-up, 2026-11-03
 
 Rebased onto `origin/main` at `140ef3b`; nothing from this run is pushed yet.

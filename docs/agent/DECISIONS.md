@@ -1,5 +1,28 @@
 # Open Keychain decisions
 
+## Local validation scales to the machine; heavy suites are sharded by file
+
+**Status:** active
+
+**Decision:** Local validation defaults to `min(4, cores)` gate concurrency on small machines and to
+all but two cores (at most 8) on larger ones. The full Unit gate uses the whole budget as Vitest workers;
+`unit:fast` and the full Browser gate use half (never fewer than two). The geometry matrix accepts up to 8 workers and schedules contiguous
+case packages longest-first from recorded per-case durations. Long-running Vitest suites are split
+into several files (for example `keychain-builder.styles-fonts.<style>.test.ts`) instead of
+growing one file; `test:fast` excludes the whole `keychain-builder.*.test.ts` set by glob. Only the
+Husky wrapper makes `validate:push` read stdin (`VALIDATION_PRE_PUSH_STDIN=1`).
+
+**Rationale:** Measured on a 10-core M1 Pro: one file (`keychain-builder.styles-fonts.test.ts`,
+321 s) was the whole critical path of the full Unit gate and `geometry-contract.test.ts` (77 s) of
+`unit:fast`, because Vitest parallelises across files only. The matrix is ~87 CPU-minutes and
+scaled linearly (44 min at 2 workers, 22 min at 4) but was capped at 5 workers. A manual
+`pnpm validate:push` from a non-TTY, never-closing stdin (agent shells) hung before any gate.
+
+**Consequences:** Sharding and scheduling change only placement and order: test names and the
+4,267-case matrix are unchanged and must stay so. CI pins `VALIDATION_CONCURRENCY=1` and
+`MATRIX_CONCURRENCY=1`, and `PLAYWRIGHT_WORKERS` defaults to 2, so CI behaviour is unchanged.
+Slowdown warnings compare against local history and are informational, not a gate.
+
 ## Frontend analytics releases identify the exact source commit
 
 **Status:** active
