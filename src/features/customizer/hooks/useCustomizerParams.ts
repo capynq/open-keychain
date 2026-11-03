@@ -54,6 +54,7 @@ import {
   type RandomizeValidation,
 } from '../model/randomizer';
 import {
+  isRecoverableCandidateFailure,
   recoveryRecipes,
   recoveryFontSignature,
   type RecoveryOption,
@@ -757,7 +758,7 @@ export const useCustomizerParams = (
             group,
             controlKey,
             failure,
-            failure.code === 'text-edge-too-large' ? 'rejected' : 'failed',
+            isRecoverableCandidateFailure(failure) ? 'rejected' : 'failed',
             error instanceof GeometryOperationError ? error.diagnostics : undefined,
             attemptId,
           );
