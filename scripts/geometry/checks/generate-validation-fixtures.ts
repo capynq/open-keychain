@@ -90,27 +90,26 @@ const manifest = {
 };
 await fs.writeFile(path.join(outputDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 
-const slicers = [
-  'Bambu Studio',
-  'Bambu Studio beta 2.8.4.57',
-  'OrcaSlicer',
-  'PrusaSlicer',
-  'Ultimaker Cura',
-  'Creality Print',
-  'Anycubic Slicer Next',
-  'Orca-Flashforge',
-];
+const compatibility = JSON.parse(await fs.readFile('docs/slicer-compatibility.json', 'utf8')) as {
+  applications: Array<{ name: string; version: string | null }>;
+  fixtureContract: { expectedCases: number };
+};
+const slicers = compatibility.applications;
+if (fixtures.length !== compatibility.fixtureContract.expectedCases)
+  throw new Error(
+    `Expected ${compatibility.fixtureContract.expectedCases} fixtures, found ${fixtures.length}.`,
+  );
 const formats = ['stl', 'threeMfSeparate', 'threeMfMerged'];
 const manualTemplate = {
   schemaVersion: 1,
   release,
   slicerCases: fixtures.flatMap((fixture) =>
-    slicers.flatMap((slicer) =>
+    slicers.flatMap((application) =>
       formats.map((format) => ({
-        id: `${fixture.id}/${slicer}/${format}`,
+        id: `${fixture.id}/${application.name}/${format}`,
         fixtureId: fixture.id,
-        slicer,
-        slicerVersion: '',
+        slicer: application.name,
+        slicerVersion: application.version ?? '',
         format,
         status: 'pending',
         repairWarnings: [],

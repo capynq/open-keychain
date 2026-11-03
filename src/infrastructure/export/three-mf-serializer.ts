@@ -70,8 +70,10 @@ const modelXml = (parts: ThreeMfPart[], mode: ThreeMfMode): string => {
         .map((part) => `<m:color color="${normalizeColor(part.color)}"/>`)
         .join('')}</m:colorgroup>`
     : '';
+  // Consumers without the Materials Extension may ignore the m:colorgroup referenced by pid.
+  const recommendedExtensions = hasSeparateColors ? ' recommendedextensions="m"' : '';
   return `<?xml version="1.0" encoding="UTF-8"?>
-<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:m="http://schemas.microsoft.com/3dmanufacturing/material/2015/02">
+<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:m="http://schemas.microsoft.com/3dmanufacturing/material/2015/02"${recommendedExtensions}>
   <metadata name="Title">Open Keychain</metadata>
   <metadata name="Description">Printable keychain generated locally in the browser.</metadata>
   <resources><basematerials id="${baseMaterialsId}">${materials}</basematerials>${colorGroup}${object}</resources>
