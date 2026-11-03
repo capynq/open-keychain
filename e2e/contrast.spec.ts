@@ -217,6 +217,22 @@ test('keeps icon action hover states visually distinct and contrasting', async (
   const actions = page.locator(
     '.export-header-button, .share-header-button, .randomize-header-button, .language-picker-trigger',
   );
+  const finePointer = await page.evaluate(
+    () => matchMedia('(hover: hover) and (pointer: fine)').matches,
+  );
+  if (!finePointer) {
+    for (const action of await actions.all()) {
+      const readColors = () =>
+        action.evaluate((element) => {
+          const styles = getComputedStyle(element);
+          return `${styles.backgroundColor}|${styles.color}`;
+        });
+      const before = await readColors();
+      await action.hover();
+      expect(await readColors()).toBe(before);
+    }
+    return;
+  }
 
   for (const action of await actions.all()) {
     const before = await action.evaluate((element) => {

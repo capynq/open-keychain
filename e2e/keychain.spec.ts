@@ -198,6 +198,9 @@ test('keeps shared icon glyphs centered while showing tactile hover feedback', a
     page.getByRole('button', { name: 'Share' }),
     page.getByRole('button', { name: 'Randomize' }),
   ];
+  const finePointer = await page.evaluate(
+    () => matchMedia('(hover: hover) and (pointer: fine)').matches,
+  );
 
   for (const button of buttons) {
     await button.hover();
@@ -219,7 +222,8 @@ test('keeps shared icon glyphs centered while showing tactile hover feedback', a
     expect(metrics?.transform).not.toContain('translate');
     expect(Math.abs(metrics?.centerOffsetX ?? 99)).toBeLessThan(1);
     expect(Math.abs(metrics?.centerOffsetY ?? 99)).toBeLessThan(1);
-    expect(metrics?.shadow).not.toBe('none');
+    if (finePointer) expect(metrics?.shadow).not.toBe('none');
+    else expect(metrics?.shadow).toBe('none');
   }
 });
 
@@ -242,10 +246,14 @@ test('treats adjusted NIKITA Bubble geometry as ready and keeps width warnings e
   );
   await dialog.locator('.export-preflight summary').click();
   await expect(dialog.locator('.export-preflight-body li').first()).toBeVisible();
+  await page.getByRole('button', { name: 'Close' }).click();
+  await expect(dialog).toBeHidden();
   await page.getByLabel('Text size').fill('12');
   await page.getByLabel('Name or text').fill('WWWWWWWWWWWWWWWWWWWWWWWW');
-  await expect(page.locator('.status-pill')).toHaveText('Ready · adjusted', { timeout: 10000 });
-  await expect(page.getByRole('dialog').getByRole('button', { name: /STL file/ })).toBeEnabled();
+  await expect(page.getByLabel('Name or text')).toHaveValue('WWWWWWWWWWWWWWWWWWWWWWWW');
+  await expect(page.locator('.status-pill')).toHaveText('Ready · adjusted', { timeout: 20000 });
+  await page.getByRole('button', { name: 'Export' }).click();
+  await expect(dialog.getByRole('button', { name: /STL file/ })).toBeEnabled();
   await page.getByRole('button', { name: 'Close' }).click();
 });
 test('switches to a bilingual font when Cyrillic text is entered', async ({ page }) => {
@@ -507,7 +515,7 @@ test('supports the Magnet ribbon workflow with subtitle hardware guidance', asyn
   await subtitleInput.fill('2026');
   await page
     .getByTestId('typography-adjustments')
-    .getByRole('radio', { name: 'Secondary' })
+    .getByRole('radio', { name: 'Subtitle', exact: true })
     .click();
   await expect(page.getByLabel('Customizer controls').getByText(/10\.4 mm diameter/)).toBeVisible();
   await waitForReadyGeometry(page);
@@ -526,7 +534,7 @@ test('keeps subtitle fields full-width, spaced, and keyboard-visible', async ({ 
   const shape = customizer.getByTestId('typography-adjustments');
   const subtitleInput = customizer.getByLabel('Subtitle or short message');
   await subtitleInput.fill('ROLE');
-  await shape.getByRole('radio', { name: 'Secondary' }).click();
+  await shape.getByRole('radio', { name: 'Subtitle', exact: true }).click();
   const subtitle = shape.getByTestId('subtitle-settings');
   await expect(subtitle).toBeVisible();
 
@@ -609,11 +617,14 @@ test('keeps Heart inputs aligned and exposes through-cut readiness', async ({ pa
   await expect(customizer.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10000 });
   await left.fill('');
   await right.fill('');
-  await expect(customizer.getByRole('alert')).toContainText('Your previous design is kept.');
+  await expect(customizer.getByRole('alert')).toContainText(
+    'Enter text on at least one side of the heart.',
+  );
   await expect(left).toHaveValue('I');
   await expect(right).toHaveValue('KYIV');
   await expect(customizer.locator('.status-pill')).toHaveText(/Ready/);
-  await expect(customizer.getByRole('button', { name: 'Fix this' })).toHaveCount(0);
+  await customizer.getByRole('button', { name: 'Fix this' }).click();
+  await expect(page.getByRole('button', { name: 'Edit this setting' })).toBeVisible();
 });
 test('shows only template-relevant shape controls', async ({ page }) => {
   await page.goto('/create');

@@ -50,21 +50,21 @@ test('synchronizes primary and secondary font targets with subtitle compatibilit
   await expect(browser.getByRole('radio')).toHaveCount(0);
   await expect(shape.getByRole('radio')).toHaveCount(0);
   await subtitle.fill('ROLE');
-  await expect(browser.getByRole('radio', { name: 'Primary' })).toHaveAttribute(
+  await expect(browser.getByRole('radio', { name: 'Name', exact: true })).toHaveAttribute(
     'aria-checked',
     'true',
   );
-  await expect(shape.getByRole('radio', { name: 'Primary' })).toHaveAttribute(
+  await expect(shape.getByRole('radio', { name: 'Name', exact: true })).toHaveAttribute(
     'aria-checked',
     'true',
   );
 
-  await shape.getByRole('radio', { name: 'Secondary' }).click();
-  await expect(browser.getByRole('radio', { name: 'Secondary' })).toHaveAttribute(
+  await shape.getByRole('radio', { name: 'Subtitle', exact: true }).click();
+  await expect(browser.getByRole('radio', { name: 'Subtitle', exact: true })).toHaveAttribute(
     'aria-checked',
     'true',
   );
-  await expect(shape.getByRole('radio', { name: 'Secondary' })).toHaveAttribute(
+  await expect(shape.getByRole('radio', { name: 'Subtitle', exact: true })).toHaveAttribute(
     'aria-checked',
     'true',
   );
@@ -74,7 +74,7 @@ test('synchronizes primary and secondary font targets with subtitle compatibilit
   await browser.getByRole('button', { name: 'Reset subtitle' }).click();
   await expect(browser.getByRole('radio')).toHaveCount(0);
   await subtitle.fill('ROLE');
-  await expect(browser.getByRole('radio', { name: 'Primary' })).toHaveAttribute(
+  await expect(browser.getByRole('radio', { name: 'Name', exact: true })).toHaveAttribute(
     'aria-checked',
     'true',
   );
@@ -83,14 +83,14 @@ test('synchronizes primary and secondary font targets with subtitle compatibilit
   await expect(browser.getByRole('radio')).toHaveCount(0);
   await expect(shape.getByRole('radio')).toHaveCount(0);
   await subtitle.fill('ROLE');
-  await shape.getByRole('radio', { name: 'Secondary' }).click();
+  await shape.getByRole('radio', { name: 'Subtitle', exact: true }).click();
   await shape.getByRole('button', { name: 'Reset subtitle' }).click();
   await expect(browser.getByRole('radio')).toHaveCount(0);
   await expect(shape.getByRole('radio')).toHaveCount(0);
   await subtitle.fill('ROLE');
   await page.getByRole('button', { name: 'Articulated name' }).click();
-  await expect(browser.getByRole('radio', { name: 'Secondary' })).toHaveCount(0);
-  await expect(shape.getByRole('radio', { name: 'Secondary' })).toHaveCount(0);
+  await expect(browser.getByRole('radio', { name: 'Subtitle', exact: true })).toHaveCount(0);
+  await expect(shape.getByRole('radio', { name: 'Subtitle', exact: true })).toHaveCount(0);
 });
 
 test('shows the Google Fonts unavailable fallback and keeps built-in fonts available', async ({
