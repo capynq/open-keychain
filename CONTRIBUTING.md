@@ -32,7 +32,7 @@ Every push must pass the **critical user journey** (`pnpm test:e2e:journey`): la
 Other checks depend on what changed:
 
 - **Docs only:** formatting of the changed files.
-- **UI/CSS:** related unit tests, typecheck, build, and browser smoke. Changed Playwright specs run directly.
+- **UI/CSS:** related unit tests, typecheck, build, browser smoke, and the desktop editor regression specs (`pnpm test:e2e:regression`). Changed Playwright specs run directly.
 - **Geometry, export, fonts, WASM:** related unit tests (including the builder, worker, and font suites), typecheck, and build. The full geometry matrix runs only in `validate:full` or a manual CI run.
 - **Tests only:** the changed tests.
 - **Tooling, config, or unknown paths:** the conservative full set.

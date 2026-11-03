@@ -2,7 +2,7 @@
 
 ## Validation speed-up, 2026-11-03
 
-Uncommitted on `main` (on top of `3d7b92d`); nothing pushed.
+Committed on `main` on top of `3d7b92d`; nothing pushed.
 
 - Root cause of a "20+ minute" `pnpm validate:push`: it was hung, not slow. It read stdin to EOF
   whenever stdin was not a TTY; agent shells hand it a socket that never closes, so no gate ever
@@ -26,16 +26,41 @@ matrix/case-durations.json`; the heaviest 5% run singly. The summary lists `slow
   `unit:fast` 77 s → 36 s (612 passed); `pnpm validate` (ci) ~6 min → 2m26s, passed; full
   geometry matrix 22 min (4 workers) → 11m53s, 4,264 passed + 3 expected-invalid, 0 failed, peak
   worker RSS 0.9 GB.
-- Open observation: the slowdown report flagged `comforter-brush` wide/long-text cases at ~24 s
-  versus ~1.5 s in the 2026-10-16 run used to seed history (for example
-  `magnet/ribbon/comforter-brush/wide-glyphs`). Not investigated; may be a real builder cost change
-  since then or a seeding artefact. History now holds today's values.
+- Slowdown report correction: the flagged `comforter-brush` wide/long-text cases (~22–24 s) are
+  not a regression. Standalone timing is identical at every geometry commit from `ddba30e`
+  (2026-10-13) to HEAD; the 2026-10-16 log used to seed history is not comparable. History now
+  holds current values.
 - Not done: profiling whether per-(font, text) relief work could be memoized across templates
   (plan step 5); `validate:full` browser timing (pre-existing e2e failures listed below would stop
   it under fail-fast).
 - `CONTRIBUTING.md` rewritten to be shorter and task-oriented (same rules, 1,259 → 914 words).
-- Next action: verify the e2e regressions below (`keychain.spec.ts`: Secondary radio, Heart
-  alert, NIKITA Bubble status, mobile icon hover shadow).
+- E2E regressions verified and fixed:
+  - Product bug: clearing both Heart words returned `heart-empty`, which had no recovery-catalog
+    entry, so users saw the generic "Something went wrong" text. Added `errorHeartEmpty`
+    (EN/RU/UK) and the catalog mapping; the catalog guard test now also scans
+    `invalidResult(...)` codes. Removed the unused `candidateRejected` locale key.
+  - Stale tests: "Primary/Secondary" radios renamed "Name/Subtitle" (`5e72341`); NIKITA Bubble
+    edited fields behind the export dialog, a native modal since `decf07c`; touch projects
+    asserted fine-pointer-only hover feedback (`keychain.spec.ts`, `contrast.spec.ts`); Heart
+    asserts "Fix this" offers "Edit this setting" (kept by user decision);
+    `geometry-finish.spec.ts:16` (~22 s idle, 30 s limit) is `test.slow()`.
+  - Full Playwright suite (desktop/mobile/mobile-2x, 4 workers): 516 passed, 3 skipped, 0 failed.
+- Text edge finishing (`edge-finish.ts`) used an O(vertices x edges) distance scan in the band warp
+  (16 of 26 s on `comforter-brush` `WWWWWWWW`). A uniform-grid index returns the identical minimum:
+  mesh hashes identical on 7 representative builds; full matrix 4,267 cases with 0 outcome
+  differences; slowest build 25.9 s -> 9.2 s, matrix 11m53s -> 9m0s. Remaining time is Manifold
+  WASM; further gains would need coarser geometry (a product decision).
+- Push gate: UI/browser changes (and conservative pushes) also run `pnpm test:e2e:regression`
+  (`keychain.spec.ts` + `font-browser.spec.ts`, desktop, ~80 s). CI is unchanged.
+- Local cleanup: build cache keeps the 3 newest artifacts (1.2 GB -> 95 MB); validation logs and
+  browser outputs keep the newest 30 runs (pruning is skipped under Vitest so runner tests cannot
+  evict real logs); old `artifacts/*` captures and `test-results` removed, `artifacts/release`
+  kept.
+- Final validation: uncached `pnpm validate` passed in 2m06s (unit 95 files / 903 tests);
+  `test:e2e:regression` 42 passed; lint, typecheck, format:check pass.
+- Not changed: typing into the editor behind the modal export dialog via automation reverts the
+  name; real users cannot reach those fields.
+- Next action: push when ready (`git push` runs the pre-push checks).
 
 ## Current work — code-review follow-up, 2026-11-03
 
