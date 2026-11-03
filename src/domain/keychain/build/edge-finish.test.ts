@@ -6,6 +6,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { FONT_CATALOG } from '../fonts/catalog';
 import { flattenText } from '../text/outline';
 import {
+  boundaryDistanceIndex,
+  segmentDistance,
   extrudeTextFinished,
   extrudeFinished,
   baseFinishLimits,
@@ -280,5 +282,43 @@ describe('native front text finishing', () => {
     } finally {
       section.delete();
     }
+  });
+});
+
+describe('boundary distance index', () => {
+  it('matches the exhaustive segment scan exactly', () => {
+    let seed = 7;
+    const random = () => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed / 2147483648;
+    };
+    const polygons = Array.from({ length: 6 }, (_, polygon) => {
+      const centerX = polygon * 9000 + random() * 2000;
+      const centerY = random() * 6000;
+      const points = 40 + Math.floor(random() * 300);
+      return Array.from({ length: points }, (_, index): [number, number] => {
+        const angle = (index / points) * Math.PI * 2;
+        const radius = 1500 + random() * 2500;
+        return [centerX + Math.cos(angle) * radius, centerY + Math.sin(angle) * radius];
+      });
+    });
+    const exhaustive = (x: number, y: number) =>
+      Math.min(
+        ...polygons.flatMap((polygon) =>
+          polygon.map((point, index) =>
+            segmentDistance(point, polygon[(index + 1) % polygon.length], x, y),
+          ),
+        ),
+      );
+    const indexed = boundaryDistanceIndex(polygons);
+    const queries: Array<[number, number]> = [
+      ...polygons.flatMap((polygon) => polygon.slice(0, 20)),
+      ...Array.from({ length: 2000 }, (): [number, number] => [
+        -20000 + random() * 90000,
+        -15000 + random() * 40000,
+      ]),
+    ];
+    for (const [x, y] of queries) expect(indexed(x, y)).toBe(exhaustive(x, y));
+    expect(boundaryDistanceIndex([])(0, 0)).toBe(Infinity);
   });
 });
