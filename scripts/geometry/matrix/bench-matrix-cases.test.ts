@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  findMatrixSlowdowns,
   listMatrixCases,
   partitionMatrixCases,
+  scheduleMatrixPackages,
   partitionMatrixCasesByShard,
   selectMatrixBenchmarkSample,
 } from './bench-matrix-cases';
@@ -71,5 +73,36 @@ describe('geometry matrix scheduling', () => {
       new Set(cases.map((item) => item.templateId)),
     );
     expect(new Set(first.map((item) => item.id)).size).toBe(100);
+  });
+
+  it('schedules every case exactly once, heaviest work first', () => {
+    const cases = listMatrixCases();
+    const heavy = cases[cases.length - 7];
+    const history = Object.fromEntries(cases.map((item) => [item.id, 100]));
+    history[heavy.id] = 30000;
+    const packages = scheduleMatrixPackages(cases, 4, history);
+    expect(packages.map((item) => item.packageId)).toEqual(packages.map((_, index) => index));
+    const scheduled = packages.flatMap((item) => item.cases.map((testCase) => testCase.id));
+    expect([...scheduled].sort()).toEqual(cases.map((item) => item.id).sort());
+    expect(new Set(scheduled).size).toBe(cases.length);
+    expect(packages[0].cases.map((item) => item.id)).toEqual([heavy.id]);
+    expect(packages.every((item) => item.cases.length >= 1 && item.cases.length <= 4)).toBe(true);
+    expect(scheduleMatrixPackages(cases, 4, history)).toEqual(packages);
+  });
+
+  it('falls back to a deterministic heuristic order without history', () => {
+    const cases = listMatrixCases();
+    const packages = scheduleMatrixPackages(cases, 4);
+    expect(packages.flatMap((item) => item.cases)).toHaveLength(cases.length);
+    expect(scheduleMatrixPackages(cases, 4)).toEqual(packages);
+  });
+
+  it('flags only material slowdowns against recorded history', () => {
+    expect(
+      findMatrixSlowdowns(
+        { slow: 40000, noisy: 400, steady: 9000, fresh: 60000 },
+        { slow: 10000, noisy: 50, steady: 8000 },
+      ),
+    ).toEqual([{ case: 'slow', durationMs: 40000, previousMs: 10000 }]);
   });
 });

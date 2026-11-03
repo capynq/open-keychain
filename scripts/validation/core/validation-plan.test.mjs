@@ -6,6 +6,7 @@ import {
   createGatePlan,
   requiresFullCIRegression,
 } from './validation-plan.mjs';
+import { unitWorkerCount } from './concurrency.mjs';
 
 describe('validation gate selection', () => {
   const expectJourney = (plan) => {
@@ -39,8 +40,17 @@ describe('validation gate selection', () => {
     expect(geometry.map(({ id }) => id)).toContain('build');
     expect(geometry.map(({ id }) => id)).not.toContain('browser');
     expect(geometry.map(({ id }) => id)).not.toContain('geometry');
-    expect(geometry.find(({ id }) => id === 'unit:related').args).toContain(
+    const relatedArgs = geometry.find(({ id }) => id === 'unit:related').args;
+    expect(relatedArgs).toContain(
       'src/domain/keychain/build/keychain-builder.keyring-articulated.test.ts',
+    );
+    // Every sharded builder suite stays related to the builder source.
+    for (const style of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'])
+      expect(relatedArgs).toContain(
+        `src/domain/keychain/build/keychain-builder.styles-fonts.${style}.test.ts`,
+      );
+    expect(relatedArgs).toContain(
+      'src/domain/keychain/build/keychain-builder.styles-fonts.test.ts',
     );
   });
 
@@ -206,10 +216,27 @@ describe('validation gate selection', () => {
     expect(plan.find(({ id }) => id === 'unit:fast').args).toEqual([
       'test:fast',
       '--',
-      '--maxWorkers=2',
+      `--maxWorkers=${unitWorkerCount()}`,
     ]);
     expect(plan.find(({ id }) => id === 'browser').args).toEqual(['test:e2e:smoke']);
     expect(plan.some(({ id }) => id === 'geometry')).toBe(false);
+  });
+
+  it('gives the full unit suite the whole worker budget', () => {
+    const previous = process.env.VALIDATION_CONCURRENCY;
+    process.env.VALIDATION_CONCURRENCY = '6';
+    try {
+      const unit = createGatePlan([], 'ci').find(({ id }) => id === 'unit');
+      expect(unit.args).toEqual(['test:full', '--', '--maxWorkers=6']);
+      expect(unit.workerSlots).toBe(6);
+      process.env.VALIDATION_CONCURRENCY = '1';
+      expect(createGatePlan([], 'ci').find(({ id }) => id === 'unit').args).toContain(
+        '--maxWorkers=2',
+      );
+    } finally {
+      if (previous === undefined) delete process.env.VALIDATION_CONCURRENCY;
+      else process.env.VALIDATION_CONCURRENCY = previous;
+    }
   });
 
   it('runs the whole fast unit suite even when only a test file changed', () => {
@@ -217,7 +244,7 @@ describe('validation gate selection', () => {
     expect(plan.find(({ id }) => id === 'unit:fast').args).toEqual([
       'test:fast',
       '--',
-      '--maxWorkers=2',
+      `--maxWorkers=${unitWorkerCount()}`,
     ]);
     expect(plan.some(({ id }) => id === 'geometry')).toBe(false);
     expect(plan.find(({ id }) => id === 'browser').dependsOn).toEqual(['build']);

@@ -1,7 +1,7 @@
 import type { Readable, Writable } from 'node:stream';
 
 import { spawn, type ChildProcessByStdio } from 'node:child_process';
-import { mkdir, rename, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
@@ -9,9 +9,11 @@ import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
 import {
+  findMatrixSlowdowns,
   listMatrixCases,
-  partitionMatrixCases,
+  type MatrixCaseDurations,
   partitionMatrixCasesByShard,
+  scheduleMatrixPackages,
   selectMatrixBenchmarkSample,
 } from './bench-matrix-cases';
 import { EXPECTED_MATRIX_CASE_COUNT } from './matrix-contract';
@@ -22,7 +24,7 @@ const boundedInteger = (name: string, fallback: number, maximum: number): number
     throw new Error(`${name} must be an integer from 1 to ${maximum}; received ${raw}`);
   return Number(raw);
 };
-const cpuLimit = Math.max(1, Math.min(5, os.availableParallelism?.() ?? os.cpus().length));
+const cpuLimit = Math.max(1, Math.min(8, os.availableParallelism?.() ?? os.cpus().length));
 const concurrency = boundedInteger('MATRIX_CONCURRENCY', Math.min(2, cpuLimit), cpuLimit);
 const packageSize = boundedInteger('MATRIX_PACKAGE_SIZE', 4, 16);
 const allCases = listMatrixCases();
@@ -87,7 +89,29 @@ type Worker = {
   heapUsedBytes: number;
   externalBytes: number;
 };
-const packages = partitionMatrixCases(cases, packageSize);
+// Per-case wall times from earlier local runs drive longest-first scheduling and
+// slowdown warnings. The file is a local cache: missing or corrupt history only
+// falls back to a heuristic order and never changes which cases run.
+const durationsFile = path.resolve(
+  process.env.MATRIX_DURATIONS_FILE ??
+    path.join(
+      'node_modules',
+      '.cache',
+      'open-keychain-validation',
+      'matrix',
+      'case-durations.json',
+    ),
+);
+const readDurationHistory = async (): Promise<MatrixCaseDurations> => {
+  try {
+    const parsed = JSON.parse(await readFile(durationsFile, 'utf8')) as unknown;
+    return parsed && typeof parsed === 'object' ? (parsed as MatrixCaseDurations) : {};
+  } catch {
+    return {};
+  }
+};
+const durationHistory = await readDurationHistory();
+const packages = scheduleMatrixPackages(cases, packageSize, durationHistory);
 const workerPath = fileURLToPath(new URL('./bench-matrix.ts', import.meta.url));
 const startedAt = performance.now();
 const records = new Map<string, CaseResult>();
@@ -263,6 +287,28 @@ try {
   clearInterval(progressTimer);
 }
 
+const observedDurations = Object.fromEntries(
+  [...records.values()]
+    .filter((result) => Number.isFinite(result.durationMs))
+    .map((result) => [result.id, Math.round(result.durationMs ?? 0)]),
+);
+const slowdowns = findMatrixSlowdowns(observedDurations, durationHistory);
+for (const slowdown of slowdowns)
+  process.stderr.write(
+    `[geometry] slowdown: ${slowdown.case} took ${slowdown.durationMs}ms (previously ${slowdown.previousMs}ms)\n`,
+  );
+try {
+  await mkdir(path.dirname(durationsFile), { recursive: true });
+  const temporaryDurations = `${durationsFile}.${process.pid}.tmp`;
+  await writeFile(
+    temporaryDurations,
+    `${JSON.stringify({ ...durationHistory, ...observedDurations })}\n`,
+  );
+  await rename(temporaryDurations, durationsFile);
+} catch (error) {
+  process.stderr.write(`[geometry] could not save case durations: ${(error as Error).message}\n`);
+}
+
 const summary = {
   schema: 'geometry-matrix-summary.v1',
   mode: sampleSize ? 'profile-sample' : shardCount !== undefined ? 'shard' : 'full',
@@ -283,6 +329,8 @@ const summary = {
   packageSize,
   packages: packages.length,
   slowestCases,
+  slowdowns,
+  scheduling: Object.keys(durationHistory).length ? 'history' : 'heuristic',
   wasmInitializationMs: Math.round(wasmInitializationMs),
   phaseDurationsMs: Object.fromEntries(
     Object.entries(phaseDurationTotals).map(([name, duration]) => [name, Math.round(duration)]),
