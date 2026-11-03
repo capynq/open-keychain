@@ -324,7 +324,7 @@ test('uses a native export dialog with contained focus, Escape, backdrop close, 
   const firstChoice = dialog.getByRole('button', { name: /3MF · separate colors/ });
   await expect(dialog).toBeVisible();
   await expect(firstChoice).toBeFocused();
-  const slicerHelp = dialog.locator('.export-slicer-help');
+  const slicerHelp = dialog.locator('details').filter({ hasText: 'Slicer setup' });
   await expect(slicerHelp.locator('p').first()).toBeHidden();
   await slicerHelp.locator('summary').click();
   await expect(slicerHelp.getByText(/Bambu Studio may ask to load geometry only/)).toBeVisible();
@@ -717,6 +717,11 @@ test('keeps the accepted preview when candidate geometry validation rejects an e
                   type: 'error',
                   requestId: request.requestId,
                   message: 'Injected candidate rejection for UI recovery coverage.',
+                  failure: {
+                    code: 'text-edge-too-large',
+                    message: 'Injected candidate rejection for UI recovery coverage.',
+                    context: { target: 'text', profile: 'round', maximumMm: 0.2, requestedMm: 0.4 },
+                  },
                 },
               }),
             ),
@@ -744,7 +749,7 @@ test('keeps the accepted preview when candidate geometry validation rejects an e
   const chamfer = backingProfile.getByRole('radio', { name: 'Chamfer' });
   // Rejection can now restore Sharp before Playwright's check() postcondition.
   await chamfer.click();
-  await expect(page.getByRole('alert')).toContainText('The design could not be generated');
+  await expect(page.getByRole('alert')).toContainText('The text edge is too large for this design');
   await expect(backingProfile.getByRole('radio', { name: 'Sharp', exact: true })).toBeChecked();
   await expect(page.locator('.status-pill:visible').first()).toHaveText(/Ready/);
   await expect(
