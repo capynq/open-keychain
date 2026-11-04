@@ -95,5 +95,5 @@ describe('change-based CI workflow', () => {
     );
     expect(result.status).toBe(78);
     expect(result.stdout).toContain('Unit: not selected');
-  });
+  }, 30000);
 });

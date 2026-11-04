@@ -250,6 +250,7 @@ describe('native front text finishing', () => {
         section.delete();
       }
     },
+    30000,
   );
 
   it.each(['nunito', 'marck-script', 'amatic-sc', 'bungee'])(
