@@ -11,6 +11,8 @@ Committed on `main` (owner-authorized; not pushed): `5b487b1` chore(lint), `c98b
 
 Validation before the fix commit: `format:check`, `lint`, `typecheck`, `test:fast` (95 files / 746 tests), `build`, `test:e2e:smoke` 6/6, `test:e2e:journey` 9/9, recovery/preview-quality/keychain/export-recovery/quick-setup on desktop+mobile 124/124, `performance.spec.ts --workers=1` desktop+mobile 10/10. Firefox not run.
 
+`pnpm validate:push` first failed twice on default 5 s vitest timeouts under parallel browser load (`validation-ci-workflow.test.mjs` spawnSync test, `edge-finish.test.ts` ALEX 0.6/0.8 mm, `feature-graph.test.ts` real Manifold nodes; 1–2 s alone). `e93d44e` gives them the repository's 30 s real-geometry timeout. After that, `pnpm validate:push` passed on `e93d44e` (1m51s): typecheck, lint, build, format, browser smoke, unit:fast, journey 9/9, browser regression 42/42. Not pushed.
+
 Open: the 45 s boot watchdog includes worker and WASM download; check field `worker_boot_ms` after deploy. Review cleanups not done: superseded results not cached, per-request font hashing, main-thread clone of cached responses, duplicated telemetry key lists, sanitizer hardening for untyped keys (pre-existing), boot-plugin base-path check, `applyQuality` and lint-rule tests.
 
 ## Code-review follow-up and coarse-first withdrawal, 2026-11-04
