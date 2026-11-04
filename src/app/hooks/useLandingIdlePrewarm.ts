@@ -11,7 +11,7 @@ const LCP_QUIET_MS = 1000;
 
 type NetworkInformation = { saveData?: boolean; effectiveType?: string };
 
-const isLandingPath = (pathname: string): boolean => {
+export const isLandingPath = (pathname: string): boolean => {
   if (pathname.replace(/\/+$/, '') === LANDING_ROUTE) return true;
   return resolveSeoRoute(pathname)?.kind === 'home';
 };

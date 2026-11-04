@@ -15,3 +15,7 @@ export const loadAndPrewarm = (shouldPrewarm: () => boolean = () => true): void 
     )
     .catch(() => undefined);
 };
+
+export const releasePrewarmedGeometry = (): void => {
+  geometryPool?.then((pool) => pool.releasePrewarmedGeometryClient()).catch(() => undefined);
+};

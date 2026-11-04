@@ -170,6 +170,22 @@ describe('preview quality cooldown', () => {
     expect(controller.tier).toBe('low');
   });
 
+  it('does not step up immediately after a step-down, waiting for the cooldown from that change', () => {
+    const { controller, advance } = setup('high');
+    controller.observe(slow);
+    controller.observe(slow);
+    expect(controller.tier).toBe('medium');
+    for (let i = 0; i < 5; i += 1) controller.observe(fast);
+    expect(controller.tier).toBe('medium');
+
+    advance(29_999);
+    controller.observe(fast);
+    expect(controller.tier).toBe('medium');
+    advance(1);
+    controller.observe(fast);
+    expect(controller.tier).toBe('high');
+  });
+
   it('keeps a fast streak across the cooldown and steps up at the first fast build after it', () => {
     const { controller, advance } = setup('low');
     for (let i = 0; i < 5; i += 1) controller.observe(fast);

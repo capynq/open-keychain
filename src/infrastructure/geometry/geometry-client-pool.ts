@@ -25,6 +25,8 @@ export const prewarmGeometryClient = (): void => {
   pooled = { client, timer };
 };
 
+export const releasePrewarmedGeometryClient = (): void => discardPooled();
+
 export const takePrewarmedGeometryClient = (): GeometryClient | undefined => {
   const entry = pooled;
   pooled = undefined;

@@ -5,6 +5,7 @@ import { GeometryClient } from './geometry-client';
 import {
   PREWARM_TTL_MS,
   prewarmGeometryClient,
+  releasePrewarmedGeometryClient,
   takePrewarmedGeometryClient,
 } from './geometry-client-pool';
 
@@ -96,6 +97,22 @@ it('discards a pooled client whose boot failed with the replacement budget exhau
   expect(dispose).toHaveBeenCalledTimes(1);
   expect(takePrewarmedGeometryClient()).toBeUndefined();
   dispose.mockRestore();
+});
+
+it('releases an untaken client, clears its TTL, and hands out nothing afterwards', () => {
+  prewarmGeometryClient();
+  MockWorker.instances[0].emitReady();
+  releasePrewarmedGeometryClient();
+
+  expect(MockWorker.instances[0].terminate).toHaveBeenCalledTimes(1);
+  expect(takePrewarmedGeometryClient()).toBeUndefined();
+  vi.advanceTimersByTime(PREWARM_TTL_MS);
+  expect(MockWorker.instances[0].terminate).toHaveBeenCalledTimes(1);
+});
+
+it('does nothing when released with no pooled client', () => {
+  expect(() => releasePrewarmedGeometryClient()).not.toThrow();
+  expect(MockWorker.instances).toHaveLength(0);
 });
 
 it('creates a fresh client when prewarmed again after the TTL fired', () => {

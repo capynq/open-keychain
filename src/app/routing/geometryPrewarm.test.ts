@@ -34,6 +34,7 @@ const mockGeometryClient = () => {
 };
 
 let loadAndPrewarm: (shouldPrewarm?: () => boolean) => void;
+let releasePrewarmedGeometry: () => void;
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 const unhandled = vi.fn();
@@ -48,7 +49,7 @@ beforeEach(async () => {
   state.constructFailures = 0;
   state.imports = 0;
   state.importFailures = 0;
-  ({ loadAndPrewarm } = await import('./geometryPrewarm'));
+  ({ loadAndPrewarm, releasePrewarmedGeometry } = await import('./geometryPrewarm'));
 });
 
 afterEach(() => {
@@ -99,6 +100,23 @@ it('skips the prewarm when the guard fails after the import resolves', async () 
   await flush();
   expect(state.imports).toBe(1);
   expect(state.clients).toHaveLength(0);
+});
+
+it('releases the prewarmed client once the pool import has resolved', async () => {
+  loadAndPrewarm();
+  await vi.waitFor(() => expect(state.clients).toHaveLength(1));
+
+  releasePrewarmedGeometry();
+  await vi.waitFor(() => expect(state.clients[0]!.dispose).toHaveBeenCalledTimes(1));
+  expect(state.imports).toBe(1);
+});
+
+it('does not import the pool when released before any prewarm', async () => {
+  releasePrewarmedGeometry();
+
+  await flush();
+  expect(state.imports).toBe(0);
+  expect(unhandled).not.toHaveBeenCalled();
 });
 
 it('prewarms again through the helper after the TTL disposes an untaken client', async () => {

@@ -217,21 +217,15 @@ export class GeometryClient {
     const cacheKey = this.cacheKey('preview', params, fontDefinition, subtitleFontDefinition);
     const cacheable = !hasInlineFontData(fontDefinition, subtitleFontDefinition);
     const cached = cacheable ? this.resultCache.get(cacheKey) : undefined;
-    if (cached) return Promise.resolve(this.cloneCachedResult(cached, requestId));
+    if (cached) {
+      this.supersedePreviewRequests();
+      return Promise.resolve(this.cloneCachedResult(cached, requestId));
+    }
     const promise = new Promise<GeometryResult>((resolve, reject) => {
       this.pendingGeometry.set(requestId, { resolve, reject, startedAt: performance.now() });
     });
     if (this.activePreviewRequestId !== undefined || this.awaitingReplacement()) {
-      if (this.activePreviewRequestId !== undefined) {
-        const stale = this.pendingGeometry.get(this.activePreviewRequestId);
-        stale?.reject(new GeometryCandidateSupersededError());
-        this.pendingGeometry.delete(this.activePreviewRequestId);
-      }
-      if (this.queuedPreview) {
-        const superseded = this.pendingGeometry.get(this.queuedPreview.requestId);
-        superseded?.reject(new GeometryCandidateSupersededError());
-        this.pendingGeometry.delete(this.queuedPreview.requestId);
-      }
+      this.supersedePreviewRequests();
       this.queuedPreview = {
         params,
         fontDefinition,
@@ -851,6 +845,20 @@ export class GeometryClient {
       clientQueueMs: queueMs,
     };
     return result;
+  }
+
+  private supersedePreviewRequests(): void {
+    if (this.activePreviewRequestId !== undefined) {
+      const stale = this.pendingGeometry.get(this.activePreviewRequestId);
+      stale?.reject(new GeometryCandidateSupersededError());
+      this.pendingGeometry.delete(this.activePreviewRequestId);
+    }
+    if (this.queuedPreview) {
+      const superseded = this.pendingGeometry.get(this.queuedPreview.requestId);
+      superseded?.reject(new GeometryCandidateSupersededError());
+      this.pendingGeometry.delete(this.queuedPreview.requestId);
+    }
+    this.queuedPreview = undefined;
   }
 
   private supersedeCandidate(requestId: number): void {

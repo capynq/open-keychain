@@ -58,12 +58,13 @@ export const createPreviewQualityController = (
   let lastBootId: number | undefined;
   let slowStreak = 0;
   let fastStreak = 0;
-  let lastStepUpAt: number | undefined;
+  let lastTierChangeAt: number | undefined;
 
   const setTier = (next: PreviewQualityTier): void => {
     tier = next;
     slowStreak = 0;
     fastStreak = 0;
+    lastTierChangeAt = now();
   };
 
   return {
@@ -89,11 +90,9 @@ export const createPreviewQualityController = (
         fastStreak += 1;
         slowStreak = 0;
         const cooledDown =
-          lastStepUpAt === undefined || now() - lastStepUpAt >= PREVIEW_STEP_UP_COOLDOWN_MS;
-        if (fastStreak >= PREVIEW_FAST_RESULTS_TO_STEP_UP && tier !== 'high' && cooledDown) {
+          lastTierChangeAt === undefined || now() - lastTierChangeAt >= PREVIEW_STEP_UP_COOLDOWN_MS;
+        if (fastStreak >= PREVIEW_FAST_RESULTS_TO_STEP_UP && tier !== 'high' && cooledDown)
           setTier(tierAbove(tier));
-          lastStepUpAt = now();
-        }
       } else {
         slowStreak = 0;
         fastStreak = 0;

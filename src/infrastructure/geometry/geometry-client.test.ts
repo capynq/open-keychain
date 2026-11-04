@@ -992,6 +992,30 @@ describe('GeometryClient queued preview cache and dispatch timing', () => {
     client.dispose();
   });
 
+  it('supersedes the active and queued previews when a newer preview is served from the cache', async () => {
+    vi.stubGlobal('Worker', MockWorker);
+    const client = new GeometryClient();
+    const worker = MockWorker.instances[0];
+    const { resultCache, cacheKey } = client as unknown as {
+      resultCache: { set(key: string, value: GeometryResult): void };
+      cacheKey(operation: 'preview', params: typeof DEFAULT_PARAMS): string;
+    };
+    resultCache.set(cacheKey('preview', DEFAULT_PARAMS), { ...result(), generationId: 1 });
+    const active = client.request({ ...DEFAULT_PARAMS, text: 'ACTIVE' });
+    const activeRejected = expect(active).rejects.toBeInstanceOf(GeometryCandidateSupersededError);
+    const queued = client.request({ ...DEFAULT_PARAMS, text: 'QUEUED' });
+    const queuedRejected = expect(queued).rejects.toBeInstanceOf(GeometryCandidateSupersededError);
+
+    const cached = await client.request(DEFAULT_PARAMS);
+    expect(cached.timings).toEqual(expect.objectContaining({ clientCacheHit: 1 }));
+    await activeRejected;
+    await queuedRejected;
+
+    worker.emit({ type: 'geometry', requestId: 1, result: result() });
+    expect(sentTypes(worker).map((message) => message.type)).toEqual(['warmup', 'generate']);
+    client.dispose();
+  });
+
   it('does not resolve a queued edit with inline font data from a cache entry keyed without that data', async () => {
     vi.stubGlobal('Worker', MockWorker);
     const client = new GeometryClient();

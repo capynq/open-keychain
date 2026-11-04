@@ -17,6 +17,7 @@ import { AnalyticsConsentBanner } from '../components/AnalyticsConsentBanner/Ana
 import { RouteErrorBoundary } from '../components/RouteErrorBoundary/RouteErrorBoundary';
 import { useAppAnalytics } from '../hooks/useAppAnalytics';
 import { useAppNavigationEffects } from '../hooks/useAppNavigationEffects';
+import { useGeometryPrewarmRelease } from '../hooks/useGeometryPrewarmRelease';
 import { useInputModality } from '../hooks/useInputModality';
 import { useLandingIdlePrewarm } from '../hooks/useLandingIdlePrewarm';
 import { useRoutePreload } from '../hooks/useRoutePreload';
@@ -59,6 +60,7 @@ const App = () => {
   useAppNavigationEffects(location, locale);
   useRoutePreload();
   useLandingIdlePrewarm(location.pathname);
+  useGeometryPrewarmRelease(location.pathname);
   useInputModality();
 
   const displayLocale = resolveDisplayLocale(location, locale);
