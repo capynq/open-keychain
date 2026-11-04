@@ -39,7 +39,6 @@ export default defineConfig({
           ? `pnpm preview --host 127.0.0.1 --port ${previewPort}`
           : `VITE_GOOGLE_FONTS_API_KEY=playwright-google-fonts-key pnpm build && pnpm preview --host 127.0.0.1 --port ${previewPort}`,
         url: previewUrl,
-        // Validation must serve the artifact built for this exact checkout.
         reuseExistingServer: false,
       },
   projects: [

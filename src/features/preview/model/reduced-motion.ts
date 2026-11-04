@@ -27,7 +27,6 @@ export const setOrbitControlsDamping = (controls: OrbitControls, enabled: boolea
   controls.target.copy(target);
   controls.update();
 
-  // OrbitControls.update() derives orientation from the target. Restore the
-  // exact captured orientation as well so a transition cannot alter the pose.
+  /* OrbitControls derives orientation from target; restore pose */
   controls.object.quaternion.copy(cameraQuaternion);
 };

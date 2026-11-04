@@ -94,7 +94,7 @@ export const fingerprintGate = async ({
     }),
   );
   if (gate.id === 'build') {
-    // Git HEAD is a build input when Vite resolves its source version without a CI variable.
+    /* HEAD is a build input without a CI version */
     try {
       digest.update(
         execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], {
@@ -123,7 +123,6 @@ export const fingerprintGate = async ({
   ]);
   for (const name of [...environmentNames].sort()) {
     if (environment[name] === undefined) continue;
-    // Only the combined gate key persists; neither the value nor its hash is written to metadata.
     digest.update(`\0env\0${name}\0`);
     digest.update(String(environment[name]));
   }

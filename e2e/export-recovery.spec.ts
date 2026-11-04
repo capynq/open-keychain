@@ -1,6 +1,5 @@
 import { expect, test } from '@playwright/test';
 
-// Inject browser worker events rather than terminating real geometry during a WASM call.
 test('retries a failed export after recovery is exhausted and switches formats without reload', async ({
   page,
 }) => {
@@ -41,12 +40,11 @@ test('retries a failed export after recovery is exhausted and switches formats w
   await dialog.getByRole('button', { name: /STL file/ }).click();
   await expect(dialog.getByRole('alert')).toContainText('worker stopped');
   await expect(dialog.getByRole('button', { name: 'Try again', exact: true })).toBeEnabled();
-  // The automatic replacement fails before producing any response: its recovery budget is spent.
   await page.evaluate(() => {
     const control = (window as unknown as { exportRecoveryTest: { workers: Worker[] } })
       .exportRecoveryTest;
     const replacement = control.workers.at(-1)!;
-    // Chromium does not deliver synthetic messageerror dispatches to this property handler.
+    /* Chromium ignores synthetic messageerror events */
     replacement.onmessageerror!.call(replacement, new MessageEvent('messageerror'));
   });
   const retryDownload = page.waitForEvent('download');

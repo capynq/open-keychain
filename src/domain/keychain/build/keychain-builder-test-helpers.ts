@@ -7,8 +7,6 @@ import type { buildKeychain } from './keychain-builder';
 import { DEFAULT_PARAMS as PRODUCT_DEFAULTS, type MeshBuffer } from '../model/types';
 import { createWasm } from './keychain-builder';
 const originalFetch = globalThis.fetch;
-// These fixtures exercise mesh validity, including intentionally separate pieces.
-// Connected-product export is covered independently in geometry-contract.test.ts.
 export const DEFAULT_PARAMS = { ...PRODUCT_DEFAULTS };
 export let wasm: Awaited<ReturnType<typeof createWasm>>;
 beforeAll(async () => {

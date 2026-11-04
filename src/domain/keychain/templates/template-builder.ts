@@ -461,7 +461,7 @@ const articulatedStyle = (wasm: GeometryWasm, input: StyleInput): ArticulatedBui
     });
   }
   let nextLeft = 0;
-  // Finish rejection must occur before allocating any structural bodies.
+  /* Reject finish before allocating bodies */
   let limits: TextFinishLimits;
   const preparedCaps: Solid[] = [];
   try {
@@ -729,8 +729,7 @@ const plantLabelStyle = (wasm: GeometryWasm, input: StyleInput, styleId: StyleId
   const textHeight = input.textBounds.max[1] - input.textBounds.min[1];
   const border = effectiveMargin(input) + Math.max(0, input.reliefHaloMm ?? 0) * MANIFOLD_SCALE;
   const foundationWidth = Math.max(34000, textWidth + border * 2 + 7000);
-  // The board is the structural backing for the whole inscription. A narrow
-  // rail left dots, accents, and tall glyph strokes as loose solids above it.
+  /* Board spans inscription or strokes float loose */
   const foundationHeight = Math.max(14000, textHeight + border * 2);
   const radius = Math.max(
     1200,

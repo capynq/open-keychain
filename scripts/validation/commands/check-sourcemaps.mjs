@@ -2,9 +2,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
-// Verifies the production bundle after `posthog-cli sourcemap inject` and before
-// `sourcemap upload`: every JavaScript file needs a source map with sources and the
-// PostHog chunk marker, and the module entry referenced by index.html must be among them.
+/* Runs after sourcemap inject, before upload */
 
 const CHUNK_ID_MARKER = '//# chunkId=';
 const distArg = process.argv[2] ?? 'dist';
@@ -45,7 +43,6 @@ const resolveDistAsset = (src) => {
   return resolved.startsWith(`${distDir}${path.sep}`) ? resolved : null;
 };
 
-// A CSS-only stub holds nothing but comments and whitespace once comments are removed.
 const isCssOnlyStub = (content) =>
   content
     .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -108,7 +105,6 @@ const checkBundle = () => {
     const mapPath = `${file}.map`;
     const hasMap = existsSync(mapPath);
     if (!hasMap && file !== entryFile && isCssOnlyStub(readFileSync(file, 'utf8'))) {
-      // Vite emits CSS-only entries as empty JS stubs with no map or PostHog marker.
       stubCount += 1;
       continue;
     }

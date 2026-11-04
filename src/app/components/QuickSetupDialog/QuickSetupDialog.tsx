@@ -116,7 +116,6 @@ export const QuickSetupDialog = ({
 
   useEffect(() => {
     if (!open) {
-      // Reset while hidden so reopening never flashes the previous step.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setStep(0);
       return;
@@ -124,7 +123,6 @@ export const QuickSetupDialog = ({
     previousActiveRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     editing.current = false;
-    // Each new dialog session starts at the first step.
 
     setStep(0);
     return () => previousActiveRef.current?.focus();

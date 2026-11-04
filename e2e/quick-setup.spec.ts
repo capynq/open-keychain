@@ -23,7 +23,6 @@ const checkFit = async (dialog: Locator) => {
   expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   const footer = dialog.locator('footer');
   await expect(footer).toBeInViewport();
-  // Navigation and headings must wrap between words, never into vertical letter stacks.
   const splitWords = await dialog
     .locator('footer button, h2, label span:not([class*="categorySpecimen"])')
     .evaluateAll((elements) =>
@@ -329,7 +328,6 @@ test('walks through six focused steps and applies accepted keyring, colors, and 
   await expect(dialog.getByRole('alert')).toContainText('20 to 120');
   await dialog.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Open quick setup' })).toBeFocused();
-  // Applying only appearance/preferences must also succeed when geometry is unchanged.
   await page.getByRole('button', { name: 'Open quick setup' }).click();
   await advance(dialog);
   await fontCategory(dialog, 'Calligraphic').uncheck();

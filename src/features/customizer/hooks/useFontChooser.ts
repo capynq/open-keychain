@@ -12,7 +12,6 @@ export const useFontChooser = (customizer: ReturnType<typeof useCustomizerParams
   useEffect(() => {
     if (!pending || candidateFeedback?.status === 'checking') return;
     if (candidateFeedback?.status === 'rejected' || candidateFeedback?.status === 'failed') return;
-    // Retain a rejected font intent so a validated repair can still complete this choice.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPending(undefined);
     const acceptedId =

@@ -135,7 +135,7 @@ const duration = (milliseconds) => {
     : `${Math.floor(seconds / 60)}m${String(seconds % 60).padStart(2, '0')}s`;
 };
 const timeStamp = () => new Date().toLocaleTimeString();
-// Terminal control bytes are intentionally matched here so child output cannot corrupt the TUI.
+/* Control bytes matched on purpose */
 const stripTerminalControls = (value) =>
   String(value)
     .replace(/\u001b\][^\u0007]*(?:\u0007|\u001b\\)/g, '')

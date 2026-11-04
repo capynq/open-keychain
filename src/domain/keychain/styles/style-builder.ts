@@ -420,8 +420,7 @@ export const finishStyle = (
     wasm,
     subtitleSupport ? [backing, support, subtitleSupport] : [backing, support],
   );
-  // Heart Split intentionally represents two pieces; its explicit print-mode
-  // policy must not be erased by the accidental-gap repair used elsewhere.
+  /* Heart Split: two pieces; keep print-mode policy */
   const joined = preserveSeparateParts
     ? joinedRaw
     : closeSmallSectionGaps(
@@ -490,9 +489,7 @@ const finishMagnetStyle = (
 };
 
 const heartPolygon = (size: number, center: Vec2): Vec2[] => {
-  // The classic implicit heart, sampled densely enough that the lobes remain
-  // smooth after manifold tessellation. Keep this at 128 points: it is also a
-  // useful, deterministic complexity bound for exports.
+  /* 128 samples: smooth lobes, bounded export size */
   const points: Vec2[] = [];
   let minX = Infinity;
   let maxX = -Infinity;
@@ -568,8 +565,7 @@ const heartSplitStyle = (wasm: GeometryWasm, input: StyleInput): StyleBuild => {
   const backingParts: CrossSection[] = [heartFoundation];
   if (leftSupport) backingParts.unshift(leftSupport);
   if (rightSupport) backingParts.push(rightSupport);
-  // A narrow rounded bridge makes positive gaps printable while preserving
-  // the visual separation between each word and the heart ring.
+  /* Narrow bridge keeps positive gaps printable */
   const heartBounds = sectionBounds(heartRing);
   if (left && leftSupport)
     backingParts.push(
@@ -591,8 +587,7 @@ const heartSplitStyle = (wasm: GeometryWasm, input: StyleInput): StyleBuild => {
     );
   const backing = union(wasm, backingParts).simplify(20);
   const reliefHeart = heartRing.translate([0, 0]);
-  // Negative gaps can bring a word into the heart interior. Preserve that
-  // lettering by removing its support envelope from the through-cut.
+  /* Negative gaps: cut support envelope from through-cut */
   let safeThroughCut = throughCut;
   if (throughCut) {
     const envelopes = leftSupport ? [leftSupport] : [];
@@ -610,8 +605,7 @@ const heartSplitStyle = (wasm: GeometryWasm, input: StyleInput): StyleBuild => {
   if (right) reliefParts.push(right);
   const relief = union(wasm, reliefParts).simplify(20);
   left.delete();
-  // The right word is already laid out and included in both sections above;
-  // do not let the generic finisher add a second, below-name subtitle support.
+  /* Word already included; no second subtitle support */
   const heartInput = { ...input, subtitle: undefined };
   const finished =
     input.templateId === 'magnet'
@@ -742,8 +736,7 @@ export const buildStyle = (wasm: GeometryWasm, styleId: StyleId, input: StyleInp
         components.forEach((component) => component.delete());
       }
     };
-    // A lobe must touch the carrier. Do not turn an ornamental bubble into an
-    // unannounced loose print, especially for narrow or angular glyphs.
+    /* Lobes must touch carrier; else loose prints */
     let decorated = backing;
     for (const positions of lobePositions) {
       for (const position of positions) {

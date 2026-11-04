@@ -42,8 +42,7 @@ export const regularizeFinishedSolid = (
       if (volume < 0) return true;
       if (minimumPositiveThicknessScaled === 0) return true;
       const area = component.surfaceArea();
-      // Nonlinear nameplate warps can leave detached sub-micron slivers.
-      // Retain all cavities and any component without a reliable thickness estimate.
+      /* Warp slivers: keep cavities and unthick parts */
       return (
         !Number.isFinite(area) ||
         area <= 0 ||
@@ -59,8 +58,7 @@ export const regularizeFinishedSolid = (
     const cutters: Manifold[] = [];
     const bodies: Manifold[] = [];
     try {
-      // Boolean union treats negative shells as filled solids. Reverse each cavity
-      // into a positive cutter and explicitly subtract it from the retained bodies.
+      /* Reverse cavities into cutters; union fills shells */
       for (const component of volumetric.filter((part) => part.volume() < 0)) {
         const mesh = component.getMesh();
         const indices = new Uint32Array(mesh.triVerts);
@@ -87,7 +85,7 @@ export const regularizeFinishedSolid = (
             } finally {
               overlap.delete();
             }
-            // A positive island inside a cavity remains a separate real body.
+            /* Islands inside cavities stay separate bodies */
             if (!containsCavity) continue;
             const next = body.subtract(cutter);
             body.delete();
@@ -170,7 +168,7 @@ export const boundaryDistanceIndex = (polygons: Polygons): ((x: number, y: numbe
             best = Math.min(best, segmentDistance(a, b, x, y));
         }
       }
-      // Cells beyond this ring are at least ring * cell away; the margin absorbs rounding.
+      /* Ring margin absorbs cell rounding error */
       if (best < Math.max(outside, ring * cell) * (1 - 1e-9) - 1e-6) break;
     }
     return best;
@@ -463,7 +461,7 @@ export const textFinishLimits = (
   const heightMaximum = Math.floor(
     Math.min(1, visibleDepthMm - EDGE_FINISH_TEXT_CLEARANCE_MM) / EDGE_FINISH_GRID_MM + 1e-8,
   );
-  // Sharp edits verify only the initial selectable amount. Expand on a finish request.
+  /* Sharp verifies initial amount; finish expands it */
   const maximum = exhaustive ? heightMaximum : Math.min(1, heightMaximum);
   const key = JSON.stringify([section.toPolygons(), height, maximum]);
   const cached = limitCache.get(key);

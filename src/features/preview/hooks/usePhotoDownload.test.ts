@@ -75,7 +75,6 @@ describe('usePhotoDownload', () => {
       await download(1024);
     });
     expect(capture).toHaveBeenCalledOnce();
-    // An accepted design update during capture must not rename the previous image.
     act(() => root.render(createElement(Harness, { captureApi, text: 'NEW NAME' })));
 
     await act(async () => {

@@ -36,7 +36,6 @@ export const useProNavigation = (
 
       heading.tabIndex = -1;
       heading.focus({ preventScroll: true });
-      // Native scrolling reaches the rail on desktop and its workspace ancestor on mobile.
       heading.scrollIntoView({
         block: 'start',
         inline: 'nearest',

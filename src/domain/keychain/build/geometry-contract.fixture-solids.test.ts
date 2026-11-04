@@ -19,9 +19,7 @@ describe('finished geometry contracts', () => {
       const model = base.add(relief);
       const exportSolid = manifoldFromMesh(wasm, built.exportMesh!);
       try {
-        // Mesh buffers use Float32 coordinates, so reconstructing their shared
-        // boundary can introduce sub-micron signed noise. It must remain
-        // negligible relative to the printable model rather than a real overlap.
+        /* Float32 noise is sub-micron, not real overlap */
         expect(Math.abs(overlap.volume()) / Math.abs(model.volume())).toBeLessThan(1e-5);
         const materialBounds = model.boundingBox();
         const exportBounds = exportSolid.boundingBox();

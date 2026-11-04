@@ -92,7 +92,6 @@ export const useDiscoveryMotion = (
     intentRef.current = intent;
   }, []);
   const focusAfterDiscovery = useCallback((element: HTMLElement | null | undefined): void => {
-    // Owned recovery keeps other cards revealing, but the focused card is immediate.
     for (const animation of animationsRef.current) {
       const target = (animation.effect as KeyframeEffect | null)?.target;
       if (target instanceof Element && element && target.contains(element)) animation.cancel();

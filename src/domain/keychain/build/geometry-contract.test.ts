@@ -103,7 +103,6 @@ describe('finished geometry contracts', () => {
             const relief = manifoldFromMesh(wasm, finished.result.reliefMesh);
             const lower = relief.slice((params.baseThicknessMm + 0.1) * 1000);
             try {
-              // Float32 export reconstruction adds sub-micron signed noise, not a changed contour.
               expect(
                 Math.abs(lower.area() - originalLower.area()) / originalLower.area(),
               ).toBeLessThan(1e-7);

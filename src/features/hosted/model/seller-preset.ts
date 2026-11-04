@@ -7,7 +7,7 @@ import {
 
 export const DEFAULT_PRESET_PRINT_PROFILE_ID = 'fdm-standard-0.4';
 
-// Keep artwork out of seller presets even while older model contracts lack the field.
+/* Never include artwork in seller presets */
 export type SellerPresetParams = Omit<KeychainParams, 'text' | 'subtitle'> & {
   modelFeatures?: never;
 };

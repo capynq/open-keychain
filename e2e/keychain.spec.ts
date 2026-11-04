@@ -18,7 +18,6 @@ const cameraViews = [
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem('open-keychain.analytics-consent', 'declined');
-    // This suite exercises the complete precision editor; Simple has its own workflow coverage.
     localStorage.setItem('open-keychain:editor-mode', 'pro');
   });
 });
@@ -758,7 +757,6 @@ test('keeps the accepted preview when candidate geometry validation rejects an e
 
   const backingProfile = page.getByRole('radiogroup', { name: 'Text profile', exact: true });
   const chamfer = backingProfile.getByRole('radio', { name: 'Chamfer' });
-  // Rejection can now restore Sharp before Playwright's check() postcondition.
   await chamfer.click();
   await expect(page.getByRole('alert')).toContainText('The text edge is too large for this design');
   await expect(backingProfile.getByRole('radio', { name: 'Sharp', exact: true })).toBeChecked();
@@ -837,7 +835,6 @@ test('keeps the latest candidate when an obsolete active validation rejects', as
   await expect(customizer.locator('.candidate-feedback[role="status"]')).toBeVisible();
   await expect(exportButton).toBeDisabled();
   await heartSize.fill('26');
-  // The active WASM job finishes before the newest queued candidate is dispatched.
   await expect(exportButton).toBeDisabled();
   await page.evaluate(() => {
     (window as Window & { releaseStaleCandidate?: () => void }).releaseStaleCandidate?.();

@@ -194,7 +194,6 @@ test('keeps landing focus indicators visible against their surfaces', async ({ p
   for (const selector of focusSelectors) {
     const element = page.locator(selector).first();
     await element.focus();
-    // Exercise keyboard modality so :focus-visible is tested as a user sees it.
     await page.keyboard.press('Shift+Tab');
     await page.keyboard.press('Tab');
     await expect(element).toBeFocused();
