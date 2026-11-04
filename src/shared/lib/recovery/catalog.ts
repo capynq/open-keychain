@@ -79,6 +79,7 @@ export const RECOVERY_CATALOG: Record<string, RecoveryDefinition> = {
   'geometry-parameter-limit': issue('recovery.geometryParameterLimit', 'geometry'),
   'geometry-worker-init-failed': issue('recovery.geometryWorkerFailed', 'retry'),
   'geometry-worker-failed': issue('recovery.geometryWorkerFailed', 'retry'),
+  'geometry-worker-boot-timeout': issue('recovery.geometryWorkerFailed', 'retry'),
   'geometry-request-timeout': issue('recovery.geometryRequestTimeout', 'retry'),
   'geometry-invalid-result': issue('recovery.geometryInvalidResult', 'geometry'),
   'geometry-client-disposed': issue('recovery.geometryClientDisposed', 'manual'),

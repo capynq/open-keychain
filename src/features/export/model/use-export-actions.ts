@@ -41,7 +41,11 @@ const exportErrorCode = (
     if (cause.diagnostics.stage === 'generation') return 'geometry_failed';
     return 'export_failed';
   }
-  if (failure.code === 'geometry-request-timeout') return 'timeout';
+  if (
+    failure.code === 'geometry-request-timeout' ||
+    failure.code === 'geometry-worker-boot-timeout'
+  )
+    return 'timeout';
   if (failure.code === 'geometry-worker-failed') return 'worker_failed';
   if (failure.code.startsWith('geometry-') && failure.code !== 'geometry-export-failed')
     return 'geometry_failed';

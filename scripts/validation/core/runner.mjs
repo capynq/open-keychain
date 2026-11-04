@@ -450,7 +450,7 @@ export const runValidationGates = async (
           running.delete(gate.id);
           if (failFast && !result.ok && result.status !== 'skipped') stopAll();
         });
-        running.set(gate.id, undefined); // process handle is assigned once cache lookup completes
+        running.set(gate.id, undefined);
         gate.promise = promise;
         madeProgress = true;
       }
@@ -478,7 +478,6 @@ export const runValidationGates = async (
     process.removeListener('SIGTERM', handleSignal);
   }
   await pruneValidationCache({ root: ROOT });
-  // Runner tests write throwaway runs here; they must not evict real run logs.
   if (!process.env.VITEST) await pruneValidationArtifacts({ root: ROOT });
   const values = [...results.values()];
   const failures = values.filter((result) => !result.ok);

@@ -9,5 +9,21 @@ export type ViewerRenderTimings = {
 
 export type PreviewRenderState =
   | { status: 'initializing' | 'recovering'; sessionId: number }
-  | { status: 'ready'; sessionId: number; generationId: number; timings?: ViewerRenderTimings }
+  | {
+      status: 'ready';
+      sessionId: number;
+      generationId: number;
+      timings?: ViewerRenderTimings;
+    }
   | { status: 'failed'; sessionId: number; failure: RecoveryFailure };
+
+export const readyRenderState = (
+  sessionId: number,
+  result: { generationId: number },
+  timings?: ViewerRenderTimings,
+): Extract<PreviewRenderState, { status: 'ready' }> => ({
+  status: 'ready',
+  sessionId,
+  generationId: result.generationId,
+  timings,
+});

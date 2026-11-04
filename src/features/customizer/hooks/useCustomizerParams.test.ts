@@ -256,6 +256,26 @@ describe('useCustomizerParams candidate scheduling', () => {
     expect(getApi().candidateFeedback?.status).toBe('rejected');
   });
 
+  it('routes an accept callback that throws to the rejection path instead of leaving the candidate checking', async () => {
+    const { rejected, callbacks } = createCallbacks();
+    const throwingCallbacks: CandidateCallbacks = {
+      ...callbacks,
+      accept: () => {
+        throw new RecoveryError({ code: 'geometry-invalid-result' });
+      },
+    };
+    const getApi = renderHook(throwingCallbacks);
+    const worker = MockWorker.instances[0];
+
+    act(() => getApi().update('text', 'GOOD'));
+    await act(async () => {
+      worker.emit({ type: 'validation', requestId: 1, result: validResult() });
+    });
+    expect(getApi().candidateFeedback?.status).not.toBe('checking');
+    expect(getApi().candidateFeedback?.status).toBeDefined();
+    expect(rejected).toEqual([DEFAULT_PARAMS.text]);
+  });
+
   it('asks before applying a geometry measured parameter correction', async () => {
     const getApi = renderHook({
       validate: async () => ({

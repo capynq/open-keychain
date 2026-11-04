@@ -45,7 +45,7 @@ type InitConfig = {
   session_recording?: {
     sampleRate?: number;
     maskAllInputs?: boolean;
-    captureCanvas?: { recordCanvas?: boolean };
+    captureCanvas?: { recordCanvas?: boolean; canvasFps?: number; canvasQuality?: string };
     canvasCapture?: { resolutionScale?: number };
   };
   save_campaign_params?: boolean;
@@ -244,6 +244,56 @@ describe('AnalyticsProvider consent and startup', () => {
     expect(automaticException.properties.app_release).toBe(testBundleRelease);
   });
 
+  it('throttles canvas replay and registers the fps property on coarse pointers', async () => {
+    const matchMedia = vi.fn(() => ({ matches: true }));
+    vi.stubGlobal('matchMedia', matchMedia);
+    await renderProvider();
+    await click('accept');
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(matchMedia).toHaveBeenCalledWith('(pointer: coarse)');
+    expect(initConfig?.session_recording).toEqual({
+      sampleRate: 1,
+      maskAllInputs: false,
+      captureCanvas: { recordCanvas: true, canvasFps: 1, canvasQuality: '0.2' },
+      canvasCapture: { resolutionScale: 0.6 },
+    });
+  });
+
+  it('keeps the desktop canvas config when the pointer query does not match', async () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => ({ matches: false })),
+    );
+    await renderProvider();
+    await click('accept');
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(posthogMock.client.init).toHaveBeenCalledTimes(1);
+    expect(initConfig?.session_recording?.captureCanvas).toEqual({ recordCanvas: true });
+  });
+
+  it('still initializes with the desktop canvas config when the pointer query throws', async () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => {
+        throw new Error('unsupported');
+      }),
+    );
+    await renderProvider();
+    await click('accept');
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(posthogMock.client.init).toHaveBeenCalledTimes(1);
+    expect(initConfig?.session_recording?.captureCanvas).toEqual({ recordCanvas: true });
+  });
+
   it('does not initialize or send events if consent is declined during SDK loading', async () => {
     await renderProvider();
     await act(async () => {
@@ -348,7 +398,6 @@ describe('AnalyticsProvider consent and startup', () => {
     expect(posthogMock.client.init).not.toHaveBeenCalled();
     expect(posthogMock.client.capture).not.toHaveBeenCalled();
 
-    // The router can leave the landing URL before the visitor accepts analytics.
     window.history.replaceState(null, '', '/create');
     await click('accept');
     await click('track');
