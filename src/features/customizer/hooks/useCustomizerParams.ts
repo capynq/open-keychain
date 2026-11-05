@@ -230,13 +230,20 @@ export const useCustomizerParams = (
 
   const undoStack = useRef<UndoEntry[]>([]);
   const redoStack = useRef<RedoEntry[]>([]);
-  /* An undo or redo names the exact entry it consumes; edits made while it is checked stay put. */
+  /*
+   * History follows the order of actions, not of validation results: a checked edit keeps the
+   * stack position it had when it was made, an undo or redo names the exact entry it consumes,
+   * and a retry of a failed check keeps the operation it belongs to.
+   */
   const pendingHistory = useRef<
     | {
         requestId: number;
         mode: Exclude<HistoryMode, 'none'>;
         previous: KeychainParams;
         entry?: UndoEntry | RedoEntry;
+        insertAt: number;
+        staleRedo: readonly RedoEntry[];
+        candidateKey: string;
       }
     | undefined
   >(undefined);
@@ -259,6 +266,15 @@ export const useCustomizerParams = (
     undoStack.current = [
       ...undoStack.current,
       { params: entry, kind, ...(appearance ? { appearance, at } : {}) },
+    ].slice(-HISTORY_LIMIT);
+  };
+  const insertUndo = (entry: KeychainParams, index: number): void => {
+    const at = Math.min(index, undoStack.current.length);
+
+    undoStack.current = [
+      ...undoStack.current.slice(0, at),
+      { params: entry, kind: 'change' as const },
+      ...undoStack.current.slice(at),
     ].slice(-HISTORY_LIMIT);
   };
   const clearHistory = (): void => {
@@ -447,10 +463,11 @@ export const useCustomizerParams = (
             -HISTORY_LIMIT,
           );
         } else {
-          if (history.mode === 'redo')
-            redoStack.current = redoStack.current.filter((item) => item !== history.entry);
-          else redoStack.current = [];
-          pushUndo(history.previous, 'change');
+          /* An accepted edit drops the redo steps it replaced, not ones made while it was checked. */
+          redoStack.current = redoStack.current.filter((item) =>
+            history.mode === 'redo' ? item !== history.entry : !history.staleRedo.includes(item),
+          );
+          insertUndo(history.previous, history.insertAt);
         }
       }
       syncHistory();
@@ -712,15 +729,24 @@ export const useCustomizerParams = (
     cancelRecovery();
     rejectedAttempt.current = undefined;
 
-    pendingHistory.current =
-      historyMode === 'none'
-        ? undefined
-        : {
-            requestId,
-            mode: historyMode,
-            previous: acceptedParamsRef.current,
-            entry: historyEntry,
-          };
+    const candidateKey = JSON.stringify(normalized);
+    const retried =
+      userRetry && pendingHistory.current?.candidateKey === candidateKey
+        ? pendingHistory.current
+        : undefined;
+    const mode = retried?.mode ?? (historyMode === 'none' ? undefined : historyMode);
+
+    pendingHistory.current = mode
+      ? {
+          requestId,
+          mode,
+          previous: acceptedParamsRef.current,
+          entry: retried?.entry ?? historyEntry,
+          insertAt: retried?.insertAt ?? undoStack.current.length,
+          staleRedo: retried?.staleRedo ?? redoStack.current,
+          candidateKey,
+        }
+      : undefined;
     if (historyMode !== 'none' && normalized.templateId !== paramsRef.current.templateId)
       callbacksRef.current.templateChanging?.(paramsRef.current.templateId, normalized.templateId);
     paramsRef.current = normalized;

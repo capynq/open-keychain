@@ -354,6 +354,63 @@ describe('useCustomizerParams candidate scheduling', () => {
     expect(getApi().canUndo).toBe(false);
   });
 
+  it('keeps action order when a color edit lands while a parameter edit is checked', async () => {
+    const { callbacks } = createCallbacks();
+    let colors: { version: 1; base?: string } = { version: 1 };
+    const getApi = renderHook({
+      ...callbacks,
+      appearance: { get: () => colors, set: (next) => (colors = next) },
+    });
+    const worker = MockWorker.instances[0];
+    const editColor = (base: string) => {
+      getApi().recordAppearanceEdit(colors);
+      colors = { version: 1, base };
+    };
+
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    act(() => editColor('#111111'));
+    act(() => getApi().undo());
+    expect(colors.base).toBeUndefined();
+    expect(getApi().canRedo).toBe(true);
+    await act(async () => worker.emit({ type: 'validation', requestId: 1, result: validResult() }));
+    /* The older parameter edit did not clear the color redo made after it. */
+    expect(getApi().canRedo).toBe(true);
+    act(() => getApi().redo());
+    expect(colors.base).toBe('#111111');
+
+    act(() => getApi().undo());
+    expect(colors.base).toBeUndefined();
+    act(() => getApi().undo());
+    await act(async () => worker.emit({ type: 'validation', requestId: 2, result: validResult() }));
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(DEFAULT_PARAMS.baseThicknessMm);
+  });
+
+  it('keeps an undo an undo when its failed check is retried', async () => {
+    let calls = 0;
+    const validate = vi.fn(async () => {
+      calls += 1;
+      if (calls === 2)
+        throw new GeometryOperationError(
+          { code: 'geometry-request-timeout' },
+          { stage: 'transport', type: 'timeout' },
+        );
+      return { ...validResult(), generationId: calls };
+    });
+    const getApi = renderHook({ validate });
+
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    await act(async () => Promise.resolve());
+    act(() => getApi().undo());
+    await act(async () => Promise.resolve());
+    expect(getApi().candidateFeedback?.status).toBe('failed');
+
+    act(() => getApi().retryCandidate(getApi().candidateFeedback!.requestId));
+    await act(async () => Promise.resolve());
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(DEFAULT_PARAMS.baseThicknessMm);
+    expect(getApi().canUndo).toBe(false);
+    expect(getApi().canRedo).toBe(true);
+  });
+
   it('keeps an undo entry when its candidate is rejected', async () => {
     const { callbacks } = createCallbacks();
     const getApi = renderHook(callbacks);
