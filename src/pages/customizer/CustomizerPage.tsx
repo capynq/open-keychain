@@ -6,7 +6,7 @@ import { CustomizerWorkspace } from '@/app/components/CustomizerWorkspace/Custom
 import { suggestedSizeEnvelope } from '@/app/components/QuickSetupDialog/model/useQuickSetupDraft';
 import { QuickSetupDialog } from '@/app/components/QuickSetupDialog/QuickSetupDialog';
 import { useCustomizerPageState } from '@/app/hooks/useCustomizerPageState';
-import { useStickyHeaderOffset } from '@/app/hooks/useStickyHeaderOffset';
+import { useStickyPreview } from '@/app/hooks/useStickyPreview';
 import { useUndoShortcuts } from '@/app/hooks/useUndoShortcuts';
 import { selectAcceptedMetrics } from '@/domain/keychain/model/accepted-metrics';
 import { TEMPLATE_CATALOG } from '@/domain/keychain/templates/template-builder';
@@ -56,7 +56,7 @@ export const CustomizerPage = ({
     state.customizer.acceptedParams.sizeEnvelope,
   );
   useUndoShortcuts(state.undo, state.redo);
-  useStickyHeaderOffset();
+  useStickyPreview();
   useWebMcp(state.customizer, {
     ...state.modelInfo,
     printable: Boolean(state.geometry.result?.printable),

@@ -1876,10 +1876,11 @@ input[type='range'] {
     max-height: none;
   }
 
-  /* Typing with the on-screen keyboard needs the room; the preview scrolls normally then. */
-  .customizer-app-shell
-    .workspace:has(.controls-panel input:is([type='text'], [type='search'], :not([type])):focus)
-    > .preview-panel {
+  /*
+   * Typing with the on-screen keyboard needs the room, so the preview scrolls normally then. It is
+   * pinned again only on the next scroll, never during the tap that ends typing (useStickyPreview).
+   */
+  .customizer-app-shell[data-preview-unpinned='true'] .workspace > .preview-panel {
     position: relative;
   }
 }
@@ -1929,8 +1930,23 @@ input[type='range'] {
 }
 
 @media (max-width: 400px) {
-  .customizer-topbar .brand-mark {
-    display: none;
+  .customizer-topbar {
+    padding-inline: 10px;
+    gap: 4px;
+  }
+
+  .customizer-topbar .brand-mark > img {
+    width: 28px;
+    height: 28px;
+  }
+
+  .customizer-topbar .topbar-export-actions,
+  .customizer-topbar .topbar-actions {
+    gap: 3px;
+  }
+
+  .customizer-topbar .topbar-export-actions .export-header-button {
+    padding-inline: 8px 10px;
   }
 
   .customizer-topbar .icon-button,
@@ -1945,6 +1961,10 @@ input[type='range'] {
 
 /* The narrowest phones keep one row: smaller targets, Redo only once there is something to redo. */
 @media (max-width: 360px) {
+  .customizer-topbar .brand-mark {
+    display: none;
+  }
+
   .customizer-topbar {
     padding-inline: 8px;
     column-gap: 4px;
