@@ -1039,5 +1039,21 @@
   "photoResolution": "Разрешение фото",
   "photoPixels": "{resolution} пкс",
   "previewCameraControls": "Управление камерой предпросмотра",
-  "fontPagesNavigation": "Страницы шрифтов"
+  "fontPagesNavigation": "Страницы шрифтов",
+  "redo": "Повторить",
+  "warningTextOverWidthAtMinimum": "Даже при минимальной высоте текста 12 мм ширина имени составляет {width} мм. Рекомендация 120 мм не применялась; экспорт доступен.",
+  "warningTextOverWidthGeneric": "Дизайн шире рекомендованных 120 мм. Экспорт доступен.",
+  "previewThickness": "толщина {thickness}",
+  "previewParts": "деталей: {count}",
+  "previewFits": "Помещается в {size}",
+  "previewExceeds": "Больше {size}",
+  "previewSizeLabel": "Размер модели",
+  "cameraViews": "Виды",
+  "customView": "Свой ракурс",
+  "navColors": "Цвета",
+  "navAdjust": "Настройки",
+  "controlsSections": "Разделы редактора",
+  "exactValue": "Точное значение",
+  "wizardSteps": "Шаги настройки",
+  "exportRecommended": "Рекомендуется"
 }

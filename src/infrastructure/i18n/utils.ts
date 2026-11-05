@@ -39,10 +39,21 @@ const recoveryVariables = (failure: RecoveryFailure): Record<string, string | nu
   maximumMm: failure.context?.maximumMm ?? '',
   requestedMm: failure.context?.requestedMm ?? '',
 });
+/* Engine messages do not always carry both measurements; pick wording that only names known values. */
+const messageKeyFor = (
+  code: string,
+  messageKey: string,
+  variables: Record<string, string | number>,
+): string => {
+  if (code !== 'text-over-width' || (variables.height !== '' && variables.width !== ''))
+    return messageKey;
+  return variables.width !== '' ? 'warningTextOverWidthAtMinimum' : 'warningTextOverWidthGeneric';
+};
 export const recoveryMessage = (locale: Locale, failure: RecoveryFailure): string => {
   const definition = recoveryDefinition(failure.code);
   const translate: TFunction = i18n.getFixedT(locale, 'translation');
-  return translate(definition.messageKey, recoveryVariables(failure));
+  const variables = recoveryVariables(failure);
+  return translate(messageKeyFor(failure.code, definition.messageKey, variables), variables);
 };
 export const recoverySteps = (locale: Locale, failure: RecoveryFailure): string => {
   const stepsKey = recoveryDefinition(failure.code).stepsKey;

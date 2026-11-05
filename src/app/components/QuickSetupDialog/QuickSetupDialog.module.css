@@ -59,6 +59,28 @@
   align-items: center;
   gap: 12px;
 }
+.progressStep {
+  display: grid;
+  width: 20px;
+  height: 24px;
+  place-items: center;
+  margin: 0 -5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.progressStep:disabled {
+  cursor: default;
+}
+.progressStep:focus-visible {
+  outline: var(--workshop-focus-ring);
+  outline-offset: 1px;
+  border-radius: 6px;
+}
+.progressStep:hover:not(:disabled) i {
+  border-color: var(--workshop-accent-control);
+}
 .progressDots i {
   width: 9px;
   height: 9px;

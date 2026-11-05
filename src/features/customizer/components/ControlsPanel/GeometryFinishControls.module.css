@@ -43,3 +43,18 @@
   padding-inline-start: 0;
   border-inline-start: 0;
 }
+
+/* Simple mode matches the segmented setting rows: no nested card, icon and label on one line. */
+.simple .group {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.simple :global(.geometry-finish-profile) {
+  grid-auto-flow: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}

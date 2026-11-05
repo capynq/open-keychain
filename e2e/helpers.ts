@@ -148,3 +148,17 @@ export const waitForProportionalPreview = async (page: Page): Promise<void> => {
     )
     .toBe(true);
 };
+
+export type CameraViewId = 'home' | 'front' | 'back' | 'left' | 'right' | 'top' | 'bottom';
+
+/** Home is a toolbar button; other presets live in the view menu. Waits until the camera settles. */
+export const selectCameraView = async (page: Page, view: CameraViewId): Promise<void> => {
+  if (view === 'home') await page.locator('.viewer-toolbar-controls > button').first().click();
+  else await page.locator('.viewer-view-select select').selectOption(view);
+  await expect(page.locator('.viewer')).toHaveAttribute('data-view', view);
+  await waitForCameraIdle(page);
+};
+
+export const waitForCameraIdle = async (page: Page): Promise<void> => {
+  await expect(page.locator('.viewer-surface canvas')).toHaveAttribute('data-motion', 'idle');
+};

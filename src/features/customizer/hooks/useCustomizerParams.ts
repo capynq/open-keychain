@@ -109,7 +109,13 @@ export type CandidateCallbacks = {
     subtitleFont: FontDefinition,
   ) => void;
   reject?: (params: KeychainParams, font: FontDefinition, subtitleFont: FontDefinition) => void;
+  /** A user edit is about to switch templates; colors are kept, not reset to the template's. */
+  templateChanging?: (from: TemplateId, to: TemplateId) => void;
 };
+
+export type UndoKind = 'randomize' | 'recovery' | 'change';
+type HistoryMode = 'record' | 'undo' | 'redo' | 'none';
+const HISTORY_LIMIT = 50;
 
 export const useCustomizerParams = (
   initialParams?: KeychainParams,
@@ -125,7 +131,7 @@ export const useCustomizerParams = (
   prepareRecovery: (requestId: number) => Promise<void>;
   cancelRecovery: () => void;
   applyRecovery: (requestId: number, optionId: string) => boolean;
-  undoKind: 'randomize' | 'recovery' | undefined;
+  undoKind: UndoKind | undefined;
   selectedFont: FontDefinition;
   selectedSubtitleFont: FontDefinition;
   fontForId: (id: string) => FontDefinition;
@@ -174,6 +180,8 @@ export const useCustomizerParams = (
   ) => Promise<RandomizeTransaction>;
   undo: () => void;
   canUndo: boolean;
+  redo: () => void;
+  canRedo: boolean;
 } => {
   const [params, setParams] = useState<KeychainParams>(() => ({
     ...DEFAULT_PARAMS,
@@ -202,9 +210,29 @@ export const useCustomizerParams = (
     [candidateScheduler],
   );
 
-  const previousParams = useRef<KeychainParams | undefined>(undefined);
+  const undoStack = useRef<{ params: KeychainParams; kind: UndoKind }[]>([]);
+  const redoStack = useRef<KeychainParams[]>([]);
+  const pendingHistory = useRef<
+    { requestId: number; mode: Exclude<HistoryMode, 'none'>; previous: KeychainParams } | undefined
+  >(undefined);
+  const nextHistoryMode = useRef<HistoryMode>('record');
   const [canUndo, setCanUndo] = useState(false);
-  const [undoKind, setUndoKind] = useState<'randomize' | 'recovery'>();
+  const [canRedo, setCanRedo] = useState(false);
+  const [undoKind, setUndoKind] = useState<UndoKind>();
+  const syncHistory = (): void => {
+    setCanUndo(undoStack.current.length > 0);
+    setCanRedo(redoStack.current.length > 0);
+    setUndoKind(undoStack.current.at(-1)?.kind);
+  };
+  const pushUndo = (entry: KeychainParams, kind: UndoKind): void => {
+    undoStack.current = [...undoStack.current, { params: entry, kind }].slice(-HISTORY_LIMIT);
+  };
+  const clearHistory = (): void => {
+    undoStack.current = [];
+    redoStack.current = [];
+    pendingHistory.current = undefined;
+    syncHistory();
+  };
   const [recoveryOptions, setRecoveryOptions] = useState<RecoveryOption[]>([]);
   const [recoveryChecking, setRecoveryChecking] = useState(false);
   const recoveryEpoch = useRef(0);
@@ -241,8 +269,8 @@ export const useCustomizerParams = (
     setRecoveryChecking(false);
   };
   const setParamsDirect: Dispatch<SetStateAction<KeychainParams>> = (next) => {
-    previousParams.current = undefined;
-    setCanUndo(false);
+    clearHistory();
+    nextHistoryMode.current = 'none';
     const candidate = typeof next === 'function' ? next(paramsRef.current) : next;
 
     proposeCandidate(candidate, 'template', 'templateId');
@@ -375,6 +403,21 @@ export const useCustomizerParams = (
     setParams(normalized);
     setAcceptedParams(normalized);
     setCandidateFeedback(undefined);
+    const history = pendingHistory.current;
+    if (history?.requestId === requestId) {
+      pendingHistory.current = undefined;
+      if (JSON.stringify(history.previous) !== JSON.stringify(normalized)) {
+        if (history.mode === 'undo') {
+          undoStack.current = undoStack.current.slice(0, -1);
+          redoStack.current = [...redoStack.current, history.previous].slice(-HISTORY_LIMIT);
+        } else {
+          if (history.mode === 'redo') redoStack.current = redoStack.current.slice(0, -1);
+          else redoStack.current = [];
+          pushUndo(history.previous, 'change');
+        }
+      }
+      syncHistory();
+    }
     if (attemptId) {
       callbacksRef.current.attemptFinished?.(
         attemptId,
@@ -550,10 +593,11 @@ export const useCustomizerParams = (
     candidateScheduler.cancel();
     cancelRecovery();
     callbacksRef.current.pending?.(prepared.params, prepared.font, prepared.subtitleFont);
+    pendingHistory.current = undefined;
     commitAccepted(prepared.params, prepared.result, nextId);
-    previousParams.current = previous;
-    setUndoKind('recovery');
-    setCanUndo(true);
+    pushUndo(previous, 'recovery');
+    redoStack.current = [];
+    syncHistory();
     rejectedAttempt.current = undefined;
     return true;
   };
@@ -567,6 +611,9 @@ export const useCustomizerParams = (
     retryOfAttemptId?: string,
   ): void => {
     const inputAt = performance.now();
+    const historyMode = nextHistoryMode.current;
+
+    nextHistoryMode.current = 'record';
     let normalized: KeychainParams;
     try {
       normalized = normalizeParams(reconcileCandidateParams(acceptedParamsRef.current, candidate));
@@ -626,8 +673,12 @@ export const useCustomizerParams = (
     cancelRecovery();
     rejectedAttempt.current = undefined;
 
-    previousParams.current = undefined;
-    setCanUndo(false);
+    pendingHistory.current =
+      historyMode === 'none'
+        ? undefined
+        : { requestId, mode: historyMode, previous: acceptedParamsRef.current };
+    if (historyMode !== 'none' && normalized.templateId !== paramsRef.current.templateId)
+      callbacksRef.current.templateChanging?.(paramsRef.current.templateId, normalized.templateId);
     paramsRef.current = normalized;
     setParams(normalized);
     const font =
@@ -1163,8 +1214,6 @@ export const useCustomizerParams = (
         status: 'checking',
         group: 'refine',
       });
-      previousParams.current = undefined;
-      setCanUndo(false);
       const trackedValidation: RandomizeValidation | undefined = validate
         ? async (candidate) => {
             const attemptId = crypto.randomUUID();
@@ -1223,10 +1272,14 @@ export const useCustomizerParams = (
         };
       }
       if (transaction.status === 'accepted') {
-        previousParams.current = original;
-        setUndoKind('randomize');
-        setCanUndo(true);
         const normalized = normalizeParams(transaction.params);
+
+        pendingHistory.current = undefined;
+        pushUndo(original, 'randomize');
+        redoStack.current = [];
+        syncHistory();
+        if (normalized.templateId !== original.templateId)
+          callbacksRef.current.templateChanging?.(original.templateId, normalized.templateId);
         const font =
           allFonts.find((item) => item.id === normalized.fontId) ??
           fontDefinition(normalized.fontId);
@@ -1254,12 +1307,31 @@ export const useCustomizerParams = (
       return transaction;
     },
     undo: () => {
-      const previous = previousParams.current;
-      if (!previous) return;
-      previousParams.current = undefined;
-      setCanUndo(false);
-      proposeCandidate(previous, 'refine');
+      const accepted = JSON.stringify(acceptedParamsRef.current);
+      while (
+        undoStack.current.length &&
+        JSON.stringify(undoStack.current.at(-1)?.params) === accepted
+      )
+        undoStack.current = undoStack.current.slice(0, -1);
+      const entry = undoStack.current.at(-1);
+
+      syncHistory();
+      if (!entry) return;
+      nextHistoryMode.current = 'undo';
+      proposeCandidate(entry.params, 'refine');
     },
     canUndo,
+    redo: () => {
+      const entry = redoStack.current.at(-1);
+      if (!entry) return;
+      if (JSON.stringify(entry) === JSON.stringify(acceptedParamsRef.current)) {
+        redoStack.current = redoStack.current.slice(0, -1);
+        syncHistory();
+        return;
+      }
+      nextHistoryMode.current = 'redo';
+      proposeCandidate(entry, 'refine');
+    },
+    canRedo,
   };
 };

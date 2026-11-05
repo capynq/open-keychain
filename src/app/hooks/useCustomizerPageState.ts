@@ -16,6 +16,7 @@ import type { Locale } from '../../infrastructure/i18n/config';
 
 import {
   DEFAULT_PARAMS,
+  keepAppearanceAcrossTemplates,
   normalizeParams,
   type KeychainParams,
   type PrintAppearanceOverrides,
@@ -139,6 +140,9 @@ export const useCustomizerPageState = (
         recovery_trigger: attempt?.recoveryTrigger,
         recovery_outcome: attempt?.recoveryOutcome,
       });
+    },
+    templateChanging: (from, to) => {
+      setAppearanceOverrides((current) => keepAppearanceAcrossTemplates(current, from, to));
     },
     pending: (params, font, subtitleFont) => {
       geometryRef.current?.clientRef.current?.cancelCandidate();
@@ -336,14 +340,43 @@ export const useCustomizerPageState = (
     allowDisconnected: disconnectedExportAcknowledged,
     designId,
   });
+  /* Export stays clickable while the latest edit is checked; the dialog opens once it passes. */
+  const exportWaiting =
+    !randomizing &&
+    !canExport &&
+    (customizer.candidateFeedback?.status === 'checking' ||
+      geometry.busy ||
+      geometry.current === false ||
+      (geometry.result !== undefined && geometryResultParamsKey !== acceptedGeometryParamsKey));
+  const [exportQueued, setExportQueued] = useState(false);
   const openExport = (): void => {
-    if (!canExport || exportOpen) return;
+    if (exportOpen) return;
+    if (!canExport) {
+      if (exportWaiting) setExportQueued(true);
+      return;
+    }
+    setExportQueued(false);
     track('export_dialog_opened', {
       template: customizer.acceptedParams.templateId,
       design_id: designId,
     });
     setExportOpen(true);
   };
+  const openExportRef = useRef(openExport);
+
+  useEffect(() => {
+    openExportRef.current = openExport;
+  });
+  useEffect(() => {
+    if (!exportQueued) return;
+    if (canExport) {
+      openExportRef.current();
+      return;
+    }
+    if (exportWaiting) return;
+    /* eslint-disable-next-line react-hooks/set-state-in-effect -- a queued export ends when its check fails */
+    setExportQueued(false);
+  }, [canExport, exportQueued, exportWaiting]);
   const lastRouteInputKey = useRef(routeInputKey);
 
   useEffect(() => {
@@ -414,6 +447,10 @@ export const useCustomizerPageState = (
     if (randomizing) return;
     customizer.undo();
   };
+  const redo = (): void => {
+    if (randomizing) return;
+    customizer.redo();
+  };
 
   return {
     customizer,
@@ -429,6 +466,8 @@ export const useCustomizerPageState = (
     disconnectedExportAcknowledged,
     setDisconnectedExportAcknowledged,
     canExport,
+    exportWaiting,
+    exportQueued,
     openExport,
     appearanceOverrides,
     setAppearanceOverrides,
@@ -437,6 +476,7 @@ export const useCustomizerPageState = (
     randomizeFailure,
     randomize,
     undo,
+    redo,
     status: previewStatus(geometry, locale),
     modelInfo: {
       templateId: customizer.acceptedParams.templateId,

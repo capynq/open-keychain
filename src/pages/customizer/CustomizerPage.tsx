@@ -3,8 +3,11 @@ import { useLocation, useNavigate } from 'react-router';
 import { CustomizerNavigationHeader } from '@/app/components/CustomizerNavigationHeader/CustomizerNavigationHeader';
 import { CustomizerNotices } from '@/app/components/CustomizerNotices/CustomizerNotices';
 import { CustomizerWorkspace } from '@/app/components/CustomizerWorkspace/CustomizerWorkspace';
+import { suggestedSizeEnvelope } from '@/app/components/QuickSetupDialog/model/useQuickSetupDraft';
 import { QuickSetupDialog } from '@/app/components/QuickSetupDialog/QuickSetupDialog';
 import { useCustomizerPageState } from '@/app/hooks/useCustomizerPageState';
+import { useStickyHeaderOffset } from '@/app/hooks/useStickyHeaderOffset';
+import { useUndoShortcuts } from '@/app/hooks/useUndoShortcuts';
 import { selectAcceptedMetrics } from '@/domain/keychain/model/accepted-metrics';
 import { TEMPLATE_CATALOG } from '@/domain/keychain/templates/template-builder';
 import { applyPrintAppearanceOverrides } from '@/entities/keychain/model/types';
@@ -52,6 +55,8 @@ export const CustomizerPage = ({
     state.geometry.result,
     state.customizer.acceptedParams.sizeEnvelope,
   );
+  useUndoShortcuts(state.undo, state.redo);
+  useStickyHeaderOffset();
   useWebMcp(state.customizer, {
     ...state.modelInfo,
     printable: Boolean(state.geometry.result?.printable),
@@ -81,8 +86,11 @@ export const CustomizerPage = ({
         onUndo={state.undo}
         canUndo={state.customizer.canUndo}
         undoKind={state.customizer.undoKind}
+        onRedo={state.redo}
+        canRedo={state.customizer.canRedo}
         randomizing={state.randomizing}
-        exportDisabled={!state.canExport}
+        exportDisabled={!state.canExport && !state.exportWaiting}
+        exportQueued={state.exportQueued}
         hosted={state.hosted}
         currentParams={state.customizer.params}
       />
@@ -143,7 +151,10 @@ export const CustomizerPage = ({
           state.appearanceOverrides,
           state.geometry.result?.appearance,
         )}
-        initialSize={state.customizer.acceptedParams.sizeEnvelope}
+        initialSize={
+          state.customizer.acceptedParams.sizeEnvelope ??
+          (quickSetup.setupReopened ? suggestedSizeEnvelope(acceptedMetrics) : undefined)
+        }
         initialFavoriteCategories={quickSetup.favoriteFontCategories}
         acceptedMetrics={acceptedMetrics}
         acceptedText={state.customizer.acceptedParams.text}

@@ -1,4 +1,4 @@
-import { Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
+import { ChevronDown, Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -78,11 +78,31 @@ type ViewerState = {
   panHalfHeight: number;
   displayOffsetZ: number;
   installedGenerationId?: number;
+  /** Mirrors prefers-reduced-motion; model swaps and view changes then apply instantly. */
+  reduceMotion?: boolean;
+  swap?: ModelSwap;
+  viewTween?: ViewTween;
   fail: (code: string, message?: string) => void;
   invalidate?: () => void;
   applyQuality?: (tier: PreviewQualityTier) => void;
 };
 const DEFAULT_INSPECTION_ZOOM = 1;
+const SWAP_MS = 220;
+const VIEW_TWEEN_MS = 320;
+type ModelSwap = {
+  startedAt: number;
+  zoomFrom: number;
+  outgoing?: THREE.Group;
+  incoming: THREE.MeshStandardMaterial[];
+};
+type ViewTween = {
+  startedAt: number;
+  from: THREE.Vector3;
+  fromUp: THREE.Vector3;
+  to: ViewId;
+  result: GeometryResult;
+  onDone: () => void;
+};
 const SURFACE_SIZE = 1800;
 const BOARD_THICKNESS = 5.2;
 const BOARD_DISPLAY_OFFSET = BOARD_THICKNESS + 0.2;
@@ -189,6 +209,81 @@ const fitViewer = (
   state.controls.update();
   onInspectionChange?.(state.inspectionZoom, state.inspectionPan);
 };
+const meshMaterials = (group: THREE.Object3D): THREE.MeshStandardMaterial[] =>
+  group.children.flatMap((child) =>
+    child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial
+      ? [child.material]
+      : [],
+  );
+const setOpacity = (materials: THREE.MeshStandardMaterial[], opacity: number): void => {
+  for (const material of materials) {
+    const transparent = opacity < 1;
+    if (material.transparent !== transparent) {
+      material.transparent = transparent;
+      material.needsUpdate = true;
+    }
+    material.opacity = opacity;
+  }
+};
+const finishSwap = (state: ViewerState): void => {
+  const swap = state.swap;
+  if (!swap) return;
+  state.swap = undefined;
+  if (swap.outgoing) {
+    disposeChildren(swap.outgoing);
+    state.scene.remove(swap.outgoing);
+  }
+  setOpacity(swap.incoming, 1);
+  state.camera.zoom = state.inspectionZoom;
+  state.camera.updateProjectionMatrix();
+};
+const easeOutCubic = (t: number): number => 1 - (1 - t) ** 3;
+const easeInOutCubic = (t: number): number => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2);
+/** Advance model crossfade and camera preset tweens; returns whether another frame is needed. */
+const stepMotion = (state: ViewerState, now: number): boolean => {
+  let active = false;
+  const tween = state.viewTween;
+  if (tween) {
+    const progress = Math.min(1, (now - tween.startedAt) / VIEW_TWEEN_MS);
+    if (progress >= 1) {
+      state.viewTween = undefined;
+      tween.onDone();
+    } else {
+      const eased = easeInOutCubic(progress);
+      const destination = viewDefinition(tween.to);
+      const rotation = new THREE.Quaternion().setFromUnitVectors(
+        tween.from,
+        destination.direction.clone().normalize(),
+      );
+      const direction = tween.from
+        .clone()
+        .applyQuaternion(new THREE.Quaternion().slerp(rotation, eased));
+      const up = tween.fromUp.clone().lerp(destination.up, eased);
+      if (up.lengthSq() < 1e-6 || direction.clone().cross(up).lengthSq() < 1e-4)
+        up.copy(destination.up);
+      fitViewer(state, tween.result, 'custom', false, undefined, {
+        direction,
+        up: up.normalize(),
+      });
+      active = true;
+    }
+  }
+  const swap = state.swap;
+  if (swap) {
+    const progress = Math.min(1, (now - swap.startedAt) / SWAP_MS);
+    if (progress >= 1) {
+      finishSwap(state);
+    } else {
+      setOpacity(swap.incoming, Math.min(1, progress * 1.5));
+      if (swap.outgoing) setOpacity(meshMaterials(swap.outgoing), 1 - progress);
+      state.camera.zoom =
+        state.inspectionZoom * (swap.zoomFrom + (1 - swap.zoomFrom) * easeOutCubic(progress));
+      state.camera.updateProjectionMatrix();
+      active = true;
+    }
+  }
+  return active;
+};
 const syncPlatform = (state: ViewerState, result: GeometryResult | undefined): void => {
   if (!result || !state.platform.visible) return;
   const width = Math.max(40, result.dimensions.widthMm + 36);
@@ -264,10 +359,32 @@ export const Viewer = ({
       activeViewRef.current = id;
       setActiveView(id);
       state.inspectionPan = { x: 0, y: 0 };
-      fitViewer(state, result, id, id === 'home', (zoom, pan) => {
-        setInspectionZoom(zoom);
-        setInspectionPan(pan);
-      });
+      const finish = (): void => {
+        fitViewer(state, result, id, id === 'home', (zoom, pan) => {
+          setInspectionZoom(zoom);
+          setInspectionPan(pan);
+        });
+      };
+      const from = state.camera.position.clone().sub(state.controls.target).normalize();
+      const destination = viewDefinition(id).direction.clone().normalize();
+
+      state.viewTween = undefined;
+      if (
+        state.reduceMotion ||
+        !from.toArray().every(Number.isFinite) ||
+        from.angleTo(destination) < 0.02
+      ) {
+        finish();
+      } else {
+        state.viewTween = {
+          startedAt: performance.now(),
+          from,
+          fromUp: state.camera.up.clone(),
+          to: id,
+          result,
+          onDone: finish,
+        };
+      }
       state.invalidate?.();
     },
     [result],
@@ -458,6 +575,7 @@ export const Viewer = ({
     renderer.domElement.addEventListener('touchmove', handleTouchMove, { passive: true });
     renderer.domElement.addEventListener('touchend', handleTouchEnd, { passive: true });
     controls.addEventListener('start', () => {
+      if (viewerState.viewTween) viewerState.viewTween = undefined;
       activeViewRef.current = 'custom';
       setActiveView('custom');
     });
@@ -546,6 +664,7 @@ export const Viewer = ({
       frame = 0;
       if (disposed || failed) return;
       controls.update();
+      const animating = stepMotion(viewerState, performance.now());
       const current = resultRef.current;
       const pendingTimings =
         current && pendingRenderTimingsRef.current?.generationId === current.generationId
@@ -579,6 +698,8 @@ export const Viewer = ({
         fail('preview-render-failed', cause instanceof Error ? cause.message : undefined);
         return;
       }
+      if (animating) invalidate();
+      renderer.domElement.dataset.motion = animating ? 'active' : 'idle';
       renderer.domElement.dataset.renderedWidth = String(renderer.domElement.width);
       renderer.domElement.dataset.renderedHeight = String(renderer.domElement.height);
       const drawSubmitMs =
@@ -667,6 +788,7 @@ export const Viewer = ({
     };
 
     const capturePreview = async (longEdge: number, format: PhotoFormat = 'png'): Promise<Blob> => {
+      finishSwap(viewerState);
       if (
         disposed ||
         failed ||
@@ -768,6 +890,8 @@ export const Viewer = ({
     controls.addEventListener('change', handleControlsChange);
     const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     const applyReducedMotion = (reduce: boolean): void => {
+      viewerState.reduceMotion = reduce;
+      if (reduce) finishSwap(viewerState);
       suppressControlsChange = true;
       try {
         setOrbitControlsDamping(controls, !reduce);
@@ -874,7 +998,24 @@ export const Viewer = ({
     const meshSetupStartedAt = performance.now();
 
     try {
-      disposeChildren(state.group);
+      finishSwap(state);
+      state.viewTween = undefined;
+      const previousDistance =
+        state.installedGenerationId === undefined
+          ? undefined
+          : state.camera.position.distanceTo(state.controls.target);
+      /* Keep the previous model briefly so the new one crossfades in instead of popping. */
+      const outgoing =
+        state.reduceMotion || previousDistance === undefined || !state.group.children.length
+          ? undefined
+          : new THREE.Group();
+      if (outgoing) {
+        outgoing.position.copy(state.group.position);
+        while (state.group.children.length) outgoing.add(state.group.children[0]);
+        state.scene.add(outgoing);
+      } else {
+        disposeChildren(state.group);
+      }
       state.installedGenerationId = undefined;
       state.group.add(
         makeMesh(
@@ -940,7 +1081,26 @@ export const Viewer = ({
       );
       recoveryPose.current = undefined;
       if (!validInspectionCamera(state.camera, state.controls.target)) {
+        if (outgoing) {
+          disposeChildren(outgoing);
+          state.scene.remove(outgoing);
+        }
         throw new RecoveryError({ code: 'preview-camera-invalid' });
+      }
+      if (outgoing && previousDistance !== undefined) {
+        const ratio = state.camera.position.distanceTo(state.controls.target) / previousDistance;
+        const zoomFrom = pose ? 1 : THREE.MathUtils.clamp(ratio, 0.6, 1.6);
+        const incoming = meshMaterials(state.group);
+
+        setOpacity(incoming, 0);
+        state.swap = {
+          startedAt: performance.now(),
+          zoomFrom: Math.abs(zoomFrom - 1) < 0.03 ? 1 : zoomFrom,
+          outgoing,
+          incoming,
+        };
+        state.camera.zoom = state.inspectionZoom * state.swap.zoomFrom;
+        state.camera.updateProjectionMatrix();
       }
       state.installedGenerationId = result.generationId;
       pendingRenderTimingsRef.current = {
@@ -1159,20 +1319,38 @@ export const Viewer = ({
       </div>
       <div className="viewer-toolbar" role="group" aria-label={t(locale, 'previewCameraControls')}>
         <div className="viewer-toolbar-controls">
-          {VIEW_DEFINITIONS.map((view) => (
-            <button
-              type="button"
-              key={view.id}
-              className={activeView === view.id ? 'active' : ''}
-              aria-label={t(locale, view.id === 'home' ? 'home' : view.id)}
-              aria-pressed={activeView === view.id}
-              title={t(locale, view.id === 'home' ? 'home' : view.id)}
+          <button
+            type="button"
+            className={activeView === 'home' ? 'active' : ''}
+            aria-label={t(locale, 'home')}
+            aria-pressed={activeView === 'home'}
+            title={t(locale, 'home')}
+            disabled={previewCapability === 'unavailable'}
+            onClick={() => setView('home')}
+          >
+            <CameraViewIcon icon="cube" />
+          </button>
+          <label className="viewer-view-select">
+            <span className="sr-only">{t(locale, 'cameraViews')}</span>
+            <select
+              value={activeView === 'home' || activeView === 'custom' ? '' : activeView}
               disabled={previewCapability === 'unavailable'}
-              onClick={() => setView(view.id)}
+              onChange={(event) => {
+                const id = event.target.value as ViewId;
+                if (id) setView(id);
+              }}
             >
-              <CameraViewIcon icon={view.icon} />
-            </button>
-          ))}
+              <option value="" disabled>
+                {t(locale, activeView === 'custom' ? 'customView' : 'cameraViews')}
+              </option>
+              {VIEW_DEFINITIONS.filter((view) => view.id !== 'home').map((view) => (
+                <option key={view.id} value={view.id}>
+                  {t(locale, view.id)}
+                </option>
+              ))}
+            </select>
+            <ChevronDown aria-hidden="true" focusable="false" size={14} strokeWidth={2.2} />
+          </label>
           <span className="toolbar-divider" aria-hidden="true" />
           <button
             type="button"

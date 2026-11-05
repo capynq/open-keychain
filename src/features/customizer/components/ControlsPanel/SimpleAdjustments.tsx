@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { ChevronRight } from 'lucide-react';
 import { useMemo } from 'react';
 
 import type { GeometryResult, KeychainParams } from '@/domain/keychain/model/types';
@@ -72,7 +73,18 @@ export const SimpleAdjustments = ({
             data-control-group={section.feedbackGroup}
             key={section.id}
           >
-            <h3>{t(locale, section.labelKey)}</h3>
+            <div className={`section-heading ${styles.groupHeading}`}>
+              <h3>{t(locale, section.labelKey)}</h3>
+              <button
+                type="button"
+                className={styles.fineTune}
+                onClick={(event) => onPro(section.id, activationMotion(event))}
+                aria-label={`${t(locale, 'simpleFineTune')}: ${t(locale, section.labelKey)}`}
+              >
+                {t(locale, 'simpleFineTune')}
+                <ChevronRight aria-hidden="true" size={14} strokeWidth={2.2} />
+              </button>
+            </div>
             {choices.map((group) => (
               <SimpleChoiceGroup
                 key={group.id}
@@ -95,14 +107,6 @@ export const SimpleAdjustments = ({
               />
             )}
             {feedback}
-            <button
-              type="button"
-              className={styles.more}
-              onClick={(event) => onPro(section.id, activationMotion(event))}
-              aria-label={`${t(locale, 'simpleFineTune')}: ${t(locale, section.labelKey)}`}
-            >
-              {t(locale, 'simpleFineTune')}
-            </button>
           </div>
         );
       })}

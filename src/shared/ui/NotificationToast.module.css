@@ -60,6 +60,17 @@
   min-height: 44px;
 }
 
+.root[data-leaving='true'] {
+  animation: leave 150ms var(--workshop-ease) both;
+}
+
+@keyframes leave {
+  to {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
 @keyframes appear {
   from {
     opacity: 0;
@@ -72,7 +83,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .root {
+  .root,
+  .root[data-leaving='true'] {
     animation: none;
   }
 }

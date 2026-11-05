@@ -314,3 +314,111 @@
   transition-timing-function: var(--workshop-ease);
   transform: scale(var(--workshop-press-scale));
 }
+
+/* Simple adjustments read as one segmented row per setting instead of three tall cards. */
+.segmented {
+  grid-template-columns: none;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--workshop-border);
+  border-radius: 10px;
+  background: #f0ebe3;
+}
+
+.picker .segmented .choice {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 40px;
+  padding: 6px 8px;
+  border-color: transparent;
+  border-radius: 8px;
+  background: transparent;
+}
+
+.picker .segmented .choice:has(input:checked) {
+  border-color: var(--workshop-accent-control);
+  background: var(--workshop-surface-control);
+  box-shadow: 0 1px 3px var(--workshop-text-8);
+}
+
+.picker .segmented .choice:hover {
+  border-color: transparent;
+  background: #faf7f2;
+}
+
+.picker .segmented .choice:has(input:checked):hover {
+  border-color: var(--workshop-accent-control);
+  background: var(--workshop-surface-control);
+}
+
+.segmented .cue {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+.segmented .cue[data-choice-level] svg {
+  width: 15px;
+  height: 15px;
+}
+
+.segmented .cue[data-choice-level='2'] svg {
+  width: 17px;
+  height: 17px;
+}
+
+.segmented .choiceCopy strong {
+  overflow: hidden;
+  font-size: calc(0.8125rem * var(--customizer-scale, 1));
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .picker .segmented .choice:hover:not(:disabled) {
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+.groupHeading {
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+
+.fineTune {
+  max-width: 100%;
+  text-align: start;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+  min-height: 32px;
+  padding: 0 4px 0 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--workshop-accent-deep);
+  font: inherit;
+  font-size: calc(var(--workshop-font-meta) * var(--customizer-scale, 1));
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color var(--workshop-motion-control) var(--workshop-ease),
+    color var(--workshop-motion-control) var(--workshop-ease);
+}
+
+.fineTune:hover {
+  background: var(--workshop-selected-surface);
+  color: var(--workshop-accent-link-hover);
+}
+
+.fineTune:focus-visible {
+  outline: var(--workshop-focus-ring);
+  outline-offset: 2px;
+}
