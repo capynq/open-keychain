@@ -25,7 +25,9 @@ import {
   ringWallMm,
   sanitizeFilename,
   applyPrintAppearanceOverrides,
+  ARTICULATED_PRINT_APPEARANCE,
   DEFAULT_PRINT_APPEARANCE,
+  keepAppearanceAcrossTemplates,
   validateGeometryResult,
   type KeychainParams,
 } from './types';
@@ -494,5 +496,33 @@ describe('keychain parameters', () => {
   it('creates safe friendly filenames', () => {
     expect(sanitizeFilename('Émilie & Jo', 'soft-tag')).toBe('keychain-emilie-jo-soft-tag.stl');
     expect(sanitizeFilename('   ', 'contour')).toBe('keychain-name-contour.stl');
+  });
+});
+
+describe('keepAppearanceAcrossTemplates', () => {
+  it('pins the visible default colors when the next template has different defaults', () => {
+    expect(
+      keepAppearanceAcrossTemplates({ version: 1 }, 'name-keychain', 'articulated-name'),
+    ).toEqual({
+      version: 1,
+      base: DEFAULT_PRINT_APPEARANCE.base.color,
+      relief: DEFAULT_PRINT_APPEARANCE.relief.color,
+    });
+    expect(keepAppearanceAcrossTemplates({ version: 1 }, 'articulated-name', 'nameplate')).toEqual({
+      version: 1,
+      base: ARTICULATED_PRINT_APPEARANCE.base.color,
+      relief: ARTICULATED_PRINT_APPEARANCE.relief.color,
+    });
+  });
+
+  it('keeps chosen colors and leaves overrides alone between templates with equal defaults', () => {
+    const chosen = { version: 1 as const, base: '#112233' };
+
+    expect(keepAppearanceAcrossTemplates(chosen, 'name-keychain', 'articulated-name')).toEqual({
+      version: 1,
+      base: '#112233',
+      relief: DEFAULT_PRINT_APPEARANCE.relief.color,
+    });
+    expect(keepAppearanceAcrossTemplates(chosen, 'name-keychain', 'nameplate')).toBe(chosen);
   });
 });

@@ -141,7 +141,6 @@ test('renders the real Customizer frame before React and hands off without a lay
     '.preview-panel',
     '.preview-heading',
     '.viewer-wrap',
-    '.preview-summary',
   ];
   const readBoxes = async (root: '#boot-customizer' | '#root') =>
     page.evaluate(
@@ -262,7 +261,7 @@ test('selects known boot URL variants and stays neutral for restored designs', a
       await expect(
         page.locator('#boot-customizer .template-grid [aria-pressed="true"]'),
       ).toHaveCount(0);
-      await expect(page.locator('#boot-customizer .preview-summary')).not.toContainText(
+      await expect(page.locator('#boot-customizer .preview-panel')).not.toContainText(
         /keychain|nameplate|label|магнит|табличк/i,
       );
       await expect(

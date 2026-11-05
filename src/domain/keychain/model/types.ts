@@ -223,6 +223,33 @@ export const ARTICULATED_PRINT_APPEARANCE: PrintAppearance = {
   base: { name: 'Structural letters and connectors', color: '#E7E2DA' },
   relief: { name: 'Decorative letter caps', color: '#D94A52' },
 };
+/** Default print colors of a template before any user color choice. */
+export const printAppearanceForTemplate = (templateId: TemplateId): PrintAppearance =>
+  templateId === 'articulated-name' ? ARTICULATED_PRINT_APPEARANCE : DEFAULT_PRINT_APPEARANCE;
+/**
+ * Keeps the colors a person sees when an edit switches templates: a color slot that still
+ * follows the old template's default is pinned to it when the new template's default differs.
+ */
+export const keepAppearanceAcrossTemplates = (
+  overrides: PrintAppearanceOverrides,
+  from: TemplateId,
+  to: TemplateId,
+): PrintAppearanceOverrides => {
+  const before = printAppearanceForTemplate(from);
+  const after = printAppearanceForTemplate(to);
+  const base =
+    overrides.base ?? (before.base.color === after.base.color ? undefined : before.base.color);
+  const relief =
+    overrides.relief ??
+    (before.relief.color === after.relief.color ? undefined : before.relief.color);
+  if (base === overrides.base && relief === overrides.relief) return overrides;
+  return {
+    ...overrides,
+    version: 1,
+    ...(base === undefined ? {} : { base }),
+    ...(relief === undefined ? {} : { relief }),
+  };
+};
 export type GeometryParameterLimits = Partial<Record<'cornerRadiusMm' | 'stakeShoulderMm', number>>;
 
 export type GeometryResult = {

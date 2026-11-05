@@ -3,6 +3,7 @@ import { useId } from 'react';
 
 import styles from './ColorControl.module.css';
 import { IconButton } from './IconButton';
+import { ResetIconButton } from './ResetIconButton';
 
 const normalizeHex = (value: string, fallback: string) => {
   const candidate = value.trim().toUpperCase();
@@ -38,6 +39,10 @@ export type ColorControlProps = {
   resetLabel: string;
   testId?: string;
   description?: string;
+  /** `compact` is a short chip for the editor sidebar; `swatch` is the large square. */
+  variant?: 'swatch' | 'compact';
+  /** Hide the reset action while the color still follows its default. */
+  canReset?: boolean;
   onChange: (value: string) => void;
   onReset: () => void;
 };
@@ -49,6 +54,8 @@ export const ColorControl = ({
   resetLabel,
   testId,
   description,
+  variant = 'swatch',
+  canReset = true,
   onChange,
   onReset,
 }: ColorControlProps) => {
@@ -58,17 +65,24 @@ export const ColorControl = ({
   const hex = normalizeHex(value, normalizeHex(fallback, '#B84838'));
 
   return (
-    <div className={styles.root} data-testid={testId}>
+    <div
+      className={`${styles.root}${variant === 'compact' ? ` ${styles.compact}` : ''}`}
+      data-testid={testId}
+    >
       <div className={styles.labelRow}>
         <label htmlFor={inputId}>{label}</label>
-        <IconButton
-          action="reset"
-          className={styles.reset}
-          icon={RotateCcw}
-          label={resetLabel}
-          motion="rotate"
-          onClick={onReset}
-        />
+        {variant === 'compact' ? (
+          <ResetIconButton label={resetLabel} onClick={onReset} visible={canReset} />
+        ) : (
+          <IconButton
+            action="reset"
+            className={styles.reset}
+            icon={RotateCcw}
+            label={resetLabel}
+            motion="rotate"
+            onClick={onReset}
+          />
+        )}
       </div>
       <span id={descriptionId} className="sr-only">
         {description ?? label}

@@ -239,6 +239,67 @@ describe('useCustomizerParams candidate scheduling', () => {
     expect(worker.postMessage).toHaveBeenCalledTimes(3);
   });
 
+  it('undoes and redoes accepted edits in order and reports template switches', async () => {
+    const { callbacks } = createCallbacks();
+    const templateChanges: string[] = [];
+    const getApi = renderHook({
+      ...callbacks,
+      templateChanging: (from, to) => templateChanges.push(`${from}>${to}`),
+    });
+    const worker = MockWorker.instances[0];
+    const accept = async (requestId: number) =>
+      act(async () => worker.emit({ type: 'validation', requestId, result: validResult() }));
+
+    expect(getApi().canUndo).toBe(false);
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    await accept(1);
+    act(() => getApi().selectTemplate('nameplate'));
+    await accept(2);
+    expect(templateChanges).toEqual(['name-keychain>nameplate']);
+    expect(getApi().canUndo).toBe(true);
+    expect(getApi().undoKind).toBe('change');
+
+    act(() => getApi().undo());
+    await accept(3);
+    expect(getApi().acceptedParams.templateId).toBe('name-keychain');
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(2.5);
+    expect(templateChanges).toEqual(['name-keychain>nameplate', 'nameplate>name-keychain']);
+    expect(getApi().canRedo).toBe(true);
+
+    act(() => getApi().undo());
+    await accept(4);
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(DEFAULT_PARAMS.baseThicknessMm);
+    expect(getApi().canUndo).toBe(false);
+
+    act(() => getApi().redo());
+    await accept(5);
+    act(() => getApi().redo());
+    await accept(6);
+    expect(getApi().acceptedParams.templateId).toBe('nameplate');
+    expect(getApi().canRedo).toBe(false);
+
+    act(() => getApi().undo());
+    await accept(7);
+    act(() => getApi().update('baseThicknessMm', 3));
+    await accept(8);
+    expect(getApi().canRedo).toBe(false);
+  });
+
+  it('keeps an undo entry when its candidate is rejected', async () => {
+    const { callbacks } = createCallbacks();
+    const getApi = renderHook(callbacks);
+    const worker = MockWorker.instances[0];
+
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    await act(async () => worker.emit({ type: 'validation', requestId: 1, result: validResult() }));
+    act(() => getApi().undo());
+    await act(async () =>
+      worker.emit({ type: 'validation', requestId: 2, result: invalidResult() }),
+    );
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(2.5);
+    expect(getApi().canUndo).toBe(true);
+  });
+
   it('restores accepted params after a rejected candidate', async () => {
     const { accepted, rejected, callbacks } = createCallbacks();
     const getApi = renderHook(callbacks);

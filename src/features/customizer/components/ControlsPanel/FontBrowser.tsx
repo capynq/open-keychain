@@ -138,11 +138,7 @@ export const FontBrowser = ({
                       {activeTargetText || (usesCyrillic ? font.sampleCyrillic : font.sampleLatin)}
                     </span>
                     <small>
-                      {loadingFontId === font.id
-                        ? t(locale, 'fontLoading')
-                        : !neutralSelection && activeTargetFontId === font.id
-                          ? `${font.name} · ${t(locale, 'fontSelected')}`
-                          : font.name}
+                      {loadingFontId === font.id ? t(locale, 'fontLoading') : font.name}
                     </small>
                   </button>
                   {font.specimenUrl && (

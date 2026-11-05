@@ -3,17 +3,9 @@ import { strFromU8, unzipSync } from 'fflate';
 import { readFile } from 'node:fs/promises';
 import sharp from 'sharp';
 
-import { waitForReadyGeometry } from './helpers';
+import { selectCameraView, waitForReadyGeometry, type CameraViewId } from './helpers';
 import { selectLocale } from './helpers';
-const cameraViews = [
-  'Home view',
-  'Front view',
-  'Back view',
-  'Left view',
-  'Right view',
-  'Top view',
-  'Bottom view',
-];
+const cameraViews: CameraViewId[] = ['home', 'front', 'back', 'left', 'right', 'top', 'bottom'];
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -41,7 +33,7 @@ for (const flow of [
     name: 'OLIVER',
     nameInput: 'Name or text',
     template: 'Nameplate',
-    camera: 'Top view',
+    camera: 'Views',
     exportButton: 'Export',
     dialog: 'Choose an export',
     format: /STL file/,
@@ -52,7 +44,7 @@ for (const flow of [
     name: 'НИКИТА',
     nameInput: 'Имя или текст',
     template: 'Именная табличка',
-    camera: 'Сверху',
+    camera: 'Виды',
     exportButton: 'Экспорт',
     dialog: 'Выберите экспорт',
     format: /3MF · единый объект/,
@@ -82,10 +74,9 @@ for (const flow of [
     await expect(template).toHaveClass(/selected/);
     await expect(page.locator('.status-pill')).toHaveText(/Ready|Готово/, { timeout: 10000 });
 
-    const camera = page.getByRole('button', { name: flow.camera });
+    const camera = page.getByRole('combobox', { name: flow.camera });
     await camera.focus();
-    await page.keyboard.press('Enter');
-    await expect(camera).toHaveAttribute('aria-pressed', 'true');
+    await camera.selectOption('top');
     await expect(page.locator('.viewer')).toHaveAttribute('data-view', 'top');
 
     const exportTrigger = page.locator('.export-header-button');
@@ -152,12 +143,10 @@ test('customizes a name, uses every icon camera preset, and downloads STL', asyn
     timeout: 10000,
   });
   const viewer = page.locator('.viewer');
-  for (const label of cameraViews) {
-    const button = page.getByRole('button', { name: label });
-    await expect(button.locator('svg[data-icon]')).toBeVisible();
-    await button.click();
-    await expect(button).toHaveAttribute('aria-pressed', 'true');
-  }
+  await expect(
+    page.getByRole('button', { name: 'Home view' }).locator('svg[data-icon]'),
+  ).toBeVisible();
+  for (const view of cameraViews) await selectCameraView(page, view);
   await expect(viewer).toHaveAttribute('data-view', 'bottom');
   const surface = page.locator('.viewer-surface');
   await surface.scrollIntoViewIfNeeded();
@@ -243,8 +232,7 @@ test('treats adjusted NIKITA Bubble geometry as ready and keeps width warnings e
   await expect(dialog.locator('.export-preflight')).toHaveClass(
     /export-preflight--ready-with-warnings/,
   );
-  await dialog.locator('.export-preflight summary').click();
-  await expect(dialog.locator('.export-preflight-body li').first()).toBeVisible();
+  await expect(dialog.getByTestId('export-preflight-issues').locator('li').first()).toBeVisible();
   await page.getByRole('button', { name: 'Close' }).click();
   await expect(dialog).toBeHidden();
   await page.getByLabel('Text size').fill('12');
@@ -288,7 +276,7 @@ test('supports bounded zoom, preview surfaces, locales, and configurable 3MF exp
   await page.goto('/create');
   await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await expect(page.locator('.status-pill')).toHaveText('Ready to print', { timeout: 10000 });
-  await expect(page.getByRole('region', { name: 'Print facts' })).toBeVisible();
+  await expect(page.getByTestId('preview-readout')).toContainText('mm thick');
   for (let click = 0; click < 8; click += 1)
     await page.getByRole('button', { name: 'Zoom in' }).click();
   await page.getByRole('button', { name: 'Zoom out' }).click();
@@ -338,7 +326,7 @@ test('uses a native export dialog with contained focus, Escape, backdrop close, 
 
   await dialog.getByRole('button', { name: 'Close' }).focus();
   await page.keyboard.press('Shift+Tab');
-  await expect(dialog.locator('.export-choice-grid button:not(:disabled)').last()).toBeFocused();
+  await expect(dialog.locator('.export-slicer-help summary')).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
   await expect(exportButton).toBeFocused();
@@ -354,7 +342,7 @@ test('downloads the current preview from an anchored photo resolution popup', as
   await page.goto('/create');
   await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
   await expect(page.locator('.status-pill')).toHaveText('Ready to print', { timeout: 10000 });
-  await page.getByRole('button', { name: 'Top view' }).click();
+  await selectCameraView(page, 'top');
   await page.getByRole('button', { name: 'Zoom in' }).click();
   const viewer = page.locator('.viewer');
   const zoom = await viewer.getAttribute('data-zoom-scale');
@@ -518,8 +506,7 @@ test('supports the Magnet ribbon workflow with subtitle hardware guidance', asyn
     .click();
   await expect(page.getByLabel('Customizer controls').getByText(/10\.4 mm diameter/)).toBeVisible();
   await waitForReadyGeometry(page);
-  await page.getByRole('button', { name: 'Bottom view' }).click();
-  await expect(page.locator('.viewer')).toHaveAttribute('data-view', 'bottom');
+  await selectCameraView(page, 'bottom');
   await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10000 });
   await page.getByRole('button', { name: 'Export' }).click();
   await expect(page.getByRole('dialog', { name: 'Choose an export' })).toBeVisible();
@@ -832,15 +819,22 @@ test('keeps the latest candidate when an obsolete active validation rejects', as
     .filter({ visible: true })
     .first();
   await heartSize.fill('24');
-  await expect(customizer.locator('.candidate-feedback[role="status"]')).toBeVisible();
-  await expect(exportButton).toBeDisabled();
+  await expect(customizer.locator('.candidate-feedback[role="status"]')).toBeAttached();
   await heartSize.fill('26');
-  await expect(exportButton).toBeDisabled();
+  /* Export stays clickable while checking; the request waits for the latest accepted design. */
+  await expect(exportButton).toBeEnabled();
+  await exportButton.click();
+  await expect(exportButton).toHaveAttribute('aria-busy', 'true');
+  await expect(page.getByRole('dialog', { name: 'Choose an export' })).toHaveCount(0);
   await page.evaluate(() => {
     (window as Window & { releaseStaleCandidate?: () => void }).releaseStaleCandidate?.();
   });
-  await expect(customizer.locator('.candidate-feedback')).toBeHidden({ timeout: 10000 });
+  await expect(customizer.locator('.candidate-feedback')).toHaveCount(0, { timeout: 10000 });
   await expect(heartSize).toHaveValue('26');
+  const queuedExport = page.getByRole('dialog', { name: 'Choose an export' });
+  await expect(queuedExport).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(queuedExport).toBeHidden();
   await expect(exportButton).toBeEnabled();
   await expect(customizer.locator('.status-pill')).toHaveText(/Ready/);
 

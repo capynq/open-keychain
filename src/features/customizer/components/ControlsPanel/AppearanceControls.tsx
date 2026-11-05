@@ -35,6 +35,8 @@ export const AppearanceControls = ({
           fallback={baseColor}
           resetLabel={t(locale, 'resetBaseColor')}
           testId="sidebar-color-field"
+          variant="compact"
+          canReset={appearanceOverrides.base !== undefined}
           onChange={(value) => onAppearanceChange({ ...appearanceOverrides, base: value })}
           onReset={() => onAppearanceChange({ ...appearanceOverrides, base: undefined })}
         />
@@ -44,6 +46,8 @@ export const AppearanceControls = ({
           fallback={reliefColor}
           resetLabel={t(locale, 'resetSecondaryColor')}
           testId="sidebar-color-field"
+          variant="compact"
+          canReset={appearanceOverrides.relief !== undefined}
           onChange={(value) => onAppearanceChange({ ...appearanceOverrides, relief: value })}
           onReset={() => onAppearanceChange({ ...appearanceOverrides, relief: undefined })}
         />

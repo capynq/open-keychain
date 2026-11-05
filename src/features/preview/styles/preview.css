@@ -114,6 +114,60 @@
 .viewer-toolbar button:focus-visible {
   box-shadow: 0 0 0 2px var(--workshop-accent);
 }
+.viewer-view-select {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  color: var(--workshop-text-on-dark);
+}
+
+.viewer-view-select select {
+  height: 34px;
+  padding: 0 30px 0 14px;
+  border: 1px solid #ffffff3d;
+  border-radius: var(--workshop-radius-pill);
+  appearance: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+  transition:
+    background-color var(--workshop-motion-control) var(--workshop-ease),
+    border-color var(--workshop-motion-control) var(--workshop-ease);
+}
+
+.viewer-view-select select:hover,
+.viewer-view-select select:focus-visible {
+  border-color: #ffffff80;
+  background: #ffffff14;
+  outline: none;
+}
+
+.viewer-view-select select:focus-visible {
+  box-shadow: 0 0 0 2px var(--workshop-accent);
+}
+
+.viewer-view-select select option {
+  color: var(--workshop-text);
+  background: #fffdf8;
+}
+
+.viewer-view-select select:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.viewer-view-select > svg {
+  position: absolute;
+  right: 11px;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+}
+
 .toolbar-divider {
   width: 1px;
   height: 20px;

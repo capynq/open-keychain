@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import sharp from 'sharp';
 
-import { waitForReadyGeometry } from './helpers';
+import { selectCameraView, waitForReadyGeometry } from './helpers';
 
 const countBackingPixels = async (image: Buffer): Promise<number> => {
   const { data, info } = await sharp(image)
@@ -37,14 +37,14 @@ for (const surface of ['Wood board', 'Metal board']) {
       body: above,
       contentType: 'image/png',
     });
-    await page.getByRole('button', { name: 'Bottom view', exact: true }).click();
+    await selectCameraView(page, 'bottom');
     const image = await canvas.screenshot({ path: testInfo.outputPath('underside.png') });
     const backingPixels = await countBackingPixels(image);
     expect(backingPixels).toBeLessThan(100);
     await testInfo.attach('underside', { body: image, contentType: 'image/png' });
-    await page.getByRole('button', { name: 'Front view', exact: true }).click();
+    await selectCameraView(page, 'front');
     await canvas.screenshot({ path: testInfo.outputPath('side.png') });
-    await page.getByRole('button', { name: 'Home view', exact: true }).click();
+    await selectCameraView(page, 'home');
     await testInfo.attach('restored', {
       body: await canvas.screenshot({ path: testInfo.outputPath('restored.png') }),
       contentType: 'image/png',
@@ -86,7 +86,7 @@ test('switching surfaces preserves apparent model size and position at fit and i
     return [left, right, top, bottom];
   };
   for (const zoomSteps of [0, 4]) {
-    await page.getByRole('button', { name: 'Home view', exact: true }).click();
+    await selectCameraView(page, 'home');
     for (let step = 0; step < zoomSteps; step++)
       await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
     const baseline = await backingBounds();

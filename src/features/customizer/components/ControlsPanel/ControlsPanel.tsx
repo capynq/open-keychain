@@ -26,6 +26,7 @@ import { useEditorMode } from '@/features/customizer/hooks/useEditorMode';
 import { useFontChooser } from '@/features/customizer/hooks/useFontChooser';
 import { useFontSuggestions } from '@/features/customizer/hooks/useFontSuggestions';
 import { useProNavigation } from '@/features/customizer/hooks/useProNavigation';
+import { sectionIsDefault } from '@/features/customizer/model/reset';
 import {
   styleDescription,
   styleName,
@@ -46,6 +47,7 @@ import { RangeControl } from '../RangeControl/RangeControl';
 import { AppearanceControls } from './AppearanceControls';
 import { CandidateRecovery } from './CandidateRecovery';
 import styles from './ControlsPanel.module.css';
+import { ControlsSectionNav } from './ControlsSectionNav';
 import { EditorModeSwitch } from './EditorModeSwitch';
 import { FontBrowser } from './FontBrowser';
 import { FontChooserDialog } from './FontChooserDialog';
@@ -313,9 +315,14 @@ export const ControlsPanel = ({
       key && key in PARAMETER_REGISTRY
         ? t(locale, PARAMETER_REGISTRY[key as ShapeParameter].labelKey)
         : t(locale, (key && controlLabelKey[key]) || groupLabelKey[group]);
+    /* Announced only; the busy section shows an inline spinner so nothing below shifts. */
     if (candidateFeedback.status === 'checking')
       return (
-        <p className="candidate-feedback" role="status" aria-live="polite">
+        <p
+          className="candidate-feedback candidate-feedback--checking sr-only"
+          role="status"
+          aria-live="polite"
+        >
           {t(locale, 'candidateChecking', { setting })}
         </p>
       );
@@ -383,6 +390,7 @@ export const ControlsPanel = ({
     if (typeof params[key] !== 'number') return null;
     return (
       <RangeControl
+        locale={locale}
         key={parameter}
         candidateKey={parameter}
         label={parameterLabel(parameter)}
@@ -427,6 +435,14 @@ export const ControlsPanel = ({
       data-editor-mode={mode}
     >
       <EditorModeSwitch locale={locale} mode={mode} onChange={changeMode} />
+      <ControlsSectionNav
+        locale={locale}
+        panelRef={controlsRef}
+        hiddenSections={[
+          ...(availableStyles.length > 0 ? [] : ['style']),
+          ...(onAppearanceChange ? [] : ['colors']),
+        ]}
+      />
       <span className="controls-scroll-state sr-only" role="status" aria-live="polite">
         {scrollState === 'middle'
           ? t(locale, 'controlsScrollMiddle')
@@ -447,6 +463,7 @@ export const ControlsPanel = ({
           <ResetIconButton
             label={t(locale, isHeartSplit ? 'resetHeartSplitName' : 'resetName')}
             onClick={() => resetSection('name')}
+            visible={!sectionIsDefault(params, 'name')}
           />
         </div>
         <label
@@ -495,15 +512,6 @@ export const ControlsPanel = ({
         )}
         {renderCandidateFeedback('name')}
       </section>
-      {onAppearanceChange && (
-        <AppearanceControls
-          locale={locale}
-          appearanceOverrides={appearanceOverrides}
-          baseColor={baseColor}
-          reliefColor={reliefColor}
-          onAppearanceChange={onAppearanceChange}
-        />
-      )}
       <hr className="control-section-divider" />
       <div className={styles.designGroup}>
         <section
@@ -520,6 +528,7 @@ export const ControlsPanel = ({
             <ResetIconButton
               label={t(locale, 'resetTemplate')}
               onClick={() => resetSection('template')}
+              visible={!sectionIsDefault(params, 'template')}
             />
           </div>
           <DesignCardRail
@@ -565,6 +574,7 @@ export const ControlsPanel = ({
               <ResetIconButton
                 label={t(locale, 'resetStyle')}
                 onClick={() => resetSection('style')}
+                visible={!sectionIsDefault(params, 'style')}
               />
             </div>
             <DesignCardRail
@@ -803,6 +813,18 @@ export const ControlsPanel = ({
         />
         {fontChooser.open && renderCandidateFeedback('refine', 'context', undefined, true)}
       </FontChooserDialog>
+      {onAppearanceChange && (
+        <>
+          <hr className="control-section-divider" />
+          <AppearanceControls
+            locale={locale}
+            appearanceOverrides={appearanceOverrides}
+            baseColor={baseColor}
+            reliefColor={reliefColor}
+            onAppearanceChange={onAppearanceChange}
+          />
+        </>
+      )}
       {!bootFrame && <hr className="control-section-divider" />}
       {!bootFrame && mode === 'simple' && (
         <SimpleAdjustments
@@ -855,6 +877,7 @@ export const ControlsPanel = ({
               <ResetIconButton
                 label={t(locale, 'resetShape')}
                 onClick={() => resetSection('shape')}
+                visible={!sectionIsDefault(params, 'shape')}
               />
             </div>
             <div className="control-subsection shape-font-settings" data-testid="font-settings">
@@ -876,11 +899,13 @@ export const ControlsPanel = ({
                         setFontTarget('primary');
                         resetSection('subtitle');
                       }}
+                      visible={!sectionIsDefault(params, 'subtitle')}
                     />
                   </div>
                   {activeFontTarget === 'secondary' && (
                     <>
                       <RangeControl
+                        locale={locale}
                         candidateKey="subtitleTextSizeMm"
                         label={t(locale, 'subtitleSize')}
                         value={params.subtitleTextSizeMm ?? 6}
@@ -891,6 +916,7 @@ export const ControlsPanel = ({
                         onChange={(value) => update('subtitleTextSizeMm', value, 'continuous')}
                       />
                       <RangeControl
+                        locale={locale}
                         candidateKey="subtitleFontWeightMm"
                         label={t(locale, 'subtitleWeight')}
                         value={params.subtitleFontWeightMm ?? 0}
@@ -901,6 +927,7 @@ export const ControlsPanel = ({
                         onChange={(value) => update('subtitleFontWeightMm', value, 'continuous')}
                       />
                       <RangeControl
+                        locale={locale}
                         candidateKey="subtitleLetterSpacingMm"
                         label={t(locale, 'subtitleSpacing')}
                         value={params.subtitleLetterSpacingMm ?? 0.5}
@@ -911,6 +938,7 @@ export const ControlsPanel = ({
                         onChange={(value) => update('subtitleLetterSpacingMm', value, 'continuous')}
                       />
                       <RangeControl
+                        locale={locale}
                         candidateKey="subtitleGapMm"
                         label={t(locale, 'subtitleGap')}
                         value={params.subtitleGapMm ?? 1.5}
@@ -921,6 +949,7 @@ export const ControlsPanel = ({
                         onChange={(value) => update('subtitleGapMm', value, 'continuous')}
                       />
                       <RangeControl
+                        locale={locale}
                         candidateKey="subtitleOffsetXRatio"
                         label={t(locale, 'subtitleOffsetX')}
                         value={params.subtitleOffsetXRatio * 100}
@@ -933,6 +962,7 @@ export const ControlsPanel = ({
                         }
                       />
                       <RangeControl
+                        locale={locale}
                         candidateKey="subtitleOffsetYRatio"
                         label={t(locale, 'subtitleOffsetY')}
                         value={params.subtitleOffsetYRatio * 100}
@@ -1046,6 +1076,7 @@ export const ControlsPanel = ({
             />
             {hasSubtitle && hasSubtitleText && activeFontTarget === 'secondary' && (
               <RangeControl
+                locale={locale}
                 candidateKey="subtitleReliefDepthMm"
                 label={t(locale, 'subtitleDepth')}
                 value={params.subtitleReliefDepthMm ?? 0.8}

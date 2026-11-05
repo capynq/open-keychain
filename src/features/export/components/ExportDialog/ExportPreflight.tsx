@@ -31,73 +31,80 @@ export const ExportPreflight = ({
           : 'printCheckReady';
 
   return (
-    <details
-      className={`export-preflight export-preflight--${preflight.status}`}
-      open={preflight.status === 'blocked'}
-    >
-      <summary>
-        <span className="export-preflight-marker" aria-hidden="true" />
-        <span>{t(locale, 'exportChecks')}</span>
-        <strong>{t(locale, statusLabelKey)}</strong>
-      </summary>
-      <div className="export-preflight-body">
-        {acceptedMetrics && (
-          <p>
-            <strong>{t(locale, 'modelSize')}:</strong> {formatAcceptedSize(acceptedMetrics)} ·{' '}
-            <strong>{t(locale, 'thickness')}:</strong> {formatAcceptedThickness(acceptedMetrics)} ·{' '}
-            <strong>{t(locale, 'parts')}:</strong> {acceptedMetrics.parts ?? '—'}
-          </p>
-        )}
-        {acceptedMetrics?.fitsWithinMaximum !== undefined && (
-          <p>
-            <strong>{t(locale, 'fitsWithinMaximum')}:</strong>{' '}
-            {formatAcceptedMaximum(acceptedMetrics)} {acceptedMetrics.fitsWithinMaximum ? '✓' : '—'}
-          </p>
-        )}
-        {preflight.profile && (
-          <p>
-            <strong>{t(locale, 'printProfile')}:</strong> {preflight.profile.id} ·{' '}
-            {preflight.profile.nozzleDiameterMm.toFixed(1)} {t(locale, 'nozzle')} ·{' '}
-            {preflight.profile.layerHeightMm.toFixed(1)} {t(locale, 'layerHeight')}
-          </p>
-        )}
-        {preflight.constraints && (
-          <p>
-            <strong>{t(locale, 'printLimits')}:</strong> {t(locale, 'minimumWall')}{' '}
-            {preflight.constraints.minimumWallMm.toFixed(1)} {t(locale, 'millimeterUnit')}{' '}
-            {t(locale, 'listSeparator')} {t(locale, 'minimumClearance')}{' '}
-            {preflight.constraints.minimumClearanceMm.toFixed(1)} {t(locale, 'millimeterUnit')}{' '}
-            {t(locale, 'listSeparator')} {t(locale, 'maximumWidth')}{' '}
-            {preflight.constraints.maximumWidthMm.toFixed(0)} {t(locale, 'millimeterUnit')}
-          </p>
-        )}
-        {effectiveAppearance && (
-          <>
+    <div className="export-preflight-group">
+      <details
+        className={`export-preflight export-preflight--${preflight.status}`}
+        open={preflight.status === 'blocked'}
+      >
+        <summary>
+          <span className="export-preflight-marker" aria-hidden="true" />
+          <span>{t(locale, 'exportChecks')}</span>
+          <strong>{t(locale, statusLabelKey)}</strong>
+        </summary>
+        <div className="export-preflight-body">
+          {acceptedMetrics && (
             <p>
-              <strong>{t(locale, 'printColors')}:</strong>{' '}
-              <span
-                className="export-color-chip"
-                style={{ backgroundColor: effectiveAppearance.base.color }}
-              />{' '}
-              {t(locale, 'baseRole')} <code>{effectiveAppearance.base.color}</code> ·{' '}
-              <span
-                className="export-color-chip"
-                style={{ backgroundColor: effectiveAppearance.relief.color }}
-              />{' '}
-              {t(locale, 'reliefRole')} <code>{effectiveAppearance.relief.color}</code>
+              <strong>{t(locale, 'modelSize')}:</strong> {formatAcceptedSize(acceptedMetrics)} ·{' '}
+              <strong>{t(locale, 'thickness')}:</strong> {formatAcceptedThickness(acceptedMetrics)}{' '}
+              · <strong>{t(locale, 'parts')}:</strong> {acceptedMetrics.parts ?? '—'}
             </p>
-            <p>{t(locale, 'exportColorGuidance')}</p>
-          </>
-        )}
-        {preflight.issues.length > 0 && (
-          <ul>
-            {preflight.issues.map((issue) => (
-              <li key={`${issue.code}-${issue.message}`}>{issueMessage(locale, issue)}</li>
-            ))}
-          </ul>
-        )}
-        <p>{t(locale, 'slicerGuidance')}</p>
-      </div>
-    </details>
+          )}
+          {acceptedMetrics?.fitsWithinMaximum !== undefined && (
+            <p>
+              <strong>{t(locale, 'fitsWithinMaximum')}:</strong>{' '}
+              {formatAcceptedMaximum(acceptedMetrics)}{' '}
+              {acceptedMetrics.fitsWithinMaximum ? '✓' : '—'}
+            </p>
+          )}
+          {preflight.profile && (
+            <p>
+              <strong>{t(locale, 'printProfile')}:</strong> {preflight.profile.id} ·{' '}
+              {preflight.profile.nozzleDiameterMm.toFixed(1)} {t(locale, 'nozzle')} ·{' '}
+              {preflight.profile.layerHeightMm.toFixed(1)} {t(locale, 'layerHeight')}
+            </p>
+          )}
+          {preflight.constraints && (
+            <p>
+              <strong>{t(locale, 'printLimits')}:</strong> {t(locale, 'minimumWall')}{' '}
+              {preflight.constraints.minimumWallMm.toFixed(1)} {t(locale, 'millimeterUnit')}{' '}
+              {t(locale, 'listSeparator')} {t(locale, 'minimumClearance')}{' '}
+              {preflight.constraints.minimumClearanceMm.toFixed(1)} {t(locale, 'millimeterUnit')}{' '}
+              {t(locale, 'listSeparator')} {t(locale, 'maximumWidth')}{' '}
+              {preflight.constraints.maximumWidthMm.toFixed(0)} {t(locale, 'millimeterUnit')}
+            </p>
+          )}
+          {effectiveAppearance && (
+            <>
+              <p>
+                <strong>{t(locale, 'printColors')}:</strong>{' '}
+                <span
+                  className="export-color-chip"
+                  style={{ backgroundColor: effectiveAppearance.base.color }}
+                />{' '}
+                {t(locale, 'baseRole')} <code>{effectiveAppearance.base.color}</code> ·{' '}
+                <span
+                  className="export-color-chip"
+                  style={{ backgroundColor: effectiveAppearance.relief.color }}
+                />{' '}
+                {t(locale, 'reliefRole')} <code>{effectiveAppearance.relief.color}</code>
+              </p>
+              <p>{t(locale, 'exportColorGuidance')}</p>
+            </>
+          )}
+          <p>{t(locale, 'slicerGuidance')}</p>
+        </div>
+      </details>
+      {/* Warnings are the reason to look twice, so they stay visible instead of behind the toggle. */}
+      {preflight.issues.length > 0 && (
+        <ul
+          className={`export-preflight-issues export-preflight-issues--${preflight.status}`}
+          data-testid="export-preflight-issues"
+        >
+          {preflight.issues.map((issue) => (
+            <li key={`${issue.code}-${issue.message}`}>{issueMessage(locale, issue)}</li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 };

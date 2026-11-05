@@ -1039,5 +1039,21 @@
   "photoResolution": "Роздільність фото",
   "photoPixels": "{resolution} пкс",
   "previewCameraControls": "Керування камерою перегляду",
-  "fontPagesNavigation": "Сторінки шрифтів"
+  "fontPagesNavigation": "Сторінки шрифтів",
+  "redo": "Повторити",
+  "warningTextOverWidthAtMinimum": "Навіть за мінімальної висоти тексту 12 мм ширина імені становить {width} мм. Рекомендацію 120 мм не застосовано; експорт доступний.",
+  "warningTextOverWidthGeneric": "Дизайн ширший за рекомендовані 120 мм. Експорт доступний.",
+  "previewThickness": "товщина {thickness}",
+  "previewParts": "деталей: {count}",
+  "previewFits": "Вміщується в {size}",
+  "previewExceeds": "Більше за {size}",
+  "previewSizeLabel": "Розмір моделі",
+  "cameraViews": "Види",
+  "customView": "Власний ракурс",
+  "navColors": "Кольори",
+  "navAdjust": "Налаштування",
+  "controlsSections": "Розділи редактора",
+  "exactValue": "Точне значення",
+  "wizardSteps": "Кроки налаштування",
+  "exportRecommended": "Рекомендовано"
 }

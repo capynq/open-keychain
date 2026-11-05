@@ -53,8 +53,8 @@
   }
 
   .customizer-app-shell .viewer-wrap {
-    height: clamp(280px, calc(100dvh - 360px), calc(500px * var(--customizer-scale)));
-    max-height: min(calc(500px * var(--customizer-scale)), calc(100% - 90px));
+    height: clamp(280px, calc(100dvh - 230px), calc(640px * var(--customizer-scale)));
+    max-height: min(calc(640px * var(--customizer-scale)), calc(100% - 50px));
   }
 
   .customizer-app-shell .preview-heading .preview-title {
@@ -82,6 +82,58 @@
   min-width: 52px;
   min-height: 52px;
   padding-inline: 14px;
+  gap: 8px;
+}
+
+.customizer-topbar .export-header-button[aria-busy='true'] > svg {
+  animation: export-waiting 900ms ease-in-out infinite alternate;
+}
+
+@keyframes export-waiting {
+  to {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .customizer-topbar .export-header-button[aria-busy='true'] > svg {
+    animation: none;
+  }
+}
+
+.customizer-topbar .topbar-export-actions .setup-header-button {
+  width: auto;
+  padding-inline: 14px 16px;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+/* Export stays centred: the actions either side of it sit in equal-width columns. */
+.customizer-topbar .topbar-export-actions {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+}
+
+.customizer-topbar .topbar-export-lead,
+.customizer-topbar .topbar-export-trail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.customizer-topbar .topbar-export-lead {
+  justify-content: flex-end;
+}
+
+.customizer-topbar .topbar-divider {
+  width: 1px;
+  height: 28px;
+  margin-inline: 4px;
+  background: #dfddd6;
+}
+
+.customizer-topbar .topbar-actions {
   gap: 8px;
 }
 
@@ -1152,8 +1204,9 @@ p {
   min-width: 0;
   min-height: 44px;
   display: flex;
-  align-items: center;
-  gap: 7px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
   padding: 7px 8px;
 }
 
@@ -1176,22 +1229,24 @@ p {
   white-space: nowrap;
 }
 
+/* Sample above the name; names wrap between words and are never cut off. */
 .font-card > span {
   min-width: 0;
-  flex: 1 1 50%;
+  flex: none;
   font-size: 15px;
-  line-height: 1;
+  line-height: 1.15;
   overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
   color: #3e4656;
 }
 
 .font-card small {
   min-width: 0;
-  flex: 1 1 50%;
+  flex: none;
   color: var(--workshop-text-muted);
   font-size: var(--workshop-font-description);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   white-space: normal;
 }
 
@@ -1275,14 +1330,15 @@ p {
 
 .reset-settings {
   width: 100%;
-  min-height: 36px;
-  margin: 12px 0 0;
-  border: 1px solid #cecbc2;
-  border-radius: 9px;
-  background: transparent;
-  color: var(--workshop-text-muted);
-  font-size: 11px;
-  font-weight: 800;
+  min-height: 40px;
+  margin: 16px 0 0;
+  border: 1px solid #b9b4aa;
+  border-radius: 10px;
+  background: var(--workshop-surface-control);
+  color: var(--workshop-text-control);
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
   transition:
     color var(--workshop-motion-fast) var(--workshop-ease),
     border-color var(--workshop-motion-fast) var(--workshop-ease),
@@ -1315,6 +1371,137 @@ p {
     color var(--workshop-motion-fast) var(--workshop-ease),
     border-color var(--workshop-motion-fast) var(--workshop-ease),
     background-color var(--workshop-motion-fast) var(--workshop-ease);
+}
+
+/* Sticky jump links for the long desktop sidebar. */
+.controls-section-nav {
+  position: sticky;
+  z-index: 4;
+  top: 0;
+  display: flex;
+  gap: 4px;
+  margin: 0 0 var(--control-space-3, 12px);
+  padding: 6px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: var(--workshop-surface-muted);
+  box-shadow: 0 8px 10px -10px color-mix(in srgb, var(--workshop-text-strong) 35%, transparent);
+}
+
+.controls-section-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.controls-section-nav button {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 0 11px;
+  border: 1px solid var(--workshop-border);
+  border-radius: 999px;
+  background: var(--workshop-surface-control);
+  color: var(--workshop-text-muted);
+  font: inherit;
+  font-size: calc(0.75rem * var(--customizer-scale));
+  font-weight: 750;
+  cursor: pointer;
+  transition:
+    background-color var(--workshop-motion-control) var(--workshop-ease),
+    border-color var(--workshop-motion-control) var(--workshop-ease),
+    color var(--workshop-motion-control) var(--workshop-ease);
+}
+
+.controls-section-nav button:hover {
+  background: #faf7f2;
+  color: var(--workshop-text);
+}
+
+.controls-section-nav button[aria-current='true'] {
+  border-color: var(--workshop-accent-control);
+  background: var(--workshop-selected-surface);
+  color: var(--workshop-accent-deep);
+}
+
+.controls-section-nav button:focus-visible {
+  outline: var(--workshop-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (max-width: 760px) {
+  .controls-section-nav {
+    display: none;
+  }
+}
+
+/* Template and style choices show every option at once in a compact grid, never a cropped rail. */
+.controls-panel .design-card-rail {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 2px;
+  overflow: visible;
+  scroll-snap-type: none;
+}
+
+.controls-panel .design-card-rail-shell::before,
+.controls-panel .design-card-rail-shell::after,
+.controls-panel .design-card-rail-shell > .design-card-rail-next.icon-button,
+.controls-panel .design-card-rail-shell > .design-card-rail-previous.icon-button {
+  display: none;
+}
+
+.controls-panel .design-card-rail > .design-select-card {
+  --workshop-image-card-caption-offset: 0;
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: 4 / 3;
+  grid-template-rows: 1fr auto;
+}
+
+.controls-panel .design-card-rail .design-select-card-copy {
+  padding: 6px 8px;
+}
+
+.controls-panel .design-card-rail .design-select-card strong {
+  overflow: hidden;
+  font-size: calc(0.75rem * var(--customizer-scale));
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.controls-panel .design-card-rail .design-select-card-description {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Inline checking state: a small spinner beside the busy section's title, no layout change. */
+.controls-panel .control-section[aria-busy='true'] > .section-heading h2::after,
+.controls-panel .control-section[aria-busy='true'] > h2::after {
+  content: '';
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-left: 8px;
+  border: 2px solid var(--workshop-accent);
+  border-top-color: transparent;
+  border-radius: 50%;
+  vertical-align: 1px;
+  animation: viewer-spin 0.75s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .controls-panel .control-section[aria-busy='true'] > .section-heading h2::after,
+  .controls-panel .control-section[aria-busy='true'] > h2::after {
+    animation: none;
+  }
+}
+
+.reset-icon-placeholder {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .controls-panel .section-heading > .reset-icon-button {
@@ -1351,7 +1538,7 @@ p {
 
 .range-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr);
   column-gap: var(--control-space-5);
   row-gap: var(--control-subsection-gap);
 }
@@ -1417,10 +1604,13 @@ input[type='range'] {
 
 .preview-heading {
   width: 100%;
+  min-height: 28px;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  margin: 0 0 14px;
+  gap: 6px 12px;
+  margin: 0 0 12px;
 }
 
 .status-pill {
@@ -1516,60 +1706,79 @@ input[type='range'] {
     overflow: visible;
   }
 
-  .topbar {
-    padding: 14px 18px;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      'brand brand'
-      'export actions';
-    row-gap: 10px;
+  /* One compact row on phones; with enlarged text it wraps instead of overlapping. */
+  .customizer-topbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 8px 12px;
   }
 
-  .brand-mark {
-    grid-area: brand;
+  .customizer-topbar .brand-mark {
+    width: auto;
   }
 
-  .export-header-button {
-    grid-area: export;
-    justify-self: end;
-    width: 44px;
-    height: 44px;
+  .customizer-topbar .brand-mark > span {
+    display: none;
+  }
+
+  .customizer-topbar .brand-mark > img {
+    width: 30px;
+    height: 30px;
+  }
+
+  .customizer-topbar .topbar-export-actions {
+    position: static;
+    display: flex;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    transform: none;
+    gap: 4px;
+  }
+
+  .customizer-topbar .topbar-export-lead,
+  .customizer-topbar .topbar-export-trail {
+    display: contents;
+  }
+
+  .customizer-topbar .topbar-export-actions .export-header-button {
+    transform: none;
+  }
+
+  .customizer-topbar .icon-button,
+  .customizer-topbar .topbar-export-actions .setup-header-button,
+  .customizer-topbar .topbar-export-actions .share-header-button {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
     padding: 0;
   }
 
-  .topbar-export-actions {
-    position: static;
-    grid-area: export;
-    justify-self: start;
-    transform: none;
+  .customizer-topbar .topbar-export-actions .setup-header-button > span,
+  .customizer-topbar .topbar-divider,
+  .customizer-topbar .language-picker-code,
+  .customizer-topbar .language-picker-trigger > svg {
+    display: none;
+  }
+
+  .customizer-topbar .topbar-export-actions .export-header-button {
+    width: auto;
+    min-height: 38px;
+    height: 38px;
+    padding-inline: 10px 12px;
     gap: 6px;
   }
 
-  .topbar-export-actions .export-header-button {
-    transform: none;
-  }
-
-  .topbar-export-actions .export-header-button,
-  .topbar-export-actions .setup-header-button,
-  .topbar-export-actions .share-header-button {
-    width: 44px;
-    height: 44px;
-    min-height: 44px;
-    padding: 0;
-  }
-
-  .topbar-actions {
-    grid-area: actions;
-    width: 100%;
-    justify-content: flex-end;
+  .customizer-topbar .topbar-actions {
+    margin-left: auto;
+    gap: 4px;
   }
 
   .github-link {
     font-size: 12px;
-  }
-
-  .topbar-actions {
-    gap: 7px;
   }
 
   .workspace {
@@ -1635,13 +1844,55 @@ input[type='range'] {
     aspect-ratio: 4 / 3;
     max-height: 360px;
   }
+}
 
-  .preview-heading {
-    width: 100%;
+/* Phones in portrait keep a shorter preview pinned under the header so every edit stays visible. */
+@media (max-width: 760px) and (min-height: 560px) {
+  .customizer-app-shell {
+    --customizer-topbar-height: 55px;
   }
 
-  .summary-metrics {
-    gap: 7px;
+  .customizer-app-shell .workspace {
+    padding-top: 0;
+  }
+
+  .customizer-app-shell .workspace > .preview-panel {
+    position: sticky;
+    z-index: 6;
+    top: var(--customizer-topbar-height);
+    margin-inline: -18px;
+    padding: 10px 18px 10px;
+    background: color-mix(in srgb, var(--workshop-surface-muted) 96%, transparent);
+    box-shadow: 0 10px 18px -14px color-mix(in srgb, var(--workshop-text-strong) 45%, transparent);
+  }
+
+  .customizer-app-shell .preview-panel .preview-heading {
+    margin-bottom: 8px;
+  }
+
+  .customizer-app-shell .preview-panel .viewer-wrap {
+    height: clamp(210px, 34svh, 300px);
+    aspect-ratio: auto;
+    max-height: none;
+  }
+
+  /* Typing with the on-screen keyboard needs the room; the preview scrolls normally then. */
+  .customizer-app-shell
+    .workspace:has(.controls-panel input:is([type='text'], [type='search'], :not([type])):focus)
+    > .preview-panel {
+    position: relative;
+  }
+}
+
+@media (max-width: 400px) and (min-height: 560px) {
+  .customizer-app-shell {
+    --customizer-topbar-height: 53px;
+  }
+}
+
+@media (max-width: 760px) {
+  .preview-heading {
+    width: 100%;
   }
 
   .surface-trigger {
@@ -1677,35 +1928,50 @@ input[type='range'] {
   }
 }
 
-@media (max-width: 600px) {
-  .topbar {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      'brand'
-      'export'
-      'actions';
+@media (max-width: 400px) {
+  .customizer-topbar .brand-mark {
+    display: none;
   }
 
-  .topbar-export-actions,
-  .topbar-actions {
-    width: 100%;
-    flex-wrap: wrap;
-    justify-content: flex-start;
+  .customizer-topbar .icon-button,
+  .customizer-topbar .topbar-export-actions .setup-header-button,
+  .customizer-topbar .topbar-export-actions .share-header-button {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
+
+/* The narrowest phones keep one row: smaller targets, Redo only once there is something to redo. */
+@media (max-width: 360px) {
+  .customizer-topbar {
+    padding-inline: 8px;
+    column-gap: 4px;
   }
 
-  .topbar-export-actions .export-header-button {
-    width: auto;
+  .customizer-topbar .icon-button,
+  .customizer-topbar .topbar-export-actions .setup-header-button,
+  .customizer-topbar .topbar-export-actions .share-header-button {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
   }
 
-  .topbar-export-actions .icon-button,
-  .topbar-actions .icon-button {
-    min-width: 48px;
-    min-height: 48px;
+  .customizer-topbar .topbar-export-actions,
+  .customizer-topbar .topbar-actions {
+    gap: 3px;
   }
 
-  .topbar-export-actions .export-header-button {
-    min-width: 52px;
-    min-height: 52px;
+  .customizer-topbar .topbar-export-actions .export-header-button {
+    height: 34px;
+    min-height: 34px;
+    padding-inline: 8px 10px;
+  }
+
+  .customizer-topbar .redo-header-button:disabled {
+    display: none;
   }
 }
 
@@ -1818,4 +2084,9 @@ html[data-input-modality='keyboard'] .customizer-app-shell .design-select-card:h
   transition:
     border-color var(--workshop-motion-control) var(--workshop-ease),
     background-color var(--workshop-motion-control) var(--workshop-ease);
+}
+
+/* Jumped-to sections clear the sticky section links. */
+.controls-panel .control-section {
+  scroll-margin-top: 52px;
 }

@@ -388,3 +388,72 @@
     min-height: var(--workshop-touch-target);
   }
 }
+
+/* Same entrance as Quick setup: a short fade and lift, skipped for keyboard and reduced motion. */
+.export-modal[open] {
+  animation: export-in var(--workshop-motion-modal) var(--workshop-ease);
+}
+
+.export-modal[open]::backdrop {
+  animation: export-backdrop-in var(--workshop-motion-fast) var(--workshop-ease);
+}
+
+@keyframes export-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+}
+
+@keyframes export-backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .export-modal[open],
+  .export-modal[open]::backdrop {
+    animation: none;
+  }
+}
+
+html:not([data-input-modality='pointer']) .export-modal[open],
+html:not([data-input-modality='pointer']) .export-modal[open]::backdrop {
+  animation: none;
+}
+
+.export-preflight-issues {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 10px 14px 10px 30px;
+  border: 1px solid #e6d6a8;
+  border-radius: 12px;
+  background: #fbf5e4;
+  color: #5d4b1b;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.export-preflight-issues--blocked {
+  border-color: #efc3ad;
+  background: #fdeee6;
+  color: #7a3420;
+}
+
+.export-choice-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--workshop-selected-surface);
+  color: var(--workshop-accent-deep);
+  font-size: 11px;
+  font-weight: 800;
+  vertical-align: 1px;
+}
+
+.export-choice-list > .export-slicer-help {
+  margin-top: 4px;
+}

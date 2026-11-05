@@ -28,7 +28,7 @@ import { applyPrintAppearanceOverrides } from '../../../domain/keychain/model/ty
 import { t } from '../../../infrastructure/i18n/utils';
 import styles from './PreviewPanel.module.css';
 import { PreviewPhoto } from './PreviewPhoto';
-import { PreviewSummary } from './PreviewSummary';
+import { PreviewReadout, PreviewSummary } from './PreviewSummary';
 import { SurfacePopover } from './SurfacePopover';
 
 type ViewerComponent = typeof ViewerComponentExport;
@@ -227,12 +227,16 @@ export const PreviewPanel = ({
       }
     >
       <div className="preview-heading">
-        <h2 className="preview-title">{t(locale, 'livePreview')}</h2>
+        <h2 className="preview-title sr-only">{t(locale, 'livePreview')}</h2>
+        <PreviewReadout locale={locale} geometry={geometry} pending={pendingPreview} />
         <span
           className={`status-pill ${viewerUnavailable ? 'attention' : pendingPreview ? 'updating' : status.className}`}
           role="status"
           aria-live="polite"
         >
+          {pendingPreview && !viewerUnavailable && (
+            <span className="status-pill-spinner" aria-hidden="true" />
+          )}
           {viewerUnavailable
             ? t(locale, 'previewUnavailableTitle')
             : pendingPreview
@@ -243,6 +247,7 @@ export const PreviewPanel = ({
       <div
         className="viewer-wrap"
         data-stale={geometry.current === false ? 'true' : 'false'}
+        data-pending={pendingPreview && geometry.result !== undefined ? 'true' : undefined}
         data-preview-unavailable={viewerUnavailable ? 'true' : undefined}
       >
         {Viewer ? (
@@ -310,18 +315,20 @@ export const PreviewPanel = ({
           onSurfaceChange={onSurfaceChange}
           onReset={onSurfaceReset}
         />
-        {pendingPreview && (
+        {pendingPreview && geometry.result === undefined && (
           <div className="viewer-loading" role="status" aria-live="polite">
             <span className="viewer-spinner" aria-hidden="true" />
-            <span>
-              {geometry.result === undefined
-                ? t(locale, 'preparingPreview')
-                : geometry.busy
-                  ? t(locale, 'updating')
-                  : geometry.current === false
-                    ? t(locale, 'previewStale')
-                    : t(locale, 'preparingPreview')}
-            </span>
+            <span>{t(locale, 'preparingPreview')}</span>
+          </div>
+        )}
+        {geometry.result !== undefined && (
+          <div
+            className="viewer-updating"
+            data-visible={pendingPreview ? 'true' : 'false'}
+            aria-hidden="true"
+          >
+            <span className="viewer-spinner" />
+            <span>{geometry.busy ? t(locale, 'updating') : t(locale, 'previewStale')}</span>
           </div>
         )}
       </div>

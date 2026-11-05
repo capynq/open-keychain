@@ -306,8 +306,10 @@ test('walks through six focused steps and applies accepted keyring, colors, and 
     const { width, height } = element.getBoundingClientRect();
     return { width, height };
   });
+  /* Sidebar colors are compact chips: full column width, one touch target tall. */
   expect(swatchSize.width).toBeGreaterThanOrEqual(44);
-  expect(swatchSize.height).toBe(swatchSize.width);
+  expect(swatchSize.height).toBeGreaterThanOrEqual(44);
+  expect(swatchSize.width).toBeGreaterThan(swatchSize.height);
   await expect(appearance.locator('[class*="swatch"] strong').first()).toHaveText('#123456');
   await expect(appearance.locator('[class*="swatch"] strong').nth(1)).toHaveText('#FEDCBA');
   await expect(page.getByTestId('simple-font-picker')).toBeVisible();
@@ -397,8 +399,10 @@ test('discards closed drafts and keeps keyboard focus inside the modal', async (
   await waitForReadyGeometry(page);
   await page.getByRole('button', { name: 'Open quick setup' }).click();
   const dialog = setup(page);
+  /* Reopening over an existing design preselects the smallest size the model already fits. */
+  await expect(dialog.getByLabel(/80 × 30/)).toBeChecked();
   await dialog.getByLabel('Name or text').fill('UNSAVED');
-  await dialog.getByLabel(/80 × 30/).check();
+  await dialog.getByLabel(/120 × 40/).check();
   await advance(dialog);
   await fontCategory(dialog, 'Marker').check();
   await advance(dialog);
@@ -421,7 +425,8 @@ test('discards closed drafts and keeps keyboard focus inside the modal', async (
   ).toBeNull();
   await page.getByRole('button', { name: 'Open quick setup' }).click();
   await expect(dialog.getByLabel('Name or text')).toHaveValue('ALEX');
-  await expect(dialog.locator('input[type="radio"]:checked')).toHaveCount(0);
+  await expect(dialog.getByLabel(/120 × 40/)).not.toBeChecked();
+  await expect(dialog.getByLabel(/80 × 30/)).toBeChecked();
 });
 
 test('keeps rejected setup drafts without committing colors or font preferences', async ({
@@ -550,7 +555,7 @@ test('direct and shared Customizer entry stays free of an automatic setup dialog
   await expect(page.getByLabel('Name or text')).toHaveValue('MIRA');
 });
 
-test('shows accepted print measurements, the saved maximum, and fit status below the preview', async ({
+test('shows accepted measurements and the saved maximum fit beside the preview', async ({
   page,
 }) => {
   const design = encodeDesignDocument(
@@ -563,21 +568,13 @@ test('shows accepted print measurements, the saved maximum, and fit status below
   await page.goto(`/create?design=${design}`);
   await waitForReadyGeometry(page);
 
-  const facts = page.getByRole('region', { name: 'Print facts' });
+  const facts = page.getByTestId('preview-readout');
   await expect(facts).toBeVisible();
-  await expect(facts.getByText('Model size', { exact: true })).toBeVisible();
-  await expect(facts.locator('.summary-metrics strong').nth(0)).toHaveText(
-    /^\d+\.\d+ × \d+\.\d+ mm$/,
-  );
-  await expect(facts.getByText('Thickness', { exact: true })).toBeVisible();
-  await expect(facts.getByText('Printable parts', { exact: true })).toBeVisible();
-  await expect(facts.getByText('Maximum size', { exact: true })).toBeVisible();
-  await expect(facts.getByText('100.0 × 50.0 mm', { exact: true })).toBeVisible();
-  await expect(facts.getByText('Fits within maximum', { exact: true })).toBeVisible();
-  await expect(facts.locator('.summary-fit-status strong')).toHaveText('Yes');
-  await expect(facts.getByText('Template', { exact: true })).toHaveCount(0);
-  await expect(facts.getByText('Style', { exact: true })).toHaveCount(0);
-  await expect(facts.getByText('Font', { exact: true })).toHaveCount(0);
+  await expect(facts.locator('strong')).toHaveText(/^\d+\.\d+ × \d+\.\d+ mm$/);
+  await expect(facts).toContainText('mm thick');
+  await expect(facts.locator('.preview-readout-fit--fits')).toHaveText('Fits 100.0 × 50.0 mm');
+  await expect(facts).not.toContainText('parts');
+  await expect(page.getByRole('region', { name: 'Print facts' })).toHaveCount(0);
 });
 
 test('keeps actions reachable with a keyboard-sized viewport', async ({ page }) => {
@@ -691,7 +688,13 @@ test('keeps setup, export and share together in the header', async ({ page }) =>
   await waitForReadyGeometry(page);
   await expect(page.getByRole('button', { name: 'Undo' })).toBeVisible();
   const buttons = actions.locator('button');
-  await expect(buttons).toHaveCount(3);
+  await expect(buttons).toHaveCount(4);
+  /* Randomize now sits in this group; move the pointer off it so its hover lift is not measured. */
+  await page.mouse.move(1, 700);
+  await expect(page.getByRole('button', { name: 'Randomize', exact: true })).not.toHaveCSS(
+    'transform',
+    /matrix\(1, 0, 0, 1, 0, -/,
+  );
   const bounds = await Promise.all((await buttons.all()).map((button) => button.boundingBox()));
   expect(
     bounds.every(
@@ -748,13 +751,9 @@ test('shows accepted dimensions and selected maximum consistently', async ({ pag
   await expect(initialDialog).toBeHidden();
   await waitForReadyGeometry(page);
 
-  const summary = page.locator('.preview-summary');
-  await expect(summary).toContainText('Fits within maximum');
-  const actualSize = await summary
-    .locator('.summary-metrics')
-    .locator('strong')
-    .first()
-    .textContent();
+  const summary = page.getByTestId('preview-readout');
+  await expect(summary).toContainText('Fits 80.0 × 30.0 mm');
+  const actualSize = await summary.locator('strong').first().textContent();
   expect(actualSize).toMatch(/mm/);
 
   await page.getByRole('button', { name: 'Open quick setup' }).click();
@@ -787,9 +786,10 @@ test('keeps actual and maximum metrics readable at narrow enlarged text', async 
   await page.goto(`/create?design=${design}&lang=ru`);
   await expect(page.locator('.preview-panel')).toHaveAttribute('data-model-ready', 'true');
   await page.addStyleTag({ content: ':root { font-size: 200%; }' });
-  const summary = page.locator('.preview-summary');
-  await expect(summary.locator('.summary-metrics strong').nth(3)).toHaveText('80.0 × 30.0 mm');
-  await expect(summary.locator('.summary-fit-status strong')).toHaveText('Да');
+  const summary = page.getByTestId('preview-readout');
+  await expect(summary.locator('.preview-readout-fit--fits')).toHaveText(
+    'Помещается в 80.0 × 30.0 mm',
+  );
   const summaryDimensions = await summary.evaluate((element) => ({
     clientWidth: element.clientWidth,
     scrollWidth: element.scrollWidth,
@@ -797,7 +797,7 @@ test('keeps actual and maximum metrics readable at narrow enlarged text', async 
   expect(summaryDimensions.scrollWidth, JSON.stringify(summaryDimensions)).toBeLessThanOrEqual(
     summaryDimensions.clientWidth,
   );
-  for (const metric of await summary.locator('.summary-metrics strong').all()) {
+  for (const metric of await summary.locator(':scope > :not(.sr-only)').all()) {
     expect(await metric.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
       true,
     );
