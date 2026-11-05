@@ -439,6 +439,64 @@ describe('useCustomizerParams candidate scheduling', () => {
     expect(getApi().canRedo).toBe(true);
   });
 
+  it('runs undo and redo pressed while an earlier one is checked, in order', async () => {
+    const { callbacks } = createCallbacks();
+    const getApi = renderHook(callbacks);
+    const worker = MockWorker.instances[0];
+    const accept = (requestId: number) =>
+      act(async () => worker.emit({ type: 'validation', requestId, result: validResult() }));
+
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    await accept(1);
+    act(() => getApi().update('baseThicknessMm', 3));
+    await accept(2);
+
+    act(() => {
+      getApi().undo();
+      getApi().undo();
+    });
+    await accept(3);
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(2.5);
+    await accept(4);
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(DEFAULT_PARAMS.baseThicknessMm);
+    expect(getApi().canUndo).toBe(false);
+
+    act(() => {
+      getApi().redo();
+      getApi().redo();
+    });
+    await accept(5);
+    await accept(6);
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(3);
+    expect(getApi().canRedo).toBe(false);
+  });
+
+  it('drops queued history steps when the step before them is rejected', async () => {
+    const { callbacks } = createCallbacks();
+    const getApi = renderHook(callbacks);
+    const worker = MockWorker.instances[0];
+
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    await act(async () => worker.emit({ type: 'validation', requestId: 1, result: validResult() }));
+    /* The starting design was never validated, so this undo really waits for the worker. */
+    act(() => {
+      getApi().undo();
+      getApi().undo();
+    });
+    await act(async () =>
+      worker.emit({ type: 'validation', requestId: 2, result: invalidResult() }),
+    );
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(2.5);
+    expect(getApi().candidateFeedback?.status).toBe('rejected');
+
+    const posted = worker.postMessage.mock.calls.length;
+
+    act(() => getApi().redo());
+    expect(worker.postMessage.mock.calls.length).toBe(posted);
+    expect(getApi().params.baseThicknessMm).toBe(2.5);
+    expect(getApi().canRedo).toBe(false);
+  });
+
   it('keeps an undo entry when its candidate is rejected', async () => {
     const { callbacks } = createCallbacks();
     const getApi = renderHook(callbacks);

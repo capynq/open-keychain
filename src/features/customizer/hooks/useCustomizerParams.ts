@@ -250,6 +250,9 @@ export const useCustomizerParams = (
   >(undefined);
   /* Counts forward edits that end the redo branch, so a later undo result cannot revive it. */
   const historyBranch = useRef(0);
+  /* Undo or redo pressed while an earlier one is still being checked runs after it, in order. */
+  const queuedHistory = useRef<Array<'undo' | 'redo'>>([]);
+  const drainHistoryRef = useRef<() => void>(() => undefined);
   const nextHistoryMode = useRef<HistoryMode>('record');
   const nextHistoryEntry = useRef<UndoEntry | RedoEntry | undefined>(undefined);
   const [canUndo, setCanUndo] = useState(false);
@@ -283,6 +286,7 @@ export const useCustomizerParams = (
   const discardRedo = (): void => {
     redoStack.current = [];
     historyBranch.current += 1;
+    queuedHistory.current = [];
   };
   const clearHistory = (): void => {
     undoStack.current = [];
@@ -492,6 +496,7 @@ export const useCustomizerParams = (
       if (activeCandidateAttemptId.current === attemptId)
         activeCandidateAttemptId.current = undefined;
     }
+    if (history?.requestId === requestId && history.mode !== 'record') drainHistoryRef.current();
   };
 
   const recordRejectedAttempt = (
@@ -504,6 +509,7 @@ export const useCustomizerParams = (
     diagnostics?: OperationDiagnostics,
     attemptId = crypto.randomUUID(),
   ): void => {
+    queuedHistory.current = [];
     rejectedAttempt.current = {
       requestId,
       attemptId,
@@ -737,6 +743,7 @@ export const useCustomizerParams = (
 
     cancelRecovery();
     rejectedAttempt.current = undefined;
+    if (historyMode === 'record' && !userRetry) queuedHistory.current = [];
 
     const candidateKey = JSON.stringify(normalized);
     const retried =
@@ -1219,6 +1226,80 @@ export const useCustomizerParams = (
     setLocalFonts((current) => current.filter((item) => item.id !== id));
   };
 
+  const stepUndo = (): void => {
+    const accepted = JSON.stringify(acceptedParamsRef.current);
+    while (
+      undoStack.current.length &&
+      !undoStack.current.at(-1)?.appearance &&
+      JSON.stringify(undoStack.current.at(-1)?.params) === accepted
+    )
+      undoStack.current = undoStack.current.slice(0, -1);
+    const entry = undoStack.current.at(-1);
+    const appearance = callbacksRef.current.appearance;
+
+    if (entry?.appearance && appearance) {
+      undoStack.current = undoStack.current.slice(0, -1);
+      redoStack.current = [
+        ...redoStack.current,
+        { params: acceptedParamsRef.current, appearance: appearance.get() },
+      ].slice(-HISTORY_LIMIT);
+      appearance.set(entry.appearance);
+      syncHistory();
+      return;
+    }
+    syncHistory();
+    if (!entry) return;
+    nextHistoryMode.current = 'undo';
+    nextHistoryEntry.current = entry;
+    proposeCandidate(entry.params, 'refine');
+  };
+  const stepRedo = (): void => {
+    const entry = redoStack.current.at(-1);
+    if (!entry) return;
+    const appearance = callbacksRef.current.appearance;
+    if (entry.appearance && appearance) {
+      redoStack.current = redoStack.current.slice(0, -1);
+      pushUndo(acceptedParamsRef.current, 'change', appearance.get());
+      appearance.set(entry.appearance);
+      syncHistory();
+      return;
+    }
+    if (JSON.stringify(entry.params) === JSON.stringify(acceptedParamsRef.current)) {
+      redoStack.current = redoStack.current.slice(0, -1);
+      syncHistory();
+      return;
+    }
+    nextHistoryMode.current = 'redo';
+    nextHistoryEntry.current = entry;
+    proposeCandidate(entry.params, 'refine');
+  };
+  const historyInFlight = (): boolean => {
+    const history = pendingHistory.current;
+
+    return (
+      history !== undefined &&
+      history.mode !== 'record' &&
+      history.requestId === candidateRequestId.current &&
+      rejectedAttempt.current?.requestId !== history.requestId
+    );
+  };
+  const drainHistoryQueue = (): void => {
+    while (queuedHistory.current.length && !historyInFlight()) {
+      const next = queuedHistory.current.shift();
+
+      if (next === 'undo') stepUndo();
+      else stepRedo();
+    }
+  };
+  const requestHistory = (direction: 'undo' | 'redo'): void => {
+    queuedHistory.current = [...queuedHistory.current, direction];
+    drainHistoryQueue();
+  };
+
+  useEffect(() => {
+    drainHistoryRef.current = drainHistoryQueue;
+  });
+
   return {
     params,
     acceptedParams,
@@ -1386,54 +1467,9 @@ export const useCustomizerParams = (
       }
       return transaction;
     },
-    undo: () => {
-      const accepted = JSON.stringify(acceptedParamsRef.current);
-      while (
-        undoStack.current.length &&
-        !undoStack.current.at(-1)?.appearance &&
-        JSON.stringify(undoStack.current.at(-1)?.params) === accepted
-      )
-        undoStack.current = undoStack.current.slice(0, -1);
-      const entry = undoStack.current.at(-1);
-      const appearance = callbacksRef.current.appearance;
-
-      if (entry?.appearance && appearance) {
-        undoStack.current = undoStack.current.slice(0, -1);
-        redoStack.current = [
-          ...redoStack.current,
-          { params: acceptedParamsRef.current, appearance: appearance.get() },
-        ].slice(-HISTORY_LIMIT);
-        appearance.set(entry.appearance);
-        syncHistory();
-        return;
-      }
-      syncHistory();
-      if (!entry) return;
-      nextHistoryMode.current = 'undo';
-      nextHistoryEntry.current = entry;
-      proposeCandidate(entry.params, 'refine');
-    },
+    undo: () => requestHistory('undo'),
     canUndo,
-    redo: () => {
-      const entry = redoStack.current.at(-1);
-      if (!entry) return;
-      const appearance = callbacksRef.current.appearance;
-      if (entry.appearance && appearance) {
-        redoStack.current = redoStack.current.slice(0, -1);
-        pushUndo(acceptedParamsRef.current, 'change', appearance.get());
-        appearance.set(entry.appearance);
-        syncHistory();
-        return;
-      }
-      if (JSON.stringify(entry.params) === JSON.stringify(acceptedParamsRef.current)) {
-        redoStack.current = redoStack.current.slice(0, -1);
-        syncHistory();
-        return;
-      }
-      nextHistoryMode.current = 'redo';
-      nextHistoryEntry.current = entry;
-      proposeCandidate(entry.params, 'refine');
-    },
+    redo: () => requestHistory('redo'),
     canRedo,
     recordAppearanceEdit: (previous) => {
       const now = Date.now();
