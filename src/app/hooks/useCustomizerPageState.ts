@@ -35,6 +35,7 @@ import {
 } from '../../features/customizer/model/geometry-telemetry';
 import {
   candidateOutcomeSignature,
+  isExportWaiting,
   queuedExportAction,
 } from '../../features/export/model/queued-export';
 import { useExportActions } from '../../features/export/model/use-export-actions';
@@ -354,13 +355,16 @@ export const useCustomizerPageState = (
     designId,
   });
   /* Export stays clickable while the latest edit is checked; the dialog opens once it passes. */
-  const exportWaiting =
-    !randomizing &&
-    !canExport &&
-    (customizer.candidateFeedback?.status === 'checking' ||
-      geometry.busy ||
-      geometry.current === false ||
-      (geometry.result !== undefined && geometryResultParamsKey !== acceptedGeometryParamsKey));
+  const exportWaiting = isExportWaiting({
+    randomizing,
+    canExport,
+    checking: customizer.candidateFeedback?.status === 'checking',
+    busy: geometry.busy,
+    current: geometry.current,
+    failed: Boolean(geometry.error) && !geometry.busy,
+    staleResult:
+      geometry.result !== undefined && geometryResultParamsKey !== acceptedGeometryParamsKey,
+  });
   const [exportQueued, setExportQueued] = useState(false);
   const queuedOutcome = useRef('');
   const openExport = (): void => {

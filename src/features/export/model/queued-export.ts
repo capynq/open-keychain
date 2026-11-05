@@ -28,3 +28,26 @@ export const queuedExportAction = ({
 export const candidateOutcomeSignature = (
   feedback: { requestId: number; attemptId?: string; status: string } | undefined,
 ): string => (feedback ? `${feedback.attemptId ?? feedback.requestId}:${feedback.status}` : '');
+
+/**
+ * Whether an Export click should wait for a check that is still running. A terminal geometry
+ * failure is not waiting: nothing more will arrive, so the click is cancelled instead of hanging.
+ */
+export const isExportWaiting = ({
+  randomizing,
+  canExport,
+  checking,
+  busy,
+  current,
+  failed,
+  staleResult,
+}: {
+  randomizing: boolean;
+  canExport: boolean;
+  checking: boolean;
+  busy: boolean;
+  current: boolean | undefined;
+  failed: boolean;
+  staleResult: boolean;
+}): boolean =>
+  !randomizing && !canExport && !failed && (checking || busy || current === false || staleResult);
