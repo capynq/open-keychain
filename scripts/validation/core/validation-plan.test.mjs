@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import process from 'node:process';
 import {
+  CI_GATE_GROUPS,
+  ciGateGroup,
   classifyChangedFiles,
   createCiChangedGatePlan,
   createGatePlan,
   requiresFullCIRegression,
 } from './validation-plan.mjs';
-import { unitWorkerCount } from './concurrency.mjs';
+import { unitWorkerCount, validationConcurrency } from './concurrency.mjs';
 
 describe('validation gate selection', () => {
   const expectJourney = (plan) => {
@@ -27,6 +29,41 @@ describe('validation gate selection', () => {
     });
     expect(plan.filter(({ id }) => id === 'build')).toHaveLength(1);
   };
+
+  it('adds the 2x profile only for changed specs that depend on the pixel ratio', () => {
+    const plan = createCiChangedGatePlan(['e2e/routes.spec.ts', 'e2e/smoke.spec.ts']);
+    expect(plan.find(({ id }) => id === 'browser:changed').args).toEqual(
+      expect.arrayContaining(['e2e/routes.spec.ts', 'e2e/smoke.spec.ts']),
+    );
+    const pixelRatio = plan.find(({ id }) => id === 'browser:changed:2x');
+    expect(pixelRatio.args).toContain('e2e/routes.spec.ts');
+    expect(pixelRatio.args).not.toContain('e2e/smoke.spec.ts');
+    expect(pixelRatio.args).toContain('--project=mobile-2x');
+    expect(createCiChangedGatePlan(['e2e/smoke.spec.ts']).map(({ id }) => id)).not.toContain(
+      'browser:changed:2x',
+    );
+  });
+
+  it('splits the CI plan into static, unit and browser job groups', () => {
+    const plan = createCiChangedGatePlan([
+      'src/features/customizer/components/ControlsPanel/ControlsPanel.tsx',
+      'e2e/routes.spec.ts',
+    ]);
+    const byGroup = Object.fromEntries(
+      CI_GATE_GROUPS.map((group) => [
+        group,
+        plan.filter((gate) => ciGateGroup(gate) === group).map(({ id }) => id),
+      ]),
+    );
+    expect(byGroup.static).toEqual(['format:changed', 'lint:changed', 'typecheck']);
+    expect(byGroup.unit).toEqual(['unit:related']);
+    expect(byGroup.browser).toEqual(
+      expect.arrayContaining(['build', 'browser:changed', 'browser', 'browser:journey']),
+    );
+    for (const gate of plan.filter((item) => ciGateGroup(item) !== 'browser'))
+      expect(gate.dependsOn ?? []).toEqual([]);
+    expect(plan.find(({ id }) => id === 'unit:related').workerSlots).toBe(validationConcurrency());
+  });
 
   it('selects only formatting for documentation and focused tests/build for geometry', () => {
     expect(createCiChangedGatePlan(['docs/geometry-roadmap.md']).map(({ id }) => id)).toEqual([
@@ -67,7 +104,16 @@ describe('validation gate selection', () => {
       'browser:journey',
     ]);
     const browserSpec = createCiChangedGatePlan(['e2e/smoke.spec.ts']);
-    expect(browserSpec.find(({ id }) => id === 'browser:changed').args).toContain('--workers=1');
+    const changedSpecs = browserSpec.find(({ id }) => id === 'browser:changed');
+    expect(changedSpecs.args).toEqual(
+      expect.arrayContaining([
+        '--project=desktop',
+        '--project=mobile',
+        `--workers=${unitWorkerCount()}`,
+      ]),
+    );
+    expect(changedSpecs.args).not.toContain('--project=mobile-2x');
+    expect(changedSpecs.workerSlots).toBe(unitWorkerCount());
     expect(ui.find(({ id }) => id === 'browser').workerSlots).toBe(2);
     expect(browserSpec.map(({ id }) => id)).toEqual([
       'format:changed',

@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import process from 'node:process';
+import { validationConcurrency } from '../core/concurrency.mjs';
 
 const args = process.argv.slice(2);
 const separator = args.indexOf('--test');
@@ -9,7 +10,8 @@ const tests = separator < 0 ? [] : args.slice(separator + 1);
 let selected = false;
 
 const run = (runArgs) => {
-  const result = spawnSync('pnpm', ['exec', 'vitest', ...runArgs, '--maxWorkers=1'], {
+  const workers = `--maxWorkers=${validationConcurrency()}`;
+  const result = spawnSync('pnpm', ['exec', 'vitest', ...runArgs, workers], {
     encoding: 'utf8',
     env: process.env,
   });

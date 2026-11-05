@@ -2,7 +2,12 @@ import { Buffer } from 'node:buffer';
 import { execFileSync } from 'node:child_process';
 import process from 'node:process';
 import { clearValidationCache } from '../core/validation-cache.mjs';
-import { createCiChangedGatePlan, createGatePlan } from '../core/validation-plan.mjs';
+import {
+  CI_GATE_GROUPS,
+  ciGateGroup,
+  createCiChangedGatePlan,
+  createGatePlan,
+} from '../core/validation-plan.mjs';
 import {
   collectPushChanges,
   assertCleanValidationInputs,
@@ -144,15 +149,25 @@ export const main = async () => {
     if (!Array.isArray(files) || files.some((file) => typeof file !== 'string'))
       throw new Error('CHANGED_FILES_JSON must contain a JSON array of changed paths.');
   }
-  const gates =
+  const group = process.env.VALIDATION_GATE_GROUP || undefined;
+  if (group && (profile !== 'ci-changed' || !CI_GATE_GROUPS.includes(group)))
+    throw new Error(
+      `VALIDATION_GATE_GROUP applies to ci-changed and must be one of ${CI_GATE_GROUPS.join(', ')}; received ${group}.`,
+    );
+  const planned =
     profile === 'ci-changed' ? createCiChangedGatePlan(files) : createGatePlan(files, profile);
+  const gates = group ? planned.filter((gate) => ciGateGroup(gate) === group) : planned;
   if (profile === 'ci-changed') {
-    if (!gates.some((gate) => gate.id.startsWith('unit')))
+    if ((!group || group === 'unit') && !gates.some((gate) => gate.id.startsWith('unit')))
       process.stdout.write('Unit: not selected (no related test files found for this change).\n');
-    if (!gates.some((gate) => gate.id.startsWith('browser')))
+    if ((!group || group === 'browser') && !gates.some((gate) => gate.id.startsWith('browser')))
       process.stdout.write('Browser: not selected for this change.\n');
-    if (!gates.some((gate) => gate.id === 'geometry'))
+    if (!group && !gates.some((gate) => gate.id === 'geometry'))
       process.stdout.write('Full Geometry matrix: not selected; run pnpm validate:full locally.\n');
+    if (!gates.length) {
+      process.stdout.write(`No ${group ?? 'CI'} checks selected for this change.\n`);
+      return;
+    }
   }
   const outcome = await runValidationGates(gates, {
     files,

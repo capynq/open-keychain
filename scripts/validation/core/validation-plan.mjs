@@ -1,5 +1,5 @@
 import process from 'node:process';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { FORMAT_EXTENSIONS, LINT_EXTENSIONS, extensionOf } from './file-types.mjs';
 import { isGeometryInput } from './inputs.mjs';
 import { boundedConcurrency, unitWorkerCount, validationConcurrency } from './concurrency.mjs';
@@ -237,6 +237,30 @@ export const relatedInputsForCi = (files) => {
   };
 };
 
+/*
+ * Hosted CI runs selected gates in three parallel jobs. Build belongs with the browser gates that
+ * reuse its artifact; every other gate is independent of the others.
+ */
+export const CI_GATE_GROUPS = ['static', 'unit', 'browser'];
+export const ciGateGroup = ({ id }) =>
+  id.startsWith('unit')
+    ? 'unit'
+    : id === 'build' || id.startsWith('browser')
+      ? 'browser'
+      : 'static';
+
+/* Changed specs run on desktop and mobile; mobile-2x only adds a different pixel ratio. */
+export const CI_CHANGED_SPEC_PROJECTS = ['desktop', 'mobile'];
+const PIXEL_RATIO_SENSITIVE =
+  /project\.name\s*===\s*'mobile-2x'|devicePixelRatio|deviceScaleFactor/;
+export const isPixelRatioSensitiveSpec = (spec) => {
+  try {
+    return PIXEL_RATIO_SENSITIVE.test(readFileSync(spec, 'utf8'));
+  } catch {
+    return false;
+  }
+};
+
 const createBuildGate = () => ({
   id: 'build',
   name: 'Build',
@@ -322,7 +346,7 @@ export const createCiChangedGatePlan = (inputFiles) => {
         '--test',
         ...related.tests,
       ],
-      { workerSlots: 1 },
+      { workerSlots: validationConcurrency() },
     );
   } else if (testOnly && files.some(isTest)) {
     const tests = files.filter(
@@ -332,10 +356,8 @@ export const createCiChangedGatePlan = (inputFiles) => {
       add(
         'unit:changed',
         'Unit (changed tests)',
-        ['exec', 'vitest', 'run', ...tests, '--maxWorkers=1'],
-        {
-          workerSlots: 1,
-        },
+        ['exec', 'vitest', 'run', ...tests, `--maxWorkers=${validationConcurrency()}`],
+        { workerSlots: validationConcurrency() },
       );
   }
   if (
@@ -346,19 +368,44 @@ export const createCiChangedGatePlan = (inputFiles) => {
     add('build', 'Build', ['build:artifact'], {
       env: { VITE_GOOGLE_FONTS_API_KEY: 'playwright-google-fonts-key' },
     });
-  if (changedBrowserSpecs.length > 0)
+  if (changedBrowserSpecs.length > 0) {
+    const workers = unitWorkerCount();
+    const options = testOnly
+      ? { workerSlots: workers }
+      : {
+          workerSlots: workers,
+          env: { PLAYWRIGHT_USE_EXISTING_BUILD: 'true' },
+          dependsOn: ['build'],
+        };
     add(
       'browser:changed',
       'Browser (changed specs)',
-      ['exec', 'playwright', 'test', ...changedBrowserSpecs, '--workers=1'],
-      testOnly
-        ? { workerSlots: 1 }
-        : {
-            workerSlots: 1,
-            env: { PLAYWRIGHT_USE_EXISTING_BUILD: 'true' },
-            dependsOn: ['build'],
-          },
+      [
+        'exec',
+        'playwright',
+        'test',
+        ...changedBrowserSpecs,
+        ...CI_CHANGED_SPEC_PROJECTS.map((project) => `--project=${project}`),
+        `--workers=${workers}`,
+      ],
+      options,
     );
+    const pixelRatioSpecs = changedBrowserSpecs.filter(isPixelRatioSensitiveSpec);
+    if (pixelRatioSpecs.length > 0)
+      add(
+        'browser:changed:2x',
+        'Browser (changed 2x specs)',
+        [
+          'exec',
+          'playwright',
+          'test',
+          ...pixelRatioSpecs,
+          '--project=mobile-2x',
+          `--workers=${workers}`,
+        ],
+        options,
+      );
+  }
   if (!documentationOnly && !testOnly && needsBrowser && !needsGeometry)
     add('browser', 'Browser smoke', ['test:e2e:smoke'], {
       workerSlots: 2,

@@ -1,5 +1,29 @@
 # Open Keychain decisions
 
+## Hosted CI runs selected gates in parallel jobs
+
+**Status:** active
+
+**Decision:** The routine workflow classifies changes once and runs the selected gates in parallel
+`static`, `unit` and `browser` jobs; `quality` aggregates them and stays the required status.
+Related unit tests use 4 Vitest workers and browser gates 2 Playwright workers. Changed specs run on
+`desktop` and `mobile`, plus `mobile-2x` when the spec depends on the pixel ratio. Merge pushes to
+`main` skip the `browser` job. Chromium is installed without apt unless a library is missing.
+
+**Rationale:** Measured on GitHub runners: a UI pull request touching `model/types.ts` spent 7.4 min
+in related unit tests (883 of 908 test-seconds were geometry builder suites, correctly selected but
+run on one worker) and 9.2 min in changed specs on three profiles and one worker; a merge to `main`
+reran the same selection for 26 min. Public-repository runners have 4 vCPUs and are not billed.
+`playwright install --with-deps` once stalled 8 min 46 s downloading optional fonts from an apt
+mirror while every system library was already present; the UI font covers EN/RU/UK and no spec
+compares screenshots.
+
+**Consequences:** Geometry builder suites still run whenever static analysis relates them.
+`mobile-2x` coverage for a changed spec without pixel-ratio logic comes from the critical journey
+and local runs only. The merge-push skip trusts the pull request's checks; without branch
+protection that requires up-to-date branches, `static`, `unit` and the production journey are the
+post-merge checks.
+
 ## Customizer UX pass: colors survive template switches, history covers every edit
 
 **Status:** active
@@ -45,8 +69,9 @@ scaled linearly (44 min at 2 workers, 22 min at 4) but was capped at 5 workers. 
 `pnpm validate:push` from a non-TTY, never-closing stdin (agent shells) hung before any gate.
 
 **Consequences:** Sharding and scheduling change only placement and order: test names and the
-4,267-case matrix are unchanged and must stay so. CI pins `VALIDATION_CONCURRENCY=1` and
-`MATRIX_CONCURRENCY=1`, and `PLAYWRIGHT_WORKERS` defaults to 2, so CI behaviour is unchanged.
+4,267-case matrix are unchanged and must stay so. The manual full CI profile pins
+`VALIDATION_CONCURRENCY=1` and `MATRIX_CONCURRENCY=1`; routine CI parallelism is described in
+"Hosted CI runs selected gates in parallel jobs".
 Slowdown warnings compare against local history and are informational, not a gate.
 
 ## Frontend analytics releases identify the exact source commit

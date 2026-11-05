@@ -1,0 +1,16 @@
+name: Install Chromium
+description: >-
+  Download the Playwright Chromium build. The runner image already has its system libraries, so
+  apt runs only when one is missing; apt mirrors have stalled for minutes on optional fonts.
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        pnpm exec playwright install chromium
+        browsers="${PLAYWRIGHT_BROWSERS_PATH:-$HOME/.cache/ms-playwright}"
+        missing="$(find "$browsers" -type f \( -name chrome -o -name chrome-headless-shell -o -name headless_shell \) -exec ldd {} \; | grep 'not found' | sort -u || true)"
+        if [ -n "$missing" ]; then
+          printf 'Missing Chromium libraries:\n%s\n' "$missing"
+          pnpm exec playwright install-deps chromium
+        fi
