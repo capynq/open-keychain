@@ -1869,6 +1869,22 @@ input[type='range'] {
   .customizer-app-shell .preview-panel .preview-heading {
     margin-bottom: 8px;
   }
+}
+
+/*
+ * Phones give the size readout its own row above the status pill and reserve both rows, so the
+ * heading keeps one height whether or not the readout has appeared (boot frame, loading, any locale).
+ */
+@media (max-width: 760px) {
+  .customizer-app-shell .preview-panel .preview-heading {
+    min-height: 50px;
+    align-content: flex-end;
+    row-gap: 4px;
+  }
+
+  .customizer-app-shell .preview-panel .preview-readout {
+    flex-basis: 100%;
+  }
 
   .customizer-app-shell .preview-panel .viewer-wrap {
     height: clamp(210px, 34svh, 300px);
@@ -1885,9 +1901,16 @@ input[type='range'] {
   }
 }
 
-@media (max-width: 400px) and (min-height: 560px) {
+/* Boot-frame defaults; the live editor measures the header (useStickyPreview). */
+@media (max-width: 420px) and (min-height: 560px) {
   .customizer-app-shell {
     --customizer-topbar-height: 53px;
+  }
+}
+
+@media (max-width: 360px) and (min-height: 560px) {
+  .customizer-app-shell {
+    --customizer-topbar-height: 51px;
   }
 }
 
@@ -1929,7 +1952,8 @@ input[type='range'] {
   }
 }
 
-@media (max-width: 400px) {
+/* Common phone widths: compact targets so the longer RU and UK Export label still fits one row. */
+@media (max-width: 420px) {
   .customizer-topbar {
     padding-inline: 10px;
     gap: 4px;
@@ -1946,7 +1970,10 @@ input[type='range'] {
   }
 
   .customizer-topbar .topbar-export-actions .export-header-button {
+    height: 36px;
+    min-height: 36px;
     padding-inline: 8px 10px;
+    font-size: 13px;
   }
 
   .customizer-topbar .icon-button,
