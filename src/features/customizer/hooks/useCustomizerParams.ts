@@ -243,10 +243,13 @@ export const useCustomizerParams = (
         entry?: UndoEntry | RedoEntry;
         insertAt: number;
         staleRedo: readonly RedoEntry[];
+        branch: number;
         candidateKey: string;
       }
     | undefined
   >(undefined);
+  /* Counts forward edits that end the redo branch, so a later undo result cannot revive it. */
+  const historyBranch = useRef(0);
   const nextHistoryMode = useRef<HistoryMode>('record');
   const nextHistoryEntry = useRef<UndoEntry | RedoEntry | undefined>(undefined);
   const [canUndo, setCanUndo] = useState(false);
@@ -277,9 +280,13 @@ export const useCustomizerParams = (
       ...undoStack.current.slice(at),
     ].slice(-HISTORY_LIMIT);
   };
+  const discardRedo = (): void => {
+    redoStack.current = [];
+    historyBranch.current += 1;
+  };
   const clearHistory = (): void => {
     undoStack.current = [];
-    redoStack.current = [];
+    discardRedo();
     pendingHistory.current = undefined;
     syncHistory();
   };
@@ -459,15 +466,17 @@ export const useCustomizerParams = (
       if (JSON.stringify(history.previous) !== JSON.stringify(normalized)) {
         if (history.mode === 'undo') {
           undoStack.current = undoStack.current.filter((item) => item !== history.entry);
-          redoStack.current = [...redoStack.current, { params: history.previous }].slice(
-            -HISTORY_LIMIT,
-          );
+          if (history.branch === historyBranch.current)
+            redoStack.current = [...redoStack.current, { params: history.previous }].slice(
+              -HISTORY_LIMIT,
+            );
         } else {
           /* An accepted edit drops the redo steps it replaced, not ones made while it was checked. */
           redoStack.current = redoStack.current.filter((item) =>
             history.mode === 'redo' ? item !== history.entry : !history.staleRedo.includes(item),
           );
           insertUndo(history.previous, history.insertAt);
+          if (history.mode === 'record') historyBranch.current += 1;
         }
       }
       syncHistory();
@@ -650,7 +659,7 @@ export const useCustomizerParams = (
     pendingHistory.current = undefined;
     commitAccepted(prepared.params, prepared.result, nextId);
     pushUndo(previous, 'recovery');
-    redoStack.current = [];
+    discardRedo();
     syncHistory();
     rejectedAttempt.current = undefined;
     return true;
@@ -744,6 +753,7 @@ export const useCustomizerParams = (
           entry: retried?.entry ?? historyEntry,
           insertAt: retried?.insertAt ?? undoStack.current.length,
           staleRedo: retried?.staleRedo ?? redoStack.current,
+          branch: retried?.branch ?? historyBranch.current,
           candidateKey,
         }
       : undefined;
@@ -1346,7 +1356,7 @@ export const useCustomizerParams = (
 
         pendingHistory.current = undefined;
         pushUndo(original, 'randomize');
-        redoStack.current = [];
+        discardRedo();
         syncHistory();
         if (normalized.templateId !== original.templateId)
           callbacksRef.current.templateChanging?.(original.templateId, normalized.templateId);
@@ -1431,7 +1441,7 @@ export const useCustomizerParams = (
       if (top?.appearance && top.at !== undefined && now - top.at < APPEARANCE_COALESCE_MS)
         undoStack.current = [...undoStack.current.slice(0, -1), { ...top, at: now }];
       else pushUndo(acceptedParamsRef.current, 'change', previous, now);
-      redoStack.current = [];
+      discardRedo();
       syncHistory();
     },
   };
