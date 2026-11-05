@@ -329,6 +329,31 @@ describe('useCustomizerParams candidate scheduling', () => {
     expect(getApi().canUndo).toBe(false);
   });
 
+  it('keeps a color edit made while an undo is still being checked', async () => {
+    const { callbacks } = createCallbacks();
+    let colors: { version: 1; base?: string } = { version: 1 };
+    const getApi = renderHook({
+      ...callbacks,
+      appearance: { get: () => colors, set: (next) => (colors = next) },
+    });
+    const worker = MockWorker.instances[0];
+
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    await act(async () => worker.emit({ type: 'validation', requestId: 1, result: validResult() }));
+    act(() => getApi().undo());
+    act(() => {
+      getApi().recordAppearanceEdit(colors);
+      colors = { version: 1, base: '#111111' };
+    });
+    await act(async () => worker.emit({ type: 'validation', requestId: 2, result: validResult() }));
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(DEFAULT_PARAMS.baseThicknessMm);
+    expect(getApi().canUndo).toBe(true);
+
+    act(() => getApi().undo());
+    expect(colors.base).toBeUndefined();
+    expect(getApi().canUndo).toBe(false);
+  });
+
   it('keeps an undo entry when its candidate is rejected', async () => {
     const { callbacks } = createCallbacks();
     const getApi = renderHook(callbacks);

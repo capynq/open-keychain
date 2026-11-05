@@ -230,10 +230,18 @@ export const useCustomizerParams = (
 
   const undoStack = useRef<UndoEntry[]>([]);
   const redoStack = useRef<RedoEntry[]>([]);
+  /* An undo or redo names the exact entry it consumes; edits made while it is checked stay put. */
   const pendingHistory = useRef<
-    { requestId: number; mode: Exclude<HistoryMode, 'none'>; previous: KeychainParams } | undefined
+    | {
+        requestId: number;
+        mode: Exclude<HistoryMode, 'none'>;
+        previous: KeychainParams;
+        entry?: UndoEntry | RedoEntry;
+      }
+    | undefined
   >(undefined);
   const nextHistoryMode = useRef<HistoryMode>('record');
+  const nextHistoryEntry = useRef<UndoEntry | RedoEntry | undefined>(undefined);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [undoKind, setUndoKind] = useState<UndoKind>();
@@ -434,12 +442,13 @@ export const useCustomizerParams = (
       pendingHistory.current = undefined;
       if (JSON.stringify(history.previous) !== JSON.stringify(normalized)) {
         if (history.mode === 'undo') {
-          undoStack.current = undoStack.current.slice(0, -1);
+          undoStack.current = undoStack.current.filter((item) => item !== history.entry);
           redoStack.current = [...redoStack.current, { params: history.previous }].slice(
             -HISTORY_LIMIT,
           );
         } else {
-          if (history.mode === 'redo') redoStack.current = redoStack.current.slice(0, -1);
+          if (history.mode === 'redo')
+            redoStack.current = redoStack.current.filter((item) => item !== history.entry);
           else redoStack.current = [];
           pushUndo(history.previous, 'change');
         }
@@ -640,8 +649,10 @@ export const useCustomizerParams = (
   ): void => {
     const inputAt = performance.now();
     const historyMode = nextHistoryMode.current;
+    const historyEntry = nextHistoryEntry.current;
 
     nextHistoryMode.current = 'record';
+    nextHistoryEntry.current = undefined;
     let normalized: KeychainParams;
     try {
       normalized = normalizeParams(reconcileCandidateParams(acceptedParamsRef.current, candidate));
@@ -704,7 +715,12 @@ export const useCustomizerParams = (
     pendingHistory.current =
       historyMode === 'none'
         ? undefined
-        : { requestId, mode: historyMode, previous: acceptedParamsRef.current };
+        : {
+            requestId,
+            mode: historyMode,
+            previous: acceptedParamsRef.current,
+            entry: historyEntry,
+          };
     if (historyMode !== 'none' && normalized.templateId !== paramsRef.current.templateId)
       callbacksRef.current.templateChanging?.(paramsRef.current.templateId, normalized.templateId);
     paramsRef.current = normalized;
@@ -1358,6 +1374,7 @@ export const useCustomizerParams = (
       syncHistory();
       if (!entry) return;
       nextHistoryMode.current = 'undo';
+      nextHistoryEntry.current = entry;
       proposeCandidate(entry.params, 'refine');
     },
     canUndo,
@@ -1378,6 +1395,7 @@ export const useCustomizerParams = (
         return;
       }
       nextHistoryMode.current = 'redo';
+      nextHistoryEntry.current = entry;
       proposeCandidate(entry.params, 'refine');
     },
     canRedo,
