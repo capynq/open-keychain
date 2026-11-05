@@ -33,6 +33,10 @@ import {
   geometryReadyTimingProperties,
   workerReplacementCount,
 } from '../../features/customizer/model/geometry-telemetry';
+import {
+  candidateOutcomeSignature,
+  queuedExportAction,
+} from '../../features/export/model/queued-export';
 import { useExportActions } from '../../features/export/model/use-export-actions';
 import { useHostedAccount } from '../../features/hosted/hooks/useHostedAccount';
 import {
@@ -349,10 +353,14 @@ export const useCustomizerPageState = (
       geometry.current === false ||
       (geometry.result !== undefined && geometryResultParamsKey !== acceptedGeometryParamsKey));
   const [exportQueued, setExportQueued] = useState(false);
+  const queuedOutcome = useRef('');
   const openExport = (): void => {
     if (exportOpen) return;
     if (!canExport) {
-      if (exportWaiting) setExportQueued(true);
+      if (exportWaiting) {
+        queuedOutcome.current = candidateOutcomeSignature(customizer.candidateFeedback);
+        setExportQueued(true);
+      }
       return;
     }
     setExportQueued(false);
@@ -367,16 +375,20 @@ export const useCustomizerPageState = (
   useEffect(() => {
     openExportRef.current = openExport;
   });
+  const candidateFeedback = customizer.candidateFeedback;
+
   useEffect(() => {
-    if (!exportQueued) return;
-    if (canExport) {
-      openExportRef.current();
-      return;
-    }
-    if (exportWaiting) return;
-    /* eslint-disable-next-line react-hooks/set-state-in-effect -- a queued export ends when its check fails */
-    setExportQueued(false);
-  }, [canExport, exportQueued, exportWaiting]);
+    const action = queuedExportAction({
+      queued: exportQueued,
+      canExport,
+      waiting: exportWaiting,
+      rejectedSinceQueued:
+        (candidateFeedback?.status === 'rejected' || candidateFeedback?.status === 'failed') &&
+        candidateOutcomeSignature(candidateFeedback) !== queuedOutcome.current,
+    });
+    if (action === 'open') openExportRef.current();
+    if (action === 'cancel') setExportQueued(false);
+  }, [canExport, candidateFeedback, exportQueued, exportWaiting]);
   const lastRouteInputKey = useRef(routeInputKey);
 
   useEffect(() => {
