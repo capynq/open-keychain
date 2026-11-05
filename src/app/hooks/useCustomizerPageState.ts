@@ -66,6 +66,11 @@ export const useCustomizerPageState = (
       typeof next === 'function' ? next(current) : next,
     initialAppearanceOverrides ?? { version: 1 },
   );
+  const appearanceRef = useRef(appearanceOverrides);
+
+  useEffect(() => {
+    appearanceRef.current = appearanceOverrides;
+  }, [appearanceOverrides]);
   const [randomizing, setRandomizing] = useState(false);
   const [randomizeFailure, setRandomizeFailure] = useState(false);
   const { consent, track } = useAnalytics();
@@ -147,6 +152,10 @@ export const useCustomizerPageState = (
     },
     templateChanging: (from, to) => {
       setAppearanceOverrides((current) => keepAppearanceAcrossTemplates(current, from, to));
+    },
+    appearance: {
+      get: () => appearanceRef.current,
+      set: (overrides) => setAppearanceOverrides(overrides),
     },
     pending: (params, font, subtitleFont) => {
       geometryRef.current?.clientRef.current?.cancelCandidate();
@@ -463,6 +472,12 @@ export const useCustomizerPageState = (
     if (randomizing) return;
     customizer.redo();
   };
+  /* Sidebar color edits are part of the undo history; setup and route loads are not. */
+  const editAppearance = (next: PrintAppearanceOverrides): void => {
+    if (JSON.stringify(next) === JSON.stringify(appearanceOverrides)) return;
+    customizer.recordAppearanceEdit(appearanceOverrides);
+    setAppearanceOverrides(next);
+  };
 
   return {
     customizer,
@@ -489,6 +504,7 @@ export const useCustomizerPageState = (
     randomize,
     undo,
     redo,
+    editAppearance,
     status: previewStatus(geometry, locale),
     modelInfo: {
       templateId: customizer.acceptedParams.templateId,

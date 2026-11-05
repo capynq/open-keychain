@@ -34,7 +34,7 @@ export const CustomizerWorkspace = ({
         }}
         favoriteFontCategories={favoriteFontCategories}
         appearanceOverrides={state.appearanceOverrides}
-        onAppearanceChange={state.setAppearanceOverrides}
+        onAppearanceChange={state.editAppearance}
         baseColor={state.geometry.result?.appearance.base.color}
         reliefColor={state.geometry.result?.appearance.relief.color}
         parameterLimits={

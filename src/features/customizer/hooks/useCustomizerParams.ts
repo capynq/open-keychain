@@ -6,7 +6,10 @@ import type { OperationDiagnostics } from '@/shared/lib/recovery/operation-diagn
 import { failureFrom, RecoveryError } from '@/shared/lib/recovery/failure';
 import { GeometryOperationError } from '@/shared/lib/recovery/operation-diagnostics';
 
-import type { GeometryResult } from '../../../domain/keychain/model/types';
+import type {
+  GeometryResult,
+  PrintAppearanceOverrides,
+} from '../../../domain/keychain/model/types';
 import type { FontNotice } from '../model/customizer-types';
 
 import {
@@ -111,11 +114,25 @@ export type CandidateCallbacks = {
   reject?: (params: KeychainParams, font: FontDefinition, subtitleFont: FontDefinition) => void;
   /** A user edit is about to switch templates; colors are kept, not reset to the template's. */
   templateChanging?: (from: TemplateId, to: TemplateId) => void;
+  /** Session color choices, so undo and redo also step through color edits. */
+  appearance?: {
+    get: () => PrintAppearanceOverrides;
+    set: (overrides: PrintAppearanceOverrides) => void;
+  };
 };
 
 export type UndoKind = 'randomize' | 'recovery' | 'change';
 type HistoryMode = 'record' | 'undo' | 'redo' | 'none';
 const HISTORY_LIMIT = 50;
+/* Native color pickers emit a change per drag step; edits closer than this form one undo step. */
+const APPEARANCE_COALESCE_MS = 800;
+type UndoEntry = {
+  params: KeychainParams;
+  kind: UndoKind;
+  appearance?: PrintAppearanceOverrides;
+  at?: number;
+};
+type RedoEntry = { params: KeychainParams; appearance?: PrintAppearanceOverrides };
 
 export const useCustomizerParams = (
   initialParams?: KeychainParams,
@@ -182,6 +199,7 @@ export const useCustomizerParams = (
   canUndo: boolean;
   redo: () => void;
   canRedo: boolean;
+  recordAppearanceEdit: (previous: PrintAppearanceOverrides) => void;
 } => {
   const [params, setParams] = useState<KeychainParams>(() => ({
     ...DEFAULT_PARAMS,
@@ -210,8 +228,8 @@ export const useCustomizerParams = (
     [candidateScheduler],
   );
 
-  const undoStack = useRef<{ params: KeychainParams; kind: UndoKind }[]>([]);
-  const redoStack = useRef<KeychainParams[]>([]);
+  const undoStack = useRef<UndoEntry[]>([]);
+  const redoStack = useRef<RedoEntry[]>([]);
   const pendingHistory = useRef<
     { requestId: number; mode: Exclude<HistoryMode, 'none'>; previous: KeychainParams } | undefined
   >(undefined);
@@ -224,8 +242,16 @@ export const useCustomizerParams = (
     setCanRedo(redoStack.current.length > 0);
     setUndoKind(undoStack.current.at(-1)?.kind);
   };
-  const pushUndo = (entry: KeychainParams, kind: UndoKind): void => {
-    undoStack.current = [...undoStack.current, { params: entry, kind }].slice(-HISTORY_LIMIT);
+  const pushUndo = (
+    entry: KeychainParams,
+    kind: UndoKind,
+    appearance?: PrintAppearanceOverrides,
+    at?: number,
+  ): void => {
+    undoStack.current = [
+      ...undoStack.current,
+      { params: entry, kind, ...(appearance ? { appearance, at } : {}) },
+    ].slice(-HISTORY_LIMIT);
   };
   const clearHistory = (): void => {
     undoStack.current = [];
@@ -409,7 +435,9 @@ export const useCustomizerParams = (
       if (JSON.stringify(history.previous) !== JSON.stringify(normalized)) {
         if (history.mode === 'undo') {
           undoStack.current = undoStack.current.slice(0, -1);
-          redoStack.current = [...redoStack.current, history.previous].slice(-HISTORY_LIMIT);
+          redoStack.current = [...redoStack.current, { params: history.previous }].slice(
+            -HISTORY_LIMIT,
+          );
         } else {
           if (history.mode === 'redo') redoStack.current = redoStack.current.slice(0, -1);
           else redoStack.current = [];
@@ -1310,11 +1338,23 @@ export const useCustomizerParams = (
       const accepted = JSON.stringify(acceptedParamsRef.current);
       while (
         undoStack.current.length &&
+        !undoStack.current.at(-1)?.appearance &&
         JSON.stringify(undoStack.current.at(-1)?.params) === accepted
       )
         undoStack.current = undoStack.current.slice(0, -1);
       const entry = undoStack.current.at(-1);
+      const appearance = callbacksRef.current.appearance;
 
+      if (entry?.appearance && appearance) {
+        undoStack.current = undoStack.current.slice(0, -1);
+        redoStack.current = [
+          ...redoStack.current,
+          { params: acceptedParamsRef.current, appearance: appearance.get() },
+        ].slice(-HISTORY_LIMIT);
+        appearance.set(entry.appearance);
+        syncHistory();
+        return;
+      }
       syncHistory();
       if (!entry) return;
       nextHistoryMode.current = 'undo';
@@ -1324,14 +1364,31 @@ export const useCustomizerParams = (
     redo: () => {
       const entry = redoStack.current.at(-1);
       if (!entry) return;
-      if (JSON.stringify(entry) === JSON.stringify(acceptedParamsRef.current)) {
+      const appearance = callbacksRef.current.appearance;
+      if (entry.appearance && appearance) {
+        redoStack.current = redoStack.current.slice(0, -1);
+        pushUndo(acceptedParamsRef.current, 'change', appearance.get());
+        appearance.set(entry.appearance);
+        syncHistory();
+        return;
+      }
+      if (JSON.stringify(entry.params) === JSON.stringify(acceptedParamsRef.current)) {
         redoStack.current = redoStack.current.slice(0, -1);
         syncHistory();
         return;
       }
       nextHistoryMode.current = 'redo';
-      proposeCandidate(entry, 'refine');
+      proposeCandidate(entry.params, 'refine');
     },
     canRedo,
+    recordAppearanceEdit: (previous) => {
+      const now = Date.now();
+      const top = undoStack.current.at(-1);
+      if (top?.appearance && top.at !== undefined && now - top.at < APPEARANCE_COALESCE_MS)
+        undoStack.current = [...undoStack.current.slice(0, -1), { ...top, at: now }];
+      else pushUndo(acceptedParamsRef.current, 'change', previous, now);
+      redoStack.current = [];
+      syncHistory();
+    },
   };
 };

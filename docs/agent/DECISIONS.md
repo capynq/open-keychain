@@ -7,7 +7,8 @@
 **Decision:** Switching template or style never changes the colors on screen: a color slot that
 still follows the old template default is pinned when the new default differs
 (`keepAppearanceAcrossTemplates`). Every accepted edit enters a 50-step undo/redo history
-(Randomize and recovery fixes included); Undo and Redo stay in the header and respond to
+(Randomize, recovery fixes and sidebar color edits included; color-picker drags within 0.8 s are
+one step); Undo and Redo stay in the header and respond to
 Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z and Ctrl+Y outside text fields. The Print facts card is removed: one
 readout line beside the preview shows size and thickness, part count only above one, and the fit
 check only with a chosen maximum; a notice under the preview appears only for warnings or errors.

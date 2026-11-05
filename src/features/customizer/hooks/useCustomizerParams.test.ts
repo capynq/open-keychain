@@ -285,6 +285,50 @@ describe('useCustomizerParams candidate scheduling', () => {
     expect(getApi().canRedo).toBe(false);
   });
 
+  it('steps through color edits and parameter edits in one history', async () => {
+    const { callbacks } = createCallbacks();
+    let colors: { version: 1; base?: string } = { version: 1 };
+    const getApi = renderHook({
+      ...callbacks,
+      appearance: { get: () => colors, set: (next) => (colors = next) },
+    });
+    const worker = MockWorker.instances[0];
+    const editColor = (base: string) => {
+      getApi().recordAppearanceEdit(colors);
+      colors = { version: 1, base };
+    };
+
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    await act(async () => worker.emit({ type: 'validation', requestId: 1, result: validResult() }));
+    act(() => editColor('#111111'));
+    act(() => vi.advanceTimersByTime(1000));
+    act(() => editColor('#222222'));
+    act(() => vi.advanceTimersByTime(100));
+    /* A drag through the native picker arrives as many edits; they form one step. */
+    act(() => editColor('#333333'));
+
+    act(() => getApi().undo());
+    expect(colors.base).toBe('#111111');
+    expect(getApi().canRedo).toBe(true);
+    act(() => getApi().undo());
+    expect(colors.base).toBeUndefined();
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(2.5);
+
+    act(() => getApi().redo());
+    expect(colors.base).toBe('#111111');
+    act(() => editColor('#444444'));
+    expect(getApi().canRedo).toBe(false);
+
+    act(() => getApi().undo());
+    expect(colors.base).toBe('#111111');
+    act(() => getApi().undo());
+    expect(colors.base).toBeUndefined();
+    act(() => getApi().undo());
+    await act(async () => worker.emit({ type: 'validation', requestId: 2, result: validResult() }));
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(DEFAULT_PARAMS.baseThicknessMm);
+    expect(getApi().canUndo).toBe(false);
+  });
+
   it('keeps an undo entry when its candidate is rejected', async () => {
     const { callbacks } = createCallbacks();
     const getApi = renderHook(callbacks);
