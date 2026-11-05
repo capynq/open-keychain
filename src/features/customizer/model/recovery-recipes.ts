@@ -104,8 +104,7 @@ export const recoveryRecipes = (
       { font: font.name },
     );
   } else if (strategy === 'size-envelope' && params.sizeEnvelope) {
-    // Text has already been fitted to the builder's minimum height. Changing the
-    // envelope can make room for fixed hardware and final feature dimensions.
+    /* Text is already at its minimum fitted height; only a larger envelope frees room for hardware. */
     if (params.sizeEnvelope.widthMm < 120 || params.sizeEnvelope.heightMm < 80)
       add(
         'larger-envelope',
