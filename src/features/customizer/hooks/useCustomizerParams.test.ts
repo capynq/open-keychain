@@ -257,6 +257,26 @@ describe('useCustomizerParams candidate scheduling', () => {
     expect(getApi().candidateFeedback?.status).toBe('rejected');
   });
 
+  it('routes an accept callback that throws to the rejection path instead of leaving the candidate checking', async () => {
+    const { rejected, callbacks } = createCallbacks();
+    const throwingCallbacks: CandidateCallbacks = {
+      ...callbacks,
+      accept: () => {
+        throw new RecoveryError({ code: 'geometry-invalid-result' });
+      },
+    };
+    const getApi = renderHook(throwingCallbacks);
+    const worker = MockWorker.instances[0];
+
+    act(() => getApi().update('text', 'GOOD'));
+    await act(async () => {
+      worker.emit({ type: 'validation', requestId: 1, result: validResult() });
+    });
+    expect(getApi().candidateFeedback?.status).not.toBe('checking');
+    expect(getApi().candidateFeedback?.status).toBeDefined();
+    expect(rejected).toEqual([DEFAULT_PARAMS.text]);
+  });
+
   it('asks before applying a geometry measured parameter correction', async () => {
     const getApi = renderHook({
       validate: async () => ({
@@ -319,6 +339,47 @@ describe('useCustomizerParams candidate scheduling', () => {
     expect(validate).toHaveBeenCalledTimes(2);
     expect(getApi().acceptedParams.text).toBe('NORA');
     expect(getApi().candidateFeedback).toBeUndefined();
+  });
+
+  it('offers Fix only for measured base edge failures and keeps generic build failures retry-only', async () => {
+    const baseEdgeCallbacks: CandidateCallbacks = {
+      validate: () =>
+        Promise.reject(
+          new GeometryOperationError(
+            {
+              code: 'base-edge-too-large',
+              context: { target: 'base', maximumMm: 0.2, requestedMm: 0.6 },
+            },
+            { stage: 'generation', type: 'operation_error' },
+          ),
+        ),
+    };
+    const baseEdgeApi = renderHook(baseEdgeCallbacks);
+
+    act(() => baseEdgeApi().update('text', 'NORA'));
+    await act(async () => Promise.resolve());
+    expect(baseEdgeApi().candidateFeedback).toMatchObject({
+      status: 'rejected',
+      failure: { code: 'base-edge-too-large' },
+    });
+
+    const genericCallbacks: CandidateCallbacks = {
+      validate: () =>
+        Promise.reject(
+          new GeometryOperationError(
+            { code: 'geometry-build-failed' },
+            { stage: 'generation', type: 'operation_error' },
+          ),
+        ),
+    };
+    const genericApi = renderHook(genericCallbacks);
+
+    act(() => genericApi().update('text', 'NORA'));
+    await act(async () => Promise.resolve());
+    expect(genericApi().candidateFeedback).toMatchObject({
+      status: 'failed',
+      failure: { code: 'geometry-build-failed' },
+    });
   });
 
   it('prepares measured recovery options and applies the proved result without another validation', async () => {

@@ -13,7 +13,6 @@ import type { GeometryResult, PrintAppearance } from '../../../../domain/keychai
 import type { Locale } from '../../../../infrastructure/i18n/config';
 import type { PhotoCaptureApi } from '../../model/photo-capture';
 import type { PhotoFormat } from '../../model/photo-format';
-import type { PreviewRenderState } from '../../model/render-state';
 
 import { t } from '../../../../infrastructure/i18n/utils';
 import {
@@ -38,7 +37,9 @@ import {
   VIEW_DEFINITIONS,
   type ViewId,
 } from '../../camera/views';
+import { previewRendererSettings, type PreviewQualityTier } from '../../model/preview-quality';
 import { setOrbitControlsDamping } from '../../model/reduced-motion';
+import { readyRenderState, type PreviewRenderState } from '../../model/render-state';
 import { CameraViewIcon } from './CameraViewIcon';
 import { createSurfaceMaterials, type SurfaceMaterials } from './surface-materials';
 import styles from './Viewer.module.css';
@@ -55,6 +56,7 @@ type ViewerProps = {
   restartKey?: number;
   toolbarAction?: ReactNode;
   onPhotoCaptureChange?: (capture: PhotoCaptureApi | undefined) => void;
+  quality?: PreviewQualityTier;
 };
 type ViewerState = {
   camera: THREE.PerspectiveCamera;
@@ -78,6 +80,7 @@ type ViewerState = {
   installedGenerationId?: number;
   fail: (code: string, message?: string) => void;
   invalidate?: () => void;
+  applyQuality?: (tier: PreviewQualityTier) => void;
 };
 const DEFAULT_INSPECTION_ZOOM = 1;
 const SURFACE_SIZE = 1800;
@@ -142,7 +145,7 @@ const fitViewer = (
     result.dimensions.thicknessMm,
     center,
   );
-  // Surface scenery must never change model framing or the inspection pan frame.
+  /* Scenery must not alter framing */
   const direction =
     orientation?.direction ??
     (selected === 'custom'
@@ -165,7 +168,7 @@ const fitViewer = (
   const fitted = fittedCameraPose(state.camera, bounds, direction, up, 1);
   const pose = fitted.pose;
 
-  // The display floor spans beyond the fitted model and can cross its near plane.
+  /* Floor can cross near plane */
   if (state.platform.visible) pose.near = Math.min(pose.near, 0.1);
   applyCameraPose(state.camera, pose);
   state.camera.zoom = inspectionZoom;
@@ -212,9 +215,11 @@ export const Viewer = ({
   onRetry,
   restartKey = 0,
   onPhotoCaptureChange,
+  quality = 'high',
   toolbarAction,
 }: ViewerProps) => {
   const hostRef = useRef<HTMLDivElement>(null);
+  const qualityRef = useRef(quality);
 
   const stateRef = useRef<ViewerState | undefined>(undefined);
   const recoveryPose = useRef<InspectionSnapshot | undefined>(undefined);
@@ -367,7 +372,12 @@ export const Viewer = ({
 
     renderer.domElement.addEventListener('webglcontextlost', handleContextLost, false);
 
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const initialSettings = previewRendererSettings(qualityRef.current, {
+      devicePixelRatio: window.devicePixelRatio,
+      viewportWidth: window.innerWidth,
+    });
+
+    renderer.setPixelRatio(initialSettings.pixelRatio);
     renderer.setSize(Math.max(host.clientWidth, 1), Math.max(host.clientHeight, 1), false);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -459,10 +469,7 @@ export const Viewer = ({
 
     key.position.set(-48, -64, 92);
     key.castShadow = true;
-    key.shadow.mapSize.set(
-      window.innerWidth < 760 ? 1024 : 2048,
-      window.innerWidth < 760 ? 1024 : 2048,
-    );
+    key.shadow.mapSize.set(initialSettings.shadowMapSize, initialSettings.shadowMapSize);
     key.shadow.bias = -0.0002;
     key.shadow.normalBias = 0.025;
     key.shadow.camera.left = -100;
@@ -585,11 +592,10 @@ export const Viewer = ({
         renderedGenerationRef.current !== current.generationId
       ) {
         renderedGenerationRef.current = current.generationId;
-        publish({
-          status: 'ready',
-          sessionId,
-          generationId: current.generationId,
-          timings:
+        publish(
+          readyRenderState(
+            sessionId,
+            current,
             pendingTimings && drawSubmitMs !== undefined
               ? {
                   renderedAt: performance.now(),
@@ -598,7 +604,8 @@ export const Viewer = ({
                   initializationMs: initializationMsRef.current,
                 }
               : undefined,
-        });
+          ),
+        );
         if (pendingTimings) pendingRenderTimingsRef.current = undefined;
       }
     };
@@ -776,6 +783,25 @@ export const Viewer = ({
     applyReducedMotion(reducedMotionQuery.matches);
     reducedMotionQuery.addEventListener('change', handleReducedMotionChange);
     viewerState.invalidate = invalidate;
+    viewerState.applyQuality = (tier) => {
+      const settings = previewRendererSettings(tier, {
+        devicePixelRatio: window.devicePixelRatio,
+        viewportWidth: window.innerWidth,
+      });
+      if (renderer.getPixelRatio() !== settings.pixelRatio)
+        renderer.setPixelRatio(settings.pixelRatio);
+      if (key.shadow.mapSize.x !== settings.shadowMapSize) {
+        key.shadow.mapSize.set(settings.shadowMapSize, settings.shadowMapSize);
+        const shadowMap = key.shadow.map;
+        if (shadowMap) {
+          shadowMap.depthTexture?.dispose();
+          shadowMap.depthTexture = null;
+          shadowMap.dispose();
+          key.shadow.map = null;
+        }
+      }
+      invalidate();
+    };
     stateRef.current = viewerState;
     let captureQueue = Promise.resolve();
     const captureApi: PhotoCaptureApi = {
@@ -836,6 +862,11 @@ export const Viewer = ({
       stateRef.current = undefined;
     };
   }, [restartKey]);
+
+  useEffect(() => {
+    qualityRef.current = quality;
+    stateRef.current?.applyQuality?.(quality);
+  }, [quality]);
 
   useEffect(() => {
     const state = stateRef.current;

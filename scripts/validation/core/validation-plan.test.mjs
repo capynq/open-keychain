@@ -6,6 +6,7 @@ import {
   createGatePlan,
   requiresFullCIRegression,
 } from './validation-plan.mjs';
+import { unitWorkerCount } from './concurrency.mjs';
 
 describe('validation gate selection', () => {
   const expectJourney = (plan) => {
@@ -39,8 +40,16 @@ describe('validation gate selection', () => {
     expect(geometry.map(({ id }) => id)).toContain('build');
     expect(geometry.map(({ id }) => id)).not.toContain('browser');
     expect(geometry.map(({ id }) => id)).not.toContain('geometry');
-    expect(geometry.find(({ id }) => id === 'unit:related').args).toContain(
+    const relatedArgs = geometry.find(({ id }) => id === 'unit:related').args;
+    expect(relatedArgs).toContain(
       'src/domain/keychain/build/keychain-builder.keyring-articulated.test.ts',
+    );
+    for (const style of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'])
+      expect(relatedArgs).toContain(
+        `src/domain/keychain/build/keychain-builder.styles-fonts.${style}.test.ts`,
+      );
+    expect(relatedArgs).toContain(
+      'src/domain/keychain/build/keychain-builder.styles-fonts.test.ts',
     );
   });
 
@@ -170,10 +179,15 @@ describe('validation gate selection', () => {
       'unit:fast',
       'build',
       'browser',
+      'browser:regression',
       'browser:journey',
     ]);
     expect(plan.find(({ id }) => id === 'browser').dependsOn).toEqual(['build']);
     expect(plan.find(({ id }) => id === 'browser').required).toBe(true);
+    expect(plan.find(({ id }) => id === 'browser:regression')).toMatchObject({
+      args: ['test:e2e:regression'],
+      dependsOn: ['build'],
+    });
   });
 
   it('typechecks UI stylesheet changes because they can affect component contracts', () => {
@@ -201,15 +215,33 @@ describe('validation gate selection', () => {
       'unit:fast',
       'build',
       'browser',
+      'browser:regression',
       'browser:journey',
     ]);
     expect(plan.find(({ id }) => id === 'unit:fast').args).toEqual([
       'test:fast',
       '--',
-      '--maxWorkers=2',
+      `--maxWorkers=${unitWorkerCount()}`,
     ]);
     expect(plan.find(({ id }) => id === 'browser').args).toEqual(['test:e2e:smoke']);
     expect(plan.some(({ id }) => id === 'geometry')).toBe(false);
+  });
+
+  it('gives the full unit suite the whole worker budget', () => {
+    const previous = process.env.VALIDATION_CONCURRENCY;
+    process.env.VALIDATION_CONCURRENCY = '6';
+    try {
+      const unit = createGatePlan([], 'ci').find(({ id }) => id === 'unit');
+      expect(unit.args).toEqual(['test:full', '--', '--maxWorkers=6']);
+      expect(unit.workerSlots).toBe(6);
+      process.env.VALIDATION_CONCURRENCY = '1';
+      expect(createGatePlan([], 'ci').find(({ id }) => id === 'unit').args).toContain(
+        '--maxWorkers=2',
+      );
+    } finally {
+      if (previous === undefined) delete process.env.VALIDATION_CONCURRENCY;
+      else process.env.VALIDATION_CONCURRENCY = previous;
+    }
   });
 
   it('runs the whole fast unit suite even when only a test file changed', () => {
@@ -217,7 +249,7 @@ describe('validation gate selection', () => {
     expect(plan.find(({ id }) => id === 'unit:fast').args).toEqual([
       'test:fast',
       '--',
-      '--maxWorkers=2',
+      `--maxWorkers=${unitWorkerCount()}`,
     ]);
     expect(plan.some(({ id }) => id === 'geometry')).toBe(false);
     expect(plan.find(({ id }) => id === 'browser').dependsOn).toEqual(['build']);
@@ -248,7 +280,19 @@ describe('validation gate selection', () => {
     ).toContain('build');
     expect(
       createGatePlan(['scripts/validation/core/validation-plan.mjs']).map(({ id }) => id),
-    ).toEqual(['format', 'lint', 'typecheck', 'unit:fast', 'build', 'browser', 'browser:journey']);
+    ).toEqual([
+      'format',
+      'lint',
+      'typecheck',
+      'unit:fast',
+      'build',
+      'browser',
+      'browser:regression',
+      'browser:journey',
+    ]);
+    expect(
+      createGatePlan(['src/domain/keychain/build/keychain-builder.ts']).map(({ id }) => id),
+    ).not.toContain('browser:regression');
   });
 
   it('runs full required checks in CI and lets the workflow add conditional gates', () => {

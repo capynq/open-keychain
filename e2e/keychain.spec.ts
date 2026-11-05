@@ -18,7 +18,6 @@ const cameraViews = [
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem('open-keychain.analytics-consent', 'declined');
-    // This suite exercises the complete precision editor; Simple has its own workflow coverage.
     localStorage.setItem('open-keychain:editor-mode', 'pro');
   });
 });
@@ -198,6 +197,9 @@ test('keeps shared icon glyphs centered while showing tactile hover feedback', a
     page.getByRole('button', { name: 'Share' }),
     page.getByRole('button', { name: 'Randomize' }),
   ];
+  const finePointer = await page.evaluate(
+    () => matchMedia('(hover: hover) and (pointer: fine)').matches,
+  );
 
   for (const button of buttons) {
     await button.hover();
@@ -219,7 +221,8 @@ test('keeps shared icon glyphs centered while showing tactile hover feedback', a
     expect(metrics?.transform).not.toContain('translate');
     expect(Math.abs(metrics?.centerOffsetX ?? 99)).toBeLessThan(1);
     expect(Math.abs(metrics?.centerOffsetY ?? 99)).toBeLessThan(1);
-    expect(metrics?.shadow).not.toBe('none');
+    if (finePointer) expect(metrics?.shadow).not.toBe('none');
+    else expect(metrics?.shadow).toBe('none');
   }
 });
 
@@ -242,10 +245,14 @@ test('treats adjusted NIKITA Bubble geometry as ready and keeps width warnings e
   );
   await dialog.locator('.export-preflight summary').click();
   await expect(dialog.locator('.export-preflight-body li').first()).toBeVisible();
+  await page.getByRole('button', { name: 'Close' }).click();
+  await expect(dialog).toBeHidden();
   await page.getByLabel('Text size').fill('12');
   await page.getByLabel('Name or text').fill('WWWWWWWWWWWWWWWWWWWWWWWW');
-  await expect(page.locator('.status-pill')).toHaveText('Ready · adjusted', { timeout: 10000 });
-  await expect(page.getByRole('dialog').getByRole('button', { name: /STL file/ })).toBeEnabled();
+  await expect(page.getByLabel('Name or text')).toHaveValue('WWWWWWWWWWWWWWWWWWWWWWWW');
+  await expect(page.locator('.status-pill')).toHaveText('Ready · adjusted', { timeout: 20000 });
+  await page.getByRole('button', { name: 'Export' }).click();
+  await expect(dialog.getByRole('button', { name: /STL file/ })).toBeEnabled();
   await page.getByRole('button', { name: 'Close' }).click();
 });
 test('switches to a bilingual font when Cyrillic text is entered', async ({ page }) => {
@@ -324,7 +331,7 @@ test('uses a native export dialog with contained focus, Escape, backdrop close, 
   const firstChoice = dialog.getByRole('button', { name: /3MF · separate colors/ });
   await expect(dialog).toBeVisible();
   await expect(firstChoice).toBeFocused();
-  const slicerHelp = dialog.locator('.export-slicer-help');
+  const slicerHelp = dialog.locator('details').filter({ hasText: 'Slicer setup' });
   await expect(slicerHelp.locator('p').first()).toBeHidden();
   await slicerHelp.locator('summary').click();
   await expect(slicerHelp.getByText(/Bambu Studio may ask to load geometry only/)).toBeVisible();
@@ -507,7 +514,7 @@ test('supports the Magnet ribbon workflow with subtitle hardware guidance', asyn
   await subtitleInput.fill('2026');
   await page
     .getByTestId('typography-adjustments')
-    .getByRole('radio', { name: 'Secondary' })
+    .getByRole('radio', { name: 'Subtitle', exact: true })
     .click();
   await expect(page.getByLabel('Customizer controls').getByText(/10\.4 mm diameter/)).toBeVisible();
   await waitForReadyGeometry(page);
@@ -526,7 +533,7 @@ test('keeps subtitle fields full-width, spaced, and keyboard-visible', async ({ 
   const shape = customizer.getByTestId('typography-adjustments');
   const subtitleInput = customizer.getByLabel('Subtitle or short message');
   await subtitleInput.fill('ROLE');
-  await shape.getByRole('radio', { name: 'Secondary' }).click();
+  await shape.getByRole('radio', { name: 'Subtitle', exact: true }).click();
   const subtitle = shape.getByTestId('subtitle-settings');
   await expect(subtitle).toBeVisible();
 
@@ -609,11 +616,14 @@ test('keeps Heart inputs aligned and exposes through-cut readiness', async ({ pa
   await expect(customizer.locator('.status-pill')).toHaveText(/Ready/, { timeout: 10000 });
   await left.fill('');
   await right.fill('');
-  await expect(customizer.getByRole('alert')).toContainText('Your previous design is kept.');
+  await expect(customizer.getByRole('alert')).toContainText(
+    'Enter text on at least one side of the heart.',
+  );
   await expect(left).toHaveValue('I');
   await expect(right).toHaveValue('KYIV');
   await expect(customizer.locator('.status-pill')).toHaveText(/Ready/);
-  await expect(customizer.getByRole('button', { name: 'Fix this' })).toHaveCount(0);
+  await customizer.getByRole('button', { name: 'Fix this' }).click();
+  await expect(page.getByRole('button', { name: 'Edit this setting' })).toBeVisible();
 });
 test('shows only template-relevant shape controls', async ({ page }) => {
   await page.goto('/create');
@@ -717,6 +727,11 @@ test('keeps the accepted preview when candidate geometry validation rejects an e
                   type: 'error',
                   requestId: request.requestId,
                   message: 'Injected candidate rejection for UI recovery coverage.',
+                  failure: {
+                    code: 'text-edge-too-large',
+                    message: 'Injected candidate rejection for UI recovery coverage.',
+                    context: { target: 'text', profile: 'round', maximumMm: 0.2, requestedMm: 0.4 },
+                  },
                 },
               }),
             ),
@@ -742,9 +757,8 @@ test('keeps the accepted preview when candidate geometry validation rejects an e
 
   const backingProfile = page.getByRole('radiogroup', { name: 'Text profile', exact: true });
   const chamfer = backingProfile.getByRole('radio', { name: 'Chamfer' });
-  // Rejection can now restore Sharp before Playwright's check() postcondition.
   await chamfer.click();
-  await expect(page.getByRole('alert')).toContainText('The design could not be generated');
+  await expect(page.getByRole('alert')).toContainText('The text edge is too large for this design');
   await expect(backingProfile.getByRole('radio', { name: 'Sharp', exact: true })).toBeChecked();
   await expect(page.locator('.status-pill:visible').first()).toHaveText(/Ready/);
   await expect(
@@ -821,7 +835,6 @@ test('keeps the latest candidate when an obsolete active validation rejects', as
   await expect(customizer.locator('.candidate-feedback[role="status"]')).toBeVisible();
   await expect(exportButton).toBeDisabled();
   await heartSize.fill('26');
-  // The active WASM job finishes before the newest queued candidate is dispatched.
   await expect(exportButton).toBeDisabled();
   await page.evaluate(() => {
     (window as Window & { releaseStaleCandidate?: () => void }).releaseStaleCandidate?.();

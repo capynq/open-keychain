@@ -1,72 +1,81 @@
 # Contributing
 
-Open Keychain is a client-side React, Three.js, and Manifold project. Geometry and exports run locally in a worker, so changes should preserve printable, manifold output and keep preview-only surfaces out of files.
+Open Keychain is a client-side React, Three.js, and Manifold app. Geometry and exports run locally in a Web Worker, so every change must keep output printable and manifold, and must keep preview-only surfaces out of exported files.
 
-## Validation profiles
+## Quick start
 
 ```sh
-pnpm validate:push          # selected checks for the pushed commit (Husky pre-push)
-pnpm validate:full          # full local format/lint/typecheck/unit/build/browser/geometry
-pnpm validate:ci            # full format/lint/typecheck/unit/build profile
-pnpm validate:ci:changed    # CI-selected gates (requires CHANGED_FILES_JSON)
-pnpm validate:bench          # repeat the quick validation profile and compare timings
-pnpm validate:cache:clear    # remove only node_modules/.cache/open-keychain-validation
+pnpm install
+pnpm exec playwright install chromium   # once, for browser tests
+pnpm dev                                # editor at /create
 ```
 
-`pnpm validate:bench [push|ui|geometry|docs|full|ci] [runs]` accepts a profile and 1–10 repeats. It reports wall times, per-gate durations, slowest tests/cases, and matrix phase/worker/memory data. Run once with `VALIDATION_CACHE=0` for cold measurements, then again normally for a warm-cache comparison. `VALIDATION_CONCURRENCY` must be a whole number from 1 to 8 and defaults to 2. Geometry uses a shared process budget: effective workers are the lower of `MATRIX_CONCURRENCY` (1–5, default 2) and `VALIDATION_CONCURRENCY`; raise both to run more geometry workers. `MATRIX_PACKAGE_SIZE` defaults to four cases per assignment.
+Before asking for review, run `pnpm format:check`, `pnpm lint`, and `pnpm typecheck`.
 
-Compare Node with installed Bun using `pnpm validate:bench runtime --sample=100 --runs=3 --concurrency=4`; the report is stored under `node_modules/.cache/open-keychain-validation/benchmarks`. Use `--full` to benchmark the complete 4,267-case matrix. Set `BUN_BINARY` to choose a specific Bun executable. The comparison disables validation cache, checks per-case outcomes, and reports phase time, CPU, and memory. Bun is not the default validation or production-build runtime; consider adopting it for the matrix runner only after at least a 20% median wall-time gain, no more than 10% higher peak worker RSS, and matching results. Verify process/WASM compatibility under the exact Bun version being measured.
+## Validation
 
-## Local push checks
+| Command                     | What it runs                                                                                    |
+| --------------------------- | ----------------------------------------------------------------------------------------------- |
+| `pnpm validate:push`        | Checks selected from the pushed changes. Runs automatically on `git push`; safe to run by hand. |
+| `pnpm validate`             | Format, lint, typecheck, all unit tests, build, and the critical browser journey.               |
+| `pnpm validate:full`        | Everything above plus the full browser suite and all 4,267 geometry matrix cases.               |
+| `pnpm validate:changed`     | Checks selected from your uncommitted changes.                                                  |
+| `pnpm validate:bench`       | Repeats a profile and compares timings (`[push\|ui\|geometry\|docs\|full\|ci] [runs]`).         |
+| `pnpm validate:cache:clear` | Clears the local validation cache.                                                              |
 
-The Husky pre-push hook reads Git's ref input and verifies the pushed commit is the checked-out `HEAD`. Before validation it removes untracked macOS `.DS_Store` metadata and temporarily moves ignored root `.env*` files outside the checkout, restoring them on success, failure, or cancellation. This prevents machine-local Vite settings and Finder files from changing the result; these files are never staged. Other untracked files that can affect validation and all tracked modifications are still rejected, so commit or remove those before pushing. Keep secrets in `.env*`; commit only sanitized `.env.example` values. Every push of a revision must pass the critical user journey, even for documentation-only, test-only,
-or empty-tree-diff changes. This required gate cannot be skipped or satisfied from a cached browser
-result. All six cases must finish as ordinary passes: skip/fixme/expected failures, partial selection,
-zero cases and focused .only runs fail strict verification. It builds or restores the verified matching artifact and forces a fresh local preview rather
-than accepting an inherited external `PLAYWRIGHT_BASE_URL`. Parallel Browser gates use isolated trace/download directories under `artifacts/validation-browser`.
-Missing pnpm or Chromium is a failed
-check, never a silent bypass. Only deletion of a remote branch (no shipped revision) is excluded.
-Do not bypass these checks with `--no-verify` or `HUSKY=0`; fix the failing prerequisite first.
+Geometry matrix results are automated printability evidence, not physical-print verification.
 
-Run `pnpm test:e2e:journey` to exercise landing → all setup steps → editor change → visible preview →
-STL → merged 3MF → separate-colors 3MF → another edit/export, plus worker failure and explicit retry,
-on desktop, mobile, and mobile-2x. Downloads are read and checked: binary STL triangle count/length,
-3MF mesh/build content, distinct merged/separate material and volume contracts. This is a critical
-path safety check, not exhaustive coverage of every template and parameter combination.
+### What a push checks
 
-Additional checks are selected from the changes:
+Every push must pass the **critical user journey** (`pnpm test:e2e:journey`): landing → setup → edit → preview → STL and both 3MF exports → recovery from a worker failure, on desktop, mobile, and mobile-2x. Downloaded files are parsed and checked. This gate always runs fresh: it can't be skipped, cached, or satisfied by skipped, focused (`.only`), or partial runs.
 
-- Documentation adds changed-file formatting to the mandatory build/journey.
-- UI/CSS changes run related Unit tests, typecheck, build, and Browser smoke. Changed Playwright specs run directly.
-- Geometry, export, font, and WASM changes run related Unit tests plus explicit tests for dynamic builder/worker/font boundaries, typecheck, and build. Routine CI always runs the critical Browser journey; the exhaustive 4,267-case Geometry matrix remains explicit.
-- Test-only changes run the changed tests. Validation-tooling and configuration changes run owning tests where mapped; unknown paths use the cost-first format/lint, typecheck, and build fallback.
-- Deleted and renamed paths remain in classification. Related test paths are filtered to files present in the checkout; an empty selection is reported as `not selected`, never as a passing Unit suite.
+Other checks depend on what changed:
 
-The full builder geometry tests are grouped into separate contracts, style/font, magnet/nameplate/plant-label, and keyring/articulated files. `pnpm test:fast` excludes these expensive geometry integrations. `pnpm test:full`, `pnpm validate:full`, and the manual CI dispatch include all of them.
+- **Docs only:** formatting of the changed files.
+- **UI/CSS:** related unit tests, typecheck, build, browser smoke, and the desktop editor regression specs (`pnpm test:e2e:regression`). Changed Playwright specs run directly.
+- **Geometry, export, fonts, WASM:** related unit tests (including the builder, worker, and font suites), typecheck, and build. The full geometry matrix runs only in `validate:full` or a manual CI run.
+- **Tests only:** the changed tests.
+- **Tooling, config, or unknown paths:** the conservative full set.
 
-Successful local gates are cached separately under `node_modules/.cache/open-keychain-validation`, keyed by each gate's relevant tracked/untracked input content, command, Node/platform, lockfile and relevant environment. Geometry fingerprints include builder/templates, export serializers, fonts, WASM, matrix code, and package metadata, so documentation changes do not invalidate geometry. Only successful completion is saved. The critical journey is always executed again. Build fingerprints include build helpers, source HEAD and revision/context variables. The build cache also saves and digest-checks its `dist` artifact before browser tests can use it. Cache bypass is `VALIDATION_CACHE=0`; clear it with the command above. CI disables local validation results and verifies its checkout independently.
+The hook also requires a clean tree: commit or remove tracked changes and relevant untracked files first. It deletes stray `.DS_Store` files and temporarily moves local `.env*` files aside so machine settings can't affect results. They are restored afterwards. Keep secrets in `.env*`; commit only `.env.example`.
 
-## TUI and plain mode
+Don't bypass the hook with `--no-verify` or `HUSKY=0`. Fix the failing check instead.
 
-`VALIDATION_UI=auto|tui|plain` selects the live terminal view. `auto` uses TUI only for an interactive terminal outside CI; `tui` explicitly requests it, and `plain` never sends ANSI control sequences. TUI colors use a warm Open Keychain accent with cyan active states, green success, red failure, amber warnings/skips, and violet cache hits. Set `NO_COLOR` or `TERM=dumb` to disable color; `FORCE_COLOR` does not enable the TUI without an interactive terminal. Keyboard input comes from `/dev/tty`, not the pre-push ref stream. If the controlling terminal is unavailable or cannot switch modes, validation falls back to plain output and disables keyboard controls.
+### Speed and parallelism
 
-- `↑` / `↓`: select a gate.
-- `l`: show or hide the selected gate's log tail and log path.
-- `v`: show shorter or more detailed diagnostics.
-- `?`: show key help.
-- `s`: request a skip for an optional local gate, then confirm with `y`; `N` cancels.
-- `Ctrl+C`: cancel validation and the push.
+Validation uses all but two CPU cores (up to 8; machines with 4 or fewer cores use all of them). Set `VALIDATION_CONCURRENCY=4` to keep your machine responsive during a run.
 
-Required checks cannot be skipped. Quick-profile skips are reported as `SKIPPED BY USER` and `Local validation partial; CI must complete before deployment`. Full-profile skips fail the command. CI has no keyboard skip path. A skip never creates a cache entry.
+| Variable                 | Default          | Effect                                                                                                     |
+| ------------------------ | ---------------- | ---------------------------------------------------------------------------------------------------------- |
+| `VALIDATION_CONCURRENCY` | cores − 2, max 8 | Total parallel budget. The full unit suite uses all of it; the fast unit suite and browser tests use half. |
+| `MATRIX_CONCURRENCY`     | same as above    | Geometry matrix workers (1–8, about 1–2 GB of memory each).                                                |
+| `PLAYWRIGHT_WORKERS`     | 2                | Workers for `pnpm test:e2e:full`.                                                                          |
+| `VALIDATION_CACHE=0`     | cache on         | Ignores cached results (use for cold timings).                                                             |
+| `VALIDATION_UI`          | `auto`           | `tui`, or `plain` for no terminal UI.                                                                      |
 
-## Main and production workflow
+Vitest runs test files in parallel, but the tests inside one file run one after another. Keep long geometry suites split across several files, like `keychain-builder.styles-fonts.<style>.test.ts`, instead of growing one file. `pnpm test:fast` skips the heavy `keychain-builder.*.test.ts` files; `pnpm test` runs everything.
 
-Work directly on `main`; GitHub Actions runs after a direct push and cannot reject that push. The stable required status is `quality`. Routine checks classify changed paths and run sequentially on one runner after one dependency install. The critical Browser journey is always selected, including documentation-only or empty change lists. Any failure fails `quality`; additional Browser checks and the full Geometry matrix remain change-based or explicit. Manual `workflow_dispatch` runs full format, lint, typecheck, Unit, build, Browser, and Geometry profiles on the same runner. Production build and deploy wait for `quality` and use Netlify's `production` build context/environment. After Netlify builds the production artifact, that exact `dist` must independently pass the critical journey before artifact upload; deploy only consumes that checked artifact.
+The geometry matrix remembers how long each case took and starts the slowest ones first. If a case becomes more than 3× slower than last time, it is listed under `slowdowns` in the run summary.
 
-Install Chromium once with `pnpm exec playwright install chromium`. `pnpm validate:full` is the exhaustive local regression command: full format, lint, typecheck, Unit, build, Browser, and all 4,267 Geometry cases. These are automated checks, not physical-printer evidence.
+### Caching
 
-## Formatting and architecture
+Successful checks are cached in `node_modules/.cache/open-keychain-validation`, keyed by their inputs, command, Node version, lockfile, and relevant environment variables. A documentation edit doesn't invalidate geometry results, and the build cache verifies its `dist` output before browser tests reuse it. The critical journey is never cached. CI doesn't use the local cache.
 
-Run `pnpm format:check`, `pnpm lint`, and `pnpm typecheck` before reviewing a meaningful change. Prettier retains the repository's configured widths. Frontend additions follow the FSD boundaries documented in `docs/architecture.md`: one component per file, composition-only pages, dedicated model, hook, and library modules, and centralized SEO and locale invariants.
+### Terminal UI
 
-Use existing style and camera tests as templates for new geometry cases. Add regression assertions for new validation rules, export formats, locales, or viewer interactions. Do not use capture or autofix commands in unattended validation because they can modify tracked files.
+In an interactive terminal, validation shows a live view. Keys: `↑`/`↓` select a check, `l` toggles its log, `v` toggles detail, `?` shows help, `s` then `y` skips an optional check, and `Ctrl+C` cancels. Required checks can't be skipped. A skipped push run is reported as partial, and CI must still pass before deploy. Set `NO_COLOR` to disable colors.
+
+## Main branch and production
+
+Work happens directly on `main`. After a push, GitHub Actions runs the `quality` job: checks selected from the changed paths, plus the critical journey. Production build and deploy wait for `quality`. The exact Netlify production `dist` must pass the critical journey again before it is deployed. A manual `workflow_dispatch` run executes the full unit, browser, and geometry profiles.
+
+## Code conventions
+
+- Frontend code follows the FSD boundaries in `docs/architecture.md`: one component per file, composition-only route pages, and dedicated model, hook, and library modules.
+- All user-visible strings go through i18n, with keys in every locale (`en`, `ru`, `uk`).
+- Add regression tests for new validation rules, export formats, locales, or viewer interactions. Existing style and camera tests are good templates for new geometry cases.
+- Don't run capture or autofix commands in unattended validation; they can modify tracked files.
+
+## Benchmarking Bun (optional)
+
+`pnpm validate:bench runtime --sample=100 --runs=3 --concurrency=4` compares Node and Bun on the geometry matrix (`--full` for all cases; `BUN_BINARY` to pick a binary). Bun is not the default runtime. Consider it for the matrix runner only with at least a 20% median speed gain, no more than 10% higher peak memory, and identical results.

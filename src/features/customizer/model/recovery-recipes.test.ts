@@ -2,9 +2,16 @@ import { describe, expect, it } from 'vitest';
 
 import { fontDefinition } from '../../../domain/keychain/fonts/catalog';
 import { DEFAULT_PARAMS } from '../../../domain/keychain/model/types';
-import { recoveryRecipes } from './recovery-recipes';
+import { isRecoverableCandidateFailure, recoveryRecipes } from './recovery-recipes';
 
 describe('recovery recipes', () => {
+  it('limits the Fix path to measured edge-too-large failures', () => {
+    expect(isRecoverableCandidateFailure({ code: 'text-edge-too-large' })).toBe(true);
+    expect(isRecoverableCandidateFailure({ code: 'base-edge-too-large' })).toBe(true);
+    expect(isRecoverableCandidateFailure({ code: 'geometry-build-failed' })).toBe(false);
+    expect(isRecoverableCandidateFailure({ code: 'text-edge-invalid' })).toBe(false);
+  });
+
   it('offers a measured smaller text edge and sharp fallback while preserving design inputs', () => {
     const params = {
       ...DEFAULT_PARAMS,

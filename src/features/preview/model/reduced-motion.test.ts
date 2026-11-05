@@ -19,7 +19,7 @@ describe('setOrbitControlsDamping', () => {
     camera.updateMatrixWorld();
     controls.update();
 
-    // These public calls leave residual deltas when damping is enabled.
+    /* Damping leaves residual deltas */
     controls.domElement = { clientHeight: 100, clientWidth: 100 } as HTMLElement;
     controls.rotateLeft(0.4);
     controls.pan(10, -5);

@@ -1,5 +1,28 @@
 # Open Keychain decisions
 
+## Local validation scales to the machine; heavy suites are sharded by file
+
+**Status:** active
+
+**Decision:** Local validation defaults to `min(4, cores)` gate concurrency on small machines and to
+all but two cores (at most 8) on larger ones. The full Unit gate uses the whole budget as Vitest workers;
+`unit:fast` and the full Browser gate use half (never fewer than two). The geometry matrix accepts up to 8 workers and schedules contiguous
+case packages longest-first from recorded per-case durations. Long-running Vitest suites are split
+into several files (for example `keychain-builder.styles-fonts.<style>.test.ts`) instead of
+growing one file; `test:fast` excludes the whole `keychain-builder.*.test.ts` set by glob. Only the
+Husky wrapper makes `validate:push` read stdin (`VALIDATION_PRE_PUSH_STDIN=1`).
+
+**Rationale:** Measured on a 10-core M1 Pro: one file (`keychain-builder.styles-fonts.test.ts`,
+321 s) was the whole critical path of the full Unit gate and `geometry-contract.test.ts` (77 s) of
+`unit:fast`, because Vitest parallelises across files only. The matrix is ~87 CPU-minutes and
+scaled linearly (44 min at 2 workers, 22 min at 4) but was capped at 5 workers. A manual
+`pnpm validate:push` from a non-TTY, never-closing stdin (agent shells) hung before any gate.
+
+**Consequences:** Sharding and scheduling change only placement and order: test names and the
+4,267-case matrix are unchanged and must stay so. CI pins `VALIDATION_CONCURRENCY=1` and
+`MATRIX_CONCURRENCY=1`, and `PLAYWRIGHT_WORKERS` defaults to 2, so CI behaviour is unchanged.
+Slowdown warnings compare against local history and are informational, not a gate.
+
 ## Frontend analytics releases identify the exact source commit
 
 **Status:** active
@@ -599,3 +622,60 @@ Expected rejection, technical error, supersession and cancellation remain distin
 codes/stages and fixed control IDs replace message-regex classification; no text, exact settings, font
 bytes, geometry or file contents are collected. Historical `geometry_error` data remains unchanged
 and must not be interpreted as proof of an engine crash.
+
+## 2026-11-03 — Preview stage timings in consent-gated telemetry
+
+The owner approved adding these keys to `geometry_ready`: `wasm_wait_ms`, `worker_boot_ms`, `worker_compute_ms`, `client_round_trip_ms`, `client_queue_ms`, `cache_hit`, and `cold_start`. The owner also approved the new event `preview_rendered` with `geometry_generation_id`, `template`, `mesh_setup_ms`, `draw_submit_ms`, `initialization_ms`, and `cold_start`. These are coarse numeric timings and booleans with no user content, device identifiers, or viewport data. Like every event, they are sent only after consent. Their purpose is diagnosing mobile cold-start latency from field data.
+
+This supersedes the 2026-10-18 statement that cache/queue timings add no telemetry payloads, only for these keys. Edit-time input-to-render timings remain local diagnostics. Evidence: the sanitizer scope and range tests in `src/infrastructure/telemetry/telemetry-events.test.ts`, and `docs/analytics.md`. The owner also approved `worker_replacements` (an integer from 0 to 20, the cumulative count of replacement geometry workers in the editor session) on `geometry_attempt_finished` and `geometry_error` as part of this same diagnostic set. The owner also approved `preview_quality` (`high`, `medium`, or `low`) on `geometry_ready` and `preview_rendered`, recording the adaptive preview tier in effect (see 2026-11-04).
+
+## 2026-11-03 — Bounded automatic worker respawn with current-design re-request
+
+The owner approved two automatic worker replacements and one current-design re-request per automatic replacement. A preview worker failure (`geometry-worker-boot-timeout`, `geometry-worker-failed` or `geometry-request-timeout`) starts at most two automatic replacements within a rolling 60 s window, and no successful response resets that window; old replacements simply age out. The first replacement starts immediately; the second waits 1000 ms. A worker is considered booted only when it reports `ready`, and it has 45 s to do so. The worker processes messages strictly serially through its own message queue, so responses arrive in request order. A per-request timer starts when the request becomes the head of the worker's in-flight FIFO (after `ready`), so a request queued behind busy work is not timed out by that wait. Exports share the same serial queue: a long export build blocks queued previews until it finishes. Builds are synchronous WASM, so the build itself already blocked; serialization only removes interleaving at short await points. A cache hit queued behind a build therefore waits for that build to finish.
+
+The automatic re-request happens only after a boot timeout or a worker crash (`geometry-worker-boot-timeout` or `geometry-worker-failed`), and only when the failed work included the current preview: the preview request that was rejected by the failure is reissued once for the current design after the automatic replacement, recorded as `recovery_trigger = auto_replacement`. A request timeout (`geometry-request-timeout`) is not re-requested, because replaying a design that hangs would cost about three 30 s timeouts before the user sees the error; the worker is still replaced so the next edit works. A replacement whose failure did not include a pending preview needs no re-request, because the shown preview is still current. The re-request is never made when the user has edited since the failure (the edit makes its own request), and never after the budget is exhausted. Candidate validation and export failures surface as they did before; they are not re-requested automatically.
+
+Obsolete work is never replayed: requests in flight when the failure happened are rejected with the failure error, and only requests made after it are held and dispatched on the replacement. When the budget is exhausted, explicit Retry and the next edit recovery behave as before. Explicit replacements do not consume the automatic window. This supersedes the 2026-10-24 rule of one automatic replacement per failure episode and its statement that a successful response resets the budget, and the 2026-10-20 wording that kept the single automatic replacement.
+
+## 2026-11-03 — Geometry engine prewarm on editor intent
+
+The owner approved prewarming the geometry engine before the editor mounts, to shorten the mobile cold start. A single pooled `GeometryClient` is created only on intent over a `/create` link (`pointerover`, `focusin`, `touchstart`) and not on a plain landing load; the 2026-11-04 entry supersedes that restriction. Prewarm is skipped when the current location is already the create route. The pool module is loaded with a dynamic import on the first intent event and deduplicated by a module-level promise, so the entry chunk does not include `GeometryClient`.
+
+The pooled client is handed over exactly once to the editor, and the editor owns and disposes it from then on. An untaken client is disposed after a 5 minute TTL measured from its creation. Before hand-over the pool checks `isUsable()`: an unusable client (disposed, or failed with no automatic replacement left) is disposed and not handed over, and prewarming replaces it.
+
+The `/create` prerender carries `<link rel="modulepreload">` for the geometry worker chunk without `crossorigin`, and `<link rel="preload" as="fetch" crossorigin>` for `/manifold-v1.wasm`. In Chromium, the worker constructor reuses both, and the WASM fetch made inside the worker is served from cache. `rel="preload" as="worker"` is ignored there, and `crossorigin` on the modulepreload stops the reuse. Firefox and Safari are not verified.
+
+Cold-start telemetry keeps its keys. `cold_start` is true for the first adopted preview after each worker boot. `worker_boot_ms` is reported only when that boot completed after the editor took the client; a boot that finished while the client was pooled reports `cold_start` true without `worker_boot_ms`. Evidence: `src/features/customizer/hooks/useGeometryGeneration.test.ts` and `docs/analytics.md`.
+
+## 2026-11-04 — Prewarm on landing idle
+
+The owner approved prewarming the geometry engine on a landing page load as well, superseding the
+2026-11-03 rule that it never runs on a plain landing load. The landing route (`/` and localized home
+paths) schedules the prewarm only after window `load` (or immediately if the document is already
+complete) and after LCP has been quiet for 1 s (no new `largest-contentful-paint` entry), then inside
+`requestIdleCallback` with a 4 s timeout, or after 1500 ms where it is unavailable. Without
+`PerformanceObserver` LCP support the LCP wait is skipped.
+Leaving the landing route cancels the scheduled work before the idle callback fires. If it has already
+fired, a route re-check after the chunk import resolves prevents prewarming off the landing route, so a
+pending import never creates a second worker once the user reaches `/create`. The prewarm is skipped when
+`navigator.connection.saveData` is true or `effectiveType` is `slow-2g`/`2g`; intent-based prewarm still
+applies on those connections. The shared lazy import and dedupe are used by both paths. The 5 minute
+TTL for an untaken client still applies, and hand-over and `isUsable()` checks are unchanged.
+
+## 2026-11-04 — Adaptive preview quality
+
+**Status:** active. Coarse-first was withdrawn the same day; see below.
+
+**Decision (owner):** The editor preview adapts across three tiers, and a tier changes only the renderer. High is today's behaviour: DPR up to 2, antialias, a 2048 shadow map (1024 under 760 px). Medium caps DPR at 1.5 and uses a 1024 shadow map. Low uses DPR 1 and a 512 shadow map. Geometry is always built at the builders' original segment counts (64 for round offsets, 96 for ring holes), and export always uses full quality. Preview tiers never change geometry. The tier steps down one level after the last two adopted, worker-built full builds each exceed 2500 ms. It steps up one level after five consecutive adopted full builds are under 1000 ms, at most once per 30 s. The cooldown gates step-up only and is measured from the last tier change, step-downs included, so a step-up never follows a tier change within 30 s. Step-down is never delayed, so a slow phone drops tiers promptly even right after a step-up. A fast streak persists across the cooldown, so the tier steps up at the first fast build after the cooldown if the streak is at least five. The owner chose this so step-down stays prompt on slow phones. Cache hits and the first result of each worker boot are ignored and leave the streaks untouched. The measured value is the full build's `workerComputeMs`, which excludes the client round trip, WASM wait, and cold boot.
+
+**Coarse-first withdrawn (owner decision, same day):** An earlier design showed a coarse-first provisional mesh (32 segments in medium, 16 in low) while the full build ran. The owner withdrew it and it was removed. Measured warm coarse builds cost 51–85% of a full build, and cold edge finishing was paid twice, so the accurate preview and the export unlock arrived about 1.3–2.1 s later on a slow device. The coarse worker request, its cache key, the client delivery path, the provisional overlay and the segment threading through the builders are gone. The builders use their original constant segment counts again: 64 for round offsets and 96 for ring holes.
+
+**Renderer:** The tier is applied live to pixel ratio and shadow-map size. The shadow map is recreated only when its size changes. Antialias remains on in every tier, because it is a WebGLRenderer constructor option and changing it would require a new WebGL context and a new context-loss recovery path. Validation results now carry the worker boot id, and recovery-validated results have it stripped, so the controller can classify cold boots.
+
+**Supersedes:** For the preview, this supersedes the 2026-10 "pixel-ratio and shadow reductions only after profiling" guidance. The owner approved adaptive reductions driven by measured worker build time. Phase measurements remain the basis for any other performance change.
+
+**Step-1 finding:** Preview and candidate validation share one worker build and the same `preview|` cache entry. Accepted candidates adopt the validated mesh directly. Lowering the build's segments would therefore change acceptance, printability, and limit decisions, so geometry stays at the full build in every tier. Export uses a separate `exportable|` key and never reads preview entries.
+
+**Telemetry:** `preview_quality` on `geometry_ready` and `preview_rendered` is the only new key. `preview_rendered` stays tied to the cold full generation. See the 2026-11-03 telemetry entry and `docs/analytics.md`.
+
+**Consequences:** Geometry for export and validation, cache keys for export and validation, and acceptance are unchanged. The e2e spec `e2e/preview-quality.spec.ts` drives the tier by rewriting the worker-reported `workerComputeMs` in the page message stream. It then checks the `data-preview-quality` steps and that an STL export at the low tier matches a full-quality export of the same design.

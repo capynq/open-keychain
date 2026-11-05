@@ -3,6 +3,8 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import { findStructuralProblems } from './three-mf-structure';
+
 const packageJson = JSON.parse(await fs.readFile('package.json', 'utf8')) as { version: string };
 const release = `v${packageJson.version}`;
 const fixtureDir = path.resolve(
@@ -32,19 +34,11 @@ const archiveCheck = async (filename: string, expectedMaterials: boolean): Promi
   const model = archive['3D/3dmodel.model'];
   if (!model) throw new Error(`${filename} is missing 3D/3dmodel.model`);
   const xml = strFromU8(model);
-  if (!xml.includes('unit="millimeter"') || (xml.match(/<item objectid=/g) ?? []).length !== 1)
-    throw new Error(`${filename} does not contain one millimeter build item.`);
-  if (expectedMaterials) {
-    if (!xml.includes('<m:colorgroup') || (xml.match(/<m:color /g) ?? []).length !== 2)
-      throw new Error(`${filename} is missing the separate-color material group.`);
-    const group = [...xml.matchAll(/<m:colorgroup id="(\d+)"/g)][0]?.[1];
-    if (!group || !new RegExp(`<triangle[^>]+pid="${group}"`).test(xml))
-      throw new Error(`${filename} has no triangle reference to its color group.`);
-    if (!new RegExp(`<triangle[^>]+pid="${group}"[^>]+p1="1"`).test(xml))
-      throw new Error(`${filename} has no triangle assigned to the second color region.`);
-    if (!archive['Metadata/Slic3r_PE_model.config'])
-      throw new Error(`${filename} is missing named-volume metadata for PrusaSlicer.`);
-  }
+  const problems = findStructuralProblems(xml, expectedMaterials ? 'separate-colors' : 'merged');
+  if (problems.length)
+    throw new Error(`${filename} failed 3MF structure checks: ${problems.join('; ')}.`);
+  if (expectedMaterials && !archive['Metadata/Slic3r_PE_model.config'])
+    throw new Error(`${filename} is missing named-volume metadata for PrusaSlicer.`);
 };
 
 for (const item of manifest.cases) {
@@ -89,4 +83,6 @@ console.log(
     pendingApplications: pending.map(({ id }) => id),
   }),
 );
+if (pending.length > 0)
+  console.log(`${pending.length} slicer(s) pending; compatibility matrix incomplete`);
 if (prusaStatus !== 'pass') process.exit(prusa.status ?? 1);

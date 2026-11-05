@@ -54,6 +54,7 @@ import {
   type RandomizeValidation,
 } from '../model/randomizer';
 import {
+  isRecoverableCandidateFailure,
   recoveryRecipes,
   recoveryFontSignature,
   type RecoveryOption,
@@ -507,7 +508,7 @@ export const useCustomizerParams = (
             subtitleSignature: recoveryFontSignature(subtitleFont),
           });
       } catch {
-        // A failed proposal never replaces the accepted preview or its actionable failure.
+        /* keep accepted preview */
       }
       if (epoch !== recoveryEpoch.current || requestId !== candidateRequestId.current) return;
       setRecoveryOptions((options) =>
@@ -652,7 +653,6 @@ export const useCustomizerParams = (
       void validate(normalized, font, subtitleFont, attemptId, userRetry)
         .then(async (result) => {
           if (requestId !== candidateRequestId.current) return;
-          // Revalidate the actual applied values when new text changes geometry-dependent limits.
           const controlKey = (['cornerRadiusMm', 'stakeShoulderMm'] as const).find((key) => {
             const maximum = result.parameterLimits?.[key];
 
@@ -757,7 +757,7 @@ export const useCustomizerParams = (
             group,
             controlKey,
             failure,
-            failure.code === 'text-edge-too-large' ? 'rejected' : 'failed',
+            isRecoverableCandidateFailure(failure) ? 'rejected' : 'failed',
             error instanceof GeometryOperationError ? error.diagnostics : undefined,
             attemptId,
           );

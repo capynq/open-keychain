@@ -257,24 +257,7 @@
   gap: 8px;
 }
 
-.export-choice-grid button {
-  display: flex;
-  align-items: center;
-  gap: var(--workshop-space-4);
-  width: 100%;
-  min-height: 72px;
-  padding: var(--workshop-space-4) var(--workshop-space-5);
-  border: 1px solid var(--workshop-border);
-  border-radius: var(--workshop-radius-control);
-  background: var(--workshop-surface-control);
-  color: var(--workshop-text);
-  text-align: left;
-  transition:
-    background-color var(--workshop-motion-fast) var(--workshop-ease),
-    border-color var(--workshop-motion-fast) var(--workshop-ease),
-    transform var(--workshop-motion-fast) var(--workshop-ease);
-}
-
+.export-choice-grid button,
 .export-choice-recommended {
   display: flex;
   align-items: center;
@@ -282,7 +265,7 @@
   width: 100%;
   min-height: 72px;
   padding: var(--workshop-space-4) var(--workshop-space-5);
-  border: 2px solid var(--workshop-accent);
+  border: var(--export-choice-border, 1px solid var(--workshop-border));
   border-radius: var(--workshop-radius-control);
   background: var(--workshop-surface-control);
   color: var(--workshop-text);
@@ -293,24 +276,11 @@
     transform var(--workshop-motion-fast) var(--workshop-ease);
 }
 
-.export-choice-recommended:hover:not(:disabled) {
-  background: var(--workshop-surface-subtle);
-}
-
-.export-choice-recommended:active:not(:disabled) {
-  transition-duration: var(--workshop-motion-fast);
-  transition-timing-function: var(--workshop-ease);
-  transform: scale(var(--workshop-press-scale));
-}
-
-.export-choice-recommended:focus-visible {
-  outline: 2px solid var(--workshop-accent);
-  outline-offset: 2px;
-}
-
-.export-choice-recommended:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
+/* Per-variant overrides: custom properties are read on the element itself,
+   so they win over the shared selector list's fallbacks regardless of specificity. */
+.export-choice-recommended {
+  --export-choice-border: 2px solid var(--workshop-accent);
+  --export-choice-outline-offset: 2px;
 }
 
 .export-slicer-help {
@@ -334,24 +304,28 @@
   margin: 8px 0 0;
 }
 
-.export-choice-grid button:hover:not(:disabled) {
+.export-choice-grid button:hover:not(:disabled),
+.export-choice-recommended:hover:not(:disabled) {
   border-color: var(--workshop-accent);
   background: var(--workshop-surface-subtle);
 }
 
-.export-choice-grid button:active:not(:disabled) {
+.export-choice-grid button:active:not(:disabled),
+.export-choice-recommended:active:not(:disabled) {
   transition-duration: var(--workshop-motion-fast);
   transition-timing-function: var(--workshop-ease);
   transform: scale(var(--workshop-press-scale));
 }
 
-.export-choice-grid button:focus-visible {
+.export-choice-grid button:focus-visible,
+.export-choice-recommended:focus-visible {
   outline: 2px solid var(--workshop-accent);
-  outline-offset: 1px;
+  outline-offset: var(--export-choice-outline-offset, 1px);
   border-color: var(--workshop-accent);
 }
 
-.export-choice-grid button:disabled {
+.export-choice-grid button:disabled,
+.export-choice-recommended:disabled {
   cursor: not-allowed;
   opacity: 0.45;
 }
@@ -382,11 +356,7 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .export-choice-grid button:hover:not(:disabled) {
-    transform: translateY(var(--workshop-hover-lift));
-    box-shadow: 0 5px 14px var(--workshop-text-alpha-0d);
-  }
-
+  .export-choice-grid button:hover:not(:disabled),
   .export-choice-recommended:hover:not(:disabled) {
     transform: translateY(var(--workshop-hover-lift));
     box-shadow: 0 5px 14px var(--workshop-text-alpha-0d);
@@ -394,21 +364,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .export-choice-grid button {
-    transition: none;
-  }
-
+  .export-choice-grid button,
   .export-choice-recommended {
     transition: none;
   }
 
   .export-choice-grid button:hover:not(:disabled),
-  .export-choice-grid button:active:not(:disabled) {
-    transition-duration: var(--workshop-motion-fast);
-    transition-timing-function: var(--workshop-ease);
-    transform: none;
-  }
-
+  .export-choice-grid button:active:not(:disabled),
   .export-choice-recommended:hover:not(:disabled),
   .export-choice-recommended:active:not(:disabled) {
     transition-duration: var(--workshop-motion-fast);

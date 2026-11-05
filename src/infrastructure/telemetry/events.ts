@@ -12,6 +12,7 @@ export type AnalyticsEvent =
   | 'template_selected'
   | 'customizer_opened'
   | 'geometry_ready'
+  | 'preview_rendered'
   | 'geometry_error'
   | 'geometry_attempt_started'
   | 'geometry_attempt_finished'
@@ -78,7 +79,45 @@ const SAFE_PROPERTY_KEYS = new Set([
   'recovery_outcome',
   'retry_of_attempt_id',
   'geometry_generation_id',
+  'worker_replacements',
   'to',
+  'wasm_wait_ms',
+  'worker_compute_ms',
+  'client_round_trip_ms',
+  'client_queue_ms',
+  'worker_boot_ms',
+  'cache_hit',
+  'cold_start',
+  'mesh_setup_ms',
+  'draw_submit_ms',
+  'initialization_ms',
+  'preview_quality',
+]);
+
+const GEOMETRY_TIMING_EVENTS = new Set<AnalyticsEvent>(['geometry_ready', 'preview_rendered']);
+const GEOMETRY_TIMING_KEYS = new Set([
+  'wasm_wait_ms',
+  'worker_compute_ms',
+  'client_round_trip_ms',
+  'client_queue_ms',
+  'worker_boot_ms',
+  'cache_hit',
+  'cold_start',
+  'mesh_setup_ms',
+  'draw_submit_ms',
+  'initialization_ms',
+]);
+
+const DURATION_PROPERTY_KEYS = new Set([
+  'duration_ms',
+  'wasm_wait_ms',
+  'worker_compute_ms',
+  'client_round_trip_ms',
+  'client_queue_ms',
+  'worker_boot_ms',
+  'mesh_setup_ms',
+  'draw_submit_ms',
+  'initialization_ms',
 ]);
 
 const SETUP_STEPS = new Set([
@@ -110,6 +149,23 @@ const EVENT_PROPERTY_KEYS: Partial<Record<AnalyticsEvent, ReadonlySet<string>>> 
     'duration_ms',
     'geometry_generation_id',
     'outcome',
+    'wasm_wait_ms',
+    'worker_compute_ms',
+    'client_round_trip_ms',
+    'client_queue_ms',
+    'worker_boot_ms',
+    'cache_hit',
+    'cold_start',
+    'preview_quality',
+  ]),
+  preview_rendered: new Set([
+    'geometry_generation_id',
+    'template',
+    'mesh_setup_ms',
+    'draw_submit_ms',
+    'initialization_ms',
+    'cold_start',
+    'preview_quality',
   ]),
   geometry_error: new Set([
     'template',
@@ -121,6 +177,7 @@ const EVENT_PROPERTY_KEYS: Partial<Record<AnalyticsEvent, ReadonlySet<string>>> 
     'duration_ms',
     'outcome',
     'error_code',
+    'worker_replacements',
   ]),
   geometry_attempt_started: new Set([
     'template',
@@ -146,6 +203,7 @@ const EVENT_PROPERTY_KEYS: Partial<Record<AnalyticsEvent, ReadonlySet<string>>> 
     'recovery_outcome',
     'retry_of_attempt_id',
     'geometry_generation_id',
+    'worker_replacements',
   ]),
   export_dialog_opened: new Set(['template', 'design_id']),
   export_started: new Set([
@@ -225,6 +283,7 @@ export const sanitizeProperties = (
         ) {
           return false;
         }
+        if (GEOMETRY_TIMING_KEYS.has(key) && !GEOMETRY_TIMING_EVENTS.has(event)) return false;
 
         const eventKeys = EVENT_PROPERTY_KEYS[event];
         if (eventKeys && !CONTEXT_PROPERTY_KEYS.has(key)) {
@@ -279,17 +338,31 @@ export const sanitizeProperties = (
         if (key === 'control_key')
           return typeof value === 'string' && /^[a-z][A-Za-z0-9]{0,63}$/.test(value);
         if (key === 'failure_code') return typeof value === 'string' && SAFE_ID.test(value);
-        if (key === 'recovery_trigger') return value === 'user_retry' || value === 'user_edit';
+        if (key === 'recovery_trigger') {
+          if (value === 'auto_replacement')
+            return event === 'geometry_attempt_started' || event === 'geometry_attempt_finished';
+          return value === 'user_retry' || value === 'user_edit';
+        }
         if (key === 'recovery_outcome')
           return value === 'recovered' || value === 'failed' || value === 'not_needed';
         if (key === 'retry_of_attempt_id')
           return typeof value === 'string' && /^[a-f0-9-]{36}$/.test(value);
         if (key === 'geometry_generation_id')
           return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
-        if (key === 'duration_ms')
+        if (DURATION_PROPERTY_KEYS.has(key))
           return (
             typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 600_000
           );
+        if (key === 'cache_hit' || key === 'cold_start') return typeof value === 'boolean';
+        if (key === 'preview_quality')
+          return (
+            GEOMETRY_TIMING_EVENTS.has(event) &&
+            (value === 'high' || value === 'medium' || value === 'low')
+          );
+        if (key === 'worker_replacements')
+          return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 20;
+        if (key === 'template' && GEOMETRY_TIMING_EVENTS.has(event))
+          return typeof value === 'string' && SAFE_ID.test(value);
         if (key === 'app_version') return typeof value === 'string' && /^[a-f0-9]{40}$/.test(value);
         if (key === 'app_release')
           return typeof value === 'string' && /^[a-z0-9][a-z0-9._+-]{0,127}$/i.test(value);
@@ -319,7 +392,6 @@ export const sanitizeProperties = (
             ].includes(value)
           );
         if (key === 'error_code') return typeof value === 'string' && ERROR_CODES.has(value);
-        if (key === 'outcome') return value === 'success' || value === 'error';
         if (key.endsWith('_id')) return typeof value === 'string' && SAFE_ID.test(value);
 
         return true;

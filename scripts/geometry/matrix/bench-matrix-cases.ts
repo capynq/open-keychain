@@ -84,8 +84,6 @@ export const partitionMatrixCasesByShard = (
   )
     throw new Error('Matrix shard index/count must identify one shard from 0 to 11 of 1 to 12.');
 
-  // Balance each template independently so a shard cannot accidentally receive
-  // most of one of the expensive templates just because its IDs hash alike.
   const byTemplate = new Map<TemplateId, MatrixCase[]>();
   for (const item of cases) {
     const templateCases = byTemplate.get(item.templateId) ?? [];
@@ -151,3 +149,60 @@ export const selectMatrixBenchmarkSample = (
       .slice(0, quota),
   );
 };
+
+export type MatrixCaseDurations = Readonly<Record<string, number>>;
+
+/* Contiguous packages; font cache holds 16 entries */
+export const scheduleMatrixPackages = (
+  cases: MatrixCase[],
+  packageSize: number,
+  history: MatrixCaseDurations = {},
+  splitShare = 0.05,
+) => {
+  const known = Object.values(history).filter((value) => Number.isFinite(value) && value > 0);
+  const average = known.length ? known.reduce((sum, value) => sum + value, 0) / known.length : 0;
+  const cost = (item: MatrixCase) =>
+    Number.isFinite(history[item.id]) && history[item.id] > 0
+      ? history[item.id]
+      : average || item.text.value.length;
+  const chunks = partitionMatrixCases(cases, packageSize)
+    .map(({ cases: items }) => ({
+      items,
+      cost: items.reduce((sum, item) => sum + cost(item), 0),
+    }))
+    .sort(
+      (left, right) => right.cost - left.cost || left.items[0].id.localeCompare(right.items[0].id),
+    );
+  const splitCount = Math.min(chunks.length, Math.ceil(chunks.length * splitShare));
+  const singles = chunks
+    .slice(0, splitCount)
+    .flatMap(({ items }) => items)
+    .sort((left, right) => cost(right) - cost(left) || left.id.localeCompare(right.id))
+    .map((item) => [item]);
+  return [...singles, ...chunks.slice(splitCount).map(({ items }) => items)].map(
+    (items, packageId) => ({ packageId, cases: items }),
+  );
+};
+
+export const findMatrixSlowdowns = (
+  durations: MatrixCaseDurations,
+  history: MatrixCaseDurations,
+  { factor = 3, minimumMs = 5000, limit = 10 } = {},
+) =>
+  Object.entries(durations)
+    .filter(([id, durationMs]) => {
+      const previous = history[id];
+      return (
+        Number.isFinite(previous) &&
+        previous > 0 &&
+        durationMs >= minimumMs &&
+        durationMs > previous * factor
+      );
+    })
+    .map(([id, durationMs]) => ({
+      case: id,
+      durationMs: Math.round(durationMs),
+      previousMs: Math.round(history[id]),
+    }))
+    .sort((left, right) => right.durationMs / right.previousMs - left.durationMs / left.previousMs)
+    .slice(0, limit);

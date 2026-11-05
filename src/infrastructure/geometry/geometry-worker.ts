@@ -33,7 +33,10 @@ const builtGeometryWeight = (built: BuiltGeometry): number => {
 };
 const finalCache = new BoundedResultCache<BuiltGeometry>(8, 64 * 1024 * 1024, builtGeometryWeight);
 const getWasm = () => {
-  wasmPromise ??= createWasm();
+  wasmPromise ??= createWasm().catch((error: unknown) => {
+    wasmPromise = undefined;
+    throw error;
+  });
   return wasmPromise;
 };
 const fontForBuild = (definition: Parameters<typeof buildKeychain>[3]) => {
@@ -73,9 +76,7 @@ const cacheKey = async (
     fontKey(fontForBuild(request.subtitleFontDefinition)),
   ]).then(
     ([primaryFontKey, subtitleFontKey]) =>
-      // Keep preview/validation meshes separate from exportable meshes. The
-      // shared bounded cache may hold both, but an incomplete preview result
-      // must never satisfy an export request.
+      /* Preview results must never satisfy export */
       `${quality}|${stableStringify(request.params)}|${primaryFontKey}|${subtitleFontKey}`,
   );
 const responseResult = (result: BuiltGeometry['result']) => ({
@@ -94,8 +95,7 @@ const transferBuffers = (result: BuiltGeometry['result']): ArrayBuffer[] => {
   }
   return [...buffers].filter((buffer): buffer is ArrayBuffer => buffer instanceof ArrayBuffer);
 };
-self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
-  const request = event.data;
+const handleRequest = async (request: WorkerRequest): Promise<void> => {
   let stage: OperationDiagnostics['stage'] = 'initialization';
   try {
     if (request.type === 'warmup') {
@@ -225,13 +225,28 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     }
   } catch (error) {
     const failure = failureFrom(error, 'geometry-build-failed');
-    const response: WorkerResponse = {
-      type: 'error',
-      requestId: request.type === 'warmup' ? 0 : request.requestId,
-      message: failure.message ?? 'The geometry engine could not create this model.',
-      failure,
-      diagnostics: { stage, type: 'operation_error' },
-    };
-    self.postMessage(response);
+    const requestId = request?.type === 'warmup' ? 0 : (request?.requestId ?? 0);
+    try {
+      const response: WorkerResponse = {
+        type: 'error',
+        requestId,
+        message: failure.message ?? 'The geometry engine could not create this model.',
+        failure,
+        diagnostics: { stage, type: 'operation_error' },
+      };
+      self.postMessage(response);
+    } catch {
+      self.postMessage({
+        type: 'error',
+        requestId,
+        message: 'The geometry engine could not create this model.',
+      } satisfies WorkerResponse);
+    }
   }
+};
+
+let messageQueue: Promise<void> = Promise.resolve();
+self.onmessage = (event: MessageEvent<WorkerRequest>) => {
+  messageQueue = messageQueue.then(() => handleRequest(event.data)).catch(() => undefined);
+  return messageQueue;
 };

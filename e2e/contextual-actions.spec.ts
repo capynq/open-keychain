@@ -91,7 +91,6 @@ test('Share offers encoded social links and native sharing without changing layo
   const popup = page.getByRole('dialog', { name: 'Share', exact: true });
   await expect(popup).toBeVisible();
   expect(await page.locator('.viewer').boundingBox()).toEqual(before);
-  // Short share labels should not inherit the wider Photo resolution panel.
   expect((await popup.boundingBox())!.width).toBeLessThan(270);
   const brandColors: Record<string, string> = {
     Telegram: 'rgb(38, 165, 228)',

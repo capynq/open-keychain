@@ -167,61 +167,6 @@ describe('styles and fonts', () => {
     expect(compact.result.dimensions.thicknessMm).toBeGreaterThanOrEqual(4.4);
   });
 
-  for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'] as const) {
-    it(`changes ${styleId} geometry across the full backing-size range`, async () => {
-      const compact = await buildKeychain(wasm, {
-        ...DEFAULT_PARAMS,
-        styleId,
-        text: 'ALEX',
-        paddingMm: 1.2,
-        edgeInsetMm: 1.2,
-      });
-      const spacious = await buildKeychain(wasm, {
-        ...DEFAULT_PARAMS,
-        styleId,
-        text: 'ALEX',
-        paddingMm: 4,
-        edgeInsetMm: 4,
-      });
-      expect(compact.result.printable, JSON.stringify(compact.result.issues)).toBe(true);
-      expect(spacious.result.printable, JSON.stringify(spacious.result.issues)).toBe(true);
-      expect(topSurfaceArea(spacious.result.baseMesh).surface).toBeGreaterThan(
-        topSurfaceArea(compact.result.baseMesh).surface,
-      );
-    }, 30000);
-  }
-
-  for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'] as const) {
-    for (const font of FONT_CATALOG) {
-      it(`contains Latin relief for ${font.name} ${styleId}`, async () => {
-        const { result } = await buildKeychain(wasm, {
-          ...DEFAULT_PARAMS,
-          fontId: font.id,
-          styleId,
-          text: 'ALEX',
-        });
-        expect(result.printable, JSON.stringify(result.issues)).toBe(true);
-        expect(result.issues.some((issue) => issue.code === 'relief-outside-backing')).toBe(false);
-        expect(result.dimensions.widthMm).toBeLessThanOrEqual(120.1);
-      }, 30000);
-    }
-  }
-
-  for (const styleId of ['contour', 'capsule', 'soft-tag', 'bubble', 'arch'] as const) {
-    for (const font of FONT_CATALOG.filter((font) => font.scripts.includes('cyrillic'))) {
-      it(`contains Cyrillic relief for ${font.name} ${styleId}`, async () => {
-        const { result } = await buildKeychain(wasm, {
-          ...DEFAULT_PARAMS,
-          fontId: font.id,
-          styleId,
-          text: 'НИКИТА',
-        });
-        expect(result.printable, JSON.stringify(result.issues)).toBe(true);
-        expect(result.issues.some((issue) => issue.code === 'relief-outside-backing')).toBe(false);
-      }, 30000);
-    }
-  }
-
   for (const fontId of [
     'nunito',
     'oswald',

@@ -23,9 +23,7 @@ export type WebMcpState = {
   dimensions: { widthMm: number; heightMm: number; thicknessMm: number } | undefined;
 };
 
-// Keep the public WebMCP schema in lockstep with the product catalogs. These are
-// intentionally materialized arrays because JSON schema enum values are runtime
-// data, while the catalogs remain the source of truth for supported IDs.
+/* Arrays materialized: JSON schema needs runtime values */
 export const WEBMCP_TEMPLATE_IDS = TEMPLATE_CATALOG.map(({ id }) => id);
 export const WEBMCP_STYLE_IDS = STYLE_CATALOG.map(({ id }) => id);
 

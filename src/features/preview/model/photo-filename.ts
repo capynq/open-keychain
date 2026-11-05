@@ -23,7 +23,6 @@ export const photoFilename = (
   format: PhotoFormat,
 ): string => {
   if (!design) return `keychain-photo-${resolution}.${format}`;
-  // These templates have no selectable backing style.
   const style =
     design.templateId === 'nameplate' || design.templateId === 'articulated-name'
       ? undefined

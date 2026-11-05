@@ -8,6 +8,35 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
 
+const LINE_COMMENT_DIRECTIVE =
+  /^\s*(?:eslint-(?:disable|enable)\b|@ts-(?:expect-error|ignore|nocheck)\b|\/\s*<reference\b|prettier-ignore\b|@vitest-environment\b|#(?:end)?region\b)/;
+
+const localPlugin = {
+  rules: {
+    'no-line-comments': {
+      meta: {
+        type: 'suggestion',
+        messages: {
+          noLineComment:
+            'Use a /* */ block comment only for crucial notes; line comments are not allowed.',
+        },
+        schema: [],
+      },
+      create(context) {
+        return {
+          Program() {
+            for (const comment of context.sourceCode.getAllComments()) {
+              if (comment.type === 'Line' && !LINE_COMMENT_DIRECTIVE.test(comment.value)) {
+                context.report({ loc: comment.loc, messageId: 'noLineComment' });
+              }
+            }
+          },
+        };
+      },
+    },
+  },
+};
+
 export default defineConfig([
   {
     ignores: [
@@ -19,6 +48,10 @@ export default defineConfig([
     ],
   },
   eslint.configs.recommended,
+  {
+    plugins: { local: localPlugin },
+    rules: { 'local/no-line-comments': 'error' },
+  },
   ...tseslint.configs.recommended,
   reactHooks.configs.flat['recommended-latest'],
   {
@@ -59,7 +92,6 @@ export default defineConfig([
         'error',
         {
           allow: [
-            // Existing entry points are temporary compatibility APIs; additions must be direct files.
             'src/entities/keychain/design-document.ts',
             'src/entities/keychain/fonts/catalog.ts',
             'src/entities/keychain/fonts/local-provider.ts',

@@ -20,7 +20,7 @@ export const useEditorMode = () => {
     try {
       localStorage.setItem(STORAGE_KEY, next);
     } catch {
-      // The editor remains usable when browser storage is unavailable.
+      /* storage unavailable */
     }
   };
 

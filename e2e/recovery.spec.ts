@@ -228,3 +228,60 @@ test('preview initialization can be retried without losing the design', async ({
   await waitForReadyGeometry(page);
   expect((await shared(page)).params).toMatchObject({ text: initial.text, fontId: initial.fontId });
 });
+
+test('a geometry worker that never boots is replaced and the current design is re-requested without user action', async ({
+  page,
+}) => {
+  test.setTimeout(150_000);
+  await page.addInitScript(() => {
+    const NativeWorker = window.Worker;
+    const control = { geometryWorkers: 0, generates: [] as { worker: number; text: unknown }[] };
+    Object.assign(window, { geometryBootTest: control });
+    window.Worker = class extends NativeWorker {
+      constructor(url: string | URL, options?: WorkerOptions) {
+        super(url, options);
+        if (!String(url).includes('geometry-worker')) return;
+        control.geometryWorkers += 1;
+        const index = control.geometryWorkers;
+        if (index === 1) {
+          Object.defineProperty(this, 'onmessage', {
+            configurable: true,
+            get: () => null,
+            set: () => undefined,
+          });
+        }
+        const post = this.postMessage.bind(this);
+        this.postMessage = (message: unknown, transfer?: unknown) => {
+          const request = message as { type?: string; params?: { text?: unknown } };
+          if (request.type === 'generate')
+            control.generates.push({ worker: index, text: request.params?.text });
+          (post as (message: unknown, transfer?: unknown) => void)(message, transfer);
+        };
+      }
+    };
+  });
+  await page.goto('/create');
+
+  const control = () =>
+    page.evaluate(() => {
+      const { geometryWorkers, generates } = (
+        window as unknown as {
+          geometryBootTest: {
+            geometryWorkers: number;
+            generates: { worker: number; text: unknown }[];
+          };
+        }
+      ).geometryBootTest;
+      return { geometryWorkers, generates };
+    });
+  await expect
+    .poll(async () => (await control()).geometryWorkers, { timeout: 90_000 })
+    .toBeGreaterThanOrEqual(2);
+  await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 60_000 });
+  await expect(page.locator('.viewer-surface canvas')).toBeVisible();
+  const { generates } = await control();
+  const firstWorkerText = generates.find((entry) => entry.worker === 1)?.text;
+  expect(generates.filter((entry) => entry.worker === 2)).toEqual([
+    { worker: 2, text: firstWorkerText },
+  ]);
+});

@@ -2,11 +2,11 @@ import { execFileSync, spawn } from 'node:child_process';
 import { mkdir, readdir } from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
 import { clearTimeout, setTimeout } from 'node:timers';
-import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import {
   fingerprintGate,
+  pruneValidationArtifacts,
   pruneValidationCache,
   readSuccessfulResult,
   restoreBuildArtifact,
@@ -15,11 +15,12 @@ import {
 import { ValidationUi, eventFor } from '../reporters/validation-ui.mjs';
 import { findAvailablePort } from './ports.mjs';
 import { validationInputsForGate } from './inputs.mjs';
+import { defaultValidationConcurrency, maxValidationConcurrency } from './concurrency.mjs';
 
 const ROOT = process.cwd();
 const LOG_DIR = path.join(ROOT, 'artifacts', 'validation-logs');
-const MAX_CONCURRENCY = Math.max(1, Math.min(8, os.availableParallelism?.() ?? os.cpus().length));
-const DEFAULT_CONCURRENCY = Math.min(4, MAX_CONCURRENCY);
+const MAX_CONCURRENCY = maxValidationConcurrency();
+const DEFAULT_CONCURRENCY = Math.min(defaultValidationConcurrency(), MAX_CONCURRENCY);
 const parseConcurrency = (raw) => {
   const value = raw ?? String(DEFAULT_CONCURRENCY);
   if (!/^[1-9]\d*$/.test(value) || Number(value) > MAX_CONCURRENCY)
@@ -449,7 +450,7 @@ export const runValidationGates = async (
           running.delete(gate.id);
           if (failFast && !result.ok && result.status !== 'skipped') stopAll();
         });
-        running.set(gate.id, undefined); // process handle is assigned once cache lookup completes
+        running.set(gate.id, undefined);
         gate.promise = promise;
         madeProgress = true;
       }
@@ -477,6 +478,7 @@ export const runValidationGates = async (
     process.removeListener('SIGTERM', handleSignal);
   }
   await pruneValidationCache({ root: ROOT });
+  if (!process.env.VITEST) await pruneValidationArtifacts({ root: ROOT });
   const values = [...results.values()];
   const failures = values.filter((result) => !result.ok);
   const partial = userSkipped && profile === 'push' && failures.length === 0;

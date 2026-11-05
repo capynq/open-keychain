@@ -270,6 +270,40 @@ describe('analytics event properties', () => {
     ).toEqual({ outcome: 'rejected', control_key: 'text' });
   });
 
+  it('accepts only integer worker replacement counts from 0 to 20 on attempt and error events', () => {
+    for (const event of ['geometry_attempt_finished', 'geometry_error'] as const) {
+      expect(sanitizeProperties(event, { worker_replacements: 0 })).toEqual({
+        worker_replacements: 0,
+      });
+      expect(sanitizeProperties(event, { worker_replacements: 20 })).toEqual({
+        worker_replacements: 20,
+      });
+      for (const value of [-1, 21, 1.5, Number.NaN, Number.POSITIVE_INFINITY, '2']) {
+        expect(sanitizeProperties(event, { worker_replacements: value as number })).toEqual({});
+      }
+    }
+    expect(sanitizeProperties('geometry_ready', { worker_replacements: 1 })).toEqual({});
+  });
+
+  it('accepts the auto replacement trigger only on geometry attempt events', () => {
+    for (const event of ['geometry_attempt_started', 'geometry_attempt_finished'] as const) {
+      expect(sanitizeProperties(event, { recovery_trigger: 'auto_replacement' })).toEqual({
+        recovery_trigger: 'auto_replacement',
+      });
+    }
+    expect(sanitizeProperties('export_started', { recovery_trigger: 'auto_replacement' })).toEqual(
+      {},
+    );
+    expect(sanitizeProperties('export_failed', { recovery_trigger: 'auto_replacement' })).toEqual(
+      {},
+    );
+    expect(
+      sanitizeProperties('geometry_attempt_started', { recovery_trigger: 'user_edit' }),
+    ).toEqual({
+      recovery_trigger: 'user_edit',
+    });
+  });
+
   it('keeps the preview generation ID on the correlated ready event', () => {
     expect(
       sanitizeProperties('geometry_ready', {
@@ -286,5 +320,89 @@ describe('analytics event properties', () => {
       geometry_generation_id: 14,
       outcome: 'success',
     });
+  });
+
+  it('keeps geometry and preview timing properties with their expected types', () => {
+    expect(
+      sanitizeProperties('geometry_ready', {
+        template: 'heart',
+        wasm_wait_ms: 12,
+        worker_compute_ms: 340,
+        client_round_trip_ms: 380,
+        client_queue_ms: 0,
+        worker_boot_ms: 1200,
+        cache_hit: false,
+        cold_start: true,
+      }),
+    ).toEqual({
+      template: 'heart',
+      wasm_wait_ms: 12,
+      worker_compute_ms: 340,
+      client_round_trip_ms: 380,
+      client_queue_ms: 0,
+      worker_boot_ms: 1200,
+      cache_hit: false,
+      cold_start: true,
+    });
+    expect(
+      sanitizeProperties('preview_rendered', {
+        geometry_generation_id: 14,
+        template: 'heart',
+        mesh_setup_ms: 8,
+        draw_submit_ms: 3,
+        initialization_ms: 450,
+        cold_start: true,
+      }),
+    ).toEqual({
+      geometry_generation_id: 14,
+      template: 'heart',
+      mesh_setup_ms: 8,
+      draw_submit_ms: 3,
+      initialization_ms: 450,
+      cold_start: true,
+    });
+  });
+
+  it('rejects malformed geometry and preview timing properties', () => {
+    expect(sanitizeProperties('geometry_ready', { worker_compute_ms: '340' })).toEqual({});
+    expect(sanitizeProperties('geometry_ready', { wasm_wait_ms: -1 })).toEqual({});
+    expect(sanitizeProperties('preview_rendered', { mesh_setup_ms: 600_001 })).toEqual({});
+    expect(sanitizeProperties('preview_rendered', { cold_start: 'true' })).toEqual({});
+    expect(sanitizeProperties('geometry_ready', { cache_hit: 1 })).toEqual({});
+    expect(sanitizeProperties('geometry_ready', { template: 'Heart Shape' })).toEqual({});
+  });
+
+  it('accepts the 600000 ms boundary and rejects non-finite timing values', () => {
+    expect(sanitizeProperties('geometry_ready', { worker_boot_ms: 600_000 })).toEqual({
+      worker_boot_ms: 600_000,
+    });
+    expect(sanitizeProperties('preview_rendered', { draw_submit_ms: 600_000 })).toEqual({
+      draw_submit_ms: 600_000,
+    });
+    for (const value of [Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(sanitizeProperties('geometry_ready', { client_queue_ms: value })).toEqual({});
+      expect(sanitizeProperties('preview_rendered', { mesh_setup_ms: value })).toEqual({});
+    }
+  });
+
+  it('allows only the fixed preview quality tiers on geometry_ready and preview_rendered', () => {
+    for (const event of ['geometry_ready', 'preview_rendered'] as const) {
+      for (const tier of ['high', 'medium', 'low'] as const) {
+        expect(sanitizeProperties(event, { preview_quality: tier })).toEqual({
+          preview_quality: tier,
+        });
+      }
+      expect(sanitizeProperties(event, { preview_quality: 'ultra' })).toEqual({});
+      expect(sanitizeProperties(event, { preview_quality: 1 })).toEqual({});
+    }
+    expect(sanitizeProperties('export_completed', { preview_quality: 'low' })).toEqual({});
+    expect(sanitizeProperties('landing_view', { preview_quality: 'low' })).toEqual({});
+  });
+
+  it('allows timing properties only on geometry_ready and preview_rendered', () => {
+    expect(sanitizeProperties('landing_view', { wasm_wait_ms: 5 })).toEqual({});
+    expect(sanitizeProperties('export_completed', { cold_start: true })).toEqual({});
+    expect(sanitizeProperties('preview_rendered', { wasm_wait_ms: 5 })).toEqual({});
+    expect(sanitizeProperties('geometry_attempt_finished', { cache_hit: false })).toEqual({});
   });
 });

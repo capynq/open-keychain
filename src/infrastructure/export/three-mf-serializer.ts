@@ -18,7 +18,7 @@ const normalizeColor = (color: string): string => {
   }
   return normalized;
 };
-// Bambu reads the Materials Extension group; keep Core materials on a distinct resource ID.
+/* Bambu reads Materials Extension group */
 const colorGroupId = 10;
 const separateModeBaseMaterialsId = 11;
 const escapeXml = (value: string): string => {
@@ -70,8 +70,10 @@ const modelXml = (parts: ThreeMfPart[], mode: ThreeMfMode): string => {
         .map((part) => `<m:color color="${normalizeColor(part.color)}"/>`)
         .join('')}</m:colorgroup>`
     : '';
+  /* Non-extension readers ignore colorgroup */
+  const recommendedExtensions = hasSeparateColors ? ' recommendedextensions="m"' : '';
   return `<?xml version="1.0" encoding="UTF-8"?>
-<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:m="http://schemas.microsoft.com/3dmanufacturing/material/2015/02">
+<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:m="http://schemas.microsoft.com/3dmanufacturing/material/2015/02"${recommendedExtensions}>
   <metadata name="Title">Open Keychain</metadata>
   <metadata name="Description">Printable keychain generated locally in the browser.</metadata>
   <resources><basematerials id="${baseMaterialsId}">${materials}</basematerials>${colorGroup}${object}</resources>

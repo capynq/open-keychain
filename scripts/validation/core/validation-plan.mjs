@@ -1,14 +1,11 @@
 import process from 'node:process';
-import { existsSync } from 'node:fs';
-import os from 'node:os';
+import { existsSync, readdirSync } from 'node:fs';
 import { FORMAT_EXTENSIONS, LINT_EXTENSIONS, extensionOf } from './file-types.mjs';
 import { isGeometryInput } from './inputs.mjs';
+import { boundedConcurrency, unitWorkerCount, validationConcurrency } from './concurrency.mjs';
 const ASSET_EXTENSIONS = /\.(?:ttf|otf|woff2?|eot|wasm|png|jpe?g|webp|svg|ico)$/i;
 const SOURCE_ROOTS = ['src/', 'e2e/', 'scripts/', 'public/', 'tools/'];
-const DEFAULT_VALIDATION_CONCURRENCY = Math.min(
-  4,
-  Math.max(1, os.availableParallelism?.() ?? os.cpus().length),
-);
+
 const CONSERVATIVE_FILES = new Set([
   'package.json',
   'pnpm-lock.yaml',
@@ -34,17 +31,33 @@ const CONSERVATIVE_FILES = new Set([
 ]);
 
 const normalize = (file) => file.replaceAll('\\', '/').replace(/^\.\//, '');
-const boundedConcurrency = (name, fallback, maximum) => {
-  const value = process.env[name] ?? String(fallback);
-  if (!/^[1-9]\d*$/.test(value) || Number(value) > maximum)
-    throw new Error(`${name} must be an integer from 1 to ${maximum}; received ${value}`);
-  return Number(value);
-};
+const MAX_MATRIX_CONCURRENCY = 8;
 const matrixWorkerCount = () =>
   Math.min(
-    boundedConcurrency('MATRIX_CONCURRENCY', DEFAULT_VALIDATION_CONCURRENCY, 5),
-    boundedConcurrency('VALIDATION_CONCURRENCY', DEFAULT_VALIDATION_CONCURRENCY, 8),
+    boundedConcurrency('MATRIX_CONCURRENCY', validationConcurrency(), MAX_MATRIX_CONCURRENCY),
+    validationConcurrency(),
   );
+const browserRegressionGate = () => ({
+  id: 'browser:regression',
+  name: 'Browser regression',
+  required: true,
+  workerSlots: 2,
+  command: 'pnpm',
+  args: ['test:e2e:regression'],
+  env: { PLAYWRIGHT_USE_EXISTING_BUILD: 'true', PLAYWRIGHT_SMOKE: 'false' },
+  dependsOn: ['build'],
+});
+const unitGate = (id, script) => {
+  const workers = id === 'unit' ? Math.max(2, validationConcurrency()) : unitWorkerCount();
+  return {
+    id,
+    name: 'Unit',
+    required: true,
+    workerSlots: workers,
+    command: 'pnpm',
+    args: [script, '--', `--maxWorkers=${workers}`],
+  };
+};
 const isTest = (file) => /\.(?:test|spec)\.[^.]+$/i.test(file);
 const isDocumentation = (file) =>
   !file.startsWith('src/') &&
@@ -156,18 +169,19 @@ export const requiresFullCIRegression = (inputFiles, conservative = false) => {
   return conservative || (classification.files.length > 0 && !classification.documentationOnly);
 };
 
+const BUILDER_DIRECTORY = 'src/domain/keychain/build';
+export const keychainBuilderSuites = () =>
+  existsSync(BUILDER_DIRECTORY)
+    ? readdirSync(BUILDER_DIRECTORY)
+        .filter((file) => /^keychain-builder\..+\.test\.ts$/.test(file))
+        .sort()
+        .map((file) => `${BUILDER_DIRECTORY}/${file}`)
+    : [];
+
 export const relatedInputsForCi = (files) => {
   const existing = files.filter((file) => existsSync(file));
   const dynamicMappings = new Map([
-    [
-      'src/domain/keychain/build/keychain-builder.ts',
-      [
-        'src/domain/keychain/build/keychain-builder.contracts.test.ts',
-        'src/domain/keychain/build/keychain-builder.styles-fonts.test.ts',
-        'src/domain/keychain/build/keychain-builder.magnet-nameplate-plant.test.ts',
-        'src/domain/keychain/build/keychain-builder.keyring-articulated.test.ts',
-      ],
-    ],
+    ['src/domain/keychain/build/keychain-builder.ts', keychainBuilderSuites()],
     [
       'src/infrastructure/geometry/geometry-client.ts',
       ['src/infrastructure/geometry/geometry-client.test.ts'],
@@ -375,14 +389,7 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
         command: 'pnpm',
         args: ['typecheck'],
       },
-      {
-        id: 'unit:fast',
-        name: 'Unit',
-        required: true,
-        workerSlots: 2,
-        command: 'pnpm',
-        args: ['test:fast', '--', '--maxWorkers=2'],
-      },
+      unitGate('unit:fast', 'test:fast'),
       {
         id: 'build',
         name: 'Build',
@@ -421,14 +428,7 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
         command: 'pnpm',
         args: ['typecheck'],
       },
-      {
-        id: 'unit',
-        name: 'Unit',
-        required: true,
-        workerSlots: 2,
-        command: 'pnpm',
-        args: ['test:full', '--', '--maxWorkers=2'],
-      },
+      unitGate('unit', 'test:full'),
       {
         id: 'build',
         name: 'Build',
@@ -442,10 +442,11 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
         id: 'browser',
         name: 'Browser',
         required: true,
-        workerSlots: 2,
+        workerSlots: unitWorkerCount(),
         command: 'pnpm',
         args: ['test:e2e:full'],
         env: {
+          PLAYWRIGHT_WORKERS: String(unitWorkerCount()),
           PLAYWRIGHT_USE_EXISTING_BUILD:
             process.env.PLAYWRIGHT_USE_EXISTING_BUILD === 'false' ? 'false' : 'true',
           VITE_HOSTED_MODE: 'false',
@@ -478,14 +479,7 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
         command: 'pnpm',
         args: ['typecheck'],
       },
-      {
-        id: 'unit',
-        name: 'Unit',
-        required: true,
-        workerSlots: 2,
-        command: 'pnpm',
-        args: ['test:full', '--', '--maxWorkers=2'],
-      },
+      unitGate('unit', 'test:full'),
       {
         id: 'build',
         name: 'Build',
@@ -539,7 +533,8 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
   if (profile === 'bench-docs') return createGatePlan(['CONTRIBUTING.md'], 'push');
 
   if (profile !== 'push') throw new Error(`Unknown validation profile: ${profile}`);
-  if (classification.conservative) return appendJourneyGate(createFastPushPlan());
+  if (classification.conservative)
+    return appendJourneyGate([...createFastPushPlan(), browserRegressionGate()]);
   if (classification.documentationOnly) {
     return appendJourneyGate([
       {
@@ -579,14 +574,7 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
       args: ['typecheck'],
     });
   if (files.some((file) => SOURCE_ROOTS.some((root) => file.startsWith(root)))) {
-    gates.push({
-      id: 'unit:fast',
-      name: 'Unit',
-      required: true,
-      workerSlots: 2,
-      command: 'pnpm',
-      args: ['test:fast', '--', '--maxWorkers=2'],
-    });
+    gates.push(unitGate('unit:fast', 'test:fast'));
   }
   gates.push(
     {
@@ -609,8 +597,7 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
       dependsOn: ['build'],
     },
   );
-  // The complete geometry and export matrix is a CI release gate. The whole fast
-  // unit suite and browser smoke remain local checks for geometry-affecting edits.
+  if (classification.needsBrowser) gates.push(browserRegressionGate());
   if (classification.needsHosting && !classification.needsBuild)
     gates.push({
       id: 'hosting',

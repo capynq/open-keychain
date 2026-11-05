@@ -126,9 +126,7 @@ export const buildNameplate = (
     baseThickness - embedDepth - carrierRotatedBounds.max[2],
   ]);
   deleteGeometry([carrierRawText, carrierCentered, carrierRotated]);
-  // The carrier is only a hidden support. Keep it inside the finished plate so
-  // rotation cannot move its lower edge below the printable bottom (or its
-  // upper edge through the plate top).
+  /* Carrier bounds keep rotation inside plate */
   const clippedCarrier = carrier.intersect(plate);
   carrier.delete();
   const carrierBounds = clippedCarrier.boundingBox();
@@ -146,8 +144,7 @@ export const buildNameplate = (
   ): Manifold => {
     const depth = rootDepth + capDepth;
     const angle = (params.nameplateTiltDeg * Math.PI) / 180;
-    // The warp is quadratic in z. Bound its chord error to 0.02 mm rather
-    // than subdividing every inscription into thirteen vertical intervals.
+    /* Warp chord error bounded to 0.02 mm */
     const slices = Math.max(1, Math.ceil(Math.sqrt((depth * Math.abs(Math.sin(angle / 2))) / 40)));
     maximumSlices = Math.max(maximumSlices, slices);
     const textStyle = params.textEdgeFinish ?? 'sharp';
@@ -189,9 +186,7 @@ export const buildNameplate = (
       ? regularizeFinishedSolid(wasm, wasm.Manifold.union([candidateMain, candidateSubtitle]), 1)
       : candidateMain;
     if (candidateSubtitle) candidateSubtitle.delete();
-    // The quadratic tilt can pull the roots below the plate's bottom even
-    // though the unrotated extrusion starts at a positive depth. Trim that
-    // leakage before checking embedding and constructing the final union.
+    /* Trim tilt leakage below plate before union */
     const candidateText = untrimmedCandidateText.trimByPlane([0, 0, 1], plateBounds.min[2]);
     untrimmedCandidateText.delete();
     if (untrimmedCandidateText !== candidateMain) candidateMain.delete();
@@ -205,7 +200,6 @@ export const buildNameplate = (
     );
     const candidateParts = candidateText.decompose();
     const candidateEmbedded = candidateParts.every((part) => {
-      // Negative shells describe enclosed voids, not separate printable bodies.
       if (part.volume() <= 0) return true;
       const overlap = plate.intersect(part);
       const embedded = overlap.numTri() > 0;

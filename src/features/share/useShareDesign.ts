@@ -54,8 +54,6 @@ const isNativeShareSupported = (url: string): boolean => {
 const shareFailure = (error: unknown, fallbackCode: string): RecoveryFailure =>
   failureFrom(error, fallbackCode);
 
-// The hook owns two guarded async workflows and their shared lifecycle state.
-
 export const useShareDesign = ({
   params,
   appearanceOverrides,
@@ -149,7 +147,7 @@ export const useShareDesign = ({
     setShareFontFallback(hasNonBundledFont);
 
     setFeedback({ status: 'preparing', url });
-    // Keep the native call in the click handler so mobile browsers retain user activation.
+    /* Native call in click handler keeps user activation */
     let result: Promise<void>;
 
     try {

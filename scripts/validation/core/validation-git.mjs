@@ -161,7 +161,7 @@ const ignoredEnvFiles = async (root) => {
       await lstat(path.join(root, entry.name));
       files.push(entry.name);
     } catch {
-      // A concurrently removed environment file needs no isolation.
+      /* file removed concurrently */
     }
   }
   return files;

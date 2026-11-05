@@ -2,10 +2,12 @@ import { mkdtemp, mkdir, readFile, rm, stat, utimes, writeFile } from 'node:fs/p
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
+import { setTimeout } from 'node:timers';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   clearValidationCache,
   fingerprintGate,
+  pruneValidationArtifacts,
   pruneValidationCache,
   readSuccessfulResult,
   restoreBuildArtifact,
@@ -154,5 +156,58 @@ describe('local validation cache', () => {
 
     expect((await stat(active)).isDirectory()).toBe(true);
     await expect(stat(stale)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('keeps only the newest build artifacts', async () => {
+    const root = await createRoot();
+    const artifactPath = path.join(root, 'dist-source');
+    await mkdir(artifactPath);
+    await writeFile(path.join(artifactPath, 'index.html'), '<main>validated</main>');
+    const keys = [];
+    for (let index = 0; index < 5; index += 1) {
+      await writeFile(path.join(root, 'input.ts'), `export const value = ${index};`);
+      const gate = { id: 'build', command: 'pnpm', args: ['build'] };
+      const key = await fingerprintGate({ root, gate, inputFiles: ['input.ts'] });
+      await saveSuccessfulResult({ root, gate, key, durationMs: 1, artifactPath });
+      keys.push(key);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    const lintGate = { id: 'lint', command: 'pnpm', args: ['lint'] };
+    const lintKey = await fingerprintGate({ root, gate: lintGate, inputFiles: ['input.ts'] });
+    await saveSuccessfulResult({ root, gate: lintGate, key: lintKey, durationMs: 1 });
+
+    await pruneValidationCache({ root, maxEntriesPerGate: { build: 2 } });
+
+    const hits = await Promise.all(
+      keys.map((key) => readSuccessfulResult({ root, gateId: 'build', key })),
+    );
+    expect(hits.map((hit) => hit.hit)).toEqual([false, false, false, true, true]);
+    expect((await readSuccessfulResult({ root, gateId: 'lint', key: lintKey })).hit).toBe(true);
+  });
+
+  it('keeps logs and browser outputs of the newest runs only', async () => {
+    const root = await createRoot();
+    const logs = path.join(root, 'artifacts', 'validation-logs');
+    const browser = path.join(root, 'artifacts', 'validation-browser');
+    await mkdir(logs, { recursive: true });
+    await mkdir(browser, { recursive: true });
+    const runs = [1, 2, 3].map((day) => `2026-11-0${day}T10-00-00.000Z-${100 + day}`);
+    for (const run of runs) {
+      await writeFile(path.join(logs, `${run}.log`), '{}');
+      await writeFile(path.join(logs, `${run}-unit.log`), 'ok');
+      await mkdir(path.join(browser, run));
+    }
+    await writeFile(path.join(logs, 'notes.txt'), 'keep');
+
+    expect(await pruneValidationArtifacts({ root, keepRuns: 2 })).toEqual({
+      removed: 3,
+      keptRuns: 2,
+    });
+
+    await expect(stat(path.join(logs, `${runs[0]}.log`))).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(stat(path.join(browser, runs[0]))).rejects.toMatchObject({ code: 'ENOENT' });
+    expect((await stat(path.join(logs, `${runs[2]}-unit.log`))).isFile()).toBe(true);
+    expect((await stat(path.join(browser, runs[1]))).isDirectory()).toBe(true);
+    expect(await readFile(path.join(logs, 'notes.txt'), 'utf8')).toBe('keep');
   });
 });

@@ -6,6 +6,7 @@ const result = spawnSync(
   ['scripts/validation/commands/run-validation-gates.mjs', 'push'],
   {
     stdio: 'inherit',
+    env: { ...process.env, VALIDATION_PRE_PUSH_STDIN: '1' },
   },
 );
 if (result.error) throw result.error;

@@ -19,6 +19,15 @@ const parseMode = () => {
   return mode;
 };
 
+/* Only pre-push closes stdin; others may hang */
+export const PRE_PUSH_STDIN_ENV = 'VALIDATION_PRE_PUSH_STDIN';
+export const readPushHookInput = async ({ stdin = process.stdin, env = process.env } = {}) => {
+  if (env[PRE_PUSH_STDIN_ENV] !== '1' || stdin.isTTY) return '';
+  const chunks = [];
+  for await (const chunk of stdin) chunks.push(chunk);
+  return Buffer.concat(chunks).toString('utf8');
+};
+
 export const main = async () => {
   const args = process.argv.slice(2);
   const command = args[0] ?? 'ci';
@@ -29,14 +38,7 @@ export const main = async () => {
   }
   let files;
   if (command === 'push' || command === 'bench-push') {
-    const input =
-      command === 'push'
-        ? await (async () => {
-            const chunks = [];
-            if (!process.stdin.isTTY) for await (const chunk of process.stdin) chunks.push(chunk);
-            return Buffer.concat(chunks).toString('utf8');
-          })()
-        : '';
+    const input = command === 'push' ? await readPushHookInput() : '';
     const executePush = async () => {
       let changes;
       if (command === 'push') {

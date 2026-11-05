@@ -21,6 +21,10 @@ describe('3MF export', () => {
     );
     expect(model).toContain('<basematerials id="11">');
     expect(model).toContain(
+      '<basematerials id="11"><base name="Backing" displaycolor="#B84838"/><base name="Raised text" displaycolor="#FAF4E9"/></basematerials>',
+    );
+    expect(model).toContain('recommendedextensions="m"');
+    expect(model).toContain(
       '<m:colorgroup id="10"><m:color color="#B84838"/><m:color color="#FAF4E9"/></m:colorgroup>',
     );
     expect(model).toContain('pid="10" pindex="0"');
@@ -50,6 +54,7 @@ describe('3MF export', () => {
     expect(model).toContain('<object id="1" type="model" name="Keychain"');
     expect(model).not.toContain('<components>');
     expect(model).not.toContain('<m:colorgroup');
+    expect(model).not.toContain('recommendedextensions');
     expect(model).toContain('displaycolor="#B84838"');
     expect(model).toContain('Keychain');
   });

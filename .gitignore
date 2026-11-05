@@ -15,4 +15,6 @@ artifacts/
 *.log
 .DS_Store
 AGENTS.md
+CLAUDE.md
 /docs/marketing/
+/result.json

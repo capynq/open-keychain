@@ -20,8 +20,8 @@ if (!Number.isInteger(runs) || runs < 3 || runs > 10)
   throw new Error('Pass --runs=N with an integer from 3 to 10.');
 if (!fullMatrix && (!Number.isInteger(sampleSize) || sampleSize < 5))
   throw new Error('Pass --sample=N with an integer of at least 5.');
-if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 5)
-  throw new Error('MATRIX_CONCURRENCY must be an integer from 1 to 5.');
+if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 8)
+  throw new Error('MATRIX_CONCURRENCY must be an integer from 1 to 8.');
 
 const bunBinary = process.env.BUN_BINARY ?? 'bun';
 const bunVersion = spawnSync(bunBinary, ['--version'], { encoding: 'utf8' });

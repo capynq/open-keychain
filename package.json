@@ -26,11 +26,12 @@
     "typecheck:watch": "node scripts/build/run-tsc.mjs -b --watch --pretty false",
     "test": "vitest run",
     "test:full": "vitest run",
-    "test:fast": "vitest run --exclude src/domain/keychain/build/keychain-builder.contracts.test.ts --exclude src/domain/keychain/build/keychain-builder.styles-fonts.test.ts --exclude src/domain/keychain/build/keychain-builder.magnet-nameplate-plant.test.ts --exclude src/domain/keychain/build/keychain-builder.keyring-articulated.test.ts",
+    "test:fast": "vitest run --exclude 'src/domain/keychain/build/keychain-builder.*.test.ts'",
     "test:e2e": "playwright test",
-    "test:e2e:full": "pnpm exec playwright test --workers=2 && pnpm test:e2e:workspace",
+    "test:e2e:full": "pnpm exec playwright test --workers=${PLAYWRIGHT_WORKERS:-2} && pnpm test:e2e:workspace",
     "test:e2e:workspace": "VITE_HOSTED_MODE=true PLAYWRIGHT_USE_EXISTING_BUILD=false playwright test e2e/workspace.spec.ts --project=desktop --workers=1",
     "test:e2e:smoke": "PLAYWRIGHT_SMOKE=true playwright test e2e/smoke.spec.ts --project=desktop --project=mobile --workers=2",
+    "test:e2e:regression": "playwright test e2e/keychain.spec.ts e2e/font-browser.spec.ts --project=desktop --workers=2",
     "test:e2e:journey": "PLAYWRIGHT_REQUIRED_JOURNEY=true playwright test e2e/critical-journey.spec.ts e2e/export-recovery.spec.ts --project=desktop --project=mobile --project=mobile-2x --workers=1",
     "test:e2e:performance": "PLAYWRIGHT_PERFORMANCE=true playwright test e2e/performance.spec.ts --workers=1",
     "capture:ui": "pnpm build && playwright test --config playwright.capture.config.ts",
@@ -72,7 +73,7 @@
     "lucide-react": "^1.53.0",
     "manifold-3d": "3.5.4",
     "opentype.js": "2.0.0",
-    "posthog-js": "^1.438.3",
+    "posthog-js": "^1.445.4",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-i18next": "^17.0.16",
@@ -100,7 +101,7 @@
     "eslint-plugin-react-hooks": "7.1.1",
     "eslint-plugin-react-refresh": "0.5.7",
     "husky": "^9.1.7",
-    "jsdom": "30.1.2",
+    "jsdom": "30.1.3",
     "lint-staged": "^17.6.0",
     "prettier": "3.9.9",
     "sharp": "^0.35.5",
@@ -118,5 +119,10 @@
     "**/*.{css,scss,html,json,md,mdx,yml,yaml}": [
       "prettier --write"
     ]
+  },
+  "pnpm": {
+    "overrides": {
+      "minimatch": "^11.0.1"
+    }
   }
 }

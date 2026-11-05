@@ -42,8 +42,7 @@ export const regularizeFinishedSolid = (
       if (volume < 0) return true;
       if (minimumPositiveThicknessScaled === 0) return true;
       const area = component.surfaceArea();
-      // Nonlinear nameplate warps can leave detached sub-micron slivers.
-      // Retain all cavities and any component without a reliable thickness estimate.
+      /* Warp slivers: keep cavities and unthick parts */
       return (
         !Number.isFinite(area) ||
         area <= 0 ||
@@ -59,8 +58,7 @@ export const regularizeFinishedSolid = (
     const cutters: Manifold[] = [];
     const bodies: Manifold[] = [];
     try {
-      // Boolean union treats negative shells as filled solids. Reverse each cavity
-      // into a positive cutter and explicitly subtract it from the retained bodies.
+      /* Reverse cavities into cutters; union fills shells */
       for (const component of volumetric.filter((part) => part.volume() < 0)) {
         const mesh = component.getMesh();
         const indices = new Uint32Array(mesh.triVerts);
@@ -87,7 +85,7 @@ export const regularizeFinishedSolid = (
             } finally {
               overlap.delete();
             }
-            // A positive island inside a cavity remains a separate real body.
+            /* Islands inside cavities stay separate bodies */
             if (!containsCavity) continue;
             const next = body.subtract(cutter);
             body.delete();
@@ -114,23 +112,67 @@ export const regularizeFinishedSolid = (
   }
 };
 
-const boundaryDistance = (polygons: Polygons, x: number, y: number): number => {
-  let best = Infinity;
-  for (const polygon of polygons) {
+export const segmentDistance = (a: Point, b: Point, x: number, y: number): number => {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const lengthSquared = dx * dx + dy * dy;
+  const progress =
+    lengthSquared === 0
+      ? 0
+      : Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / lengthSquared));
+  return Math.hypot(x - a[0] - progress * dx, y - a[1] - progress * dy);
+};
+
+export const boundaryDistanceIndex = (polygons: Polygons): ((x: number, y: number) => number) => {
+  const segments: Array<[Point, Point]> = [];
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const polygon of polygons)
     for (let index = 0; index < polygon.length; index += 1) {
       const a = polygon[index];
-      const b = polygon[(index + 1) % polygon.length];
-      const dx = b[0] - a[0];
-      const dy = b[1] - a[1];
-      const lengthSquared = dx * dx + dy * dy;
-      const progress =
-        lengthSquared === 0
-          ? 0
-          : Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / lengthSquared));
-      best = Math.min(best, Math.hypot(x - a[0] - progress * dx, y - a[1] - progress * dy));
+      segments.push([a, polygon[(index + 1) % polygon.length]]);
+      minX = Math.min(minX, a[0]);
+      minY = Math.min(minY, a[1]);
+      maxX = Math.max(maxX, a[0]);
+      maxY = Math.max(maxY, a[1]);
     }
+  if (!segments.length) return () => Infinity;
+  const span = Math.max(maxX - minX, maxY - minY, 1);
+  const cell = Math.max(span / Math.ceil(Math.sqrt(segments.length)), 1);
+  const columns = Math.floor((maxX - minX) / cell) + 1;
+  const rows = Math.floor((maxY - minY) / cell) + 1;
+  const grid: Array<Array<[Point, Point]>> = Array.from({ length: columns * rows }, () => []);
+  const column = (x: number) => Math.min(columns - 1, Math.max(0, Math.floor((x - minX) / cell)));
+  const row = (y: number) => Math.min(rows - 1, Math.max(0, Math.floor((y - minY) / cell)));
+  for (const segment of segments) {
+    const [a, b] = segment;
+    for (let r = row(Math.min(a[1], b[1])); r <= row(Math.max(a[1], b[1])); r += 1)
+      for (let c = column(Math.min(a[0], b[0])); c <= column(Math.max(a[0], b[0])); c += 1)
+        grid[r * columns + c].push(segment);
   }
-  return best;
+  const rings = Math.max(columns, rows);
+  return (x, y) => {
+    const originColumn = column(x);
+    const originRow = row(y);
+    const outside = Math.max(minX - x, x - maxX, minY - y, y - maxY, 0);
+    let best = Infinity;
+    for (let ring = 0; ring <= rings; ring += 1) {
+      for (let r = originRow - ring; r <= originRow + ring; r += 1) {
+        if (r < 0 || r >= rows) continue;
+        const edge = r === originRow - ring || r === originRow + ring;
+        for (let c = originColumn - ring; c <= originColumn + ring; c += edge ? 1 : 2 * ring || 1) {
+          if (c < 0 || c >= columns) continue;
+          for (const [a, b] of grid[r * columns + c])
+            best = Math.min(best, segmentDistance(a, b, x, y));
+        }
+      }
+      /* Ring margin absorbs cell rounding error */
+      if (best < Math.max(outside, ring * cell) * (1 - 1e-9) - 1e-6) break;
+    }
+    return best;
+  };
 };
 
 /** Match each source component to its inset, rather than comparing aggregate polygon counts. */
@@ -220,6 +262,8 @@ export const extrudeTextFinished = (
       const band = outer.subtract(inner);
       const outerPolygons = outer.toPolygons() as Point[][];
       const innerPolygons = inner.toPolygons() as Point[][];
+      const outerDistance = boundaryDistanceIndex(outerPolygons);
+      const innerDistance = boundaryDistanceIndex(innerPolygons);
       let slab: Manifold | undefined;
       let warped: Manifold | undefined;
       try {
@@ -230,8 +274,8 @@ export const extrudeTextFinished = (
             const offset = vertex * 3;
             const x = vertices[offset];
             const y = vertices[offset + 1];
-            const fromOuter = boundaryDistance(outerPolygons, x, y);
-            const fromInner = boundaryDistance(innerPolygons, x, y);
+            const fromOuter = outerDistance(x, y);
+            const fromInner = innerDistance(x, y);
             const fraction = fromOuter + fromInner === 0 ? 0 : fromOuter / (fromOuter + fromInner);
             const top = levels[index] + fraction * (levels[index + 1] - levels[index]);
             vertices[offset + 2] *= (top - floor) / slabHeight;
@@ -417,7 +461,7 @@ export const textFinishLimits = (
   const heightMaximum = Math.floor(
     Math.min(1, visibleDepthMm - EDGE_FINISH_TEXT_CLEARANCE_MM) / EDGE_FINISH_GRID_MM + 1e-8,
   );
-  // Sharp edits verify only the initial selectable amount. Expand on a finish request.
+  /* Sharp verifies initial amount; finish expands it */
   const maximum = exhaustive ? heightMaximum : Math.min(1, heightMaximum);
   const key = JSON.stringify([section.toPolygons(), height, maximum]);
   const cached = limitCache.get(key);

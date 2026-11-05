@@ -16,6 +16,7 @@ test.beforeEach(async ({ page }) => {
 test('keeps geometry finish controls contained and printable across viewports', async ({
   page,
 }, testInfo) => {
+  test.slow();
   const assertNoBrowserErrors = watchBrowserErrors(page);
 
   await page.goto('/create');

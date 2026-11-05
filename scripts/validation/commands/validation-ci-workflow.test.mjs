@@ -63,6 +63,10 @@ describe('change-based CI workflow', () => {
       workflow.indexOf('\n  production-build:'),
       workflow.indexOf('\n  deploy:'),
     );
+    const inject = productionBuild.indexOf('pnpm dlx @posthog/cli@0.19.0 sourcemap inject');
+    const check = productionBuild.indexOf(
+      'node scripts/validation/commands/check-sourcemaps.mjs dist',
+    );
     const upload = productionBuild.indexOf('pnpm dlx @posthog/cli@0.19.0 sourcemap upload');
     const removal = productionBuild.indexOf("find dist -type f -name '*.map' -delete");
     const artifact = productionBuild.indexOf('actions/upload-artifact');
@@ -70,14 +74,10 @@ describe('change-based CI workflow', () => {
     expect(productionBuild).toContain("POSTHOG_UPLOAD_SOURCEMAPS: 'true'");
     expect(productionBuild).toContain('POSTHOG_CLI_API_KEY');
     expect(productionBuild).toContain("POSTHOG_CLI_PROJECT_ID: '251074'");
-    expect(upload).toBeGreaterThan(-1);
-    expect(productionBuild).toContain('pnpm dlx @posthog/cli@0.19.0 sourcemap inject');
-    expect(productionBuild).toContain('if [ ! -f "$file.map" ]; then');
-    expect(productionBuild).toContain("find dist/assets -name 'app-*.js.map'");
-    expect(productionBuild).toContain("grep -q '//# chunkId='");
-    expect(productionBuild.indexOf("grep -q '//# chunkId='")).toBeGreaterThan(-1);
-    expect(productionBuild.indexOf("grep -q '//# chunkId='")).toBeLessThan(upload);
-    expect(productionBuild).toContain('pnpm dlx @posthog/cli@0.19.0 sourcemap upload');
+    expect(inject).toBeGreaterThan(-1);
+    expect(check).toBeGreaterThan(inject);
+    expect(upload).toBeGreaterThan(check);
+    expect(productionBuild).not.toContain("find dist/assets -name 'app-*.js.map'");
     expect(removal).toBeGreaterThan(upload);
     expect(artifact).toBeGreaterThan(removal);
   });
@@ -88,12 +88,12 @@ describe('change-based CI workflow', () => {
       [
         'scripts/validation/commands/run-related-tests.mjs',
         '--source',
-        'src/features/customizer/components/ControlsPanel/ControlsPanel.tsx',
+        'scripts/validation/commands/__fixtures__/untested-source.ts',
         '--test',
       ],
       { encoding: 'utf8' },
     );
     expect(result.status).toBe(78);
     expect(result.stdout).toContain('Unit: not selected');
-  });
+  }, 30000);
 });

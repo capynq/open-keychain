@@ -94,7 +94,7 @@ export const fingerprintGate = async ({
     }),
   );
   if (gate.id === 'build') {
-    // Git HEAD is a build input when Vite resolves its source version without a CI variable.
+    /* HEAD is a build input without a CI version */
     try {
       digest.update(
         execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], {
@@ -123,7 +123,6 @@ export const fingerprintGate = async ({
   ]);
   for (const name of [...environmentNames].sort()) {
     if (environment[name] === undefined) continue;
-    // Only the combined gate key persists; neither the value nor its hash is written to metadata.
     digest.update(`\0env\0${name}\0`);
     digest.update(String(environment[name]));
   }
@@ -285,6 +284,7 @@ export const pruneValidationCache = async ({
   root,
   maxAgeMs = 30 * 24 * 60 * 60 * 1000,
   maxBytes = 2 * 1024 ** 3,
+  maxEntriesPerGate = { build: 3 },
 } = {}) => {
   const temporaryMaxAgeMs = 60 * 60 * 1000;
   const entriesRoot = path.join(cacheRoot(root), 'entries');
@@ -325,10 +325,22 @@ export const pruneValidationCache = async ({
       const bytes = (
         await Promise.all(files.map(async (file) => (await stat(file.absolute)).size))
       ).reduce((sum, size) => sum + size, 0);
-      directories.push({ directory, bytes, createdAt: Date.parse(metadata.createdAt) || 0 });
+      directories.push({
+        directory,
+        group: group.name,
+        bytes,
+        createdAt: Date.parse(metadata.createdAt) || 0,
+      });
     }
   }
   directories.sort((a, b) => a.createdAt - b.createdAt);
+  for (const [group, limit] of Object.entries(maxEntriesPerGate)) {
+    const entries = directories.filter((item) => item.group === group);
+    for (const item of entries.slice(0, Math.max(0, entries.length - limit))) {
+      await rm(item.directory, { recursive: true, force: true });
+      directories.splice(directories.indexOf(item), 1);
+    }
+  }
   let total = directories.reduce((sum, item) => sum + item.bytes, 0);
   const cutoff = Date.now() - maxAgeMs;
   for (const item of directories) {
@@ -336,4 +348,29 @@ export const pruneValidationCache = async ({
     await rm(item.directory, { recursive: true, force: true });
     total -= item.bytes;
   }
+};
+
+const RUN_ID = /^(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d{3}Z-\d+)/;
+
+export const pruneValidationArtifacts = async ({ root, keepRuns = 30 } = {}) => {
+  const logDirectory = path.join(root, 'artifacts', 'validation-logs');
+  const browserDirectory = path.join(root, 'artifacts', 'validation-browser');
+  const logFiles = await readdir(logDirectory).catch(() => []);
+  const browserRuns = await readdir(browserDirectory).catch(() => []);
+  const runIds = [
+    ...new Set([...logFiles, ...browserRuns].map((name) => RUN_ID.exec(name)?.[1]).filter(Boolean)),
+  ].sort();
+  const kept = new Set(runIds.slice(-keepRuns));
+  let removed = 0;
+  for (const [directory, names] of [
+    [logDirectory, logFiles],
+    [browserDirectory, browserRuns],
+  ])
+    for (const name of names) {
+      const runId = RUN_ID.exec(name)?.[1];
+      if (!runId || kept.has(runId)) continue;
+      await rm(path.join(directory, name), { recursive: true, force: true });
+      removed += 1;
+    }
+  return { removed, keptRuns: kept.size };
 };
