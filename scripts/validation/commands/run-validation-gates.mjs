@@ -19,7 +19,7 @@ const parseMode = () => {
   return mode;
 };
 
-// Only the pre-push hook provides a stdin that closes; other callers may pass a socket that never does.
+/* Only pre-push closes stdin; others may hang */
 export const PRE_PUSH_STDIN_ENV = 'VALIDATION_PRE_PUSH_STDIN';
 export const readPushHookInput = async ({ stdin = process.stdin, env = process.env } = {}) => {
   if (env[PRE_PUSH_STDIN_ENV] !== '1' || stdin.isTTY) return '';

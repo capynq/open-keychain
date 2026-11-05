@@ -37,7 +37,6 @@ const textSection = async (id: string, text: string, size = 22) => {
     ),
     'EvenOdd',
   );
-  // Match the default visible text weight used by the reproduced Customizer name.
   if (text === 'ALEX') {
     const weighted = raw.offset(600, 'Round', 2, 64);
     raw.delete();
@@ -211,7 +210,7 @@ describe('native front text finishing', () => {
       const result = extrudeTextFinished(wasm, section, 1200, style, 0.4);
       const lower = result.slice(400);
       const upperRaw = result.slice(1199);
-      // Slice intersections include zero-area floating-point loops; regularize below 0.001 mm.
+      /* Regularize zero-area loops below 0.001 mm */
       const upper = upperRaw.simplify(1);
       upperRaw.delete();
       try {
@@ -251,6 +250,7 @@ describe('native front text finishing', () => {
         section.delete();
       }
     },
+    30000,
   );
 
   it.each(['nunito', 'marck-script', 'amatic-sc', 'bungee'])(

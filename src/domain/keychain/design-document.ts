@@ -299,9 +299,7 @@ const decodeCompactDocument = (
     const values = parsed[section];
     if (!isRecord(values)) return undefined;
     for (const [compactKey, value] of Object.entries(values)) {
-      // v6 compact documents may contain the removed separate-parts toggle.
-      // It was an export acknowledgement, never a design parameter, so ignore
-      // it while retaining compatibility with links created by older builds.
+      /* v6: ignore removed separate-parts toggle */
       if (compactKey === 'sp') {
         if (typeof value !== 'boolean') return undefined;
         continue;
@@ -327,8 +325,7 @@ const decodeCompactDocument = (
       params[key] = value as never;
     }
   }
-  // v6 used one finish selector for both backing and text. Infer text first,
-  // then discard the removed backing controls from the current model.
+  /* v6: infer text finish before dropping backing */
   if (legacyFinishes) {
     params.edgeFinish = legacyBackingStyle;
     params.topEdgeMm = legacyTopMm;

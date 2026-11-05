@@ -16,6 +16,7 @@ import type {
 } from '../../../features/preview/components/Viewer/Viewer';
 import type { PhotoCaptureApi } from '../../../features/preview/model/photo-capture';
 import type { PhotoDesign } from '../../../features/preview/model/photo-filename';
+import type { PreviewQualityTier } from '../../../features/preview/model/preview-quality';
 import type { PreviewStatus } from '../../../features/preview/model/preview-status';
 import type {
   PreviewRenderState,
@@ -51,6 +52,8 @@ export type PreviewPanelProps = {
   photoDesign?: PhotoDesign;
   appearanceOverrides?: PrintAppearanceOverrides;
   onReviewIssue?: () => void;
+  onPreviewRendered?: (generationId: number, timings: ViewerRenderTimings) => void;
+  previewQuality?: PreviewQualityTier;
   onSurfaceChange: (preset: SurfacePresetId) => void;
   onSurfaceReset: () => void;
 };
@@ -66,6 +69,8 @@ export const PreviewPanel = ({
   appearanceOverrides = { version: 1 },
   onSurfaceChange,
   onReviewIssue,
+  onPreviewRendered,
+  previewQuality = 'high',
   onSurfaceReset,
 }: PreviewPanelProps) => {
   const previewRef = useRef<HTMLElement>(null);
@@ -119,6 +124,7 @@ export const PreviewPanel = ({
         setRenderTimings(
           next.timings ? { generationId: next.generationId, ...next.timings } : undefined,
         );
+        if (next.timings) onPreviewRendered?.(next.generationId, next.timings);
         setFirstDrawMs((previous) => previous ?? performance.now() - mountedAt);
       } else {
         setRenderTimings(undefined);
@@ -133,7 +139,7 @@ export const PreviewPanel = ({
         }
       }
     },
-    [mountedAt],
+    [mountedAt, onPreviewRendered],
   );
   const retryViewer = (): void => {
     autoRestartUsed.current = false;
@@ -163,7 +169,6 @@ export const PreviewPanel = ({
       delete preview.dataset.candidateToReadyMs;
       return;
     }
-    // Draw submission precedes the React ready-state commit; measure both without another render.
     const committedAt = performance.now();
 
     preview.dataset.previewReadyCommittedAt = String(committedAt);
@@ -189,6 +194,7 @@ export const PreviewPanel = ({
       data-rendered-generation-id={renderedGenerationId ?? ''}
       data-renderer-session={renderState.sessionId}
       data-renderer-state={renderState.status}
+      data-preview-quality={previewQuality}
       data-candidate-input-at={geometry.result?.timings?.candidateInputAt ?? ''}
       data-candidate-dispatched-at={geometry.result?.timings?.candidateDispatchedAt ?? ''}
       data-candidate-validated-at={geometry.result?.timings?.candidateValidatedAt ?? ''}
@@ -251,6 +257,7 @@ export const PreviewPanel = ({
                 : undefined
             }
             surfacePreset={surfacePreset}
+            quality={previewQuality}
             locale={locale}
             onStateChange={onViewerStateChange}
             onPhotoCaptureChange={setPhotoCapture}

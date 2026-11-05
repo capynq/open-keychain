@@ -64,7 +64,7 @@ export const useQuickSetup = ({
       try {
         localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(changes.favoriteFontCategories));
       } catch {
-        // Keep the preference for this session when storage is unavailable.
+        /* storage unavailable */
       }
     },
     [onAppearanceChange],
@@ -74,7 +74,6 @@ export const useQuickSetup = ({
     if (!pendingSetup) return;
     if (customizer.candidateFeedback?.status === 'checking') return;
 
-    // Commit non-geometric choices only after the candidate is accepted.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPendingSetup(undefined);
     if (

@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -10,6 +11,7 @@ import {
 
 import type { CandidateCallbacks } from '../../features/customizer/hooks/useCustomizerParams';
 import type { SurfacePresetId } from '../../features/preview/components/Viewer/Viewer';
+import type { ViewerRenderTimings } from '../../features/preview/model/render-state';
 import type { Locale } from '../../infrastructure/i18n/config';
 
 import {
@@ -25,8 +27,18 @@ import {
   type GeometryAttemptCallbacks,
   useGeometryGeneration,
 } from '../../features/customizer/hooks/useGeometryGeneration';
+import {
+  createColdPreviewTracker,
+  geometryReadyTimingProperties,
+  workerReplacementCount,
+} from '../../features/customizer/model/geometry-telemetry';
 import { useExportActions } from '../../features/export/model/use-export-actions';
 import { useHostedAccount } from '../../features/hosted/hooks/useHostedAccount';
+import {
+  createPreviewQualityController,
+  previewQualitySample,
+  type PreviewQualityTier,
+} from '../../features/preview/model/preview-quality';
 import { previewStatus } from '../../features/preview/model/preview-status';
 import { useShareDesign } from '../../features/share/useShareDesign';
 import { GeometryClient } from '../../infrastructure/geometry/geometry-client';
@@ -64,11 +76,15 @@ export const useCustomizerPageState = (
         group: string;
         controlKey?: string;
         retryOfAttemptId?: string;
-        recoveryTrigger?: 'user_retry' | 'user_edit';
+        recoveryTrigger?: 'user_retry' | 'user_edit' | 'auto_replacement';
         recoveryOutcome?: 'recovered' | 'not_needed' | 'failed';
       }
     >(),
   );
+
+  const [coldPreview] = useState(createColdPreviewTracker);
+  const [previewQualityController] = useState(() => createPreviewQualityController());
+  const [previewQuality, setPreviewQuality] = useState<PreviewQualityTier>('high');
 
   useEffect(() => () => recoveryClientRef.current?.dispose(), []);
   const [candidateCallbacks] = useState<CandidateCallbacks>(() => ({
@@ -113,6 +129,9 @@ export const useCustomizerPageState = (
         failure_code: failure?.code,
         failure_stage: diagnostics?.stage ?? (failure ? 'generation' : undefined),
         error_type: outcome === 'failed' ? diagnostics?.type : undefined,
+        worker_replacements: workerReplacementCount(
+          geometryRef.current?.clientRef.current?.workerReplacements,
+        ),
         control_group: attempt?.group,
         control_key: attempt?.controlKey,
         geometry_generation_id: generationId,
@@ -150,7 +169,6 @@ export const useCustomizerPageState = (
     validateRecovery: async (params, font, subtitleFont) => {
       const client = geometryRef.current?.clientRef.current;
       if (!client) throw new Error('Geometry validation is not ready.');
-      // Disposable background work must not queue ahead of interactive edits or export.
       recoveryClientRef.current ??= new GeometryClient();
       const result = await recoveryClientRef.current.validate(params, font, subtitleFont);
 
@@ -163,6 +181,8 @@ export const useCustomizerPageState = (
     accept: (params, result, font, subtitleFont) => {
       geometryRef.current?.adoptResult(result, params, font, subtitleFont);
       setSkipRequestKey(undefined);
+      const sample = previewQualitySample(result.timings);
+      if (sample) setPreviewQuality(previewQualityController.observe(sample));
     },
     reject: (params, font, subtitleFont) => {
       geometryRef.current?.clientRef.current?.cancelCandidate();
@@ -193,16 +213,18 @@ export const useCustomizerPageState = (
   };
   const geometryAttemptCallbacks = useMemo<GeometryAttemptCallbacks>(
     () => ({
-      started: (attemptId, params) => {
+      started: (attemptId, params, recoveryTrigger) => {
         geometryAttemptStartedAt.current.set(attemptId, {
           startedAt: performance.now(),
           template: params.templateId,
           group: 'preview',
+          recoveryTrigger,
         });
         analyticsContextRef.current.track('geometry_attempt_started', {
           template: params.templateId,
           operation: 'preview',
           geometry_attempt_id: attemptId,
+          recovery_trigger: recoveryTrigger,
         });
       },
       finished: (attemptId, outcome, details) => {
@@ -221,8 +243,13 @@ export const useCustomizerPageState = (
             details?.diagnostics?.stage ?? (details?.failure ? 'generation' : undefined),
           error_type: details?.diagnostics?.type,
           geometry_generation_id: details?.generationId,
+          recovery_trigger: attempt?.recoveryTrigger,
+          worker_replacements: workerReplacementCount(details?.workerReplacements),
         });
         if (outcome === 'success') {
+          if (details?.generationId !== undefined && details.boot?.coldStart) {
+            coldPreview.markCold(details.generationId, attempt?.template);
+          }
           analyticsContextRef.current.track('geometry_ready', {
             template: attempt?.template,
             locale: analyticsContextRef.current.locale,
@@ -232,11 +259,26 @@ export const useCustomizerPageState = (
               attempt === undefined ? undefined : Math.round(performance.now() - attempt.startedAt),
             geometry_generation_id: details?.generationId,
             outcome: 'success',
+            preview_quality: previewQualityController.tier,
+            ...geometryReadyTimingProperties(details?.timings, details?.boot),
           });
+          const sample = previewQualitySample(details?.timings);
+          if (sample) setPreviewQuality(previewQualityController.observe(sample));
         }
       },
     }),
-    [],
+    [coldPreview, previewQualityController],
+  );
+  const previewRendered = useCallback(
+    (generationId: number, timings: ViewerRenderTimings): void => {
+      const properties = coldPreview.rendered(generationId, timings);
+      if (properties)
+        analyticsContextRef.current.track('preview_rendered', {
+          ...properties,
+          preview_quality: previewQualityController.tier,
+        });
+    },
+    [coldPreview, previewQualityController],
   );
   const geometry = useGeometryGeneration(
     customizer.params,
@@ -376,6 +418,8 @@ export const useCustomizerPageState = (
   return {
     customizer,
     geometry,
+    previewRendered,
+    previewQuality,
     hosted,
     exportState,
     surfacePreset,

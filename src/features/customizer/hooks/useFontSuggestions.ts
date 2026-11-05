@@ -99,7 +99,6 @@ export const useFontSuggestions = (
 
   useEffect(() => {
     if (revealBatch && revealBatch.signature !== signature) {
-      // A target/text/category change must not replay an older discovery animation.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setRevealBatch(undefined);
     }
@@ -123,7 +122,6 @@ export const useFontSuggestions = (
       ),
     [initialPages],
   );
-  // Keep the current font visible even when it is outside the starting categories.
   const sessionBatches = useMemo(
     () =>
       selectedFont &&
@@ -142,7 +140,6 @@ export const useFontSuggestions = (
 
   useEffect(() => {
     if (sessionBatches !== batches) {
-      // Remember an explicitly selected font without changing its position on later selections.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setBatches(sessionBatches);
     }
@@ -271,7 +268,6 @@ export const useFontSuggestions = (
   }, []);
   useEffect(() => {
     if (options?.googleAvailable && googleFonts.length > 0) {
-      // Provider recovery updates availability/catalog without resetting discovered pages.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setProviderFailed(false);
     }

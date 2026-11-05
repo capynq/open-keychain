@@ -853,7 +853,6 @@ const buildKeychainGeometry = async (
   const reliefMesh = asMesh(reliefCombined);
   const exportMesh = includeExport ? asMesh(model) : undefined;
   const components = model.decompose();
-  // Enclosed negative shells are cavities inside a printable body.
   const solidCount = components.filter((component) => component.volume() > 0).length;
   const connected = solidCount === 1;
   deleteAll(components);

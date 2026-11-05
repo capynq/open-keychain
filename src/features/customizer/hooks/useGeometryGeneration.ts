@@ -21,9 +21,15 @@ import {
   GeometryClient,
   GeometryCandidateSupersededError,
 } from '../../../infrastructure/geometry/geometry-client';
+import { takePrewarmedGeometryClient } from '../../../infrastructure/geometry/geometry-client-pool';
+import { attributeAdoptedBoot, type GeometryBootAttribution } from '../model/geometry-telemetry';
 
 export type GeometryAttemptCallbacks = {
-  started: (attemptId: string, params: KeychainParams) => void;
+  started: (
+    attemptId: string,
+    params: KeychainParams,
+    recoveryTrigger?: 'auto_replacement',
+  ) => void;
   finished: (
     attemptId: string,
     outcome: 'success' | 'error' | 'superseded' | 'cancelled',
@@ -31,9 +37,17 @@ export type GeometryAttemptCallbacks = {
       failure?: RecoveryFailure;
       diagnostics?: OperationDiagnostics;
       generationId?: number;
+      timings?: Record<string, number>;
+      boot?: GeometryBootAttribution;
+      workerReplacements?: number;
     },
   ) => void;
 };
+
+const AUTO_REQUEST_FAILURE_CODES = new Set([
+  'geometry-worker-boot-timeout',
+  'geometry-worker-failed',
+]);
 
 export const geometryInputKey = (
   params: KeychainParams,
@@ -95,6 +109,12 @@ export const useGeometryGeneration = (
   const isDisposingRef = useRef(false);
   const [resultParamsKey, setResultParamsKey] = useState<string>();
   const adoptedKeyRef = useRef<string | undefined>(undefined);
+  const reportedBootRef = useRef<{ client: GeometryClient | undefined; bootId?: number }>(
+    undefined,
+  );
+  const autoRequestTriggerRef = useRef<{ paramsKey: string } | undefined>(undefined);
+  const handledAutoEpisodeRef = useRef<number | undefined>(undefined);
+  const handoverBootRef = useRef<{ client: GeometryClient; bootId: number } | undefined>(undefined);
   const adoptResult = useCallback(
     (
       next: GeometryResult,
@@ -118,8 +138,12 @@ export const useGeometryGeneration = (
 
   useEffect(() => {
     isDisposingRef.current = false;
-    const client = new GeometryClient();
+    const prewarmed = takePrewarmedGeometryClient();
+    const client = prewarmed ?? new GeometryClient();
+    const readyBoot = prewarmed?.bootInfo();
 
+    handoverBootRef.current =
+      readyBoot?.workerBootMs === undefined ? undefined : { client, bootId: readyBoot.bootId };
     clientRef.current = client;
     return () => {
       isDisposingRef.current = true;
@@ -141,6 +165,8 @@ export const useGeometryGeneration = (
       adoptedKeyRef.current = undefined;
       return;
     }
+    if (autoRequestTriggerRef.current?.paramsKey !== paramsKey)
+      autoRequestTriggerRef.current = undefined;
     let active = true;
     let attemptId: string | undefined;
     let terminal = false;
@@ -152,12 +178,17 @@ export const useGeometryGeneration = (
     const timer = window.setTimeout(
       () => {
         attemptId = crypto.randomUUID();
-        attemptCallbacks?.started(attemptId, params);
+        const recoveryTrigger =
+          autoRequestTriggerRef.current?.paramsKey === paramsKey ? 'auto_replacement' : undefined;
+
+        autoRequestTriggerRef.current = undefined;
+        attemptCallbacks?.started(attemptId, params, recoveryTrigger);
         setBusy(true);
         setError(undefined);
         setFailure(undefined);
         setDiagnostics(undefined);
-        const request = clientRef.current?.request(params, fontDefinition, subtitleFontDefinition);
+        const client = clientRef.current;
+        const request = client?.request(params, fontDefinition, subtitleFontDefinition);
         if (!request) {
           const cause = new Error('Geometry preview is not ready.');
           const nextFailure = failureFrom(cause, 'geometry-build-failed');
@@ -170,8 +201,32 @@ export const useGeometryGeneration = (
         }
         void request
           .then((next) => {
+            const reported = reportedBootRef.current;
+            const stampedBootId = next.timings?.bootId;
+            const bootInfo =
+              stampedBootId === undefined ? undefined : client?.bootInfo(stampedBootId);
+            const handover = handoverBootRef.current;
+            const attribution = attributeAdoptedBoot({
+              active,
+              lastReportedBootId: reported?.client === client ? reported?.bootId : undefined,
+              info:
+                bootInfo &&
+                handover &&
+                handover.client === client &&
+                handover.bootId === bootInfo.bootId
+                  ? { bootId: bootInfo.bootId }
+                  : bootInfo,
+              cacheHit: next.timings?.clientCacheHit === 1,
+            });
+
+            reportedBootRef.current = { client, bootId: attribution.reportedBootId };
             if (!active) return;
-            finishAttempt(attemptId!, 'success', { generationId: next.generationId });
+            finishAttempt(attemptId!, 'success', {
+              generationId: next.generationId,
+              timings: next.timings,
+              boot: attribution.boot,
+              workerReplacements: client?.workerReplacements,
+            });
             adoptResult(next, params, fontDefinition, subtitleFontDefinition);
           })
           .catch((cause: Error) => {
@@ -183,17 +238,37 @@ export const useGeometryGeneration = (
               finishAttempt(attemptId!, 'superseded');
               return;
             }
-            setBusy(false);
             const failure = failureFrom(cause, 'geometry-build-failed');
             const operationDiagnostics =
               cause instanceof Error && 'diagnostics' in cause
                 ? (cause as Error & { diagnostics?: OperationDiagnostics }).diagnostics
                 : undefined;
+            const episode = client?.autoRecoveryEpisodeId();
+            if (
+              episode !== undefined &&
+              episode !== handledAutoEpisodeRef.current &&
+              AUTO_REQUEST_FAILURE_CODES.has(failure.code)
+            ) {
+              handledAutoEpisodeRef.current = episode;
+              autoRequestTriggerRef.current = { paramsKey };
+              finishAttempt(attemptId!, 'error', {
+                failure,
+                diagnostics: operationDiagnostics,
+                workerReplacements: client?.workerReplacements,
+              });
+              setRetryId((value) => value + 1);
+              return;
+            }
+            setBusy(false);
 
             setFailure(failure);
             setDiagnostics(operationDiagnostics);
             setError(cause.message);
-            finishAttempt(attemptId!, 'error', { failure, diagnostics: operationDiagnostics });
+            finishAttempt(attemptId!, 'error', {
+              failure,
+              diagnostics: operationDiagnostics,
+              workerReplacements: client?.workerReplacements,
+            });
           });
       },
       resultRef.current ? 90 : 0,

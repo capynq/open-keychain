@@ -109,7 +109,7 @@ const readAcquisitionSource = (): AcquisitionSource | undefined => {
   }
 };
 
-// Before consent, retain only the fixed marker in memory across SPA navigation.
+/* Pre-consent: in-memory marker only */
 let acquisitionSource = readAcquisitionSource();
 
 const syncReferralConsent = (): void => {
@@ -121,7 +121,7 @@ const syncReferralConsent = (): void => {
       window.sessionStorage.removeItem(REFERRAL_KEY);
     }
   } catch {
-    // Tracking can still use the in-memory marker when session storage is blocked.
+    /* storage unavailable */
   }
 };
 
@@ -188,6 +188,14 @@ const loadPostHog = (): Promise<PostHogClient> => {
   return posthogLoad;
 };
 
+const isCoarsePointer = (): boolean => {
+  try {
+    return window.matchMedia?.('(pointer: coarse)')?.matches === true;
+  } catch {
+    return false;
+  }
+};
+
 const configurePostHog = async (): Promise<void> => {
   if (!POSTHOG_KEY) return;
   if (captureConsent !== 'accepted' || posthogClient?.__loaded || posthogInitStarted) {
@@ -201,6 +209,7 @@ const configurePostHog = async (): Promise<void> => {
       return;
     }
     posthogInitStarted = true;
+    const coarsePointer = isCoarsePointer();
     client.init(POSTHOG_KEY, {
       api_host: POSTHOG_HOST,
       defaults: '2026-05-30',
@@ -227,7 +236,9 @@ const configurePostHog = async (): Promise<void> => {
       session_recording: {
         sampleRate: 1,
         maskAllInputs: false,
-        captureCanvas: { recordCanvas: true },
+        captureCanvas: coarsePointer
+          ? { recordCanvas: true, canvasFps: 1, canvasQuality: '0.2' }
+          : { recordCanvas: true },
         canvasCapture: { resolutionScale: 0.6 },
       },
       persistence: 'localStorage',
@@ -273,7 +284,7 @@ export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
     try {
       window.localStorage.setItem(CONSENT_KEY, nextConsent);
     } catch {
-      // Apply this tab's choice even when the browser blocks local storage.
+      /* storage unavailable */
     }
     try {
       if (nextConsent === 'accepted') {

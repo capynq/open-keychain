@@ -261,8 +261,6 @@ describe('magnet, nameplate and plant label', () => {
       const enabledFingerprint = geometryFingerprint(enabled.result);
       const disabledFingerprint = geometryFingerprint(disabled.result);
       expect(enabledFingerprint).not.toEqual(disabledFingerprint);
-      // Decorations may stay inside the existing bounds, especially on Arch.
-      // The mesh fingerprint above verifies that the accents actually changed.
     }
   }, 60000);
 

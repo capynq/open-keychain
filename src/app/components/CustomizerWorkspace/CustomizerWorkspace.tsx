@@ -67,6 +67,8 @@ export const CustomizerWorkspace = ({
             ?.focus();
         }}
         modelInfo={state.modelInfo}
+        onPreviewRendered={state.previewRendered}
+        previewQuality={state.previewQuality}
         photoDesign={state.customizer.acceptedParams}
         appearanceOverrides={state.appearanceOverrides}
         onSurfaceChange={setSurface}

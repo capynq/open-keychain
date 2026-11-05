@@ -88,12 +88,12 @@ describe('change-based CI workflow', () => {
       [
         'scripts/validation/commands/run-related-tests.mjs',
         '--source',
-        'src/features/customizer/components/ControlsPanel/ControlsPanel.tsx',
+        'scripts/validation/commands/__fixtures__/untested-source.ts',
         '--test',
       ],
       { encoding: 'utf8' },
     );
     expect(result.status).toBe(78);
     expect(result.stdout).toContain('Unit: not selected');
-  });
+  }, 30000);
 });

@@ -10,7 +10,6 @@ import { useAnalytics } from '@/infrastructure/telemetry/useTelemetry';
 
 import styles from './KeyringPositionPicker.module.css';
 
-// These six points sit on the matching ALEX outline; the radio targets remain 44 px.
 const anchors = {
   left: { left: '12.75%', top: '75.23%' },
   right: { left: '89%', top: '75.23%' },

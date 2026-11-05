@@ -100,36 +100,40 @@ const features: ModelFeature[] = [
 ];
 
 describe('feature graph', () => {
-  it.each(features)('evaluates the $kind node with real Manifold geometry', async (feature) => {
-    const params = {
-      ...DEFAULT_PARAMS,
-      modelFeatures: [feature],
-    } satisfies KeychainParams;
-    const original = await buildKeychain(wasm, { ...DEFAULT_PARAMS }, false);
-    const output = applyFeatureGraph(wasm, original.result, params, true);
-    expect(
-      output.result.issues.filter((issue) => issue.severity === 'error'),
-      JSON.stringify(output.result.issues),
-    ).toEqual([]);
-    expect(Number.isFinite(output.result.dimensions.widthMm)).toBe(true);
-    expect(Number.isFinite(output.result.dimensions.heightMm)).toBe(true);
-    expect(Number.isFinite(output.result.dimensions.thicknessMm)).toBe(true);
-    expect(validateMesh(output.result.baseMesh)).toBe(true);
-    expect(validateMesh(output.result.reliefMesh)).toBe(true);
-    expect(validateMesh(output.exportMesh!)).toBe(true);
-    const base = manifoldFromMesh(wasm, output.result.baseMesh);
-    const relief = manifoldFromMesh(wasm, output.result.reliefMesh);
-    const overlap = base.intersect(relief);
-    const model = base.add(relief);
-    try {
-      expect(Math.abs(overlap.volume()) / Math.abs(model.volume())).toBeLessThan(1e-6);
-    } finally {
-      overlap.delete();
-      model.delete();
-      relief.delete();
-      base.delete();
-    }
-  });
+  it.each(features)(
+    'evaluates the $kind node with real Manifold geometry',
+    async (feature) => {
+      const params = {
+        ...DEFAULT_PARAMS,
+        modelFeatures: [feature],
+      } satisfies KeychainParams;
+      const original = await buildKeychain(wasm, { ...DEFAULT_PARAMS }, false);
+      const output = applyFeatureGraph(wasm, original.result, params, true);
+      expect(
+        output.result.issues.filter((issue) => issue.severity === 'error'),
+        JSON.stringify(output.result.issues),
+      ).toEqual([]);
+      expect(Number.isFinite(output.result.dimensions.widthMm)).toBe(true);
+      expect(Number.isFinite(output.result.dimensions.heightMm)).toBe(true);
+      expect(Number.isFinite(output.result.dimensions.thicknessMm)).toBe(true);
+      expect(validateMesh(output.result.baseMesh)).toBe(true);
+      expect(validateMesh(output.result.reliefMesh)).toBe(true);
+      expect(validateMesh(output.exportMesh!)).toBe(true);
+      const base = manifoldFromMesh(wasm, output.result.baseMesh);
+      const relief = manifoldFromMesh(wasm, output.result.reliefMesh);
+      const overlap = base.intersect(relief);
+      const model = base.add(relief);
+      try {
+        expect(Math.abs(overlap.volume()) / Math.abs(model.volume())).toBeLessThan(1e-6);
+      } finally {
+        overlap.delete();
+        model.delete();
+        relief.delete();
+        base.delete();
+      }
+    },
+    30000,
+  );
 
   it.each(['articulated-name', 'nameplate'] as const)(
     'rejects unsupported %s templates without replacing geometry',

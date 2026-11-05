@@ -27,9 +27,7 @@ export const applyFeatureGraph = (
   const features = params.modelFeatures ?? [];
   if (!validateModelFeatures(features)) throw new Error('Invalid or oversized design features.');
   const started = performance.now();
-  // These templates contain assemblies, carriers, or hardware clearances that this
-  // generic boolean graph cannot preserve. Keeping the source result intact is safer
-  // than silently dropping those template-specific solids.
+  /* Keep source result; generic graph drops solids */
   if (params.templateId === 'articulated-name' || params.templateId === 'nameplate') {
     return {
       result: {
@@ -165,8 +163,7 @@ export const applyFeatureGraph = (
     const components = outputModel.decompose().map(own);
     const baseMesh = asMesh(base);
     const reliefMesh = asMesh(relief);
-    // Only connectivity is recalculated by this graph. Existing blocking issues are
-    // intentionally retained because a boolean cannot prove them resolved.
+    /* Blocking issues kept: boolean cannot prove resolved */
     const issues = original.issues.filter((issue) => issue.code !== 'disconnected');
     issues.push({
       severity: 'warning',

@@ -293,4 +293,25 @@ describe('useExportActions', () => {
       expect.objectContaining({ error_code: code }),
     );
   });
+
+  it('maps a worker boot timeout to the timeout error code', async () => {
+    mount();
+    exportMethod.mockRejectedValueOnce(
+      new GeometryOperationError(
+        { code: 'geometry-worker-boot-timeout', message: 'Geometry worker did not start in time.' },
+        { stage: 'initialization', type: 'timeout' },
+      ),
+    );
+
+    await download('stl');
+
+    expect(telemetry.track).toHaveBeenLastCalledWith(
+      'export_failed',
+      expect.objectContaining({
+        error_code: 'timeout',
+        failure_stage: 'initialization',
+        error_type: 'timeout',
+      }),
+    );
+  });
 });

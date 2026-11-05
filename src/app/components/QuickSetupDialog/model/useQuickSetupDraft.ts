@@ -135,7 +135,6 @@ export const useQuickSetupDraft = ({
     }
     if (wasOpen.current) return;
     wasOpen.current = true;
-    // Initialize the draft only at a new dialog session.
 
     setDraft(
       createDraft({

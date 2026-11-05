@@ -40,7 +40,6 @@ for (const surface of ['Wood board', 'Metal board']) {
     await page.getByRole('button', { name: 'Bottom view', exact: true }).click();
     const image = await canvas.screenshot({ path: testInfo.outputPath('underside.png') });
     const backingPixels = await countBackingPixels(image);
-    // The solid board remains between the camera and keychain from underneath.
     expect(backingPixels).toBeLessThan(100);
     await testInfo.attach('underside', { body: image, contentType: 'image/png' });
     await page.getByRole('button', { name: 'Front view', exact: true }).click();

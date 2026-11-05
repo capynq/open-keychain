@@ -14,3 +14,4 @@ public/manifold.wasm
 *.ico
 *.lock
 pnpm-lock.yaml
+.claude/

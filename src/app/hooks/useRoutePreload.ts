@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 
 import { CREATE_ROUTE } from '../routes';
+import { loadAndPrewarm } from '../routing/geometryPrewarm';
 import { preloadCreateRoute } from '../routing/routeModules';
 
 const isCreateLink = (target: EventTarget | null): boolean => {
@@ -14,10 +15,14 @@ const isCreateLink = (target: EventTarget | null): boolean => {
   return url.origin === window.location.origin && url.pathname.replace(/\/+$/, '') === CREATE_ROUTE;
 };
 
+const isOnCreateRoute = (): boolean =>
+  window.location.pathname.replace(/\/+$/, '') === CREATE_ROUTE;
+
 export const useRoutePreload = (): void => {
   useEffect(() => {
     const preloadOnIntent = (event: Event): void => {
       if (!isCreateLink(event.target)) return;
+      loadAndPrewarm(() => !isOnCreateRoute());
       void preloadCreateRoute().catch(() => undefined);
     };
 

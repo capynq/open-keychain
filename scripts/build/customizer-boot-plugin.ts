@@ -36,11 +36,43 @@ const developmentBootStyles = [
   '/src/features/customizer/components/DesignSelectCard/DesignSelectCard.module.css',
 ];
 
+export const findGeometryWorkerHref = (bundle: Record<string, { fileName: string }>): string => {
+  const workers = Object.values(bundle).filter((output) =>
+    /^assets\/geometry-worker-[^/]+\.js$/.test(output.fileName),
+  );
+  if (workers.length !== 1)
+    throw new Error(`Expected one geometry worker chunk, found ${workers.length}.`);
+  return `/${workers[0].fileName}`;
+};
+
+/* Worker preload reused only without crossorigin */
+export const geometryPreloadTags = (workerHref: string): string =>
+  [
+    `<link rel="modulepreload" href="${workerHref}">`,
+    '<link rel="preload" href="/manifold-v1.wasm" as="fetch" crossorigin>',
+  ].join('');
+
+export const buildCustomizerDocument = (
+  html: string,
+  bootStyleUrls: string[],
+  geometryWorkerHref: string,
+  variants: string,
+): string => {
+  const stylesheetLinks = bootStyleUrls
+    .map((href) => `<link rel="stylesheet" href="${href}" data-customizer-boot-style />`)
+    .join('');
+  return html
+    .replace(bootStylesPlaceholder, '[]')
+    .replace('</head>', `${geometryPreloadTags(geometryWorkerHref)}${stylesheetLinks}</head>`)
+    .replace(placeholder, () => variants);
+};
+
 export const customizerBootPlugin = (): Plugin => {
   let config: ResolvedConfig;
   let server: Awaited<ReturnType<typeof createServer>> | undefined;
   let renderedVariants: string | undefined;
   let bootStyleUrls: string[] = [];
+  let geometryWorkerHref: string | undefined;
   let devRenderQueue = Promise.resolve();
 
   const getServer = async () => {
@@ -116,17 +148,12 @@ export const customizerBootPlugin = (): Plugin => {
         config.command === 'serve' ? '[]' : bootStylesPlaceholder,
       );
       if (!withStyles.includes(placeholder)) return withStyles;
-      // Keep the shared SPA document small. In production the full Customizer
-      // frame belongs only in dist/create/index.html; dev still serves it from
-      // the regular Vite document so local routing behaves as usual.
       if (config.command !== 'serve') return withStyles;
 
       const pathname = (context?.originalUrl ?? context?.path)?.split('?')[0];
       if (pathname !== '/create' && pathname !== '/create/') return withStyles;
 
-      // The SSR server is request-scoped in dev so source edits cannot leave
-      // the render graph stale. Serialize render+close to prevent concurrent
-      // document requests from sharing and closing each other's server.
+      /* Serialize render+close across concurrent requests */
       const previousRender = devRenderQueue;
       let releaseRender!: () => void;
       devRenderQueue = new Promise<void>((resolve) => {
@@ -141,8 +168,6 @@ export const customizerBootPlugin = (): Plugin => {
         return withStylesheets.replace(placeholder, await renderVariants());
       } finally {
         try {
-          // Use a fresh SSR module graph for every dev document request so HMR
-          // cannot leave this independently-created server's modules stale.
           await closeSsrServer();
         } finally {
           releaseRender();
@@ -168,6 +193,7 @@ export const customizerBootPlugin = (): Plugin => {
         ),
       ].map((file) => `/${file}`);
       if (!bootStyleUrls.length) this.error('The Customizer boot stylesheet entry emitted no CSS.');
+      geometryWorkerHref = findGeometryWorkerHref(bundle);
     },
     async writeBundle(outputOptions) {
       if (config.command !== 'build') return;
@@ -182,13 +208,12 @@ export const customizerBootPlugin = (): Plugin => {
         .replace(placeholder, '');
       await writeFile(htmlPath, preparedHtml);
 
-      const stylesheetLinks = bootStyleUrls
-        .map((href) => `<link rel="stylesheet" href="${href}" data-customizer-boot-style />`)
-        .join('');
-      const customizerHtml = html
-        .replace(bootStylesPlaceholder, '[]')
-        .replace('</head>', `${stylesheetLinks}</head>`)
-        .replace(placeholder, await renderVariants());
+      const customizerHtml = buildCustomizerDocument(
+        html,
+        bootStyleUrls,
+        geometryWorkerHref!,
+        await renderVariants(),
+      );
       const customizerHtmlPath = path.join(outputDir, 'create', 'index.html');
       await mkdir(path.dirname(customizerHtmlPath), { recursive: true });
       await writeFile(customizerHtmlPath, customizerHtml);

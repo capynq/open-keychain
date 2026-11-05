@@ -32,7 +32,6 @@ const downloadArchive = (archive: Uint8Array): void => {
   window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 };
 
-// The profile card intentionally keeps the form controls and generated-output status together.
 export const ProfileBatch = ({
   locale,
   presets,

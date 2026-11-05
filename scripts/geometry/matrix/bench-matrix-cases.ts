@@ -84,8 +84,6 @@ export const partitionMatrixCasesByShard = (
   )
     throw new Error('Matrix shard index/count must identify one shard from 0 to 11 of 1 to 12.');
 
-  // Balance each template independently so a shard cannot accidentally receive
-  // most of one of the expensive templates just because its IDs hash alike.
   const byTemplate = new Map<TemplateId, MatrixCase[]>();
   for (const item of cases) {
     const templateCases = byTemplate.get(item.templateId) ?? [];
@@ -154,8 +152,7 @@ export const selectMatrixBenchmarkSample = (
 
 export type MatrixCaseDurations = Readonly<Record<string, number>>;
 
-// Packages stay contiguous catalog slices so each mostly shares one font and the
-// builder's 16-entry font cache is not thrashed by longest-first ordering.
+/* Contiguous packages; font cache holds 16 entries */
 export const scheduleMatrixPackages = (
   cases: MatrixCase[],
   packageSize: number,

@@ -44,6 +44,33 @@ const makeBuilt = (includeExport: boolean) => {
   };
 };
 
+describe('geometry worker warmup', () => {
+  it('retries WASM initialization on the next warmup after a rejection', async () => {
+    vi.resetAllMocks();
+    createWasm.mockRejectedValueOnce(new Error('wasm download failed')).mockResolvedValue({});
+    vi.stubGlobal('self', { postMessage });
+    await vi.resetModules();
+    await import('./geometry-worker');
+    const handler = (
+      globalThis.self as unknown as { onmessage: (event: MessageEvent) => Promise<void> }
+    ).onmessage;
+
+    await handler({ data: { type: 'warmup' } } as MessageEvent);
+    expect(postMessage).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        type: 'error',
+        requestId: 0,
+        diagnostics: { stage: 'initialization', type: 'operation_error' },
+      }),
+    );
+
+    await handler({ data: { type: 'warmup' } } as MessageEvent);
+    expect(createWasm).toHaveBeenCalledTimes(2);
+    expect(postMessage).toHaveBeenLastCalledWith({ type: 'ready', requestId: 0 });
+    vi.unstubAllGlobals();
+  });
+});
+
 describe('geometry worker build quality and cache boundaries', () => {
   let handler: (event: MessageEvent) => Promise<void>;
 
@@ -180,5 +207,67 @@ describe('geometry worker build quality and cache boundaries', () => {
       expect.objectContaining({ type: 'export', data: expect.any(ArrayBuffer) }),
     ]);
     expect(buildKeychain).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('geometry worker message order', () => {
+  it('answers a cache-hit validate after the slow build queued before it', async () => {
+    vi.resetAllMocks();
+    createWasm.mockResolvedValue({});
+    vi.stubGlobal('self', { postMessage });
+    await vi.resetModules();
+    await import('./geometry-worker');
+    const handler = (
+      globalThis.self as unknown as { onmessage: (event: MessageEvent) => Promise<void> }
+    ).onmessage;
+    let release: (() => void) | undefined;
+    buildKeychain.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = () => resolve(makeBuilt(false));
+        }),
+    );
+    const params = { ...DEFAULT_PARAMS, text: 'SERIAL-ORDER' };
+
+    const generate = handler({ data: { type: 'generate', requestId: 1, params } } as MessageEvent);
+    const validate = handler({ data: { type: 'validate', requestId: 2, params } } as MessageEvent);
+    await vi.waitFor(() => expect(release).toBeDefined());
+    release?.();
+    await Promise.all([generate, validate]);
+
+    const responses = postMessage.mock.calls.map(([message]) => message);
+    expect(responses.map((message) => [message.type, message.requestId])).toEqual([
+      ['geometry', 1],
+      ['validation', 2],
+    ]);
+    expect(responses[1].result.timings).toMatchObject({ workerCacheHit: 1 });
+    vi.unstubAllGlobals();
+  });
+
+  it('gives a message queued behind a throwing build its own response', async () => {
+    vi.resetAllMocks();
+    createWasm.mockResolvedValue({});
+    vi.stubGlobal('self', { postMessage });
+    await vi.resetModules();
+    await import('./geometry-worker');
+    const handler = (
+      globalThis.self as unknown as { onmessage: (event: MessageEvent) => Promise<void> }
+    ).onmessage;
+    buildKeychain.mockImplementation((...args: unknown[]) =>
+      Promise.resolve(makeBuilt(args[2] === true)),
+    );
+    buildKeychain.mockRejectedValueOnce(new Error('build exploded'));
+    const params = { ...DEFAULT_PARAMS, text: 'THROWING-BUILD' };
+
+    const failing = handler({ data: { type: 'generate', requestId: 1, params } } as MessageEvent);
+    const queued = handler({ data: { type: 'validate', requestId: 2, params } } as MessageEvent);
+    await Promise.all([failing, queued]);
+
+    const responses = postMessage.mock.calls.map(([message]) => message);
+    expect(responses.map((message) => [message.type, message.requestId])).toEqual([
+      ['error', 1],
+      ['validation', 2],
+    ]);
+    vi.unstubAllGlobals();
   });
 });
