@@ -984,10 +984,13 @@ test('keeps the preview prominent and touch targets comfortable at 390 px', asyn
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/create');
   await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
-  await expect(page.locator('.viewer')).toBeVisible();
-  const dimensions = await page
-    .locator('.viewer')
-    .evaluate((element) => ({ width: element.clientWidth, height: element.clientHeight }));
+  /* Measure the live viewer, not the placeholder it replaces while the renderer loads. */
+  const viewer = page.locator('.viewer:not(.viewer--preparing)');
+  await expect(viewer).toBeVisible();
+  const dimensions = await viewer.evaluate((element) => ({
+    width: element.clientWidth,
+    height: element.clientHeight,
+  }));
   expect(dimensions.height).toBeLessThanOrEqual(500);
   expect(dimensions.width).toBeGreaterThan(300);
   const cameraButtonHeight = await page
