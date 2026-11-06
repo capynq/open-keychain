@@ -94,4 +94,28 @@ describe('Workshop design token contract', () => {
     expect(contrastRatio(color, '#fbe0cd')).toBeGreaterThanOrEqual(3);
     expect(contrastRatio(tokens.get('--workshop-text')!, '#fbe0cd')).toBeGreaterThanOrEqual(4.5);
   });
+
+  it('keeps token-only stylesheets free of color literals', () => {
+    /* Migrated stylesheets take every color from the Workshop palette; add files as they move. */
+    const tokenOnly = [
+      'features/customizer/components/KeyringPositionPicker/KeyringPositionPicker.module.css',
+      'features/customizer/components/RangeControl/RangeControl.css',
+    ];
+
+    for (const file of tokenOnly) {
+      const css = readFileSync(path.join(sourceRoot, file), 'utf8').replace(
+        /\/\*[\s\S]*?\*\//g,
+        '',
+      );
+      expect(css.match(/#[\da-f]{3,8}\b|\b(?:rgba?|hsla?)\(/gi) ?? [], file).toEqual([]);
+    }
+  });
+
+  it('keeps range value units readable on the controls surface', () => {
+    const tokens = workshopTokens();
+
+    expect(
+      contrastRatio(tokens.get('--workshop-text-muted')!, tokens.get('--workshop-surface-muted')!),
+    ).toBeGreaterThanOrEqual(4.5);
+  });
 });

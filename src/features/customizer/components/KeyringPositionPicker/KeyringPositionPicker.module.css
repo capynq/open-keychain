@@ -13,16 +13,18 @@
 }
 
 .illustration {
-  --keyring-preview-line: #5f6270;
-  --keyring-preview-body: #f6efe8;
-  --keyring-preview-relief: #ddd0c4;
+  --keyring-preview-line: var(--workshop-text-muted);
+  --keyring-preview-body: var(--workshop-surface-subtle);
+  --keyring-preview-relief: var(--workshop-text-14);
   --keyring-preview-accent: var(--workshop-accent-control);
+  --keyring-preview-shadow: var(--workshop-text-strong-alpha-2b);
+  --keyring-preview-shadow-strong: var(--workshop-text-strong-alpha-40);
   position: relative;
   width: 100%;
   max-width: 420px;
   margin-inline: auto;
   overflow: hidden;
-  border: 1px solid #e3d9d0;
+  border: 1px solid var(--workshop-border-subtle);
   border-radius: 14px;
   background: transparent;
   box-sizing: border-box;
@@ -115,8 +117,8 @@
   box-sizing: border-box;
   border: 1.5px solid var(--keyring-preview-line);
   border-radius: 50%;
-  background: var(--workshop-surface-control, #fffdfa);
-  box-shadow: 0 1px 2px rgb(31 33 41 / 18%);
+  background: var(--workshop-surface-control);
+  box-shadow: 0 1px 2px var(--keyring-preview-shadow);
   transition:
     transform var(--workshop-motion-control) var(--workshop-ease-hover),
     border-color var(--workshop-motion-control) var(--workshop-ease),
@@ -155,11 +157,11 @@
 
 /* The selected ring is drawn on the artwork; its control only frames the real opening. */
 .option:has(input:checked) .marker {
-  border: 2px solid #fff;
+  border: 2px solid var(--workshop-surface);
   background: transparent;
   box-shadow:
     0 0 0 1.5px var(--keyring-preview-accent),
-    0 1px 3px rgb(31 33 41 / 22%);
+    0 1px 3px var(--keyring-preview-shadow-strong);
 }
 
 .option:has(input:checked) .hole {

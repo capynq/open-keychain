@@ -13,7 +13,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--field-label-value-gap);
-  color: #4e5260;
+  color: var(--workshop-text-control);
   font-size: 12px;
   font-weight: 650;
   line-height: 16px;
@@ -26,7 +26,7 @@
   flex: 0 0 auto;
   align-items: center;
   gap: 4px;
-  color: #8a8d95;
+  color: var(--workshop-text-muted);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
