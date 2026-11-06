@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 import { IconButton } from '@/shared/ui/IconButton';
 
@@ -24,6 +24,7 @@ export const ExportDialog = ({
   acceptedMetrics,
   onClose,
   onExportSuccess,
+  successContent,
   disconnectedExportAcknowledged,
   onDisconnectedExportAcknowledged,
 }: {
@@ -34,7 +35,10 @@ export const ExportDialog = ({
   effectiveAppearance?: PrintAppearance;
   acceptedMetrics?: AcceptedMetrics;
   onClose: () => void;
-  onExportSuccess?: () => void;
+  /** Called after each successful download while the dialog is open. */
+  onExportSuccess?: (format: ExportActionsState['lastFormat']) => void;
+  /** Shown under the status once a download succeeded, e.g. a feedback prompt. */
+  successContent?: ReactNode;
   disconnectedExportAcknowledged: boolean;
   onDisconnectedExportAcknowledged: (acknowledged: boolean) => void;
 }) => {
@@ -70,10 +74,10 @@ export const ExportDialog = ({
       exportState.clearStatus();
       reportedSuccess.current = false;
     }
-    if (!open) reportedSuccess.current = false;
+    if (!open || exportState.status !== 'success') reportedSuccess.current = false;
     if (!justOpened && open && exportState.status === 'success' && !reportedSuccess.current) {
       reportedSuccess.current = true;
-      onExportSuccess?.();
+      onExportSuccess?.(exportState.lastFormat);
     }
     wasOpen.current = open;
   }, [exportState, onExportSuccess, open]);
@@ -169,6 +173,7 @@ export const ExportDialog = ({
           printable={preflight.printable}
           onClose={onClose}
         />
+        {successContent}
         <ExportChoices
           locale={locale}
           exportState={exportState}

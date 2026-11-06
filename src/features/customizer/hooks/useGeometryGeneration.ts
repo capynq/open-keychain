@@ -22,6 +22,7 @@ import {
   GeometryCandidateSupersededError,
 } from '../../../infrastructure/geometry/geometry-client';
 import { takePrewarmedGeometryClient } from '../../../infrastructure/geometry/geometry-client-pool';
+import { logError } from '../../../shared/lib/support/error-log';
 import { attributeAdoptedBoot, type GeometryBootAttribution } from '../model/geometry-telemetry';
 
 export type GeometryAttemptCallbacks = {
@@ -173,6 +174,8 @@ export const useGeometryGeneration = (
     const finishAttempt: GeometryAttemptCallbacks['finished'] = (id, outcome, details) => {
       if (terminal) return;
       terminal = true;
+      if (outcome === 'error' && details?.failure)
+        logError('geometry', `${details.failure.code}: ${details.failure.message ?? ''}`);
       attemptCallbacks?.finished(id, outcome, details);
     };
     const timer = window.setTimeout(

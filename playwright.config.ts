@@ -37,7 +37,7 @@ export default defineConfig({
     : {
         command: useExistingBuild
           ? `pnpm preview --host 127.0.0.1 --port ${previewPort}`
-          : `VITE_GOOGLE_FONTS_API_KEY=playwright-google-fonts-key pnpm build && pnpm preview --host 127.0.0.1 --port ${previewPort}`,
+          : `VITE_GOOGLE_FONTS_API_KEY=playwright-google-fonts-key VITE_POSTHOG_KEY=phc_playwright VITE_POSTHOG_HOST=https://posthog.test pnpm build && pnpm preview --host 127.0.0.1 --port ${previewPort}`,
         url: previewUrl,
         reuseExistingServer: false,
       },

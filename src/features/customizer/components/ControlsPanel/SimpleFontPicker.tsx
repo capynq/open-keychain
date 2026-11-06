@@ -9,6 +9,7 @@ import type { RecoveryFailure } from '@/shared/lib/recovery/failure';
 
 import { useDiscoveryMotion } from '@/features/customizer/hooks/useDiscoveryMotion';
 import { useFontPreviewLoader } from '@/features/customizer/hooks/useFontPreviewLoader';
+import { useRecoveryReport } from '@/features/feedback/hooks/useRecoveryReport';
 import { recoveryMessage, recoverySteps, t } from '@/infrastructure/i18n';
 import { activationMotion, navigationMotion, type MotionIntent } from '@/shared/lib/motion';
 import { RecoveryNotice } from '@/shared/ui/RecoveryNotice';
@@ -35,6 +36,7 @@ export const SimpleFontPicker = ({
   onSelect: (fontId: string) => void;
   onMore: () => void;
 }) => {
+  const reportFor = useRecoveryReport(locale);
   const name = useId();
   const text = target === 'secondary' ? params.subtitle : params.text;
   const selectedId = neutralSelection
@@ -294,6 +296,9 @@ export const SimpleFontPicker = ({
           detailsLabel={t(locale, 'recoveryDetails')}
           diagnostic={selectionFailure.message}
           steps={recoverySteps(locale, selectionFailure)}
+          report={reportFor(selectionFailure, {
+            message: recoveryMessage(locale, selectionFailure),
+          })}
           actions={[
             {
               id: 'retry-font-preview',

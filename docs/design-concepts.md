@@ -7,18 +7,26 @@ This is the visual contract for people and agents adding user-facing work.
 **Maker Editorial** is for the landing page. It sells the feeling of making a real
 object: lead with a real model or result, one clear action, and short proof. Its
 sections earn their shape from a story or decision; it is not a generic card grid.
+The one action is the name field: typing a name in the hero (or the closing call to action)
+opens quick setup with that name filled in. The page ends with that same field and a direct
+line to us ("Send feedback" and the support address), not with a link list.
 
 **Reference** is for template, guide, and SEO pages. It is quiet, scannable, and
 useful. One page has one purpose, one primary CTA, readable line lengths, and no
 repeated landing-page persuasion.
 
 The privacy page states exactly what consent enables and keeps accept/revoke controls available.
+It also explains feedback that visitors send themselves, which works with or without consent.
 Never describe user-entered design text or the live preview as local-only when session replay is
 enabled; make its 30-day retention clear.
 
 **Workshop** is for `/create`, export, profile, and seller flows. It is calm but
 alive: selected choices, regenerated preview, progress, and print states show what
 changed. Make comes first; precision and manufacturing controls are contextual.
+
+Feedback asks are Workshop surfaces: after a successful export inside the export dialog (never a
+toast above the modal), once on a return visit as a dismissible print-result card, at the end of
+the controls panel, and as "Email support" / "Copy error report" in every recovery notice.
 
 Photo capture uses the existing far-right toolbar icon and a compact, non-modal anchored popup with
 1024, 2048 and 4096 px actions with a PNG/JPG format choice (PNG by default). The two format segments fill the action width equally. Photo filenames include the accepted name, template, applicable style and resolution. Opening Photo must not resize the preview, change framing, or

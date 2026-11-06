@@ -5,6 +5,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
 
+import { useRecoveryReport } from '@/features/feedback/hooks/useRecoveryReport';
 import { recoveryMessage, recoverySteps } from '@/infrastructure/i18n/utils';
 import { RecoveryError, type RecoveryFailure } from '@/shared/lib/recovery/failure';
 import { RecoveryNotice } from '@/shared/ui/RecoveryNotice';
@@ -313,6 +314,7 @@ export const Viewer = ({
   quality = 'high',
   toolbarAction,
 }: ViewerProps) => {
+  const reportFor = useRecoveryReport(locale);
   const hostRef = useRef<HTMLDivElement>(null);
   const qualityRef = useRef(quality);
 
@@ -1300,6 +1302,9 @@ export const Viewer = ({
               steps={recoverySteps(locale, previewFailure ?? { code: 'preview-unavailable' })}
               detailsLabel={t(locale, 'recoveryDetails')}
               diagnostic={previewFailure?.message}
+              report={reportFor(previewFailure ?? { code: 'preview-unavailable' }, {
+                message: recoveryMessage(locale, previewFailure ?? { code: 'preview-unavailable' }),
+              })}
               actions={
                 onRetry
                   ? [

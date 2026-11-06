@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import type { FontCategory } from '@/domain/keychain/fonts/catalog';
 import type { FontTarget } from '@/features/customizer/model/font-browser';
@@ -74,6 +74,7 @@ export const ControlsPanel = ({
   baseFinishLimits,
   textFinishLimits,
   parameterLimits,
+  footer,
 }: {
   locale: Locale;
   customizer: ReturnType<typeof useCustomizerParams>;
@@ -88,6 +89,8 @@ export const ControlsPanel = ({
   parameterLimits?: GeometryResult['parameterLimits'];
   baseFinishLimits?: GeometryResult['baseFinishLimits'];
   textFinishLimits?: GeometryResult['textFinishLimits'];
+  /** Rendered after every control section, e.g. the feedback line. */
+  footer?: ReactNode;
 }) => {
   const { track } = useAnalytics();
   const { mode, changeMode } = useEditorMode();
@@ -1132,6 +1135,7 @@ export const ControlsPanel = ({
           <div className="controls-scroll-spacer" aria-hidden="true" />
         </section>
       )}
+      {footer && <div className="controls-panel-footer">{footer}</div>}
     </aside>
   );
 };

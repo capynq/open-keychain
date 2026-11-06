@@ -7,6 +7,9 @@ import { AnalyticsProvider } from '@/infrastructure/telemetry';
 import '@/infrastructure/i18n/config';
 import '@/app/styles/tokens.css';
 import '@/app/styles/global.css';
+import { installGlobalErrorLog } from '@/shared/lib/support/error-log';
+
+installGlobalErrorLog();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

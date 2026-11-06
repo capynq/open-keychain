@@ -1,0 +1,159 @@
+.root {
+  display: grid;
+  min-width: 0;
+  gap: var(--workshop-space-3);
+  margin: 0;
+  color: var(--workshop-text);
+}
+.heading {
+  margin: 0;
+  color: var(--workshop-text-strong);
+  font-size: var(--workshop-font-label);
+  font-weight: 750;
+}
+.rating {
+  display: grid;
+  min-width: 0;
+  gap: var(--workshop-space-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.scale {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--workshop-space-2);
+}
+.ratingOption {
+  position: relative;
+  display: grid;
+  min-width: 0;
+}
+.ratingOption input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.ratingOption span {
+  display: grid;
+  min-height: var(--workshop-touch-target);
+  place-items: center;
+  border: 1px solid var(--workshop-border-subtle);
+  border-radius: var(--workshop-radius-control);
+  background: var(--workshop-surface-control);
+  color: var(--workshop-text-control);
+  font-size: var(--workshop-font-label);
+  font-weight: 750;
+  transition:
+    background-color var(--workshop-motion-fast) var(--workshop-ease),
+    border-color var(--workshop-motion-fast) var(--workshop-ease),
+    color var(--workshop-motion-fast) var(--workshop-ease);
+}
+.ratingOption:hover span {
+  border-color: var(--workshop-accent-hover);
+}
+.ratingOption input:checked + span {
+  border-color: var(--workshop-accent-control);
+  background: var(--workshop-accent-active-surface);
+  color: var(--workshop-accent-deep);
+}
+.ratingOption input:focus-visible + span {
+  outline: var(--workshop-focus-ring);
+  outline-offset: 2px;
+}
+.scaleLabels {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--workshop-space-3);
+  color: var(--workshop-text-muted);
+  font-size: var(--workshop-font-description);
+}
+.field {
+  display: grid;
+  gap: var(--workshop-space-1);
+}
+.field label {
+  color: var(--workshop-text-control);
+  font-size: var(--workshop-font-description);
+  font-weight: 650;
+}
+.field textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 4.5rem;
+  padding: var(--workshop-space-3) var(--workshop-space-4);
+  border: 1px solid var(--workshop-border-strong);
+  border-radius: var(--workshop-field-radius);
+  background: var(--workshop-surface-control);
+  color: var(--workshop-text-strong);
+  font: inherit;
+  font-size: var(--workshop-font-label);
+  resize: vertical;
+}
+.field textarea::placeholder {
+  color: var(--workshop-text-subtle);
+}
+.field textarea:focus-visible {
+  outline: var(--workshop-focus-ring);
+  outline-offset: 1px;
+}
+.hint,
+.error {
+  margin: 0;
+  font-size: var(--workshop-font-description);
+  line-height: 1.4;
+}
+.hint {
+  color: var(--workshop-text-muted);
+}
+.hint span {
+  white-space: nowrap;
+}
+.error {
+  color: var(--workshop-status-attention-text);
+}
+.root a {
+  color: var(--workshop-accent-strong);
+  font-weight: 650;
+}
+.root a:hover {
+  color: var(--workshop-accent-link-hover);
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.send {
+  min-height: var(--workshop-touch-target);
+  padding-inline: var(--workshop-space-6);
+  border: 1px solid var(--workshop-accent-control);
+  border-radius: var(--workshop-radius-control);
+  background: var(--workshop-accent-control);
+  color: var(--workshop-surface);
+  font: inherit;
+  font-size: var(--workshop-font-label);
+  font-weight: 750;
+  cursor: pointer;
+  transition: background-color var(--workshop-motion-fast) var(--workshop-ease);
+}
+.send:hover:not(:disabled) {
+  background: var(--workshop-accent-deep);
+}
+.send:focus-visible {
+  outline: var(--workshop-focus-ring);
+  outline-offset: 2px;
+}
+.send:disabled {
+  border-color: var(--workshop-border-subtle);
+  background: var(--workshop-surface-muted);
+  color: var(--workshop-text-subtle);
+  cursor: not-allowed;
+}
+.thanks {
+  margin: 0;
+  color: var(--workshop-status-ready-text);
+  font-size: var(--workshop-font-label);
+  font-weight: 650;
+}

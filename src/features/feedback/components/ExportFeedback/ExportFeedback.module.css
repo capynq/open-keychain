@@ -1,0 +1,32 @@
+.root {
+  display: grid;
+  min-width: 0;
+  gap: var(--workshop-space-4);
+  padding: var(--workshop-space-5);
+  border: 1px solid var(--workshop-border-subtle);
+  border-radius: var(--workshop-radius-panel);
+  background: var(--workshop-surface-subtle);
+}
+.photo {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--workshop-space-2);
+  margin: 0;
+  padding-block-start: var(--workshop-space-3);
+  border-block-start: 1px solid var(--workshop-border-subtle);
+  color: var(--workshop-text-muted);
+  font-size: var(--workshop-font-description);
+  line-height: 1.4;
+}
+.photo svg {
+  flex: none;
+  margin-block-start: 0.1em;
+  color: var(--workshop-accent-control);
+}
+.photo a {
+  color: var(--workshop-accent-strong);
+  font-weight: 650;
+}
+.photo a:hover {
+  color: var(--workshop-accent-link-hover);
+}

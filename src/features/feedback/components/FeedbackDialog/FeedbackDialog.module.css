@@ -1,0 +1,60 @@
+.dialog {
+  box-sizing: border-box;
+  width: min(calc(100vw - 2 * var(--workshop-space-5)), 28rem);
+  max-height: calc(100dvh - 2 * var(--workshop-space-5));
+  padding: var(--workshop-space-6);
+  overflow-y: auto;
+  border: 1px solid var(--workshop-border-subtle);
+  border-radius: var(--workshop-radius-panel);
+  background: var(--workshop-surface);
+  box-shadow: 0 1.5rem 3rem -1.25rem var(--workshop-text-strong-alpha-40);
+  color: var(--workshop-text);
+  font-family: inherit;
+}
+.dialog::backdrop {
+  background: var(--workshop-surface-dark-50);
+}
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--workshop-space-3);
+  margin-block: calc(-1 * var(--workshop-space-2)) var(--workshop-space-2);
+}
+.heading h2 {
+  margin: 0;
+  color: var(--workshop-text-strong);
+  font-size: 1.125rem;
+  font-weight: 800;
+}
+.intro {
+  margin: 0 0 var(--workshop-space-5);
+  color: var(--workshop-text-muted);
+  font-size: var(--workshop-font-label);
+  line-height: 1.45;
+}
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--workshop-space-2);
+  min-height: var(--workshop-touch-target);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+.trigger:hover {
+  color: var(--workshop-accent-strong);
+}
+.trigger:focus-visible {
+  outline: var(--workshop-focus-ring);
+  outline-offset: 2px;
+}
+.trigger svg {
+  flex: none;
+}

@@ -33,7 +33,8 @@ export type AnalyticsEvent =
   | 'preset_saved'
   | 'batch_started'
   | 'batch_completed'
-  | 'batch_failed';
+  | 'batch_failed'
+  | 'support_contact_opened';
 
 export type AnalyticsProperties = Record<string, string | number | boolean | undefined>;
 
@@ -92,6 +93,9 @@ const SAFE_PROPERTY_KEYS = new Set([
   'draw_submit_ms',
   'initialization_ms',
   'preview_quality',
+  'prefilled',
+  'reason',
+  'recovery_code',
 ]);
 
 const GEOMETRY_TIMING_EVENTS = new Set<AnalyticsEvent>(['geometry_ready', 'preview_rendered']);
@@ -139,7 +143,12 @@ const CUSTOMIZER_OPTION_IDS: Record<string, ReadonlySet<string>> = {
   text_finish: EDGE_FINISH_IDS,
 };
 
+const START_DESIGNING_SOURCES = new Set(['hero', 'header', 'template_card', 'final_cta']);
+const SUPPORT_CONTACT_REASONS = new Set(['error', 'print_result', 'feedback']);
+
 const EVENT_PROPERTY_KEYS: Partial<Record<AnalyticsEvent, ReadonlySet<string>>> = {
+  start_designing: new Set(['source', 'prefilled', 'template']),
+  support_contact_opened: new Set(['reason', 'recovery_code']),
   customizer_opened: new Set(['design_id']),
   geometry_ready: new Set([
     'template',
@@ -302,6 +311,12 @@ export const sanitizeProperties = (
           }
         }
         if (key === 'acquisition_source') return value === 'portfolio';
+        if (key === 'source')
+          return typeof value === 'string' && START_DESIGNING_SOURCES.has(value);
+        if (key === 'prefilled') return typeof value === 'boolean';
+        if (key === 'reason')
+          return typeof value === 'string' && SUPPORT_CONTACT_REASONS.has(value);
+        if (key === 'recovery_code') return typeof value === 'string' && SAFE_ID.test(value);
         if (key === 'environment')
           return value === 'development' || value === 'preview' || value === 'production';
         if (key === 'operation') {

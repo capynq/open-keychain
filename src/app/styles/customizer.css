@@ -2174,3 +2174,9 @@ html[data-input-modality='keyboard'] .customizer-app-shell .design-select-card:h
 .controls-panel .control-section {
   scroll-margin-top: 52px;
 }
+
+.controls-panel-footer {
+  margin-top: var(--workshop-space-6);
+  padding-top: var(--workshop-space-4);
+  border-top: 1px solid var(--workshop-border-subtle);
+}

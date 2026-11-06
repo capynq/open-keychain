@@ -57,4 +57,14 @@ describe('parseCustomizerRoute', () => {
       }).initialParams?.edgeFinish,
     ).toBe('round');
   });
+
+  it('reads a trimmed landing name from router state without treating it as a project', () => {
+    const model = parseCustomizerRoute('?setup=1&lang=en', { setupText: '  Ольга  ' });
+
+    expect(model.setupText).toBe('Ольга');
+    expect(model.initialParams).toBeUndefined();
+    expect(parseCustomizerRoute('', { setupText: 'x'.repeat(40) }).setupText).toHaveLength(24);
+    expect(parseCustomizerRoute('', { setupText: 42 }).setupText).toBeUndefined();
+    expect(parseCustomizerRoute('', { setupText: '   ' }).setupText).toBeUndefined();
+  });
 });

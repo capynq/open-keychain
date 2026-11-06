@@ -8,6 +8,7 @@ import {
   type AnalyticsEvent,
   type AnalyticsProperties,
 } from '../events';
+import { registerSurveyTransport } from '../feedback';
 import { registerReactExceptionCapture } from '../react-exceptions';
 import { readPortfolioReferral, type AcquisitionSource } from '../referral';
 import { AnalyticsContext, type AnalyticsConsent } from '../telemetry-context';
@@ -243,6 +244,8 @@ const configurePostHog = async (): Promise<void> => {
       },
       persistence: 'localStorage',
       disable_cookie: true,
+      /* Feedback surveys are app-rendered `api` surveys; the SDK never renders or fetches them. */
+      disable_surveys: true,
     });
   } catch {
     posthogInitStarted = false;
@@ -351,3 +354,34 @@ const sendReactException = (error: Error): void => {
 };
 
 registerReactExceptionCapture(sendReactException);
+
+/** Survey events go through the SDK only with consent; the caller decides the anonymous fallback. */
+const captureSurveyEvent = (event: string, properties: Record<string, unknown>): boolean => {
+  if (
+    captureConsent !== 'accepted' ||
+    !POSTHOG_KEY ||
+    !posthogClient?.__loaded ||
+    posthogClient.has_opted_out_capturing()
+  )
+    return false;
+  posthogClient.capture(event, properties);
+  return true;
+};
+
+registerSurveyTransport(
+  captureSurveyEvent,
+  POSTHOG_KEY
+    ? {
+        host: POSTHOG_HOST,
+        apiKey: POSTHOG_KEY,
+        context: () => ({
+          environment: BUILD_ENV,
+          internal_traffic: readInternalTraffic(),
+          app_release: BUILD_RELEASE,
+          ...(/^[a-f0-9]{40}$/i.test(BUILD_VERSION)
+            ? { app_version: BUILD_VERSION.toLowerCase() }
+            : {}),
+        }),
+      }
+    : undefined,
+);

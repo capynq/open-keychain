@@ -36,7 +36,11 @@ export const useQuickSetup = ({
 }) => {
   const searchParams = new URLSearchParams(search);
   const setupRequested = searchParams.get('setup') === '1';
-  const setupAllowed = setupRequested && !searchParams.has('design') && !locationState;
+  /* A saved project opens straight into the editor; a landing name only prefills setup. */
+  const projectState = Boolean(
+    (locationState as { projectParams?: unknown } | null | undefined)?.projectParams,
+  );
+  const setupAllowed = setupRequested && !searchParams.has('design') && !projectState;
   const [setupOpen, setSetupOpen] = useState(setupAllowed);
   /* Opened from the editor header over an existing design, not the first-run setup route. */
   const [setupReopened, setSetupReopened] = useState(false);

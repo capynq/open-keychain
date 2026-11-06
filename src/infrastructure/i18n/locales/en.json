@@ -670,7 +670,7 @@
     "runKicker": "Made for your setup",
     "runTitle": "Print one today. Build a repeatable workflow tomorrow.",
     "runBody": "One-off designs and exports are free in your browser without an account. The paid Maker plan adds reusable presets and batch tools; individual exports remain free.",
-    "hostedCta": "See Maker on /profile",
+    "hostedCta": "See the Maker plan",
     "run": {
       "browser": {
         "eyebrow": "Available now",
@@ -708,10 +708,16 @@
     "localFirstTitle": "Your design work stays close to you.",
     "localFirstBody": "The model and export files are generated in your browser. If you allow analytics, a 30-day session recording may include the design text, settings, and preview visible in the editor. The MIT license allows commercial use of the software with its notice; bundled fonts keep their separate SIL Open Font License terms.",
     "betaKicker": "Beta, with honest limits",
-    "betaTitle": "A generated file is not a physical-print guarantee.",
+    "betaTitle": "Check every file in your slicer before printing.",
     "betaBody": "Check every export in your slicer and test it on your own printer. Printer, material and settings can all change the result.",
     "resourcesTitle": "Explore templates and guides",
-    "footerLicense": "MIT software license · bundled fonts have separate licenses"
+    "footerLicense": "MIT software license · bundled fonts have separate licenses",
+    "heroNameLabel": "Name or text",
+    "heroNamePlaceholder": "e.g. ALEX",
+    "heroNameHint": "Free, no account. You can change everything in the editor.",
+    "finalKicker": "Ready when you are",
+    "finalTitle": "Your name, ready for the printer in a few minutes.",
+    "finalBody": "Type it, pick a template and export STL or 3MF for your slicer."
   },
   "templateDescriptions": {
     "name-keychain": "A backing contour that follows the name.",
@@ -1066,5 +1072,60 @@
   "wizardSteps": "Setup steps",
   "exportRecommended": "Recommended",
   "recoveryApplyLargerEnvelope": "Apply within {width} × {height} mm",
-  "recoveryApplyNaturalSize": "Apply at natural size (remove size limit)"
+  "recoveryApplyNaturalSize": "Apply at natural size (remove size limit)",
+  "feedback": {
+    "exportHeading": "How was making it?",
+    "footerHeading": "How is Open Keychain working for you?",
+    "dialogTitle": "Send feedback",
+    "dialogIntro": "Tell us what worked, what didn't, or what you'd like next. We read every message.",
+    "openDialog": "Send feedback",
+    "lineLead": "Questions, ideas or problems?",
+    "ratingLegend": "Rate it from 1 (frustrating) to 5 (easy)",
+    "ratingOption": "{value} out of 5",
+    "ratingLow": "Frustrating",
+    "ratingHigh": "Easy",
+    "textLabel": "Anything to add? (optional)",
+    "textPlaceholder": "Ideas, problems, anything on your mind",
+    "textPlaceholderLow": "What got in the way?",
+    "textPlaceholderHigh": "What should we add next?",
+    "privacyHint": "Sent only when you press Send. Please leave out personal details.",
+    "replyHint": "Want a reply? Email",
+    "send": "Send",
+    "sending": "Sending…",
+    "sendByEmail": "Send by email",
+    "thanks": "Thank you! Every answer helps us improve Open Keychain.",
+    "failed": "We couldn't send it.",
+    "emailInstead": "Email it instead",
+    "mailSubject": "Open Keychain feedback",
+    "mailRating": "Rating",
+    "photoPrompt": "Printed it? Send us a photo, good or bad. It helps us tune the models.",
+    "photoLink": "Email a photo",
+    "printCheck": {
+      "title": "Did your last print come out right?",
+      "dismiss": "Not now",
+      "fine": "Printed fine",
+      "tweaks": "Needed tweaks",
+      "failed": "Didn't work",
+      "notYet": "Haven't printed yet",
+      "textLabel": "What happened? (optional)",
+      "photoFine": "Show it off: email a photo",
+      "photoProblem": "Help us fix it: email a photo"
+    },
+    "mail": {
+      "photoPrompt": "Here's how my print came out. The photo is attached.",
+      "printerLine": "Printer / material / slicer:",
+      "whatHappenedLine": "What I noticed:"
+    },
+    "privacyTitle": "Feedback you choose to send",
+    "privacyBody": "When you press Send in a feedback form, your rating, anything you typed, and the template, file format and language go to PostHog. Without analytics consent it is sent once, with no ID and no profile; with consent it joins your pseudonymous activity. To decide when to ask, this browser keeps a small local note of your last export: date, format, template and design link. That note is never sent on its own. Email support and Send a photo open your own mail app with details filled in, including a link to your design; nothing leaves your device until you send that email, and you can delete anything first."
+  },
+  "support": {
+    "emailSupport": "Email support",
+    "copyReport": "Copy error report",
+    "copied": "Copied. Paste it into an email to support@open-keychain.com.",
+    "copyFailed": "Couldn't copy. Open Technical details and copy the text there.",
+    "reportGreeting": "Hi Open Keychain team,",
+    "reportPrompt": "Here is what I was doing when it went wrong:",
+    "designNote": "Design link (delete it if you'd rather not share your text):"
+  }
 }

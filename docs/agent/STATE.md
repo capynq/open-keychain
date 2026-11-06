@@ -1,5 +1,31 @@
 # Agent handoff
 
+## Feedback collection and landing conversion, 2026-11-06
+
+On `feature/peaceful-goodall-13iv0t` (restarted from `main` after PR #66 merged). See DECISIONS
+"Explicit feedback is sent on submit".
+
+- The PostHog "Customizer feedback" widget had 0 impressions since 2026-10-06 (button widget with
+  no selector never renders) and was ended. 30-day consenting volume: 59 landing viewers, 33
+  `start_designing`, 94 editor openers, 37 exporters.
+- New `src/features/feedback/`: post-export rating + text inside the export dialog, a print-outcome
+  card on return visits, a "Send feedback" dialog (controls panel footer, landing/SEO footer,
+  closing CTA) and "Send a photo" mailto links that carry the last exported design link. Two PostHog
+  `api` surveys hold the responses; visitors without consent send one anonymous request on Send.
+- Every recovery notice has "Email support" and "Copy error report"
+  (`src/shared/lib/support/*`): code, message, app build, page, browser, last 10 in-memory errors
+  and the open design link (`setSupportDesignUrlProvider`).
+- Landing: hero name field replaces the duplicated 3-step strip and prefills quick setup through
+  router state (`setupText`, never in the URL); a closing call to action with the same field and
+  the feedback line; softer beta headline; "See the Maker plan"; header, template-card and closing
+  CTAs now track `start_designing` sources. The carousel order is unchanged because the first slide
+  is the preloaded LCP image.
+- Test builds set `VITE_POSTHOG_KEY=phc_playwright` and `VITE_POSTHOG_HOST=https://posthog.test`
+  (Playwright web server and validation build gates); `e2e/routes.spec.ts` consent test answers that
+  host, and `e2e/feedback.spec.ts` asserts the exact capture payloads.
+- Follow-up after deploy: submit one consented and one anonymous response on production and confirm
+  both in the PostHog survey results; check that `cabinet.open-keychain.com` forwards `/i/v0/e/`.
+
 ## Keyring placement, position picker and Pro value fields, 2026-11-06
 
 On `feature/peaceful-goodall-13iv0t`. See DECISIONS "Keyring openings are placed by position and

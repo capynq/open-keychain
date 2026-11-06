@@ -262,6 +262,13 @@ export const isPixelRatioSensitiveSpec = (spec) => {
   }
 };
 
+/* Browser builds use test keys; PostHog points at an unroutable host that feedback specs intercept. */
+export const E2E_BUILD_ENV = Object.freeze({
+  VITE_GOOGLE_FONTS_API_KEY: 'playwright-google-fonts-key',
+  VITE_POSTHOG_KEY: 'phc_playwright',
+  VITE_POSTHOG_HOST: 'https://posthog.test',
+});
+
 const createBuildGate = () => ({
   id: 'build',
   name: 'Build',
@@ -269,7 +276,7 @@ const createBuildGate = () => ({
   phase: 'Vite production artifact',
   command: 'pnpm',
   args: ['build:artifact'],
-  env: { VITE_GOOGLE_FONTS_API_KEY: 'playwright-google-fonts-key' },
+  env: E2E_BUILD_ENV,
 });
 
 const appendJourneyGate = (gates) => {
@@ -367,7 +374,7 @@ export const createCiChangedGatePlan = (inputFiles) => {
     (needsBuild || needsBrowser || needsGeometry || unknown || (conservative && !toolingOnly))
   )
     add('build', 'Build', ['build:artifact'], {
-      env: { VITE_GOOGLE_FONTS_API_KEY: 'playwright-google-fonts-key' },
+      env: E2E_BUILD_ENV,
     });
   if (changedBrowserSpecs.length > 0) {
     const workers = unitWorkerCount();
@@ -444,7 +451,7 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
         phase: 'Vite production artifact',
         command: 'pnpm',
         args: ['build:artifact'],
-        env: { VITE_GOOGLE_FONTS_API_KEY: 'playwright-google-fonts-key' },
+        env: E2E_BUILD_ENV,
       },
       {
         id: 'browser',
@@ -483,7 +490,7 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
         phase: 'Vite production artifact',
         command: 'pnpm',
         args: ['build:artifact'],
-        env: { VITE_GOOGLE_FONTS_API_KEY: 'playwright-google-fonts-key' },
+        env: E2E_BUILD_ENV,
       },
       {
         id: 'browser',
@@ -534,7 +541,7 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
         phase: 'Vite production artifact',
         command: 'pnpm',
         args: ['build:artifact'],
-        env: { VITE_GOOGLE_FONTS_API_KEY: 'playwright-google-fonts-key' },
+        env: E2E_BUILD_ENV,
       },
     ]);
   }
@@ -631,7 +638,7 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
       phase: 'Vite production artifact',
       command: 'pnpm',
       args: ['build:artifact'],
-      env: { VITE_GOOGLE_FONTS_API_KEY: 'playwright-google-fonts-key' },
+      env: E2E_BUILD_ENV,
     },
     {
       id: 'browser',

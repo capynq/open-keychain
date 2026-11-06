@@ -3,6 +3,7 @@ import type { Locale } from '../../../infrastructure/i18n/config';
 import type { CustomizerPageState } from '../../hooks/useCustomizerPageState';
 
 import { ControlsPanel } from '../../../features/customizer/components/ControlsPanel/ControlsPanel';
+import { FeedbackLine } from '../../../features/feedback/components/FeedbackLine/FeedbackLine';
 import { useAnalytics } from '../../../infrastructure/telemetry/useTelemetry';
 import { PreviewPanel } from '../PreviewPanel/PreviewPanel';
 import './CustomizerWorkspace.module.css';
@@ -42,6 +43,7 @@ export const CustomizerWorkspace = ({
         }
         baseFinishLimits={state.geometry.result?.baseFinishLimits}
         textFinishLimits={state.geometry.result?.textFinishLimits}
+        footer={<FeedbackLine locale={locale} />}
       />
       <PreviewPanel
         locale={locale}
