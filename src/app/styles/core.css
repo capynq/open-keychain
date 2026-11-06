@@ -407,11 +407,14 @@
   background: #fffdf8;
 }
 
-.icon-button.export-header-button:hover:not(:disabled) {
-  background: var(--workshop-accent-link-hover);
+/* Touch screens keep no sticky hover, like every other icon action. */
+@media (hover: hover) and (pointer: fine) {
+  .icon-button.export-header-button:hover:not(:disabled) {
+    background: var(--workshop-accent-link-hover);
+    color: #fff7ef;
+  }
 }
 
-.icon-button.export-header-button:hover:not(:disabled),
 .icon-button.export-header-button:focus-visible {
   color: #fff7ef;
 }
