@@ -46,6 +46,7 @@ export const RECOVERY_CATALOG: Record<string, RecoveryDefinition> = {
   'magnet-pocket-unsafe': issue('errorMagnetPocketUnsafe', 'geometry'),
   disconnected: issue('warningDisconnected', 'connectivity'),
   'relief-outside-backing': issue('errorReliefOutsideBacking', 'geometry'),
+  'keyring-opening-blocked': issue('errorKeyringOpeningBlocked', 'geometry'),
   'nameplate-text-outside-plate': issue('errorNameplateTextOutside', 'size'),
   'nameplate-embedding': issue('errorNameplateEmbedding', 'geometry'),
   'scaled-to-fit': issue('warningScaled', 'size'),

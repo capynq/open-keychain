@@ -227,14 +227,18 @@ export const ARTICULATED_PRINT_APPEARANCE: PrintAppearance = {
 export const printAppearanceForTemplate = (templateId: TemplateId): PrintAppearance =>
   templateId === 'articulated-name' ? ARTICULATED_PRINT_APPEARANCE : DEFAULT_PRINT_APPEARANCE;
 /**
- * Keeps the colors a person sees when an edit switches templates: a color slot that still
- * follows the old template's default is pinned to it when the new template's default differs.
+ * Keeps the colors a person chose when an edit switches templates: once either slot is chosen, a
+ * slot that still follows the old template's default is pinned to it when the new default differs.
+ * Untouched defaults follow each template's own palette instead. Articulated letters show almost
+ * only their caps from above, so the keychain's light text color would leave light letters on a
+ * light stage; its palette keeps the same red and cream with the red on the letter faces.
  */
 export const keepAppearanceAcrossTemplates = (
   overrides: PrintAppearanceOverrides,
   from: TemplateId,
   to: TemplateId,
 ): PrintAppearanceOverrides => {
+  if (overrides.base === undefined && overrides.relief === undefined) return overrides;
   const before = printAppearanceForTemplate(from);
   const after = printAppearanceForTemplate(to);
   const base =
@@ -267,6 +271,7 @@ export type GeometryResult = {
   baseShading?: 'creased' | 'flat';
   solidCount?: number;
   magnetPocket?: MagnetPocketMetadata;
+  keyring?: KeyringMetadata;
   parts?: GeometryPart[];
   validation?: GeometryChecks;
   timings?: Record<string, number>;
@@ -308,6 +313,11 @@ export type MagnetPocketMetadata = {
   centerMm: [number, number];
   adjusted: boolean;
   safe: boolean;
+};
+/** Where the clear keyring opening ended up; articulated names also report the carrying letter. */
+export type KeyringMetadata = {
+  centerMm: [number, number];
+  hostIndex?: number;
 };
 /** A complete candidate result, kept separate from the preview queue. */
 export type GeometryValidation = Omit<GeometryResult, 'generationId'>;
@@ -412,6 +422,13 @@ export const validateGeometryResult = (result: GeometryResult): boolean => {
       typeof pocket.safe === 'boolean'
     );
   };
+  const keyringValid = (keyring: unknown): boolean =>
+    isRecord(keyring) &&
+    Array.isArray(keyring.centerMm) &&
+    keyring.centerMm.length === 2 &&
+    keyring.centerMm.every((value) => typeof value === 'number' && Number.isFinite(value)) &&
+    (keyring.hostIndex === undefined ||
+      (Number.isInteger(keyring.hostIndex) && (keyring.hostIndex as number) >= 0));
   return (
     Number.isInteger(result.generationId) &&
     meshValid(result.baseMesh) &&
@@ -428,6 +445,7 @@ export const validateGeometryResult = (result: GeometryResult): boolean => {
     typeof result.printable === 'boolean' &&
     !!result.appearance &&
     (!result.magnetPocket || magnetPocketValid(result.magnetPocket)) &&
+    (!result.keyring || keyringValid(result.keyring)) &&
     (!result.edgeFinish || edgeFinishValid(result.edgeFinish)) &&
     (!result.textFinishLimits || textFinishLimitsValid(result.textFinishLimits)) &&
     (!result.baseFinishLimits || baseFinishLimitsValid(result.baseFinishLimits)) &&

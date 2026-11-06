@@ -500,18 +500,34 @@ describe('keychain parameters', () => {
 });
 
 describe('keepAppearanceAcrossTemplates', () => {
-  it('pins the visible default colors when the next template has different defaults', () => {
+  it('lets untouched defaults follow each template palette in both directions', () => {
+    const untouched = { version: 1 as const };
+    const articulated = keepAppearanceAcrossTemplates(
+      untouched,
+      'name-keychain',
+      'articulated-name',
+    );
+    expect(articulated).toBe(untouched);
+    expect(applyPrintAppearanceOverrides(ARTICULATED_PRINT_APPEARANCE, articulated)).toEqual(
+      ARTICULATED_PRINT_APPEARANCE,
+    );
+    const back = keepAppearanceAcrossTemplates(articulated, 'articulated-name', 'name-keychain');
+    expect(applyPrintAppearanceOverrides(DEFAULT_PRINT_APPEARANCE, back)).toEqual(
+      DEFAULT_PRINT_APPEARANCE,
+    );
+  });
+
+  it('pins the other default slot once a color has been chosen', () => {
     expect(
-      keepAppearanceAcrossTemplates({ version: 1 }, 'name-keychain', 'articulated-name'),
+      keepAppearanceAcrossTemplates(
+        { version: 1, relief: '#223344' },
+        'articulated-name',
+        'nameplate',
+      ),
     ).toEqual({
       version: 1,
-      base: DEFAULT_PRINT_APPEARANCE.base.color,
-      relief: DEFAULT_PRINT_APPEARANCE.relief.color,
-    });
-    expect(keepAppearanceAcrossTemplates({ version: 1 }, 'articulated-name', 'nameplate')).toEqual({
-      version: 1,
       base: ARTICULATED_PRINT_APPEARANCE.base.color,
-      relief: ARTICULATED_PRINT_APPEARANCE.relief.color,
+      relief: '#223344',
     });
   });
 

@@ -242,8 +242,11 @@
   display: flex;
 }
 
+/* Range value fields are compact inline readouts; RangeControl.css owns their size. */
 .controls-panel
-  input:not([type='range']):not([type='checkbox']):not([type='radio']):not([type='file']):not([type='color']),
+  input:not([type='range']):not([type='checkbox']):not([type='radio']):not([type='file']):not([type='color']):not(
+    .range-value-input
+  ),
 .controls-panel select {
   width: 100%;
   min-width: 0;
@@ -270,8 +273,8 @@
 }
 
 .controls-panel
-  input:not([type='range']):not([type='checkbox']):not([type='radio']):not([type='file']):not(
-    [type='color']
+  input:not([type='range']):not([type='checkbox']):not([type='radio']):not([type='file']):not([type='color']):not(
+    .range-value-input
   ):focus-visible,
 .controls-panel select:focus-visible {
   border-color: var(--field-focus-ring);
@@ -454,12 +457,9 @@ p {
   line-height: 20px;
 }
 
+/* Flat like its neighbours: the dividers separate it and the position drawing is its only frame. */
 .controls-panel [data-keyring-panel='true'] {
   container: keyring-sidebar / inline-size;
-  padding: 14px;
-  border: 1px solid #e3d9d0;
-  border-radius: 16px;
-  background: #faf7f2;
 }
 
 .control-subsection {
@@ -1540,7 +1540,8 @@ p {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   column-gap: var(--control-space-5);
-  row-gap: var(--control-subsection-gap);
+  /* Wider than the label-to-slider gap so each label reads with its own slider. */
+  row-gap: var(--control-space-5);
 }
 
 .parameter-group {
@@ -1828,7 +1829,6 @@ input[type='range'] {
 
   .range-grid {
     grid-template-columns: 1fr;
-    row-gap: var(--control-subsection-gap);
   }
 
   .preview-panel {

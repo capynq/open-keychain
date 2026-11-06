@@ -45,25 +45,26 @@ const checkFit = async (dialog: Locator) => {
   expect(splitWords).toEqual([]);
 };
 
-const expectPositionIllustration = async (scope: Locator) => {
+const expectPositionIllustration = async (scope: Locator, artwork = 'contour') => {
   const diagram = scope.getByTestId('keyring-position-diagram');
   await expect(diagram).toBeVisible();
   await expect(diagram).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-  const sample = diagram.locator('img');
-  await expect(sample).toHaveAttribute('src', '/showcase/keyring-position-alex.png');
-  await expect(sample).toHaveAttribute('alt', '');
-  await expect(sample).toHaveAttribute('draggable', 'false');
-  await expect(sample).toHaveCSS('pointer-events', 'none');
-  await expect(sample).toHaveCSS('mix-blend-mode', 'multiply');
-  await expect(sample).toHaveCSS('user-select', 'none');
-  await sample.evaluate((image) => (image as HTMLImageElement).decode());
-  expect(await sample.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBe(778);
-  expect(await sample.evaluate((image) => (image as HTMLImageElement).naturalHeight)).toBe(296);
+  await expect(diagram).toHaveAttribute('data-preview-artwork', artwork);
+  const drawing = diagram.locator('svg').first();
+  await expect(drawing).toHaveAttribute('aria-hidden', 'true');
+  await expect(drawing).toHaveCSS('pointer-events', 'none');
+  await expect(diagram.locator('img')).toHaveCount(0);
+  const selected = await diagram.locator('input[type="radio"]:checked').getAttribute('value');
+  await expect(diagram.locator('path[data-keyring-tab="selected"]')).toHaveAttribute(
+    'data-position',
+    selected!,
+  );
   await expect(diagram.getByRole('radio')).toHaveCount(6);
-  await expect(
-    diagram.locator('label[data-position="right"]').locator('span[aria-hidden="true"]'),
-  ).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   await expect(diagram.getByRole('radio', { name: /ALEX/ })).toHaveCount(0);
+  await expect(diagram.locator(`label[data-position="${selected}"]`)).toHaveAttribute(
+    'data-displaced',
+    'false',
+  );
   const markers = await diagram.locator('label[data-position]').evaluateAll((labels) =>
     labels.map((label) => {
       const { x, y } = label.getBoundingClientRect();
@@ -84,29 +85,27 @@ const expectPositionIllustration = async (scope: Locator) => {
   expect(byPosition['top-left'].y).toBeLessThan(byPosition.left.y);
   expect(byPosition['top-right'].y).toBeLessThan(byPosition.right.y);
   expect(byPosition.bottom.y).toBeGreaterThan(byPosition.left.y);
-  const expectedAnchors: Record<string, [number, number]> = {
-    left: [0.1275, 0.7523],
-    right: [0.89, 0.7523],
-    top: [0.5983, 0.2838],
-    bottom: [0.5983, 0.7568],
-    'top-left': [0.1857, 0.3559],
-    'top-right': [0.8736, 0.2793],
-  };
   const diagramBounds = await diagram.boundingBox();
   expect(diagramBounds).not.toBeNull();
   for (const marker of markers) {
-    const anchor = expectedAnchors[marker.position!];
-    const relativeX = (marker.x + marker.width / 2 - diagramBounds!.x) / diagramBounds!.width;
-    const relativeY = (marker.y + marker.height / 2 - diagramBounds!.y) / diagramBounds!.height;
-    expect(Math.abs(relativeX - anchor[0])).toBeLessThan(0.015);
-    expect(Math.abs(relativeY - anchor[1])).toBeLessThan(0.015);
+    expect(marker.x).toBeGreaterThanOrEqual(diagramBounds!.x - 1);
+    expect(marker.y).toBeGreaterThanOrEqual(diagramBounds!.y - 1);
+    expect(marker.x + marker.width).toBeLessThanOrEqual(
+      diagramBounds!.x + diagramBounds!.width + 1,
+    );
+    expect(marker.y + marker.height).toBeLessThanOrEqual(
+      diagramBounds!.y + diagramBounds!.height + 1,
+    );
   }
   for (let first = 0; first < markers.length; first += 1) {
     for (let second = first + 1; second < markers.length; second += 1) {
       const a = markers[first];
       const b = markers[second];
       const overlaps =
-        a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+        a.x + 0.5 < b.x + b.width &&
+        a.x + a.width > b.x + 0.5 &&
+        a.y + 0.5 < b.y + b.height &&
+        a.y + a.height > b.y + 0.5;
       expect(overlaps, `${a.position} and ${b.position} targets overlap`).toBe(false);
     }
   }
@@ -183,6 +182,10 @@ test('sidebar keyring choices show their shape, size, and direction controls', a
   await expect(position).toBeChecked();
   await expect(keyring.getByTestId('keyring-position-current')).toHaveText('Top');
   await expectPositionIllustration(keyring);
+  const diagram = keyring.getByTestId('keyring-position-diagram');
+  await expect(diagram).toHaveAttribute('data-preview-opening', 'standard-round');
+  await ovalSlot.check();
+  await expect(diagram).toHaveAttribute('data-preview-opening', 'oval-slot');
 });
 
 test('walks through six focused steps and applies accepted keyring, colors, and preferences', async ({

@@ -26,6 +26,7 @@ import { useEditorMode } from '@/features/customizer/hooks/useEditorMode';
 import { useFontChooser } from '@/features/customizer/hooks/useFontChooser';
 import { useFontSuggestions } from '@/features/customizer/hooks/useFontSuggestions';
 import { useProNavigation } from '@/features/customizer/hooks/useProNavigation';
+import { keyringPreviewPreset } from '@/features/customizer/model/keyring-position-preview';
 import { sectionIsDefault } from '@/features/customizer/model/reset';
 import {
   styleDescription,
@@ -363,10 +364,13 @@ export const ControlsPanel = ({
   const hasTemplateDetailRanges = hasPresentationParameters('template-details');
   const hasStyleDetailRanges = hasPresentationParameters('style-details');
   const hasShapeRanges = hasPresentationParameters('refine');
+  /* Typography and Print always render; every group after the first gets a divider above it. */
   const adjustmentGroups = [
+    { key: 'typography', visible: true },
     { key: 'template-details', visible: hasTemplateDetailRanges },
     { key: 'style-details', visible: hasStyleDetailRanges },
     { key: 'shape', visible: hasShapeRanges },
+    { key: 'print', visible: true },
   ] as const;
   const hasPreviousVisibleAdjustmentGroup = (key: (typeof adjustmentGroups)[number]['key']) => {
     const visibleGroups = adjustmentGroups.filter((group) => group.visible);
@@ -625,6 +629,9 @@ export const ControlsPanel = ({
           <KeyringPositionPicker
             locale={locale}
             selected={params.keyringPosition ?? 'left'}
+            templateId={params.templateId}
+            styleId={params.styleId}
+            opening={keyringPreviewPreset(params)}
             onSelect={(keyringPosition) => updateMany({ keyringPosition }, 'template-details')}
           />
           {renderCandidateFeedback('template-details')}
@@ -981,6 +988,9 @@ export const ControlsPanel = ({
             </div>
             {renderCandidateFeedback('refine', 'adjustments', 'typography')}
           </div>
+          {hasPreviousVisibleAdjustmentGroup('template-details') && (
+            <hr className="control-subsection-divider" />
+          )}
           {hasTemplateDetailRanges && (
             <div
               className="control-subsection adjustment-category"
@@ -1053,6 +1063,9 @@ export const ControlsPanel = ({
               />
               {renderCandidateFeedback('refine', 'adjustments', 'shape')}
             </div>
+          )}
+          {hasPreviousVisibleAdjustmentGroup('print') && (
+            <hr className="control-subsection-divider" />
           )}
           <div
             className="control-subsection adjustment-category"

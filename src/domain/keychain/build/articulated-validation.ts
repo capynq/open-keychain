@@ -7,6 +7,7 @@ import {
   asMesh,
   validateMesh,
 } from '../../../infrastructure/geometry/manifold-utils';
+import { isOpeningClearOfSolids, keyringOpeningBlockedIssue } from './keyring-validation';
 
 const hasSolidIntersection = (left: Manifold, right: Manifold): boolean => {
   const intersection = left.intersect(right);
@@ -110,6 +111,15 @@ export const validateArticulatedBuild = (
       break;
     }
   }
+  if (
+    build.keyringOpening &&
+    !isOpeningClearOfSolids(
+      build.keyringOpening.section,
+      [...build.parts.map((part) => part.solid), ...build.connectors],
+      build.bounds,
+    )
+  )
+    issues.push(keyringOpeningBlockedIssue());
   if (!motionEnvelopeValid(build, params.maxJointAngleDeg)) {
     issues.push({
       severity: 'error',

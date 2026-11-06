@@ -16,7 +16,11 @@ import type { FontCategory } from '@/domain/keychain/fonts/catalog';
 import type { AcceptedMetrics } from '@/domain/keychain/model/accepted-metrics';
 import type { KeyringPosition } from '@/domain/keychain/model/keyring-position';
 import type { KeyringOpeningShape, KeyringPresetId } from '@/domain/keychain/model/keyring-presets';
-import type { PrintAppearanceOverrides, SizeEnvelope } from '@/domain/keychain/model/types';
+import type {
+  KeychainParams,
+  PrintAppearanceOverrides,
+  SizeEnvelope,
+} from '@/domain/keychain/model/types';
 import type { QuickSetupChanges } from '@/features/customizer/model/quick-setup';
 import type { Locale } from '@/infrastructure/i18n';
 import type { RecoveryFailure } from '@/shared/lib/recovery/failure';
@@ -55,6 +59,9 @@ type Props = {
   acceptedMetrics?: AcceptedMetrics;
   acceptedText?: string;
   supportsKeyring: boolean;
+  /** The design the keyring position preview illustrates. */
+  templateId?: KeychainParams['templateId'];
+  styleId?: KeychainParams['styleId'];
   initialKeyringPreset?: KeyringPresetId;
   initialKeyringPosition?: KeyringPosition;
   initialKeyringOpeningShape?: KeyringOpeningShape;
@@ -78,6 +85,8 @@ export const QuickSetupDialog = ({
   acceptedMetrics,
   acceptedText,
   supportsKeyring,
+  templateId,
+  styleId,
   initialKeyringPreset = 'standard-round',
   initialKeyringPosition = 'left',
   initialKeyringOpeningShape = 'round',
@@ -306,7 +315,13 @@ export const QuickSetupDialog = ({
             {stepKey === 'name-size' ? (
               <NameSizeStep locale={locale} draft={draft} setDraft={setDraft} />
             ) : stepKey === 'keyring-position' ? (
-              <KeyringPositionStep locale={locale} draft={draft} setDraft={setDraft} />
+              <KeyringPositionStep
+                locale={locale}
+                draft={draft}
+                setDraft={setDraft}
+                templateId={templateId}
+                styleId={styleId}
+              />
             ) : stepKey === 'keyring-opening' ? (
               <KeyringStep locale={locale} draft={draft} setDraft={setDraft} />
             ) : stepKey === 'fonts' ? (

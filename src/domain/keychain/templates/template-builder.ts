@@ -4,7 +4,9 @@ import type {
   GeometryWasm,
   Manifold,
 } from '../../../infrastructure/geometry/manifold-types';
+import type { KeyringPosition } from '../model/keyring-position';
 import type { StyleId, TemplateId } from '../model/types';
+import type { GlyphOutline } from '../text/outline';
 
 import {
   extrudeTextFinished,
@@ -23,10 +25,11 @@ import {
   buildStyle,
   capsule,
   effectiveMargin,
-  ringAssembly,
+  ringAssemblyWithOpening,
   roundedRect,
   sectionBounds,
   union,
+  type KeyringOpening,
   type StyleBuild,
   type StyleInput,
 } from '../styles/style-builder';
@@ -86,6 +89,8 @@ export type ArticulatedBuild = {
     motionAllowance: number;
     countersPreserved: boolean;
   };
+  /** The keyring opening and the letter that carries it, in model coordinates. */
+  keyringOpening?: KeyringOpening & { hostIndex: number };
   constraints?: GeometryConstraints;
   printProfile?: PrintProfile;
 };
@@ -370,6 +375,36 @@ const connectorSolid = (
   dogbone.delete();
   return solid;
 };
+/**
+ * The letter that carries an articulated keyring. Side and corner positions use the matching end of
+ * the chain so the tab never sits between two jointed letters; top and bottom use the letter nearest
+ * the middle of the chain. Glyphs are laid out end to end, so their widths locate that middle.
+ */
+export const articulatedKeyringHostIndex = (
+  glyphs: readonly Pick<GlyphOutline, 'bounds' | 'polygons'>[],
+  position: KeyringPosition,
+): number => {
+  const printable = glyphs
+    .map((glyph, index) => ({ glyph, index }))
+    .filter(({ glyph }) => glyph.polygons.length);
+  if (!printable.length) return 0;
+  if (position === 'left' || position === 'top-left') return printable[0].index;
+  if (position === 'right' || position === 'top-right')
+    return printable[printable.length - 1].index;
+  const widths = glyphs.map((glyph) => Math.max(0, glyph.bounds.maxX - glyph.bounds.minX));
+  const middle = widths.reduce((total, width) => total + width, 0) / 2;
+  let start = 0;
+  const centers = widths.map((width) => {
+    const center = start + width / 2;
+    start += width;
+    return center;
+  });
+  return printable.reduce((best, item) =>
+    Math.abs(centers[item.index] - middle) < Math.abs(centers[best.index] - middle) - 1e-6
+      ? item
+      : best,
+  ).index;
+};
 const articulatedStyle = (wasm: GeometryWasm, input: StyleInput): ArticulatedBuild | StyleBuild => {
   const glyphs = input.glyphs ?? [];
   if (!glyphs.length || input.baseThickness === undefined || input.reliefDepth === undefined)
@@ -407,6 +442,9 @@ const articulatedStyle = (wasm: GeometryWasm, input: StyleInput): ArticulatedBui
     { min: Infinity, max: -Infinity },
   );
   const jointY = glyphBounds.min + (glyphBounds.max - glyphBounds.min) * 0.4;
+  const keyringPosition = input.keyringPosition ?? 'left';
+  const keyringHostIndex = articulatedKeyringHostIndex(glyphs, keyringPosition);
+  let hostOpening: KeyringOpening | undefined;
   const prototypes: ArticulatedPrototype[] = [];
   for (let index = 0; index < glyphs.length; index += 1) {
     const glyphOutline = wasm.CrossSection.ofPolygons(
@@ -432,19 +470,20 @@ const articulatedStyle = (wasm: GeometryWasm, input: StyleInput): ArticulatedBui
       rightAnchor = right.anchor;
       structural = addJointBoss(wasm, structural, right.anchor, right.root, bossRadius);
     }
-    if (index === 0) {
-      const next = ringAssembly(
+    if (index === keyringHostIndex) {
+      const ring = ringAssemblyWithOpening(
         wasm,
         structural,
         input.holeDiameter,
         input.keyringWall,
-        input.keyringPosition ?? 'left',
+        keyringPosition,
         input.ringOffsetMm ?? 0,
         input.keyringOpeningShape ?? 'round',
         input.keyringSlotLength ?? input.holeDiameter,
       );
       structural.delete();
-      structural = next;
+      structural = ring.section;
+      hostOpening = ring.opening;
     }
     const counterGuard = preserveCounters(wasm, structural, glyph);
     structural = counterGuard.section;
@@ -490,6 +529,7 @@ const articulatedStyle = (wasm: GeometryWasm, input: StyleInput): ArticulatedBui
   } catch (error) {
     deleteAll(preparedCaps);
     prototypes.forEach((prototype) => deleteAll([prototype.glyph, prototype.structural]));
+    hostOpening?.section.delete();
     throw error;
   }
   const offsets = prototypes.map((prototype) => {
@@ -588,6 +628,13 @@ const articulatedStyle = (wasm: GeometryWasm, input: StyleInput): ArticulatedBui
   }
   const allSolids = [...parts.map((part) => part.solid), ...connectors];
   const bounds = aggregateBounds(allSolids);
+  const hostOffsetX = offsets[keyringHostIndex] + centerOffset;
+  const keyringOpening = hostOpening && {
+    section: hostOpening.section.translate([hostOffsetX, 0]),
+    center: [hostOpening.center[0] + hostOffsetX, hostOpening.center[1]] as Vec2,
+    hostIndex: keyringHostIndex,
+  };
+  hostOpening?.section.delete();
   return {
     kind: 'articulated',
     textFinishLimits: intersectTextFinishLimits(parts.map((part) => part.textFinishLimits)),
@@ -595,6 +642,7 @@ const articulatedStyle = (wasm: GeometryWasm, input: StyleInput): ArticulatedBui
     connectors,
     widthMm: (bounds.max[0] - bounds.min[0]) / MANIFOLD_SCALE,
     bounds,
+    keyringOpening,
     invariants: {
       headDiameter: headRadius * 2,
       throatWidth: bridgeWidth + clearance * 2,
@@ -825,5 +873,6 @@ export const releaseArticulatedBuild = (build: ArticulatedBuild): void => {
   deleteAll([
     ...build.parts.flatMap((part) => [part.body, part.cap, part.solid]),
     ...build.connectors,
+    ...(build.keyringOpening ? [build.keyringOpening.section] : []),
   ]);
 };

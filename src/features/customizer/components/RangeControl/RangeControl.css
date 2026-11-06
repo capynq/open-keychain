@@ -1,4 +1,5 @@
 .range-control {
+  --range-value-height: 28px;
   display: grid;
   width: 100%;
   min-width: 0;
@@ -8,10 +9,11 @@
 
 .control-label {
   display: flex;
+  min-height: var(--range-value-height);
   align-items: center;
   justify-content: space-between;
   gap: var(--field-label-value-gap);
-  color: #4e5260;
+  color: var(--workshop-text-control);
   font-size: 12px;
   font-weight: 650;
   line-height: 16px;
@@ -24,15 +26,20 @@
   flex: 0 0 auto;
   align-items: center;
   gap: 4px;
-  color: #8a8d95;
+  color: var(--workshop-text-muted);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.range-value input {
-  width: 4.2em;
-  height: 26px;
+/* One fixed width keeps every value column aligned whatever the digits ("0.35", "20.0", "120"). */
+.range-value .range-value-input {
+  width: 4.75em;
+  min-width: 0;
+  height: var(--range-value-height);
+  min-height: 0;
+  box-sizing: border-box;
+  margin: 0;
   padding: 0 6px;
   border: 1px solid var(--workshop-border);
   border-radius: 6px;
@@ -40,23 +47,24 @@
   color: var(--workshop-text);
   font: inherit;
   font-size: 12px;
+  line-height: calc(var(--range-value-height) - 2px);
   text-align: right;
   appearance: textfield;
 }
 
-.range-value input::-webkit-outer-spin-button,
-.range-value input::-webkit-inner-spin-button {
+.range-value .range-value-input::-webkit-outer-spin-button,
+.range-value .range-value-input::-webkit-inner-spin-button {
   margin: 0;
   appearance: none;
 }
 
-.range-value input:focus-visible {
+.range-value .range-value-input:focus-visible {
   border-color: var(--field-focus-ring);
   outline: 2px solid var(--field-focus-ring);
   outline-offset: -1px;
 }
 
-.range-control input:focus-visible {
+.range-control input[type='range']:focus-visible {
   border-color: var(--field-focus-ring);
   outline: 2px solid var(--field-focus-ring);
   outline-offset: -2px;
@@ -65,6 +73,7 @@
 
 @media (max-width: 760px) {
   .range-control {
+    --range-value-height: 36px;
     min-height: var(--workshop-touch-target);
   }
 
@@ -73,8 +82,7 @@
     line-height: 16px;
   }
 
-  .range-value input {
-    height: 34px;
+  .range-value .range-value-input {
     font-size: 14px;
   }
 }

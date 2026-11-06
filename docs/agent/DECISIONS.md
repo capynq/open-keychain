@@ -1,5 +1,34 @@
 # Open Keychain decisions
 
+## Keyring openings are placed by position and proven clear
+
+**Status:** active
+
+**Decision:** An articulated name carries its keyring on the letter that matches the position:
+the first letter for left and top left, the last for right and top right, and the letter nearest the
+middle of the chain for top and bottom. Every builder path keeps the cut opening and the builder
+rejects a design with `keyring-opening-blocked` when backing, raised text, subtitle, another
+articulated letter or a connector covers it. Before that check, the ring moves straight out from its
+anchor until the opening clears the body (0.5 mm steps, then bisection); the hull keeps the longer
+tab joined. Diagonal positions scan 10–90% of the rotated side instead of 24–76% so corners of
+wide plates qualify, and equally good extremes (both ribbon tail tips) resolve toward the model's
+lower side so left and right stay mirrored. `GeometryResult.keyring` reports the opening centre and,
+for articulated names, the carrying letter.
+
+**Rationale:** The articulated builder attached the ring to the first glyph whatever the position,
+so Right put it between A and L of ALEX, where the next socket and connector ran through it. A
+972-build matrix (`pnpm test:geometry:keyring`) then showed openings partly filled on every other
+template without any error: oval slots and ±3 mm offsets on sloped Contour, Bubble and Arch edges,
+Ribbon diagonals, Capsule and Soft tag diagonals on long names (the corner fell outside the scan
+band), Heart split offsets and thin or notched articulated letters (Montserrat IIII, Mo).
+
+**Consequences:** Side, top and bottom placements that were already clear keep their position;
+blocked placements now sit further out, diagonal placements can move toward the corner and Ribbon
+right moves from the upper to the lower tail tip, so some shared designs render their ring
+differently. Single-letter articulated names and Cyrillic in Latin-only articulated
+fonts stay rejected by their existing rules. The keyring picker artwork is regenerated from the
+builder whenever placement changes (`pnpm assets:keyring-previews`, `--check` to verify).
+
 ## Hosted CI runs selected gates in parallel jobs
 
 **Status:** active
@@ -28,9 +57,12 @@ post-merge checks.
 
 **Status:** active
 
-**Decision:** Switching template or style never changes the colors on screen: a color slot that
-still follows the old template default is pinned when the new default differs
-(`keepAppearanceAcrossTemplates`). Every accepted edit enters a 50-step undo/redo history
+**Decision:** Switching template or style never changes colors a person chose: once either slot
+is chosen, a slot that still follows the old template default is pinned when the new default
+differs (`keepAppearanceAcrossTemplates`). Untouched defaults follow each template's palette
+(amended 2026-11-06): Articulated name shows almost only its caps from above, so the keychain's
+cream text color made light letters on a light stage; its own palette keeps red and cream with the
+red on the letter faces, as its template card shows. Every accepted edit enters a 50-step undo/redo history
 (Randomize, recovery fixes, sidebar color edits, Reset all and Quick setup colors included;
 color-picker drags within 0.8 s are one step); Undo and Redo stay in the header and respond to
 Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z and Ctrl+Y outside text fields. History follows the order of
