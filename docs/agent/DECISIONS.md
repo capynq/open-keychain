@@ -57,9 +57,12 @@ post-merge checks.
 
 **Status:** active
 
-**Decision:** Switching template or style never changes the colors on screen: a color slot that
-still follows the old template default is pinned when the new default differs
-(`keepAppearanceAcrossTemplates`). Every accepted edit enters a 50-step undo/redo history
+**Decision:** Switching template or style never changes colors a person chose: once either slot
+is chosen, a slot that still follows the old template default is pinned when the new default
+differs (`keepAppearanceAcrossTemplates`). Untouched defaults follow each template's palette
+(amended 2026-11-06): Articulated name shows almost only its caps from above, so the keychain's
+cream text color made light letters on a light stage; its own palette keeps red and cream with the
+red on the letter faces, as its template card shows. Every accepted edit enters a 50-step undo/redo history
 (Randomize, recovery fixes, sidebar color edits, Reset all and Quick setup colors included;
 color-picker drags within 0.8 s are one step); Undo and Redo stay in the header and respond to
 Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z and Ctrl+Y outside text fields. History follows the order of

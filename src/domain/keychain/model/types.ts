@@ -227,14 +227,18 @@ export const ARTICULATED_PRINT_APPEARANCE: PrintAppearance = {
 export const printAppearanceForTemplate = (templateId: TemplateId): PrintAppearance =>
   templateId === 'articulated-name' ? ARTICULATED_PRINT_APPEARANCE : DEFAULT_PRINT_APPEARANCE;
 /**
- * Keeps the colors a person sees when an edit switches templates: a color slot that still
- * follows the old template's default is pinned to it when the new template's default differs.
+ * Keeps the colors a person chose when an edit switches templates: once either slot is chosen, a
+ * slot that still follows the old template's default is pinned to it when the new default differs.
+ * Untouched defaults follow each template's own palette instead. Articulated letters show almost
+ * only their caps from above, so the keychain's light text color would leave light letters on a
+ * light stage; its palette keeps the same red and cream with the red on the letter faces.
  */
 export const keepAppearanceAcrossTemplates = (
   overrides: PrintAppearanceOverrides,
   from: TemplateId,
   to: TemplateId,
 ): PrintAppearanceOverrides => {
+  if (overrides.base === undefined && overrides.relief === undefined) return overrides;
   const before = printAppearanceForTemplate(from);
   const after = printAppearanceForTemplate(to);
   const base =
