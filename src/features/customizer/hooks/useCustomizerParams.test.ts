@@ -149,6 +149,34 @@ describe('useCustomizerParams candidate scheduling', () => {
     ]);
   });
 
+  it('keeps a color edit made during Randomize above the randomize step', async () => {
+    let colors: { version: 1; base?: string } = { version: 1 };
+    const getApi = renderHook({
+      appearance: { get: () => colors, set: (next) => (colors = next) },
+    });
+    let finish: ((result: GeometryResult) => void) | undefined;
+    const validate = vi.fn(() => new Promise<GeometryResult>((resolve) => (finish = resolve)));
+    let randomizing: Promise<unknown> | undefined;
+
+    act(() => {
+      randomizing = getApi().randomize(() => 0, validate);
+    });
+    act(() => {
+      getApi().recordAppearanceEdit(colors);
+      colors = { version: 1, base: '#111111' };
+    });
+    await act(async () => {
+      finish?.({ ...validResult(), generationId: 7 } as GeometryResult);
+      await randomizing;
+    });
+    const randomized = getApi().acceptedParams;
+
+    act(() => getApi().undo());
+    expect(colors.base).toBeUndefined();
+    expect(getApi().acceptedParams).toEqual(randomized);
+    expect(getApi().undoKind).toBe('randomize');
+  });
+
   it('finishes an in-flight candidate attempt as superseded when randomization begins', async () => {
     const started: string[] = [];
     const finished: unknown[][] = [];

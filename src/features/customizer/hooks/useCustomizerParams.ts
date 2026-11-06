@@ -276,12 +276,12 @@ export const useCustomizerParams = (
       { params: entry, kind, ...(appearance ? { appearance, at } : {}) },
     ].slice(-HISTORY_LIMIT);
   };
-  const insertUndo = (entry: KeychainParams, index: number): void => {
+  const insertUndo = (entry: KeychainParams, index: number, kind: UndoKind = 'change'): void => {
     const at = Math.min(index, undoStack.current.length);
 
     undoStack.current = [
       ...undoStack.current.slice(0, at),
-      { params: entry, kind: 'change' as const },
+      { params: entry, kind },
       ...undoStack.current.slice(at),
     ].slice(-HISTORY_LIMIT);
   };
@@ -1377,6 +1377,8 @@ export const useCustomizerParams = (
       supersedeActiveCandidateAttempt();
       const original = acceptedParamsRef.current;
       const requestId = ++candidateRequestId.current;
+      /* Like a checked edit, Randomize keeps the history position it had when it started. */
+      const insertAt = undoStack.current.length;
 
       candidateScheduler.cancel();
       const font =
@@ -1455,7 +1457,7 @@ export const useCustomizerParams = (
         const normalized = normalizeParams(transaction.params);
 
         pendingHistory.current = undefined;
-        pushUndo(original, 'randomize');
+        insertUndo(original, insertAt, 'randomize');
         discardRedo();
         syncHistory();
         if (normalized.templateId !== original.templateId)
