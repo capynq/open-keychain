@@ -32,8 +32,47 @@ describe('change-based CI workflow', () => {
     expect(workflow).toContain('pnpm validate:ci:changed');
     expect(workflow).toContain("github.event_name == 'workflow_dispatch'");
     expect(workflow).toContain("github.event_name == 'push' && github.ref == 'refs/heads/main'");
-    expect(workflow.match(/pnpm install --frozen-lockfile/g)).toHaveLength(2);
+    expect(workflow).not.toContain('pnpm install');
+    expect(workflow.match(/uses: \.\/\.github\/actions\/setup$/gm)).toHaveLength(5);
+    expect(
+      readFileSync('.github/actions/setup/action.yml', 'utf8').match(
+        /pnpm install --frozen-lockfile/g,
+      ),
+    ).toHaveLength(1);
     expect(existsSync('.github/workflows/netlify.yml')).toBe(false);
+  });
+
+  it('runs selected gates in parallel jobs and reports them as one quality status', () => {
+    const workflow = readFileSync('.github/workflows/ci.yml', 'utf8');
+    const job = (name) => {
+      const start = workflow.indexOf(`\n  ${name}:\n`);
+      const next = workflow.slice(start + 1).search(/\n {2}[a-z-]+:\n/);
+      return workflow.slice(start, next < 0 ? undefined : start + 1 + next);
+    };
+    for (const [name, concurrency] of [
+      ['static', 3],
+      ['unit', 4],
+      ['browser', 2],
+    ]) {
+      expect(job(name)).toContain('needs: changes');
+      expect(job(name)).toContain(`VALIDATION_GATE_GROUP: ${name}`);
+      expect(job(name)).toContain(`VALIDATION_CONCURRENCY: ${concurrency}`);
+      expect(job(name)).toContain(`needs.changes.outputs.needs_${name} == 'true'`);
+    }
+    expect(job('browser')).toContain("needs.changes.outputs.merged_pr != 'true'");
+    expect(job('changes')).toContain('repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls');
+    expect(job('changes')).toContain('pull-requests: read');
+    expect(job('quality')).toContain('needs: [changes, static, unit, browser, full]');
+    expect(job('quality')).toContain('if: ${{ !cancelled() }}');
+    expect(job('quality')).toContain(
+      'all(.value.result == "success" or .value.result == "skipped")',
+    );
+    expect(job('production-build')).toContain("needs.quality.result == 'success'");
+    expect(job('deploy')).toContain("needs.production-build.result == 'success'");
+    const chromium = readFileSync('.github/actions/chromium/action.yml', 'utf8');
+    expect(chromium).toContain('pnpm exec playwright install chromium');
+    expect(chromium).not.toContain('--with-deps');
+    expect(chromium).toContain('pnpm exec playwright install-deps chromium');
   });
 
   it('installs browser coverage for changed journeys and verifies the exact production artifact', () => {
@@ -42,7 +81,8 @@ describe('change-based CI workflow', () => {
       workflow.indexOf('\n  production-build:'),
       workflow.indexOf('\n  deploy:'),
     );
-    expect(workflow).toContain("if: steps.changes.outputs.needs_browser == 'true'");
+    expect(workflow).toContain("needs.changes.outputs.needs_browser == 'true'");
+    expect(workflow.match(/uses: \.\/\.github\/actions\/chromium$/gm)).toHaveLength(3);
     expect(productionBuild).toContain('name: Verify production artifact user journey and exports');
     expect(productionBuild).toContain('run: pnpm test:e2e:journey');
     const productionSmoke = productionBuild.slice(

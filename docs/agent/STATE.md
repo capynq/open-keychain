@@ -1,5 +1,28 @@
 # Agent handoff
 
+## Customizer UX pass, 2026-11-05
+
+Uncommitted on `main`; no commit or push. Owner-approved review items implemented (see DECISIONS
+"Customizer UX pass"): colors kept on template switches, 50-step undo/redo with shortcuts, Print
+facts replaced by a readout line plus an on-demand notice, sharp-model rebuild feedback with a
+queued Export, one-row phone header and sticky phone preview, segmented Simple choices, template and
+style grid, sidebar section links, inline checking state, conditional resets, Pro value fields,
+model crossfade and camera preset tweens, Views menu, labelled Quick setup with prefilled reopen and
+clickable steps, export warnings list and Recommended badge, slim consent bar, toast fade-out, and
+the over-width warning wording fix.
+
+Validation in a cloud container with software WebGL and the pre-installed Chromium (Playwright 1.64
+needed `executablePath: /opt/pw-browsers/chromium` through a temporary local config, now removed):
+`format:check`, `lint`, `typecheck` pass; `test:fast` 96 files / 753 tests; smoke 6/6; journey 9/9
+(desktop, mobile, mobile-2x); keychain, font-browser, quick-setup, recovery-accessibility,
+contextual-actions, routes, simple-editor, display-surfaces and motion 115/116 at two workers (the
+remaining recovery-accessibility test passes 3/3 alone; it allows 5 s for first ready). Also
+failing on the untouched baseline here: `carousel.spec.ts:100` and the 3,000 ms startup budget
+(baseline 3,280 ms, new 3,465 ms). Not run: Firefox, Safari, geometry matrix, full mobile project.
+
+Open: Pro sidebar is longer (4,563 px vs 4,290 px) with full-width sliders; camera fit distance is
+unchanged by decision.
+
 ## Committed and review follow-ups, 2026-11-04
 
 Committed on `main` (owner-authorized; not pushed): `5b487b1` chore(lint), `c98b950` feat(customizer), `c36d8a3` docs, then the fixes below in one `fix` commit.

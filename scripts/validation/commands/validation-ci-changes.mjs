@@ -1,7 +1,7 @@
 import { appendFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import process from 'node:process';
-import { createCiChangedGatePlan } from '../core/validation-plan.mjs';
+import { CI_GATE_GROUPS, ciGateGroup, createCiChangedGatePlan } from '../core/validation-plan.mjs';
 
 const git = (args) => {
   const result = spawnSync('git', args, { encoding: 'utf8' });
@@ -46,11 +46,17 @@ if (conservative || zeroSha) {
     }
   }
 }
+const plan = createCiChangedGatePlan(files);
 const outputs = {
   conservative: String(conservative),
   changed_count: String(files.length),
   changed_files: JSON.stringify(files),
-  needs_browser: String(createCiChangedGatePlan(files).some(({ id }) => id.startsWith('browser'))),
+  ...Object.fromEntries(
+    CI_GATE_GROUPS.map((group) => [
+      `needs_${group}`,
+      String(plan.some((gate) => ciGateGroup(gate) === group)),
+    ]),
+  ),
 };
 process.stdout.write(`${JSON.stringify({ ...outputs, files })}\n`);
 if (process.env.GITHUB_OUTPUT)

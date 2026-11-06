@@ -14,6 +14,8 @@ export type IconButtonProps = Omit<
   label: string;
   motion?: 'none' | 'nudge' | 'rotate' | 'scale';
   showLabel?: boolean;
+  /** Shorter visible text; the accessible name stays `label` and must contain it. */
+  visibleLabel?: string;
 };
 
 /** Shared icon action with an accessible label and stable behavior hooks. */
@@ -26,6 +28,7 @@ export const IconButton = ({
   label,
   motion = 'none',
   showLabel = false,
+  visibleLabel,
   ...buttonProps
 }: IconButtonProps) => (
   <button
@@ -43,6 +46,6 @@ export const IconButton = ({
     data-tooltip={label}
   >
     <Icon aria-hidden="true" focusable="false" size={iconSize} strokeWidth={2} />
-    {showLabel && <span className={styles.label}>{label}</span>}
+    {showLabel && <span className={styles.label}>{visibleLabel ?? label}</span>}
   </button>
 );

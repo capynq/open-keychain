@@ -66,7 +66,6 @@ test('renders the requested locale and template before the React entry loads', a
       '.preview-panel',
       '.preview-heading',
       '.viewer-wrap',
-      '.preview-summary',
     ];
     const mobileVariableHeightSelectors = new Set(['aside.controls-panel']);
     const readBoxes = async (root: '#boot-customizer' | '#root') =>

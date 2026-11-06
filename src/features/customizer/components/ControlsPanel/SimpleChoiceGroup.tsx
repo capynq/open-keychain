@@ -67,11 +67,15 @@ export const SimpleChoiceGroup = ({
         {t(locale, group.labelKey)}
         {!selected && <span className={styles.custom}>{t(locale, 'simpleCustom')}</span>}
       </legend>
-      <div className={styles.choices}>
+      <div className={`${styles.choices} ${styles.segmented}`}>
         {group.choices.map((choice, index) => {
           const Icon = icons[choice.icon];
           return (
-            <label className={styles.choice} key={choice.id}>
+            <label
+              className={styles.choice}
+              key={choice.id}
+              title={t(locale, choice.descriptionKey)}
+            >
               <input
                 type="radio"
                 name={name}
@@ -81,11 +85,11 @@ export const SimpleChoiceGroup = ({
                 onChange={() => onSelect(choice.changes)}
               />
               <span className={styles.cue} data-choice-level={index} aria-hidden="true">
-                <Icon size={22} strokeWidth={index === 0 ? 1.5 : index === 1 ? 2 : 2.5} />
+                <Icon size={16} strokeWidth={index === 0 ? 1.5 : index === 1 ? 2 : 2.5} />
               </span>
               <span className={styles.choiceCopy}>
                 <strong>{t(locale, choice.labelKey)}</strong>
-                <small>{t(locale, choice.descriptionKey)}</small>
+                <small className="sr-only">{t(locale, choice.descriptionKey)}</small>
               </span>
             </label>
           );

@@ -83,3 +83,22 @@
   outline: 3px solid var(--workshop-accent);
   outline-offset: 2px;
 }
+
+.compact {
+  gap: 4px;
+}
+
+.compact .labelRow {
+  min-height: 36px;
+}
+
+.compact .swatch {
+  aspect-ratio: auto;
+  height: 44px;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 4px var(--workshop-surface-control);
+}
+
+.compact .swatch strong {
+  font-size: 0.8rem;
+}

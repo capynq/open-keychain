@@ -29,12 +29,12 @@ export const CustomizerWorkspace = ({
         customizer={state.customizer}
         onReset={() => {
           state.customizer.reset();
-          state.setAppearanceOverrides({ version: 1 });
+          state.editAppearance({ version: 1 });
           setSurface('matte');
         }}
         favoriteFontCategories={favoriteFontCategories}
         appearanceOverrides={state.appearanceOverrides}
-        onAppearanceChange={state.setAppearanceOverrides}
+        onAppearanceChange={state.editAppearance}
         baseColor={state.geometry.result?.appearance.base.color}
         reliefColor={state.geometry.result?.appearance.relief.color}
         parameterLimits={

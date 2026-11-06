@@ -1,13 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
-  type SetStateAction,
-} from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import type { CandidateCallbacks } from '../../features/customizer/hooks/useCustomizerParams';
 import type { SurfacePresetId } from '../../features/preview/components/Viewer/Viewer';
@@ -16,6 +7,7 @@ import type { Locale } from '../../infrastructure/i18n/config';
 
 import {
   DEFAULT_PARAMS,
+  keepAppearanceAcrossTemplates,
   normalizeParams,
   type KeychainParams,
   type PrintAppearanceOverrides,
@@ -32,6 +24,11 @@ import {
   geometryReadyTimingProperties,
   workerReplacementCount,
 } from '../../features/customizer/model/geometry-telemetry';
+import {
+  candidateOutcomeSignature,
+  isExportWaiting,
+  queuedExportAction,
+} from '../../features/export/model/queued-export';
 import { useExportActions } from '../../features/export/model/use-export-actions';
 import { useHostedAccount } from '../../features/hosted/hooks/useHostedAccount';
 import {
@@ -44,6 +41,7 @@ import { useShareDesign } from '../../features/share/useShareDesign';
 import { GeometryClient } from '../../infrastructure/geometry/geometry-client';
 import { styleName, templateName } from '../../infrastructure/i18n/utils';
 import { useAnalytics } from '../../infrastructure/telemetry/useTelemetry';
+import { useSyncedAppearance } from './useSyncedAppearance';
 
 export const useCustomizerPageState = (
   locale: Locale,
@@ -56,9 +54,7 @@ export const useCustomizerPageState = (
   const [disconnectedAcknowledgedSignature, setDisconnectedAcknowledgedSignature] = useState<
     string | undefined
   >(undefined);
-  const [appearanceOverrides, setAppearanceOverrides] = useReducer(
-    (current: PrintAppearanceOverrides, next: SetStateAction<PrintAppearanceOverrides>) =>
-      typeof next === 'function' ? next(current) : next,
+  const [appearanceOverrides, setAppearanceOverrides, readAppearance] = useSyncedAppearance(
     initialAppearanceOverrides ?? { version: 1 },
   );
   const [randomizing, setRandomizing] = useState(false);
@@ -139,6 +135,13 @@ export const useCustomizerPageState = (
         recovery_trigger: attempt?.recoveryTrigger,
         recovery_outcome: attempt?.recoveryOutcome,
       });
+    },
+    templateChanging: (from, to) => {
+      setAppearanceOverrides((current) => keepAppearanceAcrossTemplates(current, from, to));
+    },
+    appearance: {
+      get: readAppearance,
+      set: setAppearanceOverrides,
     },
     pending: (params, font, subtitleFont) => {
       geometryRef.current?.clientRef.current?.cancelCandidate();
@@ -336,14 +339,54 @@ export const useCustomizerPageState = (
     allowDisconnected: disconnectedExportAcknowledged,
     designId,
   });
+  /* Export stays clickable while the latest edit is checked; the dialog opens once it passes. */
+  const exportWaiting = isExportWaiting({
+    randomizing,
+    canExport,
+    checking: customizer.candidateFeedback?.status === 'checking',
+    busy: geometry.busy,
+    current: geometry.current,
+    failed: Boolean(geometry.error) && !geometry.busy,
+    staleResult:
+      geometry.result !== undefined && geometryResultParamsKey !== acceptedGeometryParamsKey,
+  });
+  const [exportQueued, setExportQueued] = useState(false);
+  const queuedOutcome = useRef('');
   const openExport = (): void => {
-    if (!canExport || exportOpen) return;
+    if (exportOpen) return;
+    if (!canExport) {
+      if (exportWaiting) {
+        queuedOutcome.current = candidateOutcomeSignature(customizer.candidateFeedback);
+        setExportQueued(true);
+      }
+      return;
+    }
+    setExportQueued(false);
     track('export_dialog_opened', {
       template: customizer.acceptedParams.templateId,
       design_id: designId,
     });
     setExportOpen(true);
   };
+  const openExportRef = useRef(openExport);
+
+  useEffect(() => {
+    openExportRef.current = openExport;
+  });
+  const candidateFeedback = customizer.candidateFeedback;
+
+  useEffect(() => {
+    const action = queuedExportAction({
+      queued: exportQueued,
+      canExport,
+      waiting: exportWaiting,
+      rejectedSinceQueued:
+        (candidateFeedback?.status === 'rejected' || candidateFeedback?.status === 'failed') &&
+        candidateOutcomeSignature(candidateFeedback) !== queuedOutcome.current,
+    });
+    if (action === 'open') openExportRef.current();
+    if (action === 'cancel') setExportQueued(false);
+  }, [canExport, candidateFeedback, exportQueued, exportWaiting]);
   const lastRouteInputKey = useRef(routeInputKey);
 
   useEffect(() => {
@@ -361,7 +404,13 @@ export const useCustomizerPageState = (
     customizer.setParams(normalizeParams({ ...DEFAULT_PARAMS, ...initialParams }));
     setAppearanceOverrides(initialAppearanceOverrides ?? { version: 1 });
     setDisconnectedAcknowledgedSignature(undefined);
-  }, [customizer, initialAppearanceOverrides, initialParams, routeInputKey]);
+  }, [
+    customizer,
+    initialAppearanceOverrides,
+    initialParams,
+    routeInputKey,
+    setAppearanceOverrides,
+  ]);
 
   const lastTemplate = useRef(customizer.acceptedParams.templateId);
 
@@ -414,6 +463,18 @@ export const useCustomizerPageState = (
     if (randomizing) return;
     customizer.undo();
   };
+  const redo = (): void => {
+    if (randomizing) return;
+    customizer.redo();
+  };
+  /* Sidebar colors, Reset all and Quick setup colors are part of the undo history; route loads are not. */
+  const editAppearance = (next: PrintAppearanceOverrides): void => {
+    const previous = readAppearance();
+
+    if (JSON.stringify(next) === JSON.stringify(previous)) return;
+    customizer.recordAppearanceEdit(previous);
+    setAppearanceOverrides(next);
+  };
 
   return {
     customizer,
@@ -429,6 +490,8 @@ export const useCustomizerPageState = (
     disconnectedExportAcknowledged,
     setDisconnectedExportAcknowledged,
     canExport,
+    exportWaiting,
+    exportQueued,
     openExport,
     appearanceOverrides,
     setAppearanceOverrides,
@@ -437,6 +500,8 @@ export const useCustomizerPageState = (
     randomizeFailure,
     randomize,
     undo,
+    redo,
+    editAppearance,
     status: previewStatus(geometry, locale),
     modelInfo: {
       templateId: customizer.acceptedParams.templateId,

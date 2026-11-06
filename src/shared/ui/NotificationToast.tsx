@@ -12,6 +12,8 @@ type NotificationToastProps = {
   onDismiss: () => void;
 };
 
+const TOAST_EXIT_MS = 150;
+
 /** Transient confirmation; never moves focus and pauses dismissal during interaction. */
 export const NotificationToast = ({
   title,
@@ -21,19 +23,29 @@ export const NotificationToast = ({
 }: NotificationToastProps) => {
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
+  const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
-    if (hovered || focused) return;
+    if (hovered || focused || leaving) return;
 
-    const timeout = window.setTimeout(onDismiss, 6000);
+    const timeout = window.setTimeout(() => setLeaving(true), 6000 - TOAST_EXIT_MS);
 
     return () => window.clearTimeout(timeout);
-  }, [focused, hovered, onDismiss]);
+  }, [focused, hovered, leaving]);
+
+  useEffect(() => {
+    if (!leaving) return;
+
+    const timeout = window.setTimeout(onDismiss, TOAST_EXIT_MS);
+
+    return () => window.clearTimeout(timeout);
+  }, [leaving, onDismiss]);
 
   return createPortal(
     <div className={styles.positioner} data-notification-toast="true">
       <div
         className={styles.root}
+        data-leaving={leaving ? 'true' : undefined}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         onFocusCapture={() => setFocused(true)}
@@ -48,7 +60,7 @@ export const NotificationToast = ({
           <strong>{title}</strong>
           <p>{description}</p>
         </div>
-        <IconButton icon={X} label={dismissLabel} onClick={onDismiss} motion="none" />
+        <IconButton icon={X} label={dismissLabel} onClick={() => setLeaving(true)} motion="none" />
       </div>
     </div>,
     document.body,

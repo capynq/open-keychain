@@ -14,7 +14,6 @@ import { useAnalytics } from '@/infrastructure/telemetry/useTelemetry';
 import { RangeControl } from '../RangeControl/RangeControl';
 import { FinishStrengthChoices } from './FinishStrengthChoices';
 import styles from './GeometryFinishControls.module.css';
-import choiceStyles from './SimpleOptions.module.css';
 
 const EDGE_PROFILES = ['sharp', 'chamfer', 'round'] as const;
 const PROFILE_ICONS = { sharp: CornerDownRight, chamfer: TriangleRight, round: Radius };
@@ -70,7 +69,7 @@ export const GeometryFinishControls = ({
     (limits.chamferMaxMm < EDGE_FINISH_GRID_MM || limits.roundMaxMm < EDGE_FINISH_GRID_MM);
   return (
     <section
-      className={`control-subsection geometry-finish-controls${simple ? '' : ` ${styles.pro}`}`}
+      className={`control-subsection geometry-finish-controls ${simple ? styles.simple : styles.pro}`}
       data-testid="geometry-finish-settings"
     >
       <div className={styles.group} data-finish-target="base">
@@ -122,12 +121,10 @@ export const GeometryFinishControls = ({
                         );
                       }}
                     />
-                    {simple && <Icon size={22} aria-hidden="true" />}
+                    {simple && <Icon size={16} aria-hidden="true" />}
                     <strong>{t(locale, `geometryEdge${next}`)}</strong>
                     {simple && (
-                      <small className={choiceStyles.finishDescription}>
-                        {t(locale, PROFILE_DESCRIPTION_KEYS[next])}
-                      </small>
+                      <small className="sr-only">{t(locale, PROFILE_DESCRIPTION_KEYS[next])}</small>
                     )}
                   </label>
                 );
@@ -151,6 +148,7 @@ export const GeometryFinishControls = ({
               <div className={`geometry-finish-tune ${styles.strength}`}>
                 <div className="range-grid">
                   <RangeControl
+                    locale={locale}
                     candidateKey="topEdgeMm"
                     label={t(locale, 'geometryBaseTopEdge')}
                     value={baseTop}
@@ -161,6 +159,7 @@ export const GeometryFinishControls = ({
                     onChange={(value) => updateMany({ topEdgeMm: value }, 'print', 'continuous')}
                   />
                   <RangeControl
+                    locale={locale}
                     candidateKey="bottomEdgeMm"
                     label={t(locale, 'geometryBaseBottomEdge')}
                     value={baseBottom}
@@ -221,12 +220,10 @@ export const GeometryFinishControls = ({
                     );
                   }}
                 />
-                {simple && <Icon size={22} aria-hidden="true" />}
+                {simple && <Icon size={16} aria-hidden="true" />}
                 <strong>{t(locale, `geometryTextEdge${next}`)}</strong>
                 {simple && (
-                  <small className={choiceStyles.finishDescription}>
-                    {t(locale, PROFILE_DESCRIPTION_KEYS[next])}
-                  </small>
+                  <small className="sr-only">{t(locale, PROFILE_DESCRIPTION_KEYS[next])}</small>
                 )}
               </label>
             );
@@ -246,6 +243,7 @@ export const GeometryFinishControls = ({
         {!simple && profile !== 'sharp' && maximum >= EDGE_FINISH_GRID_MM && (
           <div className={`geometry-finish-tune ${styles.strength}`}>
             <RangeControl
+              locale={locale}
               candidateKey="textEdgeMm"
               label={t(locale, 'geometryTextEdge')}
               value={params.textEdgeMm ?? 0}

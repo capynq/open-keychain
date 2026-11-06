@@ -12,6 +12,15 @@ export const SIZE_PRESETS: readonly SizeEnvelope[] = [
   { widthMm: 100, heightMm: 35 },
   { widthMm: 120, heightMm: 40 },
 ];
+/** Smallest preset the current model already fits, so reopening setup starts complete. */
+export const suggestedSizeEnvelope = (
+  metrics: { widthMm: number; heightMm: number } | undefined,
+): SizeEnvelope | undefined =>
+  metrics
+    ? SIZE_PRESETS.find(
+        (size) => metrics.widthMm <= size.widthMm + 0.1 && metrics.heightMm <= size.heightMm + 0.1,
+      )
+    : undefined;
 export type QuickSetupStepId =
   'name-size' | 'keyring-position' | 'keyring-opening' | 'fonts' | 'colors' | 'review';
 

@@ -29,15 +29,13 @@ export const ExportChoices = ({
       >
         <Layers3 className="export-choice-icon" aria-hidden="true" />
         <span className="export-choice-copy">
-          <strong>{t(locale, 'export3mfSeparate')}</strong>
+          <strong>
+            {t(locale, 'export3mfSeparate')}
+            <span className="export-choice-badge">{t(locale, 'exportRecommended')}</span>
+          </strong>
           <small>{t(locale, 'export3mfSeparateDescription')}</small>
         </span>
       </button>
-      <details className="export-slicer-help">
-        <summary>{t(locale, 'exportSlicerHelpTitle')}</summary>
-        <p>{t(locale, 'exportSlicerHelpBody')}</p>
-        <p>{t(locale, 'exportBambuHelp')}</p>
-      </details>
       <div className="export-choice-grid">
         <button type="button" disabled={disabled} onClick={() => onDownload('stl')}>
           <Box className="export-choice-icon" aria-hidden="true" />
@@ -54,6 +52,11 @@ export const ExportChoices = ({
           </span>
         </button>
       </div>
+      <details className="export-slicer-help">
+        <summary>{t(locale, 'exportSlicerHelpTitle')}</summary>
+        <p>{t(locale, 'exportSlicerHelpBody')}</p>
+        <p>{t(locale, 'exportBambuHelp')}</p>
+      </details>
     </div>
   );
 };

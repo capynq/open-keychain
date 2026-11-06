@@ -1,5 +1,61 @@
 # Open Keychain decisions
 
+## Hosted CI runs selected gates in parallel jobs
+
+**Status:** active
+
+**Decision:** The routine workflow classifies changes once and runs the selected gates in parallel
+`static`, `unit` and `browser` jobs; `quality` aggregates them and stays the required status.
+Related unit tests use 4 Vitest workers and browser gates 2 Playwright workers. Changed specs run on
+`desktop` and `mobile`, plus `mobile-2x` when the spec depends on the pixel ratio. Merge pushes to
+`main` skip the `browser` job. Chromium is installed without apt unless a library is missing.
+
+**Rationale:** Measured on GitHub runners: a UI pull request touching `model/types.ts` spent 7.4 min
+in related unit tests (883 of 908 test-seconds were geometry builder suites, correctly selected but
+run on one worker) and 9.2 min in changed specs on three profiles and one worker; a merge to `main`
+reran the same selection for 26 min. Public-repository runners have 4 vCPUs and are not billed.
+`playwright install --with-deps` once stalled 8 min 46 s downloading optional fonts from an apt
+mirror while every system library was already present; the UI font covers EN/RU/UK and no spec
+compares screenshots.
+
+**Consequences:** Geometry builder suites still run whenever static analysis relates them.
+`mobile-2x` coverage for a changed spec without pixel-ratio logic comes from the critical journey
+and local runs only. The merge-push skip trusts the pull request's checks; without branch
+protection that requires up-to-date branches, `static`, `unit` and the production journey are the
+post-merge checks.
+
+## Customizer UX pass: colors survive template switches, history covers every edit
+
+**Status:** active
+
+**Decision:** Switching template or style never changes the colors on screen: a color slot that
+still follows the old template default is pinned when the new default differs
+(`keepAppearanceAcrossTemplates`). Every accepted edit enters a 50-step undo/redo history
+(Randomize, recovery fixes, sidebar color edits, Reset all and Quick setup colors included;
+color-picker drags within 0.8 s are one step); Undo and Redo stay in the header and respond to
+Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z and Ctrl+Y outside text fields. History follows the order of
+actions: an Undo or Redo whose step depends on a pending geometry check (a pending undo or redo,
+the pending edit itself, or a redo step that edit discards) waits for that check and then runs in
+order; undoing a newer color change runs at once; a rejection, failure or new edit drops waiting
+steps. The Print facts card is removed: one
+readout line beside the preview shows size and thickness, part count only above one, and the fit
+check only with a chosen maximum; a notice under the preview appears only for warnings or errors.
+Rebuilds keep the last model sharp (no full-viewer blur); Export stays clickable and a click
+during a check opens the dialog once the latest edit is accepted. Phones get a one-row header and
+a sticky, shorter preview. Model swaps crossfade (220 ms) and camera presets tween (320 ms); both
+are instant under reduced motion. Fitted-camera distance is unchanged.
+
+**Rationale:** Owner-approved UX review on 2026-11-05: colors changed silently on template
+switches, mobile edits were invisible below the preview, and the facts card mostly showed values
+that were not actionable.
+
+**Consequences:** E2E camera presets use `selectCameraView` (Home button plus the Views menu) and
+wait for `canvas[data-motion="idle"]`. Simple choices are segmented rows; sidebar colors are
+44 px chips that keep the 4 px inset. The boot frame renders the same section links as the live
+sidebar so the hand-off has no layout jump. The phone header stays one row with Undo and Redo
+enabled in EN/RU/UK: the brand mark hides at 385 px and below, and header targets shrink to
+32 px at 340 px and below.
+
 ## Local validation scales to the machine; heavy suites are sharded by file
 
 **Status:** active
@@ -19,8 +75,9 @@ scaled linearly (44 min at 2 workers, 22 min at 4) but was capped at 5 workers. 
 `pnpm validate:push` from a non-TTY, never-closing stdin (agent shells) hung before any gate.
 
 **Consequences:** Sharding and scheduling change only placement and order: test names and the
-4,267-case matrix are unchanged and must stay so. CI pins `VALIDATION_CONCURRENCY=1` and
-`MATRIX_CONCURRENCY=1`, and `PLAYWRIGHT_WORKERS` defaults to 2, so CI behaviour is unchanged.
+4,267-case matrix are unchanged and must stay so. The manual full CI profile pins
+`VALIDATION_CONCURRENCY=1` and `MATRIX_CONCURRENCY=1`; routine CI parallelism is described in
+"Hosted CI runs selected gates in parallel jobs".
 Slowdown warnings compare against local history and are informational, not a gate.
 
 ## Frontend analytics releases identify the exact source commit
@@ -419,7 +476,8 @@ is shown for restored legacy finishes.
 **UI:** Setup width is at most 600 px. Font chips fit their content and use real bundled Aa specimens;
 actions use Lucide icons. Only keyboard focus adds a ring. Sidebar colors use two balanced native
 fields with a 4 px color inset, individual resets, and no reset-all action. Quick setup uses a
-SlidersHorizontal icon beside Export and Share. Rendered preview aspect must match displayed canvas
+labelled ListChecks icon beside Randomize, left of a centred Export (superseded 2026-11-05, see
+"Customizer UX pass"). Rendered preview aspect must match displayed canvas
 aspect; capture readiness includes a completed resize render.
 
 **Evidence:** User decisions on 2026-10-05, ALEX/Nunito 0.6/0.8 mm reproduction, native generation

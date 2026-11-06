@@ -107,3 +107,11 @@ export const resetParamsForSection = (
     };
   return normalizeParams({ ...params, ...SHAPE_DEFAULTS });
 };
+
+/** Whether resetting the section would change nothing, so its reset action can stay hidden. */
+export const sectionIsDefault = (
+  params: KeychainParams,
+  section: CustomizerResetSection,
+): boolean =>
+  JSON.stringify(normalizeParams(resetParamsForSection(params, section))) ===
+  JSON.stringify(normalizeParams(params));

@@ -260,9 +260,26 @@ export const QuickSetupDialog = ({
                   .replace('{step}', String(step + 1))
                   .replace('{total}', String(steps.length))}
               </span>
-              <span className={styles.progressDots} aria-hidden="true">
-                {steps.map((_, index) => (
-                  <i key={index} data-complete={index < step} data-current={index === step} />
+              <span
+                className={styles.progressDots}
+                role="group"
+                aria-label={t(locale, 'wizardSteps')}
+              >
+                {steps.map((id, index) => (
+                  <button
+                    type="button"
+                    key={id}
+                    className={styles.progressStep}
+                    aria-label={t(locale, titles[id])}
+                    aria-current={index === step ? 'step' : undefined}
+                    disabled={submitting || (index > step && !valid)}
+                    onClick={() => {
+                      editing.current = false;
+                      setStep(index);
+                    }}
+                  >
+                    <i data-complete={index < step} data-current={index === step} />
+                  </button>
                 ))}
               </span>
             </div>

@@ -67,7 +67,7 @@ In an interactive terminal, validation shows a live view. Keys: `↑`/`↓` sele
 
 ## Main branch and production
 
-Work happens directly on `main`. After a push, GitHub Actions runs the `quality` job: checks selected from the changed paths, plus the critical journey. Production build and deploy wait for `quality`. The exact Netlify production `dist` must pass the critical journey again before it is deployed. A manual `workflow_dispatch` run executes the full unit, browser, and geometry profiles.
+Work happens directly on `main`. After a push, GitHub Actions selects checks from the changed paths and runs them in parallel `static`, `unit` and `browser` jobs, plus the critical journey; `quality` reports whether all of them passed. A push that merges a pull request skips the `browser` job, which the pull request already ran. Production build and deploy wait for `quality`. The exact Netlify production `dist` must pass the critical journey again before it is deployed. A manual `workflow_dispatch` run executes the full unit, browser, and geometry profiles.
 
 ## Code conventions
 

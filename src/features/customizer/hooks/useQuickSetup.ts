@@ -38,6 +38,8 @@ export const useQuickSetup = ({
   const setupRequested = searchParams.get('setup') === '1';
   const setupAllowed = setupRequested && !searchParams.has('design') && !locationState;
   const [setupOpen, setSetupOpen] = useState(setupAllowed);
+  /* Opened from the editor header over an existing design, not the first-run setup route. */
+  const [setupReopened, setSetupReopened] = useState(false);
   const [pendingSetup, setPendingSetup] = useState<{
     changes: QuickSetupChanges;
     signature: string;
@@ -103,6 +105,7 @@ export const useQuickSetup = ({
 
   const openSetup = (): void => {
     setSetupError(false);
+    setSetupReopened(true);
     setSetupOpen(true);
   };
   const closeSetup = (): void => {
@@ -147,6 +150,7 @@ export const useQuickSetup = ({
 
   return {
     setupOpen,
+    setupReopened,
     setupSubmitting,
     setupError,
     favoriteFontCategories,

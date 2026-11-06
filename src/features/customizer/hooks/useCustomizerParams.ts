@@ -6,7 +6,10 @@ import type { OperationDiagnostics } from '@/shared/lib/recovery/operation-diagn
 import { failureFrom, RecoveryError } from '@/shared/lib/recovery/failure';
 import { GeometryOperationError } from '@/shared/lib/recovery/operation-diagnostics';
 
-import type { GeometryResult } from '../../../domain/keychain/model/types';
+import type {
+  GeometryResult,
+  PrintAppearanceOverrides,
+} from '../../../domain/keychain/model/types';
 import type { FontNotice } from '../model/customizer-types';
 
 import {
@@ -109,7 +112,27 @@ export type CandidateCallbacks = {
     subtitleFont: FontDefinition,
   ) => void;
   reject?: (params: KeychainParams, font: FontDefinition, subtitleFont: FontDefinition) => void;
+  /** A user edit is about to switch templates; colors are kept, not reset to the template's. */
+  templateChanging?: (from: TemplateId, to: TemplateId) => void;
+  /** Session color choices, so undo and redo also step through color edits. */
+  appearance?: {
+    get: () => PrintAppearanceOverrides;
+    set: (overrides: PrintAppearanceOverrides) => void;
+  };
 };
+
+export type UndoKind = 'randomize' | 'recovery' | 'change';
+type HistoryMode = 'record' | 'undo' | 'redo' | 'none';
+const HISTORY_LIMIT = 50;
+/* Native color pickers emit a change per drag step; edits closer than this form one undo step. */
+const APPEARANCE_COALESCE_MS = 800;
+type UndoEntry = {
+  params: KeychainParams;
+  kind: UndoKind;
+  appearance?: PrintAppearanceOverrides;
+  at?: number;
+};
+type RedoEntry = { params: KeychainParams; appearance?: PrintAppearanceOverrides };
 
 export const useCustomizerParams = (
   initialParams?: KeychainParams,
@@ -125,7 +148,7 @@ export const useCustomizerParams = (
   prepareRecovery: (requestId: number) => Promise<void>;
   cancelRecovery: () => void;
   applyRecovery: (requestId: number, optionId: string) => boolean;
-  undoKind: 'randomize' | 'recovery' | undefined;
+  undoKind: UndoKind | undefined;
   selectedFont: FontDefinition;
   selectedSubtitleFont: FontDefinition;
   fontForId: (id: string) => FontDefinition;
@@ -174,6 +197,9 @@ export const useCustomizerParams = (
   ) => Promise<RandomizeTransaction>;
   undo: () => void;
   canUndo: boolean;
+  redo: () => void;
+  canRedo: boolean;
+  recordAppearanceEdit: (previous: PrintAppearanceOverrides) => void;
 } => {
   const [params, setParams] = useState<KeychainParams>(() => ({
     ...DEFAULT_PARAMS,
@@ -202,9 +228,87 @@ export const useCustomizerParams = (
     [candidateScheduler],
   );
 
-  const previousParams = useRef<KeychainParams | undefined>(undefined);
+  const undoStack = useRef<UndoEntry[]>([]);
+  const redoStack = useRef<RedoEntry[]>([]);
+  /*
+   * History follows the order of actions, not of validation results: a checked edit keeps the
+   * stack position it had when it was made, an undo or redo names the exact entry it consumes,
+   * and a retry of a failed check keeps the operation it belongs to.
+   */
+  const pendingHistory = useRef<
+    | {
+        requestId: number;
+        mode: Exclude<HistoryMode, 'none'>;
+        previous: KeychainParams;
+        entry?: UndoEntry | RedoEntry;
+        /* The history entry this step goes above; undefined means the bottom of the stack. */
+        insertAfter: UndoEntry | undefined;
+        staleRedo: readonly RedoEntry[];
+        branch: number;
+        candidateKey: string;
+      }
+    | undefined
+  >(undefined);
+  /* Counts forward edits that end the redo branch, so a later undo result cannot revive it. */
+  const historyBranch = useRef(0);
+  /* Undo or redo pressed while any edit is still being checked runs after it, in order. */
+  const queuedHistory = useRef<Array<'undo' | 'redo'>>([]);
+  /* The request whose geometry check is running; retained retry details do not count. */
+  const checkingRequest = useRef<number | undefined>(undefined);
+  const drainHistoryRef = useRef<() => void>(() => undefined);
+  const nextHistoryMode = useRef<HistoryMode>('record');
+  const nextHistoryEntry = useRef<UndoEntry | RedoEntry | undefined>(undefined);
   const [canUndo, setCanUndo] = useState(false);
-  const [undoKind, setUndoKind] = useState<'randomize' | 'recovery'>();
+  const [canRedo, setCanRedo] = useState(false);
+  const [undoKind, setUndoKind] = useState<UndoKind>();
+  const syncHistory = (): void => {
+    setCanUndo(undoStack.current.length > 0);
+    setCanRedo(redoStack.current.length > 0);
+    setUndoKind(undoStack.current.at(-1)?.kind);
+  };
+  const pushUndo = (
+    entry: KeychainParams,
+    kind: UndoKind,
+    appearance?: PrintAppearanceOverrides,
+    at?: number,
+  ): void => {
+    undoStack.current = [
+      ...undoStack.current,
+      { params: entry, kind, ...(appearance ? { appearance, at } : {}) },
+    ].slice(-HISTORY_LIMIT);
+  };
+  /* Anchored to an entry, not an index, so trimming at the history limit cannot shift it. */
+  const insertUndo = (
+    entry: KeychainParams,
+    after: UndoEntry | undefined,
+    kind: UndoKind = 'change',
+  ): void => {
+    const at = after ? undoStack.current.indexOf(after) + 1 : 0;
+
+    undoStack.current = [
+      ...undoStack.current.slice(0, at),
+      { params: entry, kind },
+      ...undoStack.current.slice(at),
+    ].slice(-HISTORY_LIMIT);
+  };
+  /* Color edits merge within 0.8 s; a parameter operation in between starts a new color step. */
+  const endColorGroup = (): void => {
+    const top = undoStack.current.at(-1);
+
+    if (top?.at !== undefined)
+      undoStack.current = [...undoStack.current.slice(0, -1), { ...top, at: undefined }];
+  };
+  const discardRedo = (): void => {
+    redoStack.current = [];
+    historyBranch.current += 1;
+    queuedHistory.current = [];
+  };
+  const clearHistory = (): void => {
+    undoStack.current = [];
+    discardRedo();
+    pendingHistory.current = undefined;
+    syncHistory();
+  };
   const [recoveryOptions, setRecoveryOptions] = useState<RecoveryOption[]>([]);
   const [recoveryChecking, setRecoveryChecking] = useState(false);
   const recoveryEpoch = useRef(0);
@@ -241,8 +345,8 @@ export const useCustomizerParams = (
     setRecoveryChecking(false);
   };
   const setParamsDirect: Dispatch<SetStateAction<KeychainParams>> = (next) => {
-    previousParams.current = undefined;
-    setCanUndo(false);
+    clearHistory();
+    nextHistoryMode.current = 'none';
     const candidate = typeof next === 'function' ? next(paramsRef.current) : next;
 
     proposeCandidate(candidate, 'template', 'templateId');
@@ -357,6 +461,7 @@ export const useCustomizerParams = (
     attemptId?: string,
   ): void => {
     if (requestId !== candidateRequestId.current) return;
+    if (checkingRequest.current === requestId) checkingRequest.current = undefined;
     const normalized = normalizeParams(candidate);
     const font =
       allFonts.find((item) => item.id === normalized.fontId) ?? fontDefinition(normalized.fontId);
@@ -375,6 +480,27 @@ export const useCustomizerParams = (
     setParams(normalized);
     setAcceptedParams(normalized);
     setCandidateFeedback(undefined);
+    const history = pendingHistory.current;
+    if (history?.requestId === requestId) {
+      pendingHistory.current = undefined;
+      if (JSON.stringify(history.previous) !== JSON.stringify(normalized)) {
+        if (history.mode === 'undo') {
+          undoStack.current = undoStack.current.filter((item) => item !== history.entry);
+          if (history.branch === historyBranch.current)
+            redoStack.current = [...redoStack.current, { params: history.previous }].slice(
+              -HISTORY_LIMIT,
+            );
+        } else {
+          /* An accepted edit drops the redo steps it replaced, not ones made while it was checked. */
+          redoStack.current = redoStack.current.filter((item) =>
+            history.mode === 'redo' ? item !== history.entry : !history.staleRedo.includes(item),
+          );
+          insertUndo(history.previous, history.insertAfter);
+          if (history.mode === 'record') historyBranch.current += 1;
+        }
+      }
+      syncHistory();
+    }
     if (attemptId) {
       callbacksRef.current.attemptFinished?.(
         attemptId,
@@ -386,6 +512,7 @@ export const useCustomizerParams = (
       if (activeCandidateAttemptId.current === attemptId)
         activeCandidateAttemptId.current = undefined;
     }
+    if (history?.requestId === requestId) drainHistoryRef.current();
   };
 
   const recordRejectedAttempt = (
@@ -398,6 +525,8 @@ export const useCustomizerParams = (
     diagnostics?: OperationDiagnostics,
     attemptId = crypto.randomUUID(),
   ): void => {
+    queuedHistory.current = [];
+    if (checkingRequest.current === requestId) checkingRequest.current = undefined;
     rejectedAttempt.current = {
       requestId,
       attemptId,
@@ -550,10 +679,11 @@ export const useCustomizerParams = (
     candidateScheduler.cancel();
     cancelRecovery();
     callbacksRef.current.pending?.(prepared.params, prepared.font, prepared.subtitleFont);
+    pendingHistory.current = undefined;
     commitAccepted(prepared.params, prepared.result, nextId);
-    previousParams.current = previous;
-    setUndoKind('recovery');
-    setCanUndo(true);
+    pushUndo(previous, 'recovery');
+    discardRedo();
+    syncHistory();
     rejectedAttempt.current = undefined;
     return true;
   };
@@ -567,6 +697,11 @@ export const useCustomizerParams = (
     retryOfAttemptId?: string,
   ): void => {
     const inputAt = performance.now();
+    const historyMode = nextHistoryMode.current;
+    const historyEntry = nextHistoryEntry.current;
+
+    nextHistoryMode.current = 'record';
+    nextHistoryEntry.current = undefined;
     let normalized: KeychainParams;
     try {
       normalized = normalizeParams(reconcileCandidateParams(acceptedParamsRef.current, candidate));
@@ -625,9 +760,31 @@ export const useCustomizerParams = (
 
     cancelRecovery();
     rejectedAttempt.current = undefined;
+    if (historyMode === 'record' && !userRetry) queuedHistory.current = [];
 
-    previousParams.current = undefined;
-    setCanUndo(false);
+    const candidateKey = JSON.stringify(normalized);
+    const retried =
+      userRetry && pendingHistory.current?.candidateKey === candidateKey
+        ? pendingHistory.current
+        : undefined;
+    const mode = retried?.mode ?? (historyMode === 'none' ? undefined : historyMode);
+
+    if (mode) endColorGroup();
+    pendingHistory.current = mode
+      ? {
+          requestId,
+          mode,
+          previous: acceptedParamsRef.current,
+          entry: retried?.entry ?? historyEntry,
+          insertAfter: retried ? retried.insertAfter : undoStack.current.at(-1),
+          staleRedo: retried?.staleRedo ?? redoStack.current,
+          branch: retried?.branch ?? historyBranch.current,
+          candidateKey,
+        }
+      : undefined;
+    checkingRequest.current = requestId;
+    if (historyMode !== 'none' && normalized.templateId !== paramsRef.current.templateId)
+      callbacksRef.current.templateChanging?.(paramsRef.current.templateId, normalized.templateId);
     paramsRef.current = normalized;
     setParams(normalized);
     const font =
@@ -1088,6 +1245,96 @@ export const useCustomizerParams = (
     setLocalFonts((current) => current.filter((item) => item.id !== id));
   };
 
+  const stepUndo = (): void => {
+    const accepted = JSON.stringify(acceptedParamsRef.current);
+    while (
+      undoStack.current.length &&
+      !undoStack.current.at(-1)?.appearance &&
+      JSON.stringify(undoStack.current.at(-1)?.params) === accepted
+    )
+      undoStack.current = undoStack.current.slice(0, -1);
+    const entry = undoStack.current.at(-1);
+    const appearance = callbacksRef.current.appearance;
+
+    if (entry?.appearance && appearance) {
+      undoStack.current = undoStack.current.slice(0, -1);
+      redoStack.current = [
+        ...redoStack.current,
+        { params: acceptedParamsRef.current, appearance: appearance.get() },
+      ].slice(-HISTORY_LIMIT);
+      appearance.set(entry.appearance);
+      syncHistory();
+      return;
+    }
+    syncHistory();
+    if (!entry) return;
+    nextHistoryMode.current = 'undo';
+    nextHistoryEntry.current = entry;
+    proposeCandidate(entry.params, 'refine');
+  };
+  const stepRedo = (): void => {
+    const entry = redoStack.current.at(-1);
+    if (!entry) return;
+    const appearance = callbacksRef.current.appearance;
+    if (entry.appearance && appearance) {
+      redoStack.current = redoStack.current.slice(0, -1);
+      pushUndo(acceptedParamsRef.current, 'change', appearance.get());
+      appearance.set(entry.appearance);
+      syncHistory();
+      return;
+    }
+    if (JSON.stringify(entry.params) === JSON.stringify(acceptedParamsRef.current)) {
+      redoStack.current = redoStack.current.slice(0, -1);
+      syncHistory();
+      return;
+    }
+    nextHistoryMode.current = 'redo';
+    nextHistoryEntry.current = entry;
+    proposeCandidate(entry.params, 'refine');
+  };
+  /*
+   * A history step waits while the step it would take depends on a pending check: any pending
+   * undo or redo, the pending edit itself, or a redo step that the pending edit will discard.
+   * Undoing or redoing a newer color change does not depend on it and runs at once.
+   */
+  const mustWait = (direction: 'undo' | 'redo'): boolean => {
+    const history = pendingHistory.current;
+
+    if (
+      !history ||
+      history.requestId !== candidateRequestId.current ||
+      checkingRequest.current !== history.requestId
+    )
+      return false;
+    if (history.mode !== 'record') return true;
+    if (direction === 'undo') {
+      const top = undoStack.current.at(-1);
+
+      const anchor = history.insertAfter ? undoStack.current.indexOf(history.insertAfter) : -1;
+
+      return !top?.appearance || undoStack.current.length - 1 <= anchor;
+    }
+    const top = redoStack.current.at(-1);
+
+    return !top?.appearance || history.staleRedo.includes(top);
+  };
+  const drainHistoryQueue = (): void => {
+    while (queuedHistory.current.length && !mustWait(queuedHistory.current[0])) {
+      const next = queuedHistory.current.shift();
+
+      if (next === 'undo') stepUndo();
+      else stepRedo();
+    }
+  };
+  const requestHistory = (direction: 'undo' | 'redo'): void => {
+    queuedHistory.current = [...queuedHistory.current, direction];
+    drainHistoryQueue();
+  };
+
+  useEffect(() => {
+    drainHistoryRef.current = drainHistoryQueue;
+  });
+
   return {
     params,
     acceptedParams,
@@ -1147,6 +1394,10 @@ export const useCustomizerParams = (
       const original = acceptedParamsRef.current;
       const requestId = ++candidateRequestId.current;
 
+      /* Like a checked edit, Randomize keeps the history position it had when it started. */
+      endColorGroup();
+      const insertAfter = undoStack.current.at(-1);
+
       candidateScheduler.cancel();
       const font =
         allFonts.find((item) => item.id === original.fontId) ?? fontDefinition(original.fontId);
@@ -1163,8 +1414,6 @@ export const useCustomizerParams = (
         status: 'checking',
         group: 'refine',
       });
-      previousParams.current = undefined;
-      setCanUndo(false);
       const trackedValidation: RandomizeValidation | undefined = validate
         ? async (candidate) => {
             const attemptId = crypto.randomUUID();
@@ -1223,10 +1472,14 @@ export const useCustomizerParams = (
         };
       }
       if (transaction.status === 'accepted') {
-        previousParams.current = original;
-        setUndoKind('randomize');
-        setCanUndo(true);
         const normalized = normalizeParams(transaction.params);
+
+        pendingHistory.current = undefined;
+        insertUndo(original, insertAfter, 'randomize');
+        discardRedo();
+        syncHistory();
+        if (normalized.templateId !== original.templateId)
+          callbacksRef.current.templateChanging?.(original.templateId, normalized.templateId);
         const font =
           allFonts.find((item) => item.id === normalized.fontId) ??
           fontDefinition(normalized.fontId);
@@ -1253,13 +1506,18 @@ export const useCustomizerParams = (
       }
       return transaction;
     },
-    undo: () => {
-      const previous = previousParams.current;
-      if (!previous) return;
-      previousParams.current = undefined;
-      setCanUndo(false);
-      proposeCandidate(previous, 'refine');
-    },
+    undo: () => requestHistory('undo'),
     canUndo,
+    redo: () => requestHistory('redo'),
+    canRedo,
+    recordAppearanceEdit: (previous) => {
+      const now = Date.now();
+      const top = undoStack.current.at(-1);
+      if (top?.appearance && top.at !== undefined && now - top.at < APPEARANCE_COALESCE_MS)
+        undoStack.current = [...undoStack.current.slice(0, -1), { ...top, at: now }];
+      else pushUndo(acceptedParamsRef.current, 'change', previous, now);
+      discardRedo();
+      syncHistory();
+    },
   };
 };

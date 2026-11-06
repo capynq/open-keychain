@@ -149,6 +149,93 @@ describe('useCustomizerParams candidate scheduling', () => {
     ]);
   });
 
+  it('starts a new color step when a parameter edit lands between two quick color edits', async () => {
+    const { validate, settleAll } = deferredValidation();
+    let colors: { version: 1; base?: string } = { version: 1 };
+    const getApi = renderHook({
+      validate,
+      appearance: { get: () => colors, set: (next) => (colors = next) },
+    });
+    const editColor = (base: string) => {
+      getApi().recordAppearanceEdit(colors);
+      colors = { version: 1, base };
+    };
+
+    act(() => editColor('#111111'));
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    act(() => {
+      vi.advanceTimersByTime(100);
+      editColor('#222222');
+    });
+    await settleAll();
+
+    act(() => getApi().undo());
+    expect(colors.base).toBe('#111111');
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(2.5);
+    act(() => getApi().undo());
+    await settleAll();
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(DEFAULT_PARAMS.baseThicknessMm);
+    expect(colors.base).toBe('#111111');
+    act(() => getApi().undo());
+    expect(colors.base).toBeUndefined();
+  });
+
+  it('keeps a pending edit below a newer color edit when the history is full', async () => {
+    const { validate, settleAll } = deferredValidation();
+    let colors: { version: 1; base?: string } = { version: 1 };
+    const getApi = renderHook({
+      validate,
+      appearance: { get: () => colors, set: (next) => (colors = next) },
+    });
+
+    for (let index = 0; index < 50; index += 1) {
+      act(() => {
+        getApi().update('text', `T${index}`);
+        vi.advanceTimersByTime(200);
+      });
+      await settleAll();
+    }
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    act(() => {
+      getApi().recordAppearanceEdit(colors);
+      colors = { version: 1, base: '#111111' };
+    });
+    await settleAll();
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(2.5);
+
+    act(() => getApi().undo());
+    expect(colors.base).toBeUndefined();
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(2.5);
+  });
+
+  it('keeps a color edit made during Randomize above the randomize step', async () => {
+    let colors: { version: 1; base?: string } = { version: 1 };
+    const getApi = renderHook({
+      appearance: { get: () => colors, set: (next) => (colors = next) },
+    });
+    let finish: ((result: GeometryResult) => void) | undefined;
+    const validate = vi.fn(() => new Promise<GeometryResult>((resolve) => (finish = resolve)));
+    let randomizing: Promise<unknown> | undefined;
+
+    act(() => {
+      randomizing = getApi().randomize(() => 0, validate);
+    });
+    act(() => {
+      getApi().recordAppearanceEdit(colors);
+      colors = { version: 1, base: '#111111' };
+    });
+    await act(async () => {
+      finish?.({ ...validResult(), generationId: 7 } as GeometryResult);
+      await randomizing;
+    });
+    const randomized = getApi().acceptedParams;
+
+    act(() => getApi().undo());
+    expect(colors.base).toBeUndefined();
+    expect(getApi().acceptedParams).toEqual(randomized);
+    expect(getApi().undoKind).toBe('randomize');
+  });
+
   it('finishes an in-flight candidate attempt as superseded when randomization begins', async () => {
     const started: string[] = [];
     const finished: unknown[][] = [];
@@ -238,6 +325,396 @@ describe('useCustomizerParams candidate scheduling', () => {
     act(() => root?.unmount());
     act(() => vi.advanceTimersByTime(100));
     expect(worker.postMessage).toHaveBeenCalledTimes(3);
+  });
+
+  it('undoes and redoes accepted edits in order and reports template switches', async () => {
+    const { callbacks } = createCallbacks();
+    const templateChanges: string[] = [];
+    const getApi = renderHook({
+      ...callbacks,
+      templateChanging: (from, to) => templateChanges.push(`${from}>${to}`),
+    });
+    const worker = MockWorker.instances[0];
+    const accept = async (requestId: number) =>
+      act(async () => worker.emit({ type: 'validation', requestId, result: validResult() }));
+
+    expect(getApi().canUndo).toBe(false);
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    await accept(1);
+    act(() => getApi().selectTemplate('nameplate'));
+    await accept(2);
+    expect(templateChanges).toEqual(['name-keychain>nameplate']);
+    expect(getApi().canUndo).toBe(true);
+    expect(getApi().undoKind).toBe('change');
+
+    act(() => getApi().undo());
+    await accept(3);
+    expect(getApi().acceptedParams.templateId).toBe('name-keychain');
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(2.5);
+    expect(templateChanges).toEqual(['name-keychain>nameplate', 'nameplate>name-keychain']);
+    expect(getApi().canRedo).toBe(true);
+
+    act(() => getApi().undo());
+    await accept(4);
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(DEFAULT_PARAMS.baseThicknessMm);
+    expect(getApi().canUndo).toBe(false);
+
+    act(() => getApi().redo());
+    await accept(5);
+    act(() => getApi().redo());
+    await accept(6);
+    expect(getApi().acceptedParams.templateId).toBe('nameplate');
+    expect(getApi().canRedo).toBe(false);
+
+    act(() => getApi().undo());
+    await accept(7);
+    act(() => getApi().update('baseThicknessMm', 3));
+    await accept(8);
+    expect(getApi().canRedo).toBe(false);
+  });
+
+  it('steps through color edits and parameter edits in one history', async () => {
+    const { callbacks } = createCallbacks();
+    let colors: { version: 1; base?: string } = { version: 1 };
+    const getApi = renderHook({
+      ...callbacks,
+      appearance: { get: () => colors, set: (next) => (colors = next) },
+    });
+    const worker = MockWorker.instances[0];
+    const editColor = (base: string) => {
+      getApi().recordAppearanceEdit(colors);
+      colors = { version: 1, base };
+    };
+
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    await act(async () => worker.emit({ type: 'validation', requestId: 1, result: validResult() }));
+    act(() => editColor('#111111'));
+    act(() => vi.advanceTimersByTime(1000));
+    act(() => editColor('#222222'));
+    act(() => vi.advanceTimersByTime(100));
+    /* A drag through the native picker arrives as many edits; they form one step. */
+    act(() => editColor('#333333'));
+
+    act(() => getApi().undo());
+    expect(colors.base).toBe('#111111');
+    expect(getApi().canRedo).toBe(true);
+    act(() => getApi().undo());
+    expect(colors.base).toBeUndefined();
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(2.5);
+
+    act(() => getApi().redo());
+    expect(colors.base).toBe('#111111');
+    act(() => editColor('#444444'));
+    expect(getApi().canRedo).toBe(false);
+
+    act(() => getApi().undo());
+    expect(colors.base).toBe('#111111');
+    act(() => getApi().undo());
+    expect(colors.base).toBeUndefined();
+    act(() => getApi().undo());
+    await act(async () => worker.emit({ type: 'validation', requestId: 2, result: validResult() }));
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(DEFAULT_PARAMS.baseThicknessMm);
+    expect(getApi().canUndo).toBe(false);
+  });
+
+  it('keeps a color edit made while an undo is still being checked', async () => {
+    const { callbacks } = createCallbacks();
+    let colors: { version: 1; base?: string } = { version: 1 };
+    const getApi = renderHook({
+      ...callbacks,
+      appearance: { get: () => colors, set: (next) => (colors = next) },
+    });
+    const worker = MockWorker.instances[0];
+
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    await act(async () => worker.emit({ type: 'validation', requestId: 1, result: validResult() }));
+    act(() => getApi().undo());
+    act(() => {
+      getApi().recordAppearanceEdit(colors);
+      colors = { version: 1, base: '#111111' };
+    });
+    await act(async () => worker.emit({ type: 'validation', requestId: 2, result: validResult() }));
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(DEFAULT_PARAMS.baseThicknessMm);
+    expect(getApi().canUndo).toBe(true);
+
+    act(() => getApi().undo());
+    expect(colors.base).toBeUndefined();
+    expect(getApi().canUndo).toBe(false);
+  });
+
+  it('keeps action order when a color edit lands while a parameter edit is checked', async () => {
+    const { callbacks } = createCallbacks();
+    let colors: { version: 1; base?: string } = { version: 1 };
+    const getApi = renderHook({
+      ...callbacks,
+      appearance: { get: () => colors, set: (next) => (colors = next) },
+    });
+    const worker = MockWorker.instances[0];
+    const editColor = (base: string) => {
+      getApi().recordAppearanceEdit(colors);
+      colors = { version: 1, base };
+    };
+
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    act(() => editColor('#111111'));
+    act(() => getApi().undo());
+    expect(colors.base).toBeUndefined();
+    expect(getApi().canRedo).toBe(true);
+    await act(async () => worker.emit({ type: 'validation', requestId: 1, result: validResult() }));
+    /* The older parameter edit did not clear the color redo made after it. */
+    expect(getApi().canRedo).toBe(true);
+    act(() => getApi().redo());
+    expect(colors.base).toBe('#111111');
+
+    act(() => getApi().undo());
+    expect(colors.base).toBeUndefined();
+    act(() => getApi().undo());
+    await act(async () => worker.emit({ type: 'validation', requestId: 2, result: validResult() }));
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(DEFAULT_PARAMS.baseThicknessMm);
+  });
+
+  it('does not revive redo when a color edit lands while an undo is checked', async () => {
+    const { callbacks } = createCallbacks();
+    let colors: { version: 1; base?: string } = { version: 1 };
+    const getApi = renderHook({
+      ...callbacks,
+      appearance: { get: () => colors, set: (next) => (colors = next) },
+    });
+    const worker = MockWorker.instances[0];
+
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    await act(async () => worker.emit({ type: 'validation', requestId: 1, result: validResult() }));
+    act(() => getApi().undo());
+    act(() => {
+      getApi().recordAppearanceEdit(colors);
+      colors = { version: 1, base: '#111111' };
+    });
+    await act(async () => worker.emit({ type: 'validation', requestId: 2, result: validResult() }));
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(DEFAULT_PARAMS.baseThicknessMm);
+    expect(getApi().canRedo).toBe(false);
+
+    act(() => getApi().undo());
+    expect(colors.base).toBeUndefined();
+    act(() => getApi().redo());
+    expect(colors.base).toBe('#111111');
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(DEFAULT_PARAMS.baseThicknessMm);
+  });
+
+  it('keeps an undo an undo when its failed check is retried', async () => {
+    let calls = 0;
+    const validate = vi.fn(async () => {
+      calls += 1;
+      if (calls === 2)
+        throw new GeometryOperationError(
+          { code: 'geometry-request-timeout' },
+          { stage: 'transport', type: 'timeout' },
+        );
+      return { ...validResult(), generationId: calls };
+    });
+    const getApi = renderHook({ validate });
+
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    await act(async () => Promise.resolve());
+    act(() => getApi().undo());
+    await act(async () => Promise.resolve());
+    expect(getApi().candidateFeedback?.status).toBe('failed');
+
+    act(() => getApi().retryCandidate(getApi().candidateFeedback!.requestId));
+    await act(async () => Promise.resolve());
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(DEFAULT_PARAMS.baseThicknessMm);
+    expect(getApi().canUndo).toBe(false);
+    expect(getApi().canRedo).toBe(true);
+  });
+
+  it('runs undo and redo pressed while an earlier one is checked, in order', async () => {
+    const { callbacks } = createCallbacks();
+    const getApi = renderHook(callbacks);
+    const worker = MockWorker.instances[0];
+    const accept = (requestId: number) =>
+      act(async () => worker.emit({ type: 'validation', requestId, result: validResult() }));
+
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    await accept(1);
+    act(() => getApi().update('baseThicknessMm', 3));
+    await accept(2);
+
+    act(() => {
+      getApi().undo();
+      getApi().undo();
+    });
+    await accept(3);
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(2.5);
+    await accept(4);
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(DEFAULT_PARAMS.baseThicknessMm);
+    expect(getApi().canUndo).toBe(false);
+
+    act(() => {
+      getApi().redo();
+      getApi().redo();
+    });
+    await accept(5);
+    await accept(6);
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(3);
+    expect(getApi().canRedo).toBe(false);
+  });
+
+  /* A validator whose checks stay pending until the test settles them, without any cache. */
+  const deferredValidation = () => {
+    const pending: Array<(result: GeometryResult) => void> = [];
+    let generationId = 0;
+    const validate = vi.fn(() => new Promise<GeometryResult>((resolve) => pending.push(resolve)));
+    const settleAll = async () => {
+      while (pending.length) {
+        const resolve = pending.shift();
+
+        generationId += 1;
+        await act(async () => {
+          resolve?.({ ...validResult(), generationId });
+          await Promise.resolve();
+          await Promise.resolve();
+        });
+      }
+    };
+
+    return { validate, pending, settleAll };
+  };
+
+  it('runs Undo pressed during a pending edit once that edit is accepted', async () => {
+    const { validate, pending, settleAll } = deferredValidation();
+    const getApi = renderHook({ validate });
+
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    await settleAll();
+    act(() => getApi().update('baseThicknessMm', 3));
+    expect(pending).toHaveLength(1);
+    act(() => getApi().undo());
+    await settleAll();
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(2.5);
+    expect(getApi().canRedo).toBe(true);
+
+    act(() => getApi().redo());
+    await settleAll();
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(3);
+    expect(getApi().canRedo).toBe(false);
+  });
+
+  it('stops holding Undo once a rejected edit has been dismissed', async () => {
+    const { validate, pending, settleAll } = deferredValidation();
+    const getApi = renderHook({ validate });
+
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    await settleAll();
+    act(() => getApi().update('baseThicknessMm', 3));
+    await act(async () => {
+      pending.shift()?.({ ...invalidResult(), generationId: 99 });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(getApi().candidateFeedback?.status).toBe('rejected');
+
+    act(() => getApi().clearCandidateFeedback());
+    act(() => getApi().undo());
+    expect(pending).toHaveLength(1);
+    await settleAll();
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(DEFAULT_PARAMS.baseThicknessMm);
+  });
+
+  it('keeps a new edit when Redo is pressed during its check', async () => {
+    const { validate, settleAll } = deferredValidation();
+    const getApi = renderHook({ validate });
+
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    await settleAll();
+    act(() => getApi().undo());
+    await settleAll();
+    expect(getApi().canRedo).toBe(true);
+
+    act(() => getApi().update('baseThicknessMm', 3.2));
+    act(() => getApi().redo());
+    await settleAll();
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(3.2);
+    expect(getApi().canRedo).toBe(false);
+  });
+
+  it('returns to the start when Undo and Redo are pressed during a pending undo', async () => {
+    const { validate, settleAll } = deferredValidation();
+    const getApi = renderHook({ validate });
+
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    await settleAll();
+    act(() => getApi().update('baseThicknessMm', 3));
+    await settleAll();
+    act(() => {
+      getApi().undo();
+      getApi().redo();
+    });
+    await settleAll();
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(3);
+    expect(getApi().canUndo).toBe(true);
+    expect(getApi().canRedo).toBe(false);
+  });
+
+  it('keeps 50 undo steps and walks all of them back', async () => {
+    const { validate, settleAll } = deferredValidation();
+    const getApi = renderHook({ validate });
+
+    for (let index = 0; index < 55; index += 1) {
+      act(() => {
+        getApi().update('text', `T${index}`);
+        vi.advanceTimersByTime(200);
+      });
+      await settleAll();
+    }
+    let steps = 0;
+
+    while (getApi().canUndo && steps < 60) {
+      act(() => getApi().undo());
+      await settleAll();
+      steps += 1;
+    }
+    expect(steps).toBe(50);
+    expect(getApi().acceptedParams.text).toBe('T4');
+  });
+
+  it('drops queued history steps when the step before them is rejected', async () => {
+    const { callbacks } = createCallbacks();
+    const getApi = renderHook(callbacks);
+    const worker = MockWorker.instances[0];
+
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    await act(async () => worker.emit({ type: 'validation', requestId: 1, result: validResult() }));
+    /* The starting design was never validated, so this undo really waits for the worker. */
+    act(() => {
+      getApi().undo();
+      getApi().undo();
+    });
+    await act(async () =>
+      worker.emit({ type: 'validation', requestId: 2, result: invalidResult() }),
+    );
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(2.5);
+    expect(getApi().candidateFeedback?.status).toBe('rejected');
+
+    const posted = worker.postMessage.mock.calls.length;
+
+    act(() => getApi().redo());
+    expect(worker.postMessage.mock.calls.length).toBe(posted);
+    expect(getApi().params.baseThicknessMm).toBe(2.5);
+    expect(getApi().canRedo).toBe(false);
+  });
+
+  it('keeps an undo entry when its candidate is rejected', async () => {
+    const { callbacks } = createCallbacks();
+    const getApi = renderHook(callbacks);
+    const worker = MockWorker.instances[0];
+
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    await act(async () => worker.emit({ type: 'validation', requestId: 1, result: validResult() }));
+    act(() => getApi().undo());
+    await act(async () =>
+      worker.emit({ type: 'validation', requestId: 2, result: invalidResult() }),
+    );
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(2.5);
+    expect(getApi().canUndo).toBe(true);
   });
 
   it('restores accepted params after a rejected candidate', async () => {
