@@ -252,6 +252,8 @@ export const useCustomizerParams = (
   const historyBranch = useRef(0);
   /* Undo or redo pressed while any edit is still being checked runs after it, in order. */
   const queuedHistory = useRef<Array<'undo' | 'redo'>>([]);
+  /* The request whose geometry check is running; retained retry details do not count. */
+  const checkingRequest = useRef<number | undefined>(undefined);
   const drainHistoryRef = useRef<() => void>(() => undefined);
   const nextHistoryMode = useRef<HistoryMode>('record');
   const nextHistoryEntry = useRef<UndoEntry | RedoEntry | undefined>(undefined);
@@ -446,6 +448,7 @@ export const useCustomizerParams = (
     attemptId?: string,
   ): void => {
     if (requestId !== candidateRequestId.current) return;
+    if (checkingRequest.current === requestId) checkingRequest.current = undefined;
     const normalized = normalizeParams(candidate);
     const font =
       allFonts.find((item) => item.id === normalized.fontId) ?? fontDefinition(normalized.fontId);
@@ -510,6 +513,7 @@ export const useCustomizerParams = (
     attemptId = crypto.randomUUID(),
   ): void => {
     queuedHistory.current = [];
+    if (checkingRequest.current === requestId) checkingRequest.current = undefined;
     rejectedAttempt.current = {
       requestId,
       attemptId,
@@ -764,6 +768,7 @@ export const useCustomizerParams = (
           candidateKey,
         }
       : undefined;
+    checkingRequest.current = requestId;
     if (historyMode !== 'none' && normalized.templateId !== paramsRef.current.templateId)
       callbacksRef.current.templateChanging?.(paramsRef.current.templateId, normalized.templateId);
     paramsRef.current = normalized;
@@ -1284,7 +1289,7 @@ export const useCustomizerParams = (
     if (
       !history ||
       history.requestId !== candidateRequestId.current ||
-      rejectedAttempt.current?.requestId === history.requestId
+      checkingRequest.current !== history.requestId
     )
       return false;
     if (history.mode !== 'record') return true;

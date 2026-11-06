@@ -511,6 +511,27 @@ describe('useCustomizerParams candidate scheduling', () => {
     expect(getApi().canRedo).toBe(false);
   });
 
+  it('stops holding Undo once a rejected edit has been dismissed', async () => {
+    const { validate, pending, settleAll } = deferredValidation();
+    const getApi = renderHook({ validate });
+
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    await settleAll();
+    act(() => getApi().update('baseThicknessMm', 3));
+    await act(async () => {
+      pending.shift()?.({ ...invalidResult(), generationId: 99 });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(getApi().candidateFeedback?.status).toBe('rejected');
+
+    act(() => getApi().clearCandidateFeedback());
+    act(() => getApi().undo());
+    expect(pending).toHaveLength(1);
+    await settleAll();
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(DEFAULT_PARAMS.baseThicknessMm);
+  });
+
   it('keeps a new edit when Redo is pressed during its check', async () => {
     const { validate, settleAll } = deferredValidation();
     const getApi = renderHook({ validate });
