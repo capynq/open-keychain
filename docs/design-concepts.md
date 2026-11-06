@@ -283,10 +283,19 @@ nested card padding or an indented strength rail. Keep Simple's grouped preset p
 
 ### Coordinate-based picker targets
 
-Keyring marker targets use fixed 44 CSS px minimum width and height within the reference image.
-Do not substitute rem-based minima: enlarging text can grow invisible target boxes into adjacent
-markers even when the artwork is unchanged. Validate all target pairs at 320 px and 200% text
-size in EN/RU/UK; ordinary text labels still enlarge and wrap.
+Keyring marker targets use fixed 44 CSS px minimum width and height. Do not substitute rem-based
+minima: enlarging text can grow invisible target boxes into adjacent markers even when the artwork
+is unchanged. Validate all target pairs at 320 px and 200% text size in EN/RU/UK; ordinary text
+labels still enlarge and wrap.
+
+The keyring position artwork is generated from the real builder
+(`pnpm assets:keyring-previews`) for the fixed sample name ALEX, one drawing per keyring template
+and style. Markers sit on the actual opening centres; the selected position also draws its real
+tab, and hovering or focusing another marker previews that tab dashed. Markers are laid out in the
+measured frame: the selected one never moves, others separate only when 44 px targets would touch,
+with a dashed leader back to their opening. Frames narrower than 320 px switch to a taller 1.7:1
+frame so six targets still fit. The entered name is never drawn there, so long names cannot
+overflow the picker.
 
 Text-bearing template/style cards must retain content-driven height. Compact desktop rules may
 reduce the image row and caption offset, but must not force an aspect ratio that clips the caption.

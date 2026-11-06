@@ -242,8 +242,11 @@
   display: flex;
 }
 
+/* Range value fields are compact inline readouts; RangeControl.css owns their size. */
 .controls-panel
-  input:not([type='range']):not([type='checkbox']):not([type='radio']):not([type='file']):not([type='color']),
+  input:not([type='range']):not([type='checkbox']):not([type='radio']):not([type='file']):not([type='color']):not(
+    .range-value-input
+  ),
 .controls-panel select {
   width: 100%;
   min-width: 0;
@@ -270,8 +273,8 @@
 }
 
 .controls-panel
-  input:not([type='range']):not([type='checkbox']):not([type='radio']):not([type='file']):not(
-    [type='color']
+  input:not([type='range']):not([type='checkbox']):not([type='radio']):not([type='file']):not([type='color']):not(
+    .range-value-input
   ):focus-visible,
 .controls-panel select:focus-visible {
   border-color: var(--field-focus-ring);
@@ -1540,7 +1543,8 @@ p {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   column-gap: var(--control-space-5);
-  row-gap: var(--control-subsection-gap);
+  /* Wider than the label-to-slider gap so each label reads with its own slider. */
+  row-gap: var(--control-space-5);
 }
 
 .parameter-group {
@@ -1828,7 +1832,6 @@ input[type='range'] {
 
   .range-grid {
     grid-template-columns: 1fr;
-    row-gap: var(--control-subsection-gap);
   }
 
   .preview-panel {

@@ -312,9 +312,10 @@ browser verification.
 | Interaction-state selector group                                                                                                            | Changed properties                                               |
 | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | `.option:hover .marker`                                                                                                                     | `transform`, `border-color`                                      |
+| `.option:hover .hole`                                                                                                                       | `border-color`                                                   |
 | `.option:active .marker`                                                                                                                    | `transition-duration`, `transition-timing-function`, `transform` |
-| `.option:has(input:checked) .marker`                                                                                                        | `border-color`, `background`                                     |
-| `.option:has(input:checked) .hole`                                                                                                          | `color`                                                          |
+| `.option:has(input:checked) .marker`                                                                                                        | `border`, `background`, `box-shadow`                             |
+| `.option:has(input:checked) .hole`                                                                                                          | `border-color`, `background`                                     |
 | `.option:has(input:focus-visible)`                                                                                                          | `outline`, `outline-offset`                                      |
 | `.option:has(input:focus-visible) .marker`                                                                                                  | `border-color`                                                   |
 | `.option:hover .marker, .option:active .marker`                                                                                             | `transform`                                                      |

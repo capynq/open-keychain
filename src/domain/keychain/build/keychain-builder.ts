@@ -61,6 +61,7 @@ import {
   regularizeFinishedSolid,
 } from './edge-finish';
 import { applyFeatureGraph } from './feature-graph';
+import { isOpeningClear, keyringOpeningBlockedIssue } from './keyring-validation';
 const MAX_WIDTH_MM = 120;
 const MIN_TEXT_HEIGHT_MM = 12;
 const WIDTH_FIT_ITERATIONS = 6;
@@ -188,6 +189,7 @@ const releaseStyledGeometry = (geometry: StyledGeometry): void => {
     ...geometry.recesses.map((item) => item.section),
     ...geometry.rearRecesses.map((item) => item.section),
     ...(geometry.throughCuts ?? []),
+    ...(geometry.keyringOpening ? [geometry.keyringOpening.section] : []),
   ]);
 };
 const finalizeArticulated = (
@@ -263,6 +265,13 @@ const finalizeArticulated = (
     constraints: geometryConstraintsFor(params),
     printProfile: printProfileFor(geometryConstraintsFor(params)),
     solidCount: build.parts.length * 2 - 1,
+    keyring: build.keyringOpening && {
+      centerMm: [
+        build.keyringOpening.center[0] / MANIFOLD_SCALE,
+        build.keyringOpening.center[1] / MANIFOLD_SCALE,
+      ],
+      hostIndex: build.keyringOpening.hostIndex,
+    },
   };
   releaseArticulatedBuild(build);
   rawText.delete();
@@ -568,6 +577,7 @@ const buildKeychainGeometry = async (
       recesses: style.recesses ?? [],
       rearRecesses: style.rearRecesses ?? [],
       throughCuts: style.throughCuts ?? [],
+      keyringOpening: style.keyringOpening,
       magnetPocket: style.magnetPocket,
       parameterLimits: style.parameterLimits,
       reliefDepthMm: style.reliefDepthMm,
@@ -716,6 +726,10 @@ const buildKeychainGeometry = async (
       message:
         'The raised text extends beyond its foundation. Choose another style or adjust the name.',
     });
+  const keyringOpeningClear =
+    !styled.keyringOpening ||
+    isOpeningClear(styled.keyringOpening.section, [styleBase, textSection, subtitleSection]);
+  if (!keyringOpeningClear) issues.push(keyringOpeningBlockedIssue());
   const baseThickness = Math.round(params.baseThicknessMm * MANIFOLD_SCALE);
   const baseFinishStyle = params.edgeFinish ?? 'sharp';
   const backingFinishLimits = baseFinishLimits(
@@ -860,6 +874,7 @@ const buildKeychainGeometry = async (
     model.status() === 'NoError' &&
     styled.magnetPocket?.safe !== false &&
     reliefContained &&
+    keyringOpeningClear &&
     finiteBounds(bounds) &&
     validateMesh(baseMesh) &&
     validateMesh(reliefMesh);
@@ -934,6 +949,12 @@ const buildKeychainGeometry = async (
     constraints: geometryConstraintsFor(params),
     printProfile: printProfileFor(geometryConstraintsFor(params)),
     magnetPocket: styled.magnetPocket,
+    keyring: styled.keyringOpening && {
+      centerMm: [
+        styled.keyringOpening.center[0] / MANIFOLD_SCALE,
+        styled.keyringOpening.center[1] / MANIFOLD_SCALE,
+      ],
+    },
     baseShading: params.templateId === 'plant-label' ? 'flat' : 'creased',
     solidCount,
   };
@@ -948,6 +969,7 @@ const buildKeychainGeometry = async (
     ...(subtitleRelief ? [subtitleRelief] : []),
     ...styled.recesses.map((item) => item.section),
     ...rearRecesses.map((item) => item.section),
+    ...(styled.keyringOpening ? [styled.keyringOpening.section] : []),
   ]);
   return { result, exportMesh };
 };

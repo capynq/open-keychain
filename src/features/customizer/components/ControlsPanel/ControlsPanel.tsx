@@ -625,6 +625,8 @@ export const ControlsPanel = ({
           <KeyringPositionPicker
             locale={locale}
             selected={params.keyringPosition ?? 'left'}
+            templateId={params.templateId}
+            styleId={params.styleId}
             onSelect={(keyringPosition) => updateMany({ keyringPosition }, 'template-details')}
           />
           {renderCandidateFeedback('template-details')}

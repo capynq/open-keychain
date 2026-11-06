@@ -1,5 +1,6 @@
 import type { CrossSection } from '../../../infrastructure/geometry/manifold-types';
 import type { GeometryParameterLimits, MagnetPocketMetadata } from '../model/types';
+import type { KeyringOpening } from '../styles/style-builder';
 
 export type StandardStyledGeometry = {
   kind: 'standard';
@@ -12,6 +13,7 @@ export type StandardStyledGeometry = {
   recesses: Array<{ section: CrossSection; depthMm: number }>;
   rearRecesses: Array<{ section: CrossSection; depthMm: number }>;
   throughCuts?: CrossSection[];
+  keyringOpening?: KeyringOpening;
   magnetPocket?: MagnetPocketMetadata;
   reliefDepthMm?: number;
   widthMm: number;

@@ -34,6 +34,7 @@ const PRINT_ISSUES = new Set([
   'text-over-width',
   'scaled-to-fit',
   'relief-outside-backing',
+  'keyring-opening-blocked',
   'nameplate-text-outside-plate',
   'nameplate-embedding',
   'magnet-base-adjusted',

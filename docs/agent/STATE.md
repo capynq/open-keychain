@@ -1,5 +1,27 @@
 # Agent handoff
 
+## Keyring placement, position picker and Pro value fields, 2026-11-06
+
+On `feature/peaceful-goodall-13iv0t`. See DECISIONS "Keyring openings are placed by position and
+proven clear".
+
+- Articulated names carry the ring on the letter matching the position (first, last or middle);
+  previously Right put it between the first two letters.
+- Every builder path keeps the keyring opening and rejects `keyring-opening-blocked`; rings are
+  pushed out until clear, diagonals scan a wider band, mirrored extremes resolve downward.
+- `pnpm test:geometry:keyring [base|offset|texts|subtitle|fonts|all] [filter]` builds every keyring
+  template × style × position (942 cases for `all`); the only rejections are the existing
+  single-letter articulated and Latin-only articulated font rules, which the script skips.
+- Keyring position picker draws generated artwork per template and style
+  (`pnpm assets:keyring-previews`, `--check`), with markers on the real opening centres and a
+  measured, collision-free 44 px layout; `public/showcase/keyring-position-alex.png` was removed.
+- Pro range value fields no longer inherit the 44 px generic field rule: 28 px desktop, 36 px
+  phone, one fixed width; range rows are 16 px apart.
+
+Known environment issue: `e2e/keychain.spec.ts:983` (viewer width at 390 px) fails here on this
+branch and on the unchanged base commit alike; Playwright browsers need
+`launchOptions.executablePath: '/opt/pw-browsers/chromium'` in this container.
+
 ## Customizer UX pass, 2026-11-05
 
 Uncommitted on `main`; no commit or push. Owner-approved review items implemented (see DECISIONS

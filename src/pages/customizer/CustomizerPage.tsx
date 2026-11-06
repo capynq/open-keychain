@@ -138,6 +138,8 @@ export const CustomizerPage = ({
             (template) => template.id === state.customizer.acceptedParams.templateId,
           )?.supportsKeyring ?? false
         }
+        templateId={state.customizer.acceptedParams.templateId}
+        styleId={state.customizer.acceptedParams.styleId}
         initialKeyringPreset={state.customizer.acceptedParams.keyringPreset ?? 'standard-round'}
         initialKeyringPosition={state.customizer.acceptedParams.keyringPosition ?? 'left'}
         initialKeyringOpeningShape={state.customizer.acceptedParams.keyringOpeningShape ?? 'round'}

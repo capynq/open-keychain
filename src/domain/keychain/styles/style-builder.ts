@@ -90,6 +90,8 @@ export type StyleBuild = {
   rearRecesses?: Array<{ section: CrossSection; depthMm: number }>;
   /** Sections that must be removed through the full base thickness. */
   throughCuts?: CrossSection[];
+  /** The keyring opening when one was attached; it must stay clear of every material layer. */
+  keyringOpening?: KeyringOpening;
   magnetPocket?: {
     preset: '6x2' | '8x2' | '10x3' | '12x3' | '15x3';
     placement: 'center' | 'upper' | 'lower' | 'left' | 'right';
@@ -220,10 +222,20 @@ const horizontalIntervals = (polygons: Vec2[][], y: number): Array<[number, numb
     intervals.push([intersections[index], intersections[index + 1]]);
   return intervals;
 };
+/** Scan band across the attachment side: a central band for edges, a wide one so corners qualify. */
+type AnchorBand = { start: number; end: number; samples: number };
+const EDGE_ANCHOR_BAND: AnchorBand = { start: 0.24, end: 0.76, samples: 17 };
+const CORNER_ANCHOR_BAND: AnchorBand = { start: 0.1, end: 0.9, samples: 25 };
+/**
+ * @param lowerSign Sign of the local y axis that points down in the finished model. Equally good
+ * extremes (both tips of a ribbon tail) resolve toward it, so mirrored positions stay mirrored.
+ */
 const attachmentAnchor = (
   section: CrossSection,
   minimumSpan: number,
   side: 'left' | 'right',
+  band: AnchorBand = EDGE_ANCHOR_BAND,
+  lowerSign = -1,
 ): Vec2 => {
   const bounds = sectionBounds(section);
   const polygons = section.toPolygons() as Vec2[][];
@@ -235,8 +247,9 @@ const attachmentAnchor = (
         edge: number;
       }
     | undefined;
-  for (let index = 0; index < 17; index += 1) {
-    const y = bounds.min[1] + height * (0.24 + index * 0.0325);
+  const step = (band.end - band.start) / (band.samples - 1);
+  for (let index = 0; index < band.samples; index += 1) {
+    const y = bounds.min[1] + height * (band.start + index * step);
     const intervals = horizontalIntervals(polygons, y);
     const viable = intervals.filter(([start, end]) => end - start >= minimumSpan);
     const candidates = viable.length ? viable : intervals;
@@ -248,10 +261,13 @@ const attachmentAnchor = (
         side === 'left'
           ? x < (best?.point[0] ?? Infinity) - 0.01
           : x > (best?.point[0] ?? -Infinity) + 0.01;
+      const isTie = best !== undefined && Math.abs(x - best.point[0]) < 0.01;
+      const isMirrorTie = isTie && Math.abs(edge - best!.edge) < 1;
       if (
         !best ||
         isFartherOut ||
-        (Math.abs(x - best.point[0]) < 0.01 && (width > best.width || edge > best.edge))
+        (isTie && !isMirrorTie && (width > best.width || edge > best.edge)) ||
+        (isMirrorTie && (y - best.point[1]) * lowerSign > 1)
       ) {
         best = { point: [x, y], width, edge };
       }
@@ -264,8 +280,30 @@ const attachmentAnchor = (
     ]
   );
 };
-/** Attach a keyring tab with a deliberately overlapping root, preserving the counter opening. */
-export const ringAssembly = (
+/** Clear keyring opening in the backing's coordinates, kept so the builder can prove it stays open. */
+export type KeyringOpening = {
+  section: CrossSection;
+  center: Vec2;
+};
+const KEYRING_ROTATION: Record<KeyringPosition, number> = {
+  left: 0,
+  right: 180,
+  top: 90,
+  bottom: 270,
+  'top-left': 45,
+  'top-right': 135,
+};
+const rotatePoint = ([x, y]: Vec2, degrees: number): Vec2 => {
+  const radians = (degrees * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  return [x * cos - y * sin, x * sin + y * cos];
+};
+/**
+ * Attach a keyring tab with a deliberately overlapping root and return the opening it cuts.
+ * The caller owns both returned sections.
+ */
+export const ringAssemblyWithOpening = (
   wasm: GeometryWasm,
   base: CrossSection,
   holeDiameter: number,
@@ -274,19 +312,12 @@ export const ringAssembly = (
   offsetMm = 0,
   openingShape: KeyringOpeningShape = 'round',
   slotLength = holeDiameter,
-): CrossSection => {
-  const rotation = {
-    left: 0,
-    right: 180,
-    top: 90,
-    bottom: 270,
-    'top-left': 45,
-    'top-right': 135,
-  }[position];
+): { section: CrossSection; opening: KeyringOpening } => {
+  const rotation = KEYRING_ROTATION[position];
   const localBase = rotation === 0 ? base.translate([0, 0]) : base.rotate(rotation);
-  let localResult: CrossSection;
+  let local: ReturnType<typeof ringAssemblyAtLeft>;
   try {
-    localResult = ringAssemblyAtLeft(
+    local = ringAssemblyAtLeft(
       wasm,
       localBase,
       holeDiameter,
@@ -294,18 +325,37 @@ export const ringAssembly = (
       offsetMm,
       openingShape,
       slotLength,
+      rotation % 90 === 0 ? EDGE_ANCHOR_BAND : CORNER_ANCHOR_BAND,
+      /* Model down (0, -1) turned into the local frame; ties have no side for top and bottom. */
+      Math.sign(Math.round(-Math.cos((rotation * Math.PI) / 180) * 1000)) || -1,
     );
   } finally {
     localBase.delete();
   }
-  if (rotation === 0) return localResult;
+  if (rotation === 0) return { section: local.section, opening: local.opening };
   try {
-    return localResult.rotate(-rotation);
+    return {
+      section: local.section.rotate(-rotation),
+      opening: {
+        section: local.opening.section.rotate(-rotation),
+        center: rotatePoint(local.opening.center, -rotation),
+      },
+    };
   } finally {
-    localResult.delete();
+    local.section.delete();
+    local.opening.section.delete();
   }
 };
-
+/** Material that may graze the opening while it is pushed clear, in scaled square units. */
+const OPENING_PUSH_TOLERANCE = 10_000;
+const overlapArea = (left: CrossSection, right: CrossSection): number => {
+  const overlap = left.intersect(right);
+  try {
+    return sectionArea(overlap);
+  } finally {
+    overlap.delete();
+  }
+};
 const ringAssemblyAtLeft = (
   wasm: GeometryWasm,
   base: CrossSection,
@@ -314,15 +364,17 @@ const ringAssemblyAtLeft = (
   offsetMm: number,
   openingShape: KeyringOpeningShape,
   slotLength: number,
-): CrossSection => {
+  band: AnchorBand,
+  lowerSign: number,
+): { section: CrossSection; opening: KeyringOpening } => {
   const bounds = sectionBounds(base);
   const outerRadius = holeDiameter / 2 + wall;
   const overlap = Math.max(5000, wall * 2);
   const rootWidth = Math.max(6000, wall * 2.5);
-  const anchor = attachmentAnchor(base, Math.max(wall, 3200), 'left');
-  const x = anchor[0] - outerRadius + Math.min(1600, outerRadius * 0.34);
-  const center: Vec2 = [x, anchor[1] + offsetMm * 1000];
-  const hole =
+  const anchor = attachmentAnchor(base, Math.max(wall, 3200), 'left', band, lowerSign);
+  const nominalX = anchor[0] - outerRadius + Math.min(1600, outerRadius * 0.34);
+  const centerY = anchor[1] + offsetMm * 1000;
+  const holeAt = (center: Vec2): CrossSection =>
     openingShape === 'slot'
       ? capsule(
           wasm,
@@ -331,6 +383,43 @@ const ringAssemblyAtLeft = (
           holeDiameter,
         )
       : wasm.CrossSection.circle(holeDiameter / 2, 96).translate(center);
+  /*
+   * Sloped edges, slots, offsets and corners can tuck the nominal opening into the body, where the
+   * union would fill it. Move the ring straight out until the opening is clear; the hull below keeps
+   * the longer tab joined to its root. Coarse 0.5 mm steps, then bisection to about 0.06 mm.
+   */
+  const isClear = (shift: number): boolean => {
+    const candidate = holeAt([nominalX - shift, centerY]);
+    try {
+      return overlapArea(candidate, base) <= OPENING_PUSH_TOLERANCE;
+    } finally {
+      candidate.delete();
+    }
+  };
+  const maximumShift = outerRadius * 2 + Math.max(0, slotLength - holeDiameter);
+  let shift = 0;
+  if (!isClear(0)) {
+    let blocked = 0;
+    let clear: number | undefined;
+    for (let candidate = 500; candidate <= maximumShift + 1; candidate += 500) {
+      if (isClear(candidate)) {
+        clear = candidate;
+        break;
+      }
+      blocked = candidate;
+    }
+    if (clear !== undefined) {
+      let clearShift: number = clear;
+      for (let iteration = 0; iteration < 3; iteration += 1) {
+        const middle: number = (blocked + clearShift) / 2;
+        if (isClear(middle)) clearShift = middle;
+        else blocked = middle;
+      }
+      shift = clearShift;
+    }
+  }
+  const center: Vec2 = [nominalX - shift, centerY];
+  const hole = holeAt(center);
   const outer =
     openingShape === 'slot'
       ? hole.offset(wall, 'Round', 2, 96)
@@ -349,9 +438,8 @@ const ringAssemblyAtLeft = (
   outer.delete();
   root.delete();
   tabOuter.delete();
-  hole.delete();
   tab.delete();
-  return result;
+  return { section: result, opening: { section: hole, center } };
 };
 const plateStyle = (wasm: GeometryWasm, input: StyleInput, radius: number): CrossSection => {
   const textInset = effectiveMargin(input);
@@ -432,20 +520,25 @@ export const finishStyle = (
   support.delete();
   subtitleSupport?.delete();
   joined.delete();
-  const result = attachKeyring
-    ? ringAssembly(
-        wasm,
-        combined,
-        input.holeDiameter,
-        input.keyringWall,
-        input.keyringPosition ?? side,
-        input.ringOffsetMm ?? 0,
-        input.keyringOpeningShape ?? 'round',
-        input.keyringSlotLength ?? input.holeDiameter,
-      )
-    : combined;
-  if (result !== combined) combined.delete();
-  return { backing: result, relief, subtitle: input.subtitle, recesses };
+  if (!attachKeyring) return { backing: combined, relief, subtitle: input.subtitle, recesses };
+  const ring = ringAssemblyWithOpening(
+    wasm,
+    combined,
+    input.holeDiameter,
+    input.keyringWall,
+    input.keyringPosition ?? side,
+    input.ringOffsetMm ?? 0,
+    input.keyringOpeningShape ?? 'round',
+    input.keyringSlotLength ?? input.holeDiameter,
+  );
+  combined.delete();
+  return {
+    backing: ring.section,
+    relief,
+    subtitle: input.subtitle,
+    recesses,
+    keyringOpening: ring.opening,
+  };
 };
 const finishMagnetStyle = (
   wasm: GeometryWasm,

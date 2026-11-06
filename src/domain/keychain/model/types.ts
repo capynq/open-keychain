@@ -267,6 +267,7 @@ export type GeometryResult = {
   baseShading?: 'creased' | 'flat';
   solidCount?: number;
   magnetPocket?: MagnetPocketMetadata;
+  keyring?: KeyringMetadata;
   parts?: GeometryPart[];
   validation?: GeometryChecks;
   timings?: Record<string, number>;
@@ -308,6 +309,11 @@ export type MagnetPocketMetadata = {
   centerMm: [number, number];
   adjusted: boolean;
   safe: boolean;
+};
+/** Where the clear keyring opening ended up; articulated names also report the carrying letter. */
+export type KeyringMetadata = {
+  centerMm: [number, number];
+  hostIndex?: number;
 };
 /** A complete candidate result, kept separate from the preview queue. */
 export type GeometryValidation = Omit<GeometryResult, 'generationId'>;
@@ -412,6 +418,13 @@ export const validateGeometryResult = (result: GeometryResult): boolean => {
       typeof pocket.safe === 'boolean'
     );
   };
+  const keyringValid = (keyring: unknown): boolean =>
+    isRecord(keyring) &&
+    Array.isArray(keyring.centerMm) &&
+    keyring.centerMm.length === 2 &&
+    keyring.centerMm.every((value) => typeof value === 'number' && Number.isFinite(value)) &&
+    (keyring.hostIndex === undefined ||
+      (Number.isInteger(keyring.hostIndex) && (keyring.hostIndex as number) >= 0));
   return (
     Number.isInteger(result.generationId) &&
     meshValid(result.baseMesh) &&
@@ -428,6 +441,7 @@ export const validateGeometryResult = (result: GeometryResult): boolean => {
     typeof result.printable === 'boolean' &&
     !!result.appearance &&
     (!result.magnetPocket || magnetPocketValid(result.magnetPocket)) &&
+    (!result.keyring || keyringValid(result.keyring)) &&
     (!result.edgeFinish || edgeFinishValid(result.edgeFinish)) &&
     (!result.textFinishLimits || textFinishLimitsValid(result.textFinishLimits)) &&
     (!result.baseFinishLimits || baseFinishLimitsValid(result.baseFinishLimits)) &&

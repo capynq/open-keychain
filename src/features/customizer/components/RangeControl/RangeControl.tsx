@@ -45,6 +45,7 @@ export const RangeControl = ({
         </label>
         <span className="range-value">
           <input
+            className="range-value-input"
             type="number"
             inputMode="decimal"
             min={min}
