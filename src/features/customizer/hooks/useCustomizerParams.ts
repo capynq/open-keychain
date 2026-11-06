@@ -285,6 +285,13 @@ export const useCustomizerParams = (
       ...undoStack.current.slice(at),
     ].slice(-HISTORY_LIMIT);
   };
+  /* Color edits merge within 0.8 s; a parameter operation in between starts a new color step. */
+  const endColorGroup = (): void => {
+    const top = undoStack.current.at(-1);
+
+    if (top?.at !== undefined)
+      undoStack.current = [...undoStack.current.slice(0, -1), { ...top, at: undefined }];
+  };
   const discardRedo = (): void => {
     redoStack.current = [];
     historyBranch.current += 1;
@@ -768,6 +775,7 @@ export const useCustomizerParams = (
           candidateKey,
         }
       : undefined;
+    if (mode) endColorGroup();
     checkingRequest.current = requestId;
     if (historyMode !== 'none' && normalized.templateId !== paramsRef.current.templateId)
       callbacksRef.current.templateChanging?.(paramsRef.current.templateId, normalized.templateId);
@@ -1379,6 +1387,8 @@ export const useCustomizerParams = (
       const requestId = ++candidateRequestId.current;
       /* Like a checked edit, Randomize keeps the history position it had when it started. */
       const insertAt = undoStack.current.length;
+
+      endColorGroup();
 
       candidateScheduler.cancel();
       const font =

@@ -149,6 +149,37 @@ describe('useCustomizerParams candidate scheduling', () => {
     ]);
   });
 
+  it('starts a new color step when a parameter edit lands between two quick color edits', async () => {
+    const { validate, settleAll } = deferredValidation();
+    let colors: { version: 1; base?: string } = { version: 1 };
+    const getApi = renderHook({
+      validate,
+      appearance: { get: () => colors, set: (next) => (colors = next) },
+    });
+    const editColor = (base: string) => {
+      getApi().recordAppearanceEdit(colors);
+      colors = { version: 1, base };
+    };
+
+    act(() => editColor('#111111'));
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    act(() => {
+      vi.advanceTimersByTime(100);
+      editColor('#222222');
+    });
+    await settleAll();
+
+    act(() => getApi().undo());
+    expect(colors.base).toBe('#111111');
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(2.5);
+    act(() => getApi().undo());
+    await settleAll();
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(DEFAULT_PARAMS.baseThicknessMm);
+    expect(colors.base).toBe('#111111');
+    act(() => getApi().undo());
+    expect(colors.base).toBeUndefined();
+  });
+
   it('keeps a color edit made during Randomize above the randomize step', async () => {
     let colors: { version: 1; base?: string } = { version: 1 };
     const getApi = renderHook({
