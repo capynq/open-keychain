@@ -73,7 +73,7 @@
     "lucide-react": "^1.53.0",
     "manifold-3d": "3.5.4",
     "opentype.js": "2.0.0",
-    "posthog-js": "^1.445.4",
+    "posthog-js": "^1.447.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-i18next": "^17.0.16",
