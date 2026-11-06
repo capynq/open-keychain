@@ -180,6 +180,34 @@ describe('useCustomizerParams candidate scheduling', () => {
     expect(colors.base).toBeUndefined();
   });
 
+  it('keeps a pending edit below a newer color edit when the history is full', async () => {
+    const { validate, settleAll } = deferredValidation();
+    let colors: { version: 1; base?: string } = { version: 1 };
+    const getApi = renderHook({
+      validate,
+      appearance: { get: () => colors, set: (next) => (colors = next) },
+    });
+
+    for (let index = 0; index < 50; index += 1) {
+      act(() => {
+        getApi().update('text', `T${index}`);
+        vi.advanceTimersByTime(200);
+      });
+      await settleAll();
+    }
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    act(() => {
+      getApi().recordAppearanceEdit(colors);
+      colors = { version: 1, base: '#111111' };
+    });
+    await settleAll();
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(2.5);
+
+    act(() => getApi().undo());
+    expect(colors.base).toBeUndefined();
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(2.5);
+  });
+
   it('keeps a color edit made during Randomize above the randomize step', async () => {
     let colors: { version: 1; base?: string } = { version: 1 };
     const getApi = renderHook({

@@ -241,7 +241,8 @@ export const useCustomizerParams = (
         mode: Exclude<HistoryMode, 'none'>;
         previous: KeychainParams;
         entry?: UndoEntry | RedoEntry;
-        insertAt: number;
+        /* The history entry this step goes above; undefined means the bottom of the stack. */
+        insertAfter: UndoEntry | undefined;
         staleRedo: readonly RedoEntry[];
         branch: number;
         candidateKey: string;
@@ -276,8 +277,13 @@ export const useCustomizerParams = (
       { params: entry, kind, ...(appearance ? { appearance, at } : {}) },
     ].slice(-HISTORY_LIMIT);
   };
-  const insertUndo = (entry: KeychainParams, index: number, kind: UndoKind = 'change'): void => {
-    const at = Math.min(index, undoStack.current.length);
+  /* Anchored to an entry, not an index, so trimming at the history limit cannot shift it. */
+  const insertUndo = (
+    entry: KeychainParams,
+    after: UndoEntry | undefined,
+    kind: UndoKind = 'change',
+  ): void => {
+    const at = after ? undoStack.current.indexOf(after) + 1 : 0;
 
     undoStack.current = [
       ...undoStack.current.slice(0, at),
@@ -489,7 +495,7 @@ export const useCustomizerParams = (
           redoStack.current = redoStack.current.filter((item) =>
             history.mode === 'redo' ? item !== history.entry : !history.staleRedo.includes(item),
           );
-          insertUndo(history.previous, history.insertAt);
+          insertUndo(history.previous, history.insertAfter);
           if (history.mode === 'record') historyBranch.current += 1;
         }
       }
@@ -763,19 +769,19 @@ export const useCustomizerParams = (
         : undefined;
     const mode = retried?.mode ?? (historyMode === 'none' ? undefined : historyMode);
 
+    if (mode) endColorGroup();
     pendingHistory.current = mode
       ? {
           requestId,
           mode,
           previous: acceptedParamsRef.current,
           entry: retried?.entry ?? historyEntry,
-          insertAt: retried?.insertAt ?? undoStack.current.length,
+          insertAfter: retried ? retried.insertAfter : undoStack.current.at(-1),
           staleRedo: retried?.staleRedo ?? redoStack.current,
           branch: retried?.branch ?? historyBranch.current,
           candidateKey,
         }
       : undefined;
-    if (mode) endColorGroup();
     checkingRequest.current = requestId;
     if (historyMode !== 'none' && normalized.templateId !== paramsRef.current.templateId)
       callbacksRef.current.templateChanging?.(paramsRef.current.templateId, normalized.templateId);
@@ -1304,7 +1310,9 @@ export const useCustomizerParams = (
     if (direction === 'undo') {
       const top = undoStack.current.at(-1);
 
-      return !top?.appearance || undoStack.current.length - 1 < history.insertAt;
+      const anchor = history.insertAfter ? undoStack.current.indexOf(history.insertAfter) : -1;
+
+      return !top?.appearance || undoStack.current.length - 1 <= anchor;
     }
     const top = redoStack.current.at(-1);
 
@@ -1385,10 +1393,10 @@ export const useCustomizerParams = (
       supersedeActiveCandidateAttempt();
       const original = acceptedParamsRef.current;
       const requestId = ++candidateRequestId.current;
-      /* Like a checked edit, Randomize keeps the history position it had when it started. */
-      const insertAt = undoStack.current.length;
 
+      /* Like a checked edit, Randomize keeps the history position it had when it started. */
       endColorGroup();
+      const insertAfter = undoStack.current.at(-1);
 
       candidateScheduler.cancel();
       const font =
@@ -1467,7 +1475,7 @@ export const useCustomizerParams = (
         const normalized = normalizeParams(transaction.params);
 
         pendingHistory.current = undefined;
-        insertUndo(original, insertAt, 'randomize');
+        insertUndo(original, insertAfter, 'randomize');
         discardRedo();
         syncHistory();
         if (normalized.templateId !== original.templateId)
