@@ -217,6 +217,7 @@ export const relatedInputsForCi = (files) => {
       ],
     ],
     ['.github/workflows/', ['scripts/validation/commands/validation-ci-workflow.test.mjs']],
+    ['.github/actions/', ['scripts/validation/commands/validation-ci-workflow.test.mjs']],
   ]);
   const mapped = files.flatMap((file) =>
     [...dynamicMappings].flatMap(([boundary, tests]) =>
@@ -370,13 +371,12 @@ export const createCiChangedGatePlan = (inputFiles) => {
     });
   if (changedBrowserSpecs.length > 0) {
     const workers = unitWorkerCount();
-    const options = testOnly
-      ? { workerSlots: workers }
-      : {
-          workerSlots: workers,
-          env: { PLAYWRIGHT_USE_EXISTING_BUILD: 'true' },
-          dependsOn: ['build'],
-        };
+    /* Every CI plan builds once; changed specs reuse that artifact instead of racing it. */
+    const options = {
+      workerSlots: workers,
+      env: { PLAYWRIGHT_USE_EXISTING_BUILD: 'true' },
+      dependsOn: ['build'],
+    };
     add(
       'browser:changed',
       'Browser (changed specs)',

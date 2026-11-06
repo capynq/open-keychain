@@ -49,7 +49,7 @@ export const CustomizerPage = ({
     locale,
     navigate,
     customizer: state.customizer,
-    onAppearanceChange: state.setAppearanceOverrides,
+    onAppearanceChange: state.editAppearance,
   });
   const acceptedMetrics = selectAcceptedMetrics(
     state.geometry.result,

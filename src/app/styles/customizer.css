@@ -1914,6 +1914,12 @@ input[type='range'] {
   }
 }
 
+@media (max-width: 340px) and (min-height: 560px) {
+  .customizer-app-shell {
+    --customizer-topbar-height: 49px;
+  }
+}
+
 @media (max-width: 760px) {
   .preview-heading {
     width: 100%;
@@ -1986,12 +1992,15 @@ input[type='range'] {
   }
 }
 
-/* The narrowest phones keep one row: smaller targets, Redo only once there is something to redo. */
-@media (max-width: 360px) {
+/* Below 386 px the brand mark does not fit beside Undo, Redo and the longer RU/UK Export label. */
+@media (max-width: 385px) {
   .customizer-topbar .brand-mark {
     display: none;
   }
+}
 
+/* The narrowest phones keep one row: smaller targets, Redo only once there is something to redo. */
+@media (max-width: 360px) {
   .customizer-topbar {
     padding-inline: 8px;
     column-gap: 4px;
@@ -2019,6 +2028,34 @@ input[type='range'] {
 
   .customizer-topbar .redo-header-button:disabled {
     display: none;
+  }
+}
+
+/* At 320-340 px an enabled Redo still has to fit on the same row. */
+@media (max-width: 340px) {
+  .customizer-topbar {
+    padding-inline: 6px;
+    column-gap: 2px;
+  }
+
+  .customizer-topbar .icon-button,
+  .customizer-topbar .topbar-export-actions .setup-header-button,
+  .customizer-topbar .topbar-export-actions .share-header-button {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+  }
+
+  .customizer-topbar .topbar-export-actions,
+  .customizer-topbar .topbar-actions {
+    gap: 2px;
+  }
+
+  .customizer-topbar .topbar-export-actions .export-header-button {
+    height: 32px;
+    min-height: 32px;
+    padding-inline: 6px 8px;
   }
 }
 

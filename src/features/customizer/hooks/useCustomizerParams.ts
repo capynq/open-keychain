@@ -250,7 +250,7 @@ export const useCustomizerParams = (
   >(undefined);
   /* Counts forward edits that end the redo branch, so a later undo result cannot revive it. */
   const historyBranch = useRef(0);
-  /* Undo or redo pressed while an earlier one is still being checked runs after it, in order. */
+  /* Undo or redo pressed while any edit is still being checked runs after it, in order. */
   const queuedHistory = useRef<Array<'undo' | 'redo'>>([]);
   const drainHistoryRef = useRef<() => void>(() => undefined);
   const nextHistoryMode = useRef<HistoryMode>('record');
@@ -496,7 +496,7 @@ export const useCustomizerParams = (
       if (activeCandidateAttemptId.current === attemptId)
         activeCandidateAttemptId.current = undefined;
     }
-    if (history?.requestId === requestId && history.mode !== 'record') drainHistoryRef.current();
+    if (history?.requestId === requestId) drainHistoryRef.current();
   };
 
   const recordRejectedAttempt = (
@@ -1273,18 +1273,32 @@ export const useCustomizerParams = (
     nextHistoryEntry.current = entry;
     proposeCandidate(entry.params, 'refine');
   };
-  const historyInFlight = (): boolean => {
+  /*
+   * A history step waits while the step it would take depends on a pending check: any pending
+   * undo or redo, the pending edit itself, or a redo step that the pending edit will discard.
+   * Undoing or redoing a newer color change does not depend on it and runs at once.
+   */
+  const mustWait = (direction: 'undo' | 'redo'): boolean => {
     const history = pendingHistory.current;
 
-    return (
-      history !== undefined &&
-      history.mode !== 'record' &&
-      history.requestId === candidateRequestId.current &&
-      rejectedAttempt.current?.requestId !== history.requestId
-    );
+    if (
+      !history ||
+      history.requestId !== candidateRequestId.current ||
+      rejectedAttempt.current?.requestId === history.requestId
+    )
+      return false;
+    if (history.mode !== 'record') return true;
+    if (direction === 'undo') {
+      const top = undoStack.current.at(-1);
+
+      return !top?.appearance || undoStack.current.length - 1 < history.insertAt;
+    }
+    const top = redoStack.current.at(-1);
+
+    return !top?.appearance || history.staleRedo.includes(top);
   };
   const drainHistoryQueue = (): void => {
-    while (queuedHistory.current.length && !historyInFlight()) {
+    while (queuedHistory.current.length && !mustWait(queuedHistory.current[0])) {
       const next = queuedHistory.current.shift();
 
       if (next === 'undo') stepUndo();

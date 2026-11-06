@@ -5,6 +5,8 @@ export const decimalsFor = (step: number): number => {
 
 /** Clamp a typed value to the slider range and snap it to the slider step. */
 export const commitRangeValue = (raw: string, min: number, max: number, step: number) => {
+  /* A cleared or invalid number field reports an empty string, which Number() reads as 0. */
+  if (!raw.trim()) return undefined;
   const parsed = Number(raw.replace(',', '.'));
   if (!Number.isFinite(parsed)) return undefined;
   const snapped = Math.round((Math.min(max, Math.max(min, parsed)) - min) / step) * step + min;

@@ -1,6 +1,7 @@
 import { useLayoutEffect } from 'react';
 
-const TEXT_INPUT = "input:is([type='text'], [type='search'], :not([type])), textarea";
+const TEXT_INPUT =
+  "input:is([type='text'], [type='search'], [type='number'], :not([type])), textarea";
 
 /**
  * Keeps the phone preview pinned under the header without moving it under a finger:

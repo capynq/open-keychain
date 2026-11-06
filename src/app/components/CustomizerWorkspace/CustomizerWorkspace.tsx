@@ -29,7 +29,7 @@ export const CustomizerWorkspace = ({
         customizer={state.customizer}
         onReset={() => {
           state.customizer.reset();
-          state.setAppearanceOverrides({ version: 1 });
+          state.editAppearance({ version: 1 });
           setSurface('matte');
         }}
         favoriteFontCategories={favoriteFontCategories}

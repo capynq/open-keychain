@@ -471,6 +471,103 @@ describe('useCustomizerParams candidate scheduling', () => {
     expect(getApi().canRedo).toBe(false);
   });
 
+  /* A validator whose checks stay pending until the test settles them, without any cache. */
+  const deferredValidation = () => {
+    const pending: Array<(result: GeometryResult) => void> = [];
+    let generationId = 0;
+    const validate = vi.fn(() => new Promise<GeometryResult>((resolve) => pending.push(resolve)));
+    const settleAll = async () => {
+      while (pending.length) {
+        const resolve = pending.shift();
+
+        generationId += 1;
+        await act(async () => {
+          resolve?.({ ...validResult(), generationId });
+          await Promise.resolve();
+          await Promise.resolve();
+        });
+      }
+    };
+
+    return { validate, pending, settleAll };
+  };
+
+  it('runs Undo pressed during a pending edit once that edit is accepted', async () => {
+    const { validate, pending, settleAll } = deferredValidation();
+    const getApi = renderHook({ validate });
+
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    await settleAll();
+    act(() => getApi().update('baseThicknessMm', 3));
+    expect(pending).toHaveLength(1);
+    act(() => getApi().undo());
+    await settleAll();
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(2.5);
+    expect(getApi().canRedo).toBe(true);
+
+    act(() => getApi().redo());
+    await settleAll();
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(3);
+    expect(getApi().canRedo).toBe(false);
+  });
+
+  it('keeps a new edit when Redo is pressed during its check', async () => {
+    const { validate, settleAll } = deferredValidation();
+    const getApi = renderHook({ validate });
+
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    await settleAll();
+    act(() => getApi().undo());
+    await settleAll();
+    expect(getApi().canRedo).toBe(true);
+
+    act(() => getApi().update('baseThicknessMm', 3.2));
+    act(() => getApi().redo());
+    await settleAll();
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(3.2);
+    expect(getApi().canRedo).toBe(false);
+  });
+
+  it('returns to the start when Undo and Redo are pressed during a pending undo', async () => {
+    const { validate, settleAll } = deferredValidation();
+    const getApi = renderHook({ validate });
+
+    act(() => getApi().update('baseThicknessMm', 2.5));
+    await settleAll();
+    act(() => getApi().update('baseThicknessMm', 3));
+    await settleAll();
+    act(() => {
+      getApi().undo();
+      getApi().redo();
+    });
+    await settleAll();
+    expect(getApi().acceptedParams.baseThicknessMm).toBe(3);
+    expect(getApi().canUndo).toBe(true);
+    expect(getApi().canRedo).toBe(false);
+  });
+
+  it('keeps 50 undo steps and walks all of them back', async () => {
+    const { validate, settleAll } = deferredValidation();
+    const getApi = renderHook({ validate });
+
+    for (let index = 0; index < 55; index += 1) {
+      act(() => {
+        getApi().update('text', `T${index}`);
+        vi.advanceTimersByTime(200);
+      });
+      await settleAll();
+    }
+    let steps = 0;
+
+    while (getApi().canUndo && steps < 60) {
+      act(() => getApi().undo());
+      await settleAll();
+      steps += 1;
+    }
+    expect(steps).toBe(50);
+    expect(getApi().acceptedParams.text).toBe('T4');
+  });
+
   it('drops queued history steps when the step before them is rejected', async () => {
     const { callbacks } = createCallbacks();
     const getApi = renderHook(callbacks);

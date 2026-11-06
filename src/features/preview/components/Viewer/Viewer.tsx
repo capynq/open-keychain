@@ -972,6 +972,7 @@ export const Viewer = ({
       renderer.domElement.removeEventListener('touchstart', handleTouchStart);
       renderer.domElement.removeEventListener('touchmove', handleTouchMove);
       renderer.domElement.removeEventListener('touchend', handleTouchEnd);
+      finishSwap(viewerState);
       disposeChildren(group);
       floor.geometry.dispose();
       (floor.material as THREE.Material).dispose();

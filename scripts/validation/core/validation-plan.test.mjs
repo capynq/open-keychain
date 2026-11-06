@@ -30,6 +30,23 @@ describe('validation gate selection', () => {
     expect(plan.filter(({ id }) => id === 'build')).toHaveLength(1);
   };
 
+  it('runs the CI workflow test for changed composite actions', () => {
+    const plan = createCiChangedGatePlan(['.github/actions/setup/action.yml']);
+    expect(plan.find(({ id }) => id === 'unit:related').args).toContain(
+      'scripts/validation/commands/validation-ci-workflow.test.mjs',
+    );
+  });
+
+  it('runs changed specs against the shared build even when only specs changed', () => {
+    const changedSpecs = createCiChangedGatePlan(['e2e/smoke.spec.ts']).find(
+      ({ id }) => id === 'browser:changed',
+    );
+    expect(changedSpecs).toMatchObject({
+      dependsOn: ['build'],
+      env: { PLAYWRIGHT_USE_EXISTING_BUILD: 'true' },
+    });
+  });
+
   it('adds the 2x profile only for changed specs that depend on the pixel ratio', () => {
     const plan = createCiChangedGatePlan(['e2e/routes.spec.ts', 'e2e/smoke.spec.ts']);
     expect(plan.find(({ id }) => id === 'browser:changed').args).toEqual(

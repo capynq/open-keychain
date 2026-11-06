@@ -31,9 +31,13 @@ post-merge checks.
 **Decision:** Switching template or style never changes the colors on screen: a color slot that
 still follows the old template default is pinned when the new default differs
 (`keepAppearanceAcrossTemplates`). Every accepted edit enters a 50-step undo/redo history
-(Randomize, recovery fixes and sidebar color edits included; color-picker drags within 0.8 s are
-one step); Undo and Redo stay in the header and respond to
-Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z and Ctrl+Y outside text fields. The Print facts card is removed: one
+(Randomize, recovery fixes, sidebar color edits, Reset all and Quick setup colors included;
+color-picker drags within 0.8 s are one step); Undo and Redo stay in the header and respond to
+Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z and Ctrl+Y outside text fields. History follows the order of
+actions: an Undo or Redo whose step depends on a pending geometry check (a pending undo or redo,
+the pending edit itself, or a redo step that edit discards) waits for that check and then runs in
+order; undoing a newer color change runs at once; a rejection, failure or new edit drops waiting
+steps. The Print facts card is removed: one
 readout line beside the preview shows size and thickness, part count only above one, and the fit
 check only with a chosen maximum; a notice under the preview appears only for warnings or errors.
 Rebuilds keep the last model sharp (no full-viewer blur); Export stays clickable and a click
@@ -48,7 +52,9 @@ that were not actionable.
 **Consequences:** E2E camera presets use `selectCameraView` (Home button plus the Views menu) and
 wait for `canvas[data-motion="idle"]`. Simple choices are segmented rows; sidebar colors are
 44 px chips that keep the 4 px inset. The boot frame renders the same section links as the live
-sidebar so the hand-off has no layout jump.
+sidebar so the hand-off has no layout jump. The phone header stays one row with Undo and Redo
+enabled in EN/RU/UK: the brand mark hides at 385 px and below, and header targets shrink to
+32 px at 340 px and below.
 
 ## Local validation scales to the machine; heavy suites are sharded by file
 

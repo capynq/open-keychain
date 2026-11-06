@@ -476,7 +476,7 @@ export const useCustomizerPageState = (
     if (randomizing) return;
     customizer.redo();
   };
-  /* Sidebar color edits are part of the undo history; setup and route loads are not. */
+  /* Sidebar colors, Reset all and Quick setup colors are part of the undo history; route loads are not. */
   const editAppearance = (next: PrintAppearanceOverrides): void => {
     if (JSON.stringify(next) === JSON.stringify(appearanceOverrides)) return;
     customizer.recordAppearanceEdit(appearanceOverrides);
