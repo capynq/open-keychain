@@ -1,13 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
-  type SetStateAction,
-} from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import type { CandidateCallbacks } from '../../features/customizer/hooks/useCustomizerParams';
 import type { SurfacePresetId } from '../../features/preview/components/Viewer/Viewer';
@@ -50,6 +41,7 @@ import { useShareDesign } from '../../features/share/useShareDesign';
 import { GeometryClient } from '../../infrastructure/geometry/geometry-client';
 import { styleName, templateName } from '../../infrastructure/i18n/utils';
 import { useAnalytics } from '../../infrastructure/telemetry/useTelemetry';
+import { useSyncedAppearance } from './useSyncedAppearance';
 
 export const useCustomizerPageState = (
   locale: Locale,
@@ -62,16 +54,9 @@ export const useCustomizerPageState = (
   const [disconnectedAcknowledgedSignature, setDisconnectedAcknowledgedSignature] = useState<
     string | undefined
   >(undefined);
-  const [appearanceOverrides, setAppearanceOverrides] = useReducer(
-    (current: PrintAppearanceOverrides, next: SetStateAction<PrintAppearanceOverrides>) =>
-      typeof next === 'function' ? next(current) : next,
+  const [appearanceOverrides, setAppearanceOverrides, readAppearance] = useSyncedAppearance(
     initialAppearanceOverrides ?? { version: 1 },
   );
-  const appearanceRef = useRef(appearanceOverrides);
-
-  useEffect(() => {
-    appearanceRef.current = appearanceOverrides;
-  }, [appearanceOverrides]);
   const [randomizing, setRandomizing] = useState(false);
   const [randomizeFailure, setRandomizeFailure] = useState(false);
   const { consent, track } = useAnalytics();
@@ -155,8 +140,8 @@ export const useCustomizerPageState = (
       setAppearanceOverrides((current) => keepAppearanceAcrossTemplates(current, from, to));
     },
     appearance: {
-      get: () => appearanceRef.current,
-      set: (overrides) => setAppearanceOverrides(overrides),
+      get: readAppearance,
+      set: setAppearanceOverrides,
     },
     pending: (params, font, subtitleFont) => {
       geometryRef.current?.clientRef.current?.cancelCandidate();
@@ -419,7 +404,13 @@ export const useCustomizerPageState = (
     customizer.setParams(normalizeParams({ ...DEFAULT_PARAMS, ...initialParams }));
     setAppearanceOverrides(initialAppearanceOverrides ?? { version: 1 });
     setDisconnectedAcknowledgedSignature(undefined);
-  }, [customizer, initialAppearanceOverrides, initialParams, routeInputKey]);
+  }, [
+    customizer,
+    initialAppearanceOverrides,
+    initialParams,
+    routeInputKey,
+    setAppearanceOverrides,
+  ]);
 
   const lastTemplate = useRef(customizer.acceptedParams.templateId);
 
@@ -478,8 +469,10 @@ export const useCustomizerPageState = (
   };
   /* Sidebar colors, Reset all and Quick setup colors are part of the undo history; route loads are not. */
   const editAppearance = (next: PrintAppearanceOverrides): void => {
-    if (JSON.stringify(next) === JSON.stringify(appearanceOverrides)) return;
-    customizer.recordAppearanceEdit(appearanceOverrides);
+    const previous = readAppearance();
+
+    if (JSON.stringify(next) === JSON.stringify(previous)) return;
+    customizer.recordAppearanceEdit(previous);
     setAppearanceOverrides(next);
   };
 
