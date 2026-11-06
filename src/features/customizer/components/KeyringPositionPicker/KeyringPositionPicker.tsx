@@ -1,7 +1,8 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 import type { KeyringPosition } from '@/domain/keychain/model/keyring-position';
 import type { KeychainParams } from '@/domain/keychain/model/types';
+import type { KeyringPreviewPreset } from '@/features/customizer/model/keyring-preview-artwork';
 import type { Locale } from '@/infrastructure/i18n';
 
 import { keyringPositionNameKey } from '@/domain/keychain/model/keyring-position';
@@ -52,6 +53,7 @@ export const KeyringPositionPicker = ({
   selected,
   templateId = 'name-keychain',
   styleId = 'contour',
+  opening = 'standard-round',
   variant = 'editor',
   onSelect,
 }: {
@@ -59,6 +61,8 @@ export const KeyringPositionPicker = ({
   selected: KeyringPosition;
   templateId?: KeychainParams['templateId'];
   styleId?: KeychainParams['styleId'];
+  /** Opening preset whose tab is drawn, so the preview matches the chosen hole. */
+  opening?: KeyringPreviewPreset;
   variant?: 'editor' | 'setup';
   onSelect: (position: KeyringPosition) => void;
 }) => {
@@ -67,11 +71,9 @@ export const KeyringPositionPicker = ({
   const frameWidth = frameSize.width;
   const [previewed, setPreviewed] = useState<KeyringPosition>();
   const artwork = keyringPreviewArtwork(templateId, styleId);
+  const openings = artwork.openings[opening];
   const aspect = keyringPreviewAspect(artwork, frameWidth);
-  const viewBox = useMemo(
-    () => keyringPreviewViewBox(artwork, aspect, frameWidth),
-    [artwork, aspect, frameWidth],
-  );
+  const viewBox = keyringPreviewViewBox(artwork, aspect, frameWidth);
   /* The measured height lags one frame behind an aspect change; fall back to the target ratio. */
   const measuredHeight = frameSize.height;
   const frame = {
@@ -81,17 +83,39 @@ export const KeyringPositionPicker = ({
         ? measuredHeight
         : frameWidth / aspect,
   };
-  const placements = layoutKeyringMarkers(artwork, viewBox, frame, selected);
+  const placements = layoutKeyringMarkers(openings, viewBox, frame, selected);
   const hinted = previewed && previewed !== selected ? previewed : undefined;
+  const setup = variant === 'setup';
+  /* The radio already announces the choice; this repeats it for sighted users only. */
+  const selectedName = (
+    <span
+      aria-hidden="true"
+      className={styles.selectedPosition}
+      data-testid="keyring-position-current"
+    >
+      {t(locale, keyringPositionNameKey(selected))}
+    </span>
+  );
 
   return (
-    <fieldset className={styles.picker}>
-      <legend>{t(locale, 'keyringPosition')}</legend>
+    <fieldset className={`${styles.picker} ${setup ? styles.setup : ''}`}>
+      {/* Quick setup titles the step with the same words, so its legend only names the group. */}
+      <legend className={setup ? styles.visuallyHidden : styles.legend}>
+        {setup ? (
+          t(locale, 'keyringPosition')
+        ) : (
+          <>
+            <span>{t(locale, 'keyringPositionShort')}</span>
+            {selectedName}
+          </>
+        )}
+      </legend>
       <div
         ref={frameRef}
         className={styles.illustration}
         data-testid="keyring-position-diagram"
         data-preview-artwork={templateId === 'articulated-name' ? templateId : styleId}
+        data-preview-opening={opening}
         style={{ aspectRatio: `${aspect.toFixed(3)} / 1` }}
         onPointerLeave={() => setPreviewed(undefined)}
       >
@@ -105,7 +129,7 @@ export const KeyringPositionPicker = ({
           {hinted && (
             <path
               className={styles.hintTab}
-              d={artwork.positions[hinted].tab}
+              d={openings[hinted].tab}
               data-keyring-tab="hint"
               data-position={hinted}
               fillRule="evenodd"
@@ -113,7 +137,7 @@ export const KeyringPositionPicker = ({
           )}
           <path
             className={styles.selectedTab}
-            d={artwork.positions[selected].tab}
+            d={openings[selected].tab}
             data-keyring-tab="selected"
             data-position={selected}
             fillRule="evenodd"
@@ -170,13 +194,7 @@ export const KeyringPositionPicker = ({
           </label>
         ))}
       </div>
-      <p
-        aria-hidden="true"
-        className={styles.selectedPosition}
-        data-testid="keyring-position-current"
-      >
-        {t(locale, keyringPositionNameKey(selected))}
-      </p>
+      {setup && <p className={styles.setupCaption}>{selectedName}</p>}
     </fieldset>
   );
 };

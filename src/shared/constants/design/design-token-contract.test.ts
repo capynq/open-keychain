@@ -98,6 +98,7 @@ describe('Workshop design token contract', () => {
   it('keeps token-only stylesheets free of color literals', () => {
     /* Migrated stylesheets take every color from the Workshop palette; add files as they move. */
     const tokenOnly = [
+      'features/customizer/components/KeyringPresetPicker/KeyringPresetPicker.module.css',
       'features/customizer/components/KeyringPositionPicker/KeyringPositionPicker.module.css',
       'features/customizer/components/RangeControl/RangeControl.css',
     ];

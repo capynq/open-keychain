@@ -182,6 +182,10 @@ test('sidebar keyring choices show their shape, size, and direction controls', a
   await expect(position).toBeChecked();
   await expect(keyring.getByTestId('keyring-position-current')).toHaveText('Top');
   await expectPositionIllustration(keyring);
+  const diagram = keyring.getByTestId('keyring-position-diagram');
+  await expect(diagram).toHaveAttribute('data-preview-opening', 'standard-round');
+  await ovalSlot.check();
+  await expect(diagram).toHaveAttribute('data-preview-opening', 'oval-slot');
 });
 
 test('walks through six focused steps and applies accepted keyring, colors, and preferences', async ({

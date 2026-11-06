@@ -6,6 +6,7 @@
 }
 
 .picker legend {
+  padding: 0;
   margin-bottom: 8px;
   color: var(--workshop-text-muted);
   font-size: var(--workshop-font-label);
@@ -68,7 +69,7 @@
   padding: 0;
   box-sizing: border-box;
   appearance: none;
-  border: 1.5px solid #8d909b;
+  border: 1.5px solid var(--workshop-border-strong);
   border-radius: 50%;
   background: var(--workshop-surface-control);
   cursor: pointer;
@@ -94,9 +95,9 @@
   width: 36px;
   height: 36px;
   box-sizing: border-box;
-  border: 1px solid #e5dbd2;
+  border: 1px solid var(--workshop-border-subtle);
   border-radius: 50%;
-  background: #f5f1eb;
+  background: var(--workshop-surface-muted);
   color: var(--workshop-text-muted);
   transition:
     background 120ms,
@@ -111,7 +112,7 @@
 }
 
 .picker .option:has(input:checked) .iconWell {
-  border-color: #efc1ae;
+  border-color: var(--workshop-accent-27);
   background: var(--workshop-surface-control);
   color: var(--workshop-accent-control);
 }
@@ -120,7 +121,6 @@
   display: grid;
   min-width: 0;
   gap: 2px;
-  padding-right: 12px;
   overflow-wrap: anywhere;
 }
 
@@ -155,7 +155,12 @@
   min-height: 52px;
 }
 
-@container keyring-sidebar (max-width: 360px) {
+/*
+ * Two columns fit the longest name (RU "Стандартное") from a 380 px sidebar at default text size.
+ * The em breakpoint scales with the text, so enlarged text stacks the choices instead of splitting
+ * words.
+ */
+@container keyring-sidebar (max-width: 23.5em) {
   .picker:not(.setup) .grid {
     grid-template-columns: 1fr;
   }
@@ -170,4 +175,16 @@
   .copy strong {
     font-size: 0.72rem;
   }
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

@@ -6,9 +6,10 @@ import * as prettier from 'prettier';
 /**
  * Generate the keyring position picker artwork from the real geometry builder.
  *
- * Every template and style that carries a keyring is built once per position for the fixed sample
- * name "ALEX". The picker draws the ring-less body, the raised letters and, for each position, the
- * actual tab and opening centre, so its markers sit exactly where the builder puts the ring.
+ * Every template and style that carries a keyring is built once per opening preset and position for
+ * the fixed sample name "ALEX". The picker draws the ring-less body, the raised letters and, for
+ * each preset and position, the actual tab and opening centre, so its markers sit exactly where the
+ * builder puts the ring and the drawn tab matches the opening the user chose.
  */
 import type { CrossSection, GeometryWasm } from '../../src/infrastructure/geometry/manifold-types';
 
@@ -18,6 +19,11 @@ import {
   KEYRING_POSITIONS,
   type KeyringPosition,
 } from '../../src/domain/keychain/model/keyring-position';
+import {
+  KEYRING_PRESETS,
+  keyringPresetValues,
+  type KeyringPreset,
+} from '../../src/domain/keychain/model/keyring-presets';
 import {
   DEFAULT_PARAMS,
   type KeychainParams,
@@ -42,21 +48,31 @@ globalThis.fetch = (async (input: string | URL | Request) => {
 
 type Vec2 = [number, number];
 const round = (value: number): number => Math.round(value * 10) / 10;
-const formatNumber = (value: number): string => {
-  const rounded = round(value);
-  return Object.is(rounded, -0) ? '0' : String(rounded);
-};
+/** Tenths of a millimetre as the shortest SVG number: 0.3 → ".3", -0.3 → "-.3". */
+const formatTenths = (tenths: number): string =>
+  (tenths / 10).toString().replace(/^(-?)0\./, '$1.');
 
-/** SVG path in millimetres with y pointing down; holes rely on the even-odd fill rule. */
+/**
+ * SVG path in millimetres with y pointing down; holes rely on the even-odd fill rule. Points after
+ * the first are relative and rounded to 0.1 mm before differencing, so nothing drifts and the
+ * shipped artwork stays small.
+ */
 const svgPath = (section: CrossSection): string =>
   (section.toPolygons() as Vec2[][])
     .filter((polygon) => polygon.length >= 3)
     .map((polygon) => {
-      const points = polygon.map(
-        ([x, y]) => `${formatNumber(x / MANIFOLD_SCALE)} ${formatNumber(-y / MANIFOLD_SCALE)}`,
-      );
-      const deduplicated = points.filter((point, index) => point !== points[index - 1]);
-      return `M${deduplicated.join('L')}Z`;
+      const points = polygon.map(([x, y]): Vec2 => [
+        Math.round((x / MANIFOLD_SCALE) * 10),
+        Math.round((-y / MANIFOLD_SCALE) * 10),
+      ]);
+      const [first] = points;
+      const steps: string[] = [];
+      for (let index = 1; index < points.length; index += 1) {
+        const dx = points[index][0] - points[index - 1][0];
+        const dy = points[index][1] - points[index - 1][1];
+        if (dx || dy) steps.push(`${formatTenths(dx)} ${formatTenths(dy)}`);
+      }
+      return `M${formatTenths(first[0])} ${formatTenths(first[1])}l${steps.join(' ')}z`;
     })
     .join('');
 
@@ -90,7 +106,11 @@ const letterCenters = (relief: CrossSection): Vec2[] => {
 };
 
 class FittedWidthError extends Error {}
+type PresetId = KeyringPreset['id'];
+/** The preset whose left and right builds define the shared body and letters. */
+const REFERENCE_PRESET: PresetId = 'standard-round';
 type PositionBuild = {
+  preset: PresetId;
   position: KeyringPosition;
   body: CrossSection;
   relief: CrossSection;
@@ -101,10 +121,12 @@ type PositionBuild = {
 const previewParams = (
   templateId: KeychainParams['templateId'],
   styleId: KeychainParams['styleId'],
+  preset: PresetId,
   position: KeyringPosition,
   textSizeMm: number,
 ): KeychainParams => ({
   ...DEFAULT_PARAMS,
+  ...keyringPresetValues(preset),
   templateId,
   styleId,
   text: SAMPLE_TEXT,
@@ -119,18 +141,20 @@ const previewParams = (
 
 const buildPosition = async (
   wasm: GeometryWasm,
+  preset: PresetId,
   params: KeychainParams,
 ): Promise<PositionBuild> => {
   const { result } = await buildKeychain(wasm, params);
   const position = params.keyringPosition ?? 'left';
   if (!result.printable || !result.keyring)
     throw new Error(
-      `${params.templateId}/${params.styleId}/${position} is not printable: ${JSON.stringify(result.issues)}`,
+      `${params.templateId}/${params.styleId}/${preset}/${position} is not printable: ${JSON.stringify(result.issues)}`,
     );
   /* Width fitting rescales each position differently, which would misalign the shared body. */
   if (result.issues.some((issue) => ['scaled-to-fit', 'text-over-width'].includes(issue.code)))
     throw new FittedWidthError();
   return {
+    preset,
     position,
     body: silhouette(wasm, result.baseMesh),
     relief: silhouette(wasm, result.reliefMesh),
@@ -147,7 +171,7 @@ type PreviewRecord = {
   bounds: [number, number, number, number];
   body: string;
   relief: string;
-  positions: Record<KeyringPosition, { center: Vec2; tab: string }>;
+  openings: Record<PresetId, Record<KeyringPosition, { center: Vec2; tab: string }>>;
 };
 
 const generatePreview = async (
@@ -161,10 +185,15 @@ const generatePreview = async (
     builds.forEach((build) => [build.body, build.relief].forEach((item) => item.delete()));
     builds = [];
     try {
-      for (const position of KEYRING_POSITIONS)
-        builds.push(
-          await buildPosition(wasm, previewParams(templateId, styleId, position, textSizeMm)),
-        );
+      for (const { id: preset } of KEYRING_PRESETS)
+        for (const position of KEYRING_POSITIONS)
+          builds.push(
+            await buildPosition(
+              wasm,
+              preset,
+              previewParams(templateId, styleId, preset, position, textSizeMm),
+            ),
+          );
       break;
     } catch (error) {
       if (!(error instanceof FittedWidthError)) throw error;
@@ -176,7 +205,9 @@ const generatePreview = async (
      * Articulated names re-space their letters around the ring, so align every build on the letter
      * that carries it. Standard builds share one frame and need no shift.
      */
-    const reference = builds.find((build) => build.position === 'left')!;
+    const referenceBuild = (position: KeyringPosition): PositionBuild =>
+      builds.find((build) => build.preset === REFERENCE_PRESET && build.position === position)!;
+    const reference = referenceBuild('left');
     const referenceLetters = letterCenters(reference.relief);
     const shiftFor = (build: PositionBuild): Vec2 => {
       if (build.hostIndex === undefined) return [0, 0];
@@ -190,18 +221,23 @@ const generatePreview = async (
       const body = build.body.translate(shift);
       owned.push(body);
       return {
+        preset: build.preset,
         position: build.position,
         body,
         center: [build.center[0] + shift[0], build.center[1] + shift[1]] as Vec2,
       };
     });
-    const left = aligned.find((build) => build.position === 'left')!;
-    const right = aligned.find((build) => build.position === 'right')!;
+    const alignedReference = (position: KeyringPosition) =>
+      aligned.find((build) => build.preset === REFERENCE_PRESET && build.position === position)!;
+    const left = alignedReference('left');
+    const right = alignedReference('right');
     const body = left.body.intersect(right.body).simplify(SIMPLIFY);
     owned.push(body);
     const grown = body.offset(150, 'Round', 2, 32);
     owned.push(grown);
-    const positions = {} as PreviewRecord['positions'];
+    const openings = Object.fromEntries(
+      KEYRING_PRESETS.map((preset) => [preset.id, {}]),
+    ) as PreviewRecord['openings'];
     let minX = body.bounds().min[0];
     let minY = body.bounds().min[1];
     let maxX = body.bounds().max[0];
@@ -223,7 +259,9 @@ const generatePreview = async (
       };
       const tab = components.filter(containsCenter);
       if (!tab.length)
-        throw new Error(`No keyring tab found for ${templateId}/${styleId}/${build.position}`);
+        throw new Error(
+          `No keyring tab found for ${templateId}/${styleId}/${build.preset}/${build.position}`,
+        );
       const tabSection = tab.length === 1 ? tab[0] : wasm.CrossSection.union(tab);
       if (tab.length > 1) owned.push(tabSection);
       const tabBounds = tabSection.bounds();
@@ -231,7 +269,7 @@ const generatePreview = async (
       minY = Math.min(minY, tabBounds.min[1]);
       maxX = Math.max(maxX, tabBounds.max[0]);
       maxY = Math.max(maxY, tabBounds.max[1]);
-      positions[build.position] = {
+      openings[build.preset][build.position] = {
         center: [round(build.center[0] / MANIFOLD_SCALE), round(-build.center[1] / MANIFOLD_SCALE)],
         tab: svgPath(tabSection),
       };
@@ -246,7 +284,7 @@ const generatePreview = async (
       ],
       body: svgPath(body),
       relief: svgPath(reference.relief),
-      positions,
+      openings,
     };
   } finally {
     new Set(owned).forEach((section) => section.delete());
@@ -265,16 +303,28 @@ for (const template of TEMPLATE_CATALOG.filter((item) => item.supportsKeyring)) 
 
 const draft = `/* Generated by scripts/generators/generate-keyring-previews.ts. Do not edit by hand. */
 import type { KeyringPosition } from '@/domain/keychain/model/keyring-position';
+import type { KeyringPresetId } from '@/domain/keychain/model/keyring-presets';
+
+export type KeyringPreviewPreset = Exclude<KeyringPresetId, 'custom'>;
+
+export type KeyringPreviewOpening = {
+  /** Opening centre in millimetres. */
+  center: readonly [number, number];
+  /** Tab outline with its opening, even-odd filled. */
+  tab: string;
+};
 
 export type KeyringPreviewArtwork = {
-  /** SVG viewBox in millimetres (x, y, width, height); y points down. */
+  /** SVG viewBox in millimetres (x, y, width, height); y points down. Covers every preset. */
   bounds: readonly [number, number, number, number];
   /** Ring-less backing silhouette, even-odd filled. */
   body: string;
   /** Raised letters. */
   relief: string;
-  /** Opening centre and the tab the builder attaches at each position. */
-  positions: Readonly<Record<KeyringPosition, { center: readonly [number, number]; tab: string }>>;
+  /** The tab the builder attaches for each opening preset and position. */
+  openings: Readonly<
+    Record<KeyringPreviewPreset, Readonly<Record<KeyringPosition, KeyringPreviewOpening>>>
+  >;
 };
 
 export const KEYRING_PREVIEW_SAMPLE_TEXT = ${JSON.stringify(SAMPLE_TEXT)};
@@ -286,10 +336,14 @@ ${records
     bounds: ${JSON.stringify(record.bounds)},
     body: ${JSON.stringify(record.body)},
     relief: ${JSON.stringify(record.relief)},
-    positions: {
+    openings: {
+${KEYRING_PRESETS.map(
+  ({ id: preset }) => `      ${JSON.stringify(preset)}: {
 ${KEYRING_POSITIONS.map(
   (position) =>
-    `      ${JSON.stringify(position)}: { center: ${JSON.stringify(record.positions[position].center)}, tab: ${JSON.stringify(record.positions[position].tab)} },`,
+    `        ${JSON.stringify(position)}: { center: ${JSON.stringify(record.openings[preset][position].center)}, tab: ${JSON.stringify(record.openings[preset][position].tab)} },`,
+).join('\n')}
+      },`,
 ).join('\n')}
     },
   },`,

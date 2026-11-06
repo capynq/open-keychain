@@ -450,6 +450,8 @@
   "keyringSlotWidth": "Ширина прорізу для кільця",
   "keyringPresets": "Форма й розмір отвору для кільця",
   "keyringPosition": "Розташування отвору для кільця",
+  "keyringPresetsShort": "Отвір",
+  "keyringPositionShort": "Розташування",
   "keyringPositionLeft": "Ліворуч",
   "keyringPositionRight": "Праворуч",
   "keyringPositionTop": "Зверху",

@@ -30,7 +30,12 @@ export const KeyringPresetPicker = ({
 
   return (
     <fieldset className={`${styles.picker} ${variant === 'setup' ? styles.setup : ''}`}>
-      <legend>{t(locale, 'keyringPresets')}</legend>
+      {/* Quick setup titles the step with the same words, so its legend only names the group. */}
+      {variant === 'setup' ? (
+        <legend className={styles.visuallyHidden}>{t(locale, 'keyringPresets')}</legend>
+      ) : (
+        <legend>{t(locale, 'keyringPresetsShort')}</legend>
+      )}
       <div className={styles.grid}>
         {KEYRING_PRESETS.map((preset) => {
           const Icon = preset.shape === 'slot' ? Ellipse : Circle;

@@ -121,11 +121,15 @@ finishes use separate profiles; text finishing affects only its visible front ed
   explain the action, keep the glyph optically centered, and disappear under reduced motion.
 - Keep content and controls responsive at desktop, mobile, and mobile-2x. A preview
   or product visual must show real geometry, never a decorative placeholder.
-- Group the sidebar's Keyring settings in one quiet inset panel. Opening choices pair
+- Keep the sidebar's Keyring settings a flat section like Name, Template and Style: the section
+  dividers separate it and the position drawing is its only frame. Its group labels are short
+  ("Opening", "Position") because the section heading already says Keyring. Opening choices pair
   proportionally scaled shape cues with measured sizes. Position selection reuses a responsive ALEX
-  outline illustration in a transparent, bordered frame across the sidebar and setup. Its six radio
-  targets map to the attachment locations for Left, Right, Top, Bottom, Top left, and Top right,
-  with the selected localized label beneath the lettering. Do not draw a plaque outline around ALEX.
+  outline illustration in a transparent, bordered, full-width frame across the sidebar and setup.
+  Its six radio targets map to the attachment locations for Left, Right, Top, Bottom, Top left, and
+  Top right. The sidebar names the selected position at the end of the legend row, like a range
+  value; quick setup hides both keyring legends visually because the step title says the same, and
+  names the position beneath the drawing. Do not draw a plaque outline around ALEX.
   Keep targets at least 44 px, spaced without overlap, and aligned to the drawing in both contexts.
   The supplied rounded ALEX outline image is a fixed guide and does not replace the actual
   preview. Use Lucide's natural ellipse glyph for oval slots. Keep radio inputs out of the
@@ -290,8 +294,9 @@ labels still enlarge and wrap.
 
 The keyring position artwork is generated from the real builder
 (`pnpm assets:keyring-previews`) for the fixed sample name ALEX, one drawing per keyring template
-and style. Markers sit on the actual opening centres; the selected position also draws its real
-tab, and hovering or focusing another marker previews that tab dashed. Markers are laid out in the
+and style with the tab of every opening preset, so the drawn hole follows the chosen opening (a
+custom opening draws as the closest preset). Markers sit on the actual opening centres; the selected
+position also draws its real tab, and hovering or focusing another marker previews that tab dashed. Markers are laid out in the
 measured frame: the selected one never moves, others separate only when 44 px targets would touch,
 with a dashed leader back to their opening. Frames narrower than 320 px switch to a taller 1.7:1
 frame so six targets still fit. The entered name is never drawn there, so long names cannot

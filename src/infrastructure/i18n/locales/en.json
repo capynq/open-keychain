@@ -450,6 +450,8 @@
   "keyringSlotWidth": "Keyring slot width",
   "keyringPresets": "Keyring opening shape and size",
   "keyringPosition": "Keyring hole position",
+  "keyringPresetsShort": "Opening",
+  "keyringPositionShort": "Position",
   "keyringPositionLeft": "Left",
   "keyringPositionRight": "Right",
   "keyringPositionTop": "Top",

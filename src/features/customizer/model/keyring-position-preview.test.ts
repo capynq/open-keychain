@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { KEYRING_POSITIONS } from '@/domain/keychain/model/keyring-position';
+import { KEYRING_PRESETS } from '@/domain/keychain/model/keyring-presets';
 import { TEMPLATE_CATALOG } from '@/domain/keychain/templates/template-builder';
 
 import {
@@ -9,6 +10,7 @@ import {
   keyringPreviewArtwork,
   keyringPreviewAspect,
   keyringPreviewKey,
+  keyringPreviewPreset,
   keyringPreviewViewBox,
   layoutKeyringMarkers,
 } from './keyring-position-preview';
@@ -23,22 +25,43 @@ const keyringDesigns = TEMPLATE_CATALOG.filter((template) => template.supportsKe
 );
 
 describe('keyring position preview', () => {
-  it('has generated artwork with every position for each keyring template and style', () => {
+  it('has generated artwork with every preset and position for each keyring template and style', () => {
     for (const { templateId, styleId } of keyringDesigns) {
       const key = keyringPreviewKey(templateId, styleId);
       expect(KEYRING_PREVIEW_ARTWORK[key], key).toBeDefined();
       const artwork = KEYRING_PREVIEW_ARTWORK[key];
       expect(artwork.body).toMatch(/^M/);
       expect(artwork.relief).toMatch(/^M/);
-      for (const position of KEYRING_POSITIONS) {
-        expect(artwork.positions[position].tab, `${key}/${position}`).toMatch(/^M/);
-        const [x, y] = artwork.positions[position].center;
-        const [left, top, width, height] = artwork.bounds;
-        expect(x).toBeGreaterThan(left);
-        expect(x).toBeLessThan(left + width);
-        expect(y).toBeGreaterThan(top);
-        expect(y).toBeLessThan(top + height);
-      }
+      for (const { id: preset } of KEYRING_PRESETS)
+        for (const position of KEYRING_POSITIONS) {
+          const opening = artwork.openings[preset][position];
+          expect(opening.tab, `${key}/${preset}/${position}`).toMatch(/^M/);
+          const [x, y] = opening.center;
+          const [left, top, width, height] = artwork.bounds;
+          expect(x).toBeGreaterThan(left);
+          expect(x).toBeLessThan(left + width);
+          expect(y).toBeGreaterThan(top);
+          expect(y).toBeLessThan(top + height);
+        }
+    }
+  });
+
+  it('draws the chosen opening, mapping custom sizes to the closest preset', () => {
+    expect(keyringPreviewPreset({ keyringPreset: 'large-round' })).toBe('large-round');
+    expect(keyringPreviewPreset({ keyringPreset: 'custom', keyringOpeningShape: 'slot' })).toBe(
+      'oval-slot',
+    );
+    expect(keyringPreviewPreset({ keyringPreset: 'custom', holeDiameterMm: 3 })).toBe(
+      'compact-round',
+    );
+    expect(keyringPreviewPreset({ keyringPreset: 'custom', holeDiameterMm: 6.5 })).toBe(
+      'large-round',
+    );
+    expect(keyringPreviewPreset({})).toBe('standard-round');
+    for (const { templateId, styleId } of keyringDesigns) {
+      const { openings } = keyringPreviewArtwork(templateId, styleId);
+      const tabs = new Set(KEYRING_PRESETS.map(({ id }) => openings[id].left.tab));
+      expect(tabs.size, `${templateId}/${styleId}`).toBe(KEYRING_PRESETS.length);
     }
   });
 
@@ -52,10 +75,12 @@ describe('keyring position preview', () => {
   });
 
   it('places mirrored and articulated end positions on the expected sides', () => {
-    const ribbon = keyringPreviewArtwork('name-keychain', 'ribbon').positions;
+    const ribbon = keyringPreviewArtwork('name-keychain', 'ribbon').openings['standard-round'];
     expect(Math.abs(ribbon.right.center[1] - ribbon['top-right'].center[1])).toBeGreaterThan(3);
     expect(ribbon.left.center[1]).toBeCloseTo(ribbon.right.center[1], 0);
-    const articulated = keyringPreviewArtwork('articulated-name', 'contour').positions;
+    const articulated = keyringPreviewArtwork('articulated-name', 'contour').openings[
+      'standard-round'
+    ];
     expect(articulated.left.center[0]).toBeLessThan(articulated.top.center[0]);
     expect(articulated.right.center[0]).toBeGreaterThan(articulated.top.center[0]);
     expect(articulated['top-right'].center[0]).toBeGreaterThan(articulated.top.center[0]);
@@ -77,43 +102,44 @@ describe('keyring position preview', () => {
     }
   });
 
-  it.each([248, 260, 300, 319, 320, 340, 380, 420])(
+  it.each([248, 260, 300, 319, 320, 340, 380, 420, 480, 560])(
     'keeps 44 px targets apart and inside a %i px frame',
     (frameWidth) => {
       for (const { templateId, styleId } of keyringDesigns)
-        for (const selected of KEYRING_POSITIONS) {
-          const artwork = keyringPreviewArtwork(templateId, styleId);
-          const aspect = keyringPreviewAspect(artwork, frameWidth);
-          const frame = { width: frameWidth, height: frameWidth / aspect };
-          const placements = layoutKeyringMarkers(
-            artwork,
-            keyringPreviewViewBox(artwork, aspect, frameWidth),
-            frame,
-            selected,
-          );
-          const label = `${templateId}/${styleId} selected ${selected} at ${frameWidth}px`;
-          expect(placements).toHaveLength(KEYRING_POSITIONS.length);
-          const half = KEYRING_MARKER_TARGET_PX / 2;
-          for (const placement of placements) {
-            const x = placement.marker[0] * frame.width;
-            const y = placement.marker[1] * frame.height;
-            expect(x, label).toBeGreaterThanOrEqual(half - 0.01);
-            expect(x, label).toBeLessThanOrEqual(frame.width - half + 0.01);
-            expect(y, label).toBeGreaterThanOrEqual(half - 0.01);
-            expect(y, label).toBeLessThanOrEqual(frame.height - half + 0.01);
-          }
-          const chosen = placements.find((placement) => placement.position === selected)!;
-          expect(chosen.displaced, label).toBe(false);
-          for (let first = 0; first < placements.length; first += 1)
-            for (let second = first + 1; second < placements.length; second += 1) {
-              const a = placements[first];
-              const b = placements[second];
-              const apart =
-                Math.abs(a.marker[0] - b.marker[0]) * frame.width >= KEYRING_MARKER_TARGET_PX ||
-                Math.abs(a.marker[1] - b.marker[1]) * frame.height >= KEYRING_MARKER_TARGET_PX;
-              expect(apart, `${label}: ${a.position} and ${b.position}`).toBe(true);
+        for (const { id: preset } of KEYRING_PRESETS)
+          for (const selected of KEYRING_POSITIONS) {
+            const artwork = keyringPreviewArtwork(templateId, styleId);
+            const aspect = keyringPreviewAspect(artwork, frameWidth);
+            const frame = { width: frameWidth, height: frameWidth / aspect };
+            const placements = layoutKeyringMarkers(
+              artwork.openings[preset],
+              keyringPreviewViewBox(artwork, aspect, frameWidth),
+              frame,
+              selected,
+            );
+            const label = `${templateId}/${styleId}/${preset} selected ${selected} at ${frameWidth}px`;
+            expect(placements).toHaveLength(KEYRING_POSITIONS.length);
+            const half = KEYRING_MARKER_TARGET_PX / 2;
+            for (const placement of placements) {
+              const x = placement.marker[0] * frame.width;
+              const y = placement.marker[1] * frame.height;
+              expect(x, label).toBeGreaterThanOrEqual(half - 0.01);
+              expect(x, label).toBeLessThanOrEqual(frame.width - half + 0.01);
+              expect(y, label).toBeGreaterThanOrEqual(half - 0.01);
+              expect(y, label).toBeLessThanOrEqual(frame.height - half + 0.01);
             }
-        }
+            const chosen = placements.find((placement) => placement.position === selected)!;
+            expect(chosen.displaced, label).toBe(false);
+            for (let first = 0; first < placements.length; first += 1)
+              for (let second = first + 1; second < placements.length; second += 1) {
+                const a = placements[first];
+                const b = placements[second];
+                const apart =
+                  Math.abs(a.marker[0] - b.marker[0]) * frame.width >= KEYRING_MARKER_TARGET_PX ||
+                  Math.abs(a.marker[1] - b.marker[1]) * frame.height >= KEYRING_MARKER_TARGET_PX;
+                expect(apart, `${label}: ${a.position} and ${b.position}`).toBe(true);
+              }
+          }
     },
   );
 });

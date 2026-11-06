@@ -2,8 +2,14 @@ import type { KeyringPosition } from '@/domain/keychain/model/keyring-position';
 import type { KeychainParams } from '@/domain/keychain/model/types';
 
 import { KEYRING_POSITIONS } from '@/domain/keychain/model/keyring-position';
+import { KEYRING_PRESETS } from '@/domain/keychain/model/keyring-presets';
 
-import { KEYRING_PREVIEW_ARTWORK, type KeyringPreviewArtwork } from './keyring-preview-artwork';
+import {
+  KEYRING_PREVIEW_ARTWORK,
+  type KeyringPreviewArtwork,
+  type KeyringPreviewOpening,
+  type KeyringPreviewPreset,
+} from './keyring-preview-artwork';
 
 /** Frame proportions follow the artwork within this range, so the panel height barely moves. */
 export const KEYRING_PREVIEW_ASPECT_RANGE = [2, 2.6] as const;
@@ -29,6 +35,25 @@ export const keyringPreviewArtwork = (
   templateId: KeychainParams['templateId'],
   styleId: KeychainParams['styleId'],
 ): KeyringPreviewArtwork => KEYRING_PREVIEW_ARTWORK[keyringPreviewKey(templateId, styleId)];
+
+/**
+ * The drawn opening for the current settings. A custom slot draws as the oval slot and a custom
+ * round opening as the round preset closest in diameter.
+ */
+export const keyringPreviewPreset = ({
+  keyringPreset,
+  keyringOpeningShape,
+  holeDiameterMm,
+}: Partial<
+  Pick<KeychainParams, 'keyringPreset' | 'keyringOpeningShape' | 'holeDiameterMm'>
+>): KeyringPreviewPreset => {
+  if (keyringPreset && keyringPreset !== 'custom') return keyringPreset;
+  if (keyringOpeningShape === 'slot') return 'oval-slot';
+  const diameter = holeDiameterMm ?? 5;
+  return KEYRING_PRESETS.filter((preset) => preset.shape === 'round').reduce((closest, preset) =>
+    Math.abs(preset.widthMm - diameter) < Math.abs(closest.widthMm - diameter) ? preset : closest,
+  ).id;
+};
 
 export type PreviewViewBox = readonly [number, number, number, number];
 
@@ -80,7 +105,7 @@ export type MarkerPlacement = {
  * its opening; others separate along the shorter axis of their overlap, a few pixels at a time.
  */
 export const layoutKeyringMarkers = (
-  artwork: KeyringPreviewArtwork,
+  openings: Readonly<Record<KeyringPosition, KeyringPreviewOpening>>,
   viewBox: PreviewViewBox,
   frame: { width: number; height: number },
   selected: KeyringPosition,
@@ -93,7 +118,7 @@ export const layoutKeyringMarkers = (
   const clampX = (value: number): number => Math.min(width - half, Math.max(half, value));
   const clampY = (value: number): number => Math.min(height - half, Math.max(half, value));
   const anchors = KEYRING_POSITIONS.map((position) => {
-    const [x, y] = artwork.positions[position].center;
+    const [x, y] = openings[position].center;
     return {
       position,
       x: ((x - viewX) / viewWidth) * width,

@@ -450,6 +450,8 @@
   "keyringSlotWidth": "Ширина прорези для кольца",
   "keyringPresets": "Форма и размер отверстия для кольца",
   "keyringPosition": "Положение отверстия для кольца",
+  "keyringPresetsShort": "Отверстие",
+  "keyringPositionShort": "Положение",
   "keyringPositionLeft": "Слева",
   "keyringPositionRight": "Справа",
   "keyringPositionTop": "Сверху",

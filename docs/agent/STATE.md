@@ -16,7 +16,13 @@ proven clear".
   (`pnpm assets:keyring-previews`, `--check`), with markers on the real opening centres and a
   measured, collision-free 44 px layout; `public/showcase/keyring-position-alex.png` was removed.
 - Pro range value fields no longer inherit the 44 px generic field rule: 28 px desktop, 36 px
-  phone, one fixed width; range rows are 16 px apart.
+  phone, one fixed width; range rows are 16 px apart, and every adjustment group after Typography
+  (Template details and Print included) now has a divider so groups stay further apart than rows.
+- Design review follow-up: the Keyring section is flat like its neighbours (no tinted card), its
+  legends read "Opening" and "Position" with the selected position at the end of the legend row,
+  quick setup hides both keyring legends behind the step title and widens the drawing, the opening
+  picker takes its colors from tokens, and the position drawing shows the tab of the chosen opening
+  preset (artwork now stores tabs per preset as relative SVG paths).
 
 Known environment issue: `e2e/keychain.spec.ts:983` (viewer width at 390 px) fails here on this
 branch and on the unchanged base commit alike; Playwright browsers need
