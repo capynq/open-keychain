@@ -8,6 +8,7 @@ import { SeoPage } from '@/pages/seo/SeoPage';
 
 import { hostedMode } from '../../features/hosted/config';
 import { type Locale } from '../../infrastructure/i18n/config';
+import { commitBoot } from '../boot/handoff';
 import { RouteLoading, type RouteLoadingVariant } from '../components/RouteLoading/RouteLoading';
 import { CREATE_ROUTE, LANDING_ROUTE, PROFILE_ROUTE } from '../routes';
 import {
@@ -19,14 +20,7 @@ import {
 } from '../routing/routeModules';
 
 const RouteCommitted = ({ children }: { children: ReactNode }) => {
-  useLayoutEffect(() => {
-    const root = document.getElementById('root');
-
-    root?.removeAttribute('inert');
-    root?.setAttribute('data-app-ready', 'true');
-    document.documentElement.setAttribute('data-app-ready', 'true');
-    document.getElementById('boot-customizer')?.replaceChildren();
-  }, []);
+  useLayoutEffect(() => commitBoot(), []);
 
   return children;
 };
@@ -50,15 +44,15 @@ export const AppRoutes = ({
 }: AppRoutesProps) => {
   const seoRoute = resolveSeoRoute(location.pathname);
   const loadingVariant: RouteLoadingVariant =
-    normalizedPath === LANDING_ROUTE
-      ? 'landing'
-      : normalizedPath === PROFILE_ROUTE
-        ? 'profile'
-        : normalizedPath === '/privacy' || seoRoute
-          ? 'reference'
-          : 'not-found';
+    normalizedPath === PROFILE_ROUTE
+      ? 'profile'
+      : normalizedPath === '/privacy' || seoRoute
+        ? 'reference'
+        : 'not-found';
+  /* Landing and Customizer cold loads show their boot frame; client navigation keeps the old
+   * page during the transition, so neither needs a skeleton of its own. */
   const suspenseFallback =
-    normalizedPath === CREATE_ROUTE ? null : (
+    normalizedPath === CREATE_ROUTE || normalizedPath === LANDING_ROUTE ? null : (
       <RouteLoading variant={loadingVariant} locale={displayLocale} />
     );
 

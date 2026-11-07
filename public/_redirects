@@ -3,4 +3,5 @@
 /api/* https://api.open-keychain.com/api/:splat 200
 /create /create/index.html 200
 /create/ /create/index.html 200
-/* /index.html 200
+# Every other path renders in the app; app.html is index.html without the landing frame.
+/* /app.html 200

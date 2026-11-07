@@ -17,6 +17,9 @@
   Content-Type: application/json; charset=UTF-8
   Cache-Control: public, max-age=3600, must-revalidate
 
+/app.html
+  X-Robots-Tag: noindex, follow
+
 /privacy
   X-Robots-Tag: noindex, follow
 

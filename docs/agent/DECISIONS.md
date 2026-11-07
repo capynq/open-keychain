@@ -854,3 +854,24 @@ bounds to 1 px.
 Serif. Hovering or focusing a bundled font card fetches its TTF at low priority so the geometry
 worker reads it from cache on selection. `generate-font-specimens.test.ts` fails when the
 committed sprite or metrics are stale.
+
+## 2026-11-07 — The landing page boots from its real first screen
+
+**Decision:** `/` paints the live header, hero and workflow section, rendered at build time into
+`dist/index.html`, before React runs; the hand-drawn skeleton and its second copy in `core.css`
+are gone. Landing, Customizer and profile frames share one registry and plugin
+(`scripts/build/route-boot-plugin.ts`). The build writes `index.html` (landing), `create/index.html`
+(Customizer) and `app.html` (SPA fallback without landing assets); `public/_redirects` rewrites
+other paths to `app.html`. The English landing variant is inline; `?lang=ru|uk` clones a template.
+
+**Rationale:** The skeleton drifted from the page (header 62 vs 68 px, hero 1320 vs 1180 px wide,
+48 vs 130 px top padding, a 16:10 box where phones show a tall screenshot), so every cold load
+jumped. The real first screen also starts the hero image download at HTML parse time instead of
+after two JavaScript chunks. At 390–1920 px every measured box matches the live page within 1 px.
+
+**Consequences:** The frame stays until React commits; on the landing page `data-boot-handoff`
+holds it at most 150 ms more while the live hero image decodes, and `data-app-ready` still marks
+the commit. The frame's ids and label targets are stripped so anchors such as `#faq` resolve to
+the live page. While the landing frame shows, the page is 1 px taller than the viewport, so
+classic scrollbars take the same width they take on the live page. The Customizer resolver now
+picks the first supported entry of `navigator.languages`, as i18next does.

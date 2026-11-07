@@ -15,43 +15,41 @@
     <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <script>
-      const bootPath = window.location.pathname.replace(/\/+$/, '') || '/';
-      const bootRoute =
-        bootPath === '/'
-          ? 'landing'
-          : bootPath === '/create'
-            ? 'customizer'
-            : bootPath === '/profile'
-              ? 'profile'
-              : 'none';
-      document.documentElement.dataset.bootRoute = bootRoute;
-      if (bootRoute === 'customizer') {
-        const customizerBootStyleUrls = __CUSTOMIZER_BOOT_STYLE_URLS__;
-        for (const href of customizerBootStyleUrls) {
-          const stylesheet = document.createElement('link');
-          stylesheet.rel = 'stylesheet';
-          stylesheet.href = href;
-          document.head.append(stylesheet);
+      (() => {
+        /* Picks the boot frame variant; keep in step with scripts/build/boot-routes.ts. */
+        const html = document.documentElement;
+        const path = window.location.pathname.replace(/\/+$/, '') || '/';
+        const route =
+          path === '/' ? 'landing' : path === '/create' ? 'customizer' : path === '/profile' ? 'profile' : 'none';
+        html.dataset.bootRoute = route;
+        const params = new URLSearchParams(window.location.search);
+        const locales = ['en', 'ru', 'uk'];
+        const requested = locales.includes(params.get('lang')) ? params.get('lang') : undefined;
+        if (route === 'landing') {
+          /* `/` is English unless `?lang` asks otherwise (detectInitialLocale). */
+          const locale = requested ?? 'en';
+          html.lang = locale;
+          html.dataset.bootKey = locale;
+        } else if (route === 'customizer') {
+          /* Like i18next's navigator detector: the first supported language in the list. */
+          const browser = [...(navigator.languages?.length ? navigator.languages : [navigator.language])]
+            .map((language) => language.toLowerCase().split('-')[0])
+            .find((language) => locales.includes(language));
+          const locale = requested ?? browser ?? 'en';
+          const templates = ['name-keychain', 'articulated-name', 'magnet', 'nameplate', 'plant-label'];
+          const template = params.has('design')
+            ? 'neutral'
+            : templates.includes(params.get('template'))
+              ? params.get('template')
+              : 'name-keychain';
+          html.lang = locale;
+          html.dataset.bootKey = `${locale}:${template}`;
+        } else if (route === 'profile') {
+          html.dataset.bootKey = 'skeleton';
         }
-        const bootParams = new URLSearchParams(window.location.search);
-        const bootLanguages = ['en', 'ru', 'uk'];
-        const bootTemplates = ['name-keychain', 'articulated-name', 'magnet', 'nameplate', 'plant-label'];
-        const bootLanguageParam = bootParams.get('lang');
-        const bootBrowserLanguage = navigator.language.toLowerCase().split('-')[0];
-        const bootLocale = bootLanguages.includes(bootLanguageParam)
-          ? bootLanguageParam
-          : bootLanguages.includes(bootBrowserLanguage)
-            ? bootBrowserLanguage
-            : 'en';
-        document.documentElement.lang = bootLocale;
-        const bootTemplate = bootParams.has('design')
-          ? 'neutral'
-          : bootTemplates.includes(bootParams.get('template'))
-            ? bootParams.get('template')
-            : 'name-keychain';
-        document.documentElement.dataset.bootCustomizer = `${bootLocale}:${bootTemplate}`;
-      }
+      })();
     </script>
+    <!-- route-boot-head -->
     <script>
       (() => {
         const recoveryCopy = {
@@ -149,133 +147,17 @@
 
       #boot-shell[hidden],
       html[data-boot-route='none'] #boot-shell,
-      html[data-app-ready='true'] #boot-shell {
+      html[data-app-ready='true']:not([data-boot-handoff='pending']) #boot-shell {
         display: none;
       }
 
-      #boot-shell [data-route-skeleton] {
-        display: none;
-      }
-
-      html[data-boot-route='landing'] #boot-shell [data-route-skeleton='landing'],
-      html[data-boot-route='profile'] #boot-shell [data-route-skeleton='profile'] {
-        display: block;
-      }
-
-      #boot-shell .route-skeleton {
-        min-height: 100dvh;
-        color: #303545;
-        background: #f6f4ef;
-      }
-
-      #boot-shell .route-skeleton__header {
-        display: flex;
-        min-height: 62px;
-        align-items: center;
-        justify-content: space-between;
-        gap: 24px;
-        padding: 10px clamp(18px, 4vw, 64px);
-        border-bottom: 1px solid #dfddd6;
-      }
-
-      #boot-shell .route-skeleton__brand,
-      #boot-shell .route-skeleton__nav,
-      #boot-shell .route-skeleton__action,
-      #boot-shell .route-skeleton__line,
-      #boot-shell .route-skeleton__control,
-      #boot-shell .route-skeleton__button,
-      #boot-shell .route-skeleton__showcase {
-        display: block;
-        border-radius: 8px;
-        background: #e8e2d9;
-      }
-
-      #boot-shell .route-skeleton__brand {
-        width: 172px;
-        height: 34px;
-      }
-
-      #boot-shell .route-skeleton__nav {
-        width: 180px;
-        height: 18px;
-      }
-
-      #boot-shell .route-skeleton__action {
-        width: 116px;
-        height: 38px;
-        border-radius: 999px;
-      }
-
-      #boot-shell .route-skeleton__landing {
-        display: grid;
-        width: min(100% - 64px, 1320px);
-        min-height: min(620px, calc(100dvh - 62px));
-        grid-template-columns: minmax(0, 0.92fr) minmax(0, 1fr);
-        align-items: center;
-        gap: clamp(36px, 5vw, 76px);
-        margin-inline: auto;
-        padding-block: 48px;
-      }
-
-      #boot-shell .route-skeleton__landing-copy,
-      #boot-shell .route-skeleton__profile-form {
-        display: grid;
-        align-content: start;
-        gap: 14px;
-      }
-
-      #boot-shell .route-skeleton__line--short {
-        width: 36%;
-        height: 12px;
-      }
-
-      #boot-shell .route-skeleton__line--title {
-        width: 78%;
-        height: clamp(42px, 5vw, 68px);
-      }
-
-      #boot-shell .route-skeleton__line--wide {
-        width: 92%;
-      }
-
-      #boot-shell .route-skeleton__line--body {
-        width: 72%;
-        height: 14px;
-      }
-
-      #boot-shell .route-skeleton__button {
-        width: 178px;
-        height: 46px;
-        border-radius: 999px;
-      }
-
-      #boot-shell .route-skeleton__showcase {
-        width: 100%;
-        aspect-ratio: 16 / 10;
-        padding: 12px;
-        border: 1px solid #dfddd6;
-        border-radius: 20px;
-        background: #eee8df;
-      }
-
-      #boot-shell .route-skeleton__control {
-        height: 42px;
-        border: 1px solid #d7c8bd;
-        background: #fffdf9;
-      }
-
-      #boot-shell .route-skeleton__reference {
-        width: min(100% - 48px, 840px);
-        margin: clamp(50px, 9vh, 104px) auto;
-      }
-
-      #boot-shell .route-skeleton__profile-form {
-        width: min(100%, 520px);
-        margin-top: 40px;
-        padding: 24px;
-        border: 1px solid #dfddd6;
-        border-radius: 16px;
-        background: #fffdf8;
+      /*
+       * The live landing page scrolls. Give the booting page the same auto scrollbar (a gutter
+       * would also shrink vw units, which the hero type uses), so the frame lays out at the same
+       * width and the hand-off does not shift on classic-scrollbar systems.
+       */
+      html[data-boot-route='landing']:not([data-app-ready='true']) body {
+        min-height: calc(100vh + 1px);
       }
 
       #boot-recovery[hidden],
@@ -350,20 +232,6 @@
           transition: none;
         }
       }
-
-      @media (max-width: 760px) {
-        #boot-shell .route-skeleton__nav {
-          display: none;
-        }
-
-        #boot-shell .route-skeleton__landing {
-          display: flex;
-          width: min(100% - 36px, 560px);
-          flex-direction: column;
-          gap: 42px;
-          padding-block: 58px;
-        }
-      }
     </style>
     <title>Open Keychain 3D - free printable name keychain maker</title>
   </head>
@@ -378,47 +246,21 @@
       <div id="boot-no-js">Open Keychain needs JavaScript enabled to create a keychain.</div>
     </noscript>
     <div id="boot-shell" data-boot-shell aria-hidden="true">
-      <div class="route-skeleton route-skeleton--landing" data-route-skeleton="landing">
-        <header class="route-skeleton__header">
-          <span class="route-skeleton__brand"></span><span class="route-skeleton__nav"></span
-          ><span class="route-skeleton__action"></span>
-        </header>
-        <main class="route-skeleton__landing">
-          <div class="route-skeleton__landing-copy">
-            <span class="route-skeleton__line route-skeleton__line--short"></span
-            ><span class="route-skeleton__line route-skeleton__line--title"></span
-            ><span class="route-skeleton__line route-skeleton__line--title route-skeleton__line--wide"></span
-            ><span class="route-skeleton__line route-skeleton__line--body"></span
-            ><span class="route-skeleton__line route-skeleton__line--body route-skeleton__line--wide"></span
-            ><span class="route-skeleton__button"></span>
-          </div>
-          <div class="route-skeleton__showcase"></div>
-        </main>
-      </div>
-      <div id="boot-customizer" aria-hidden="true" inert></div>
-      <!-- customizer-boot-variants -->
+      <div id="boot-frame" aria-hidden="true" inert><!-- route-boot-frames --></div>
       <script>
-        if (document.documentElement.dataset.bootRoute === 'customizer') {
-          const bootTemplate = document.querySelector(
-            `template[data-customizer-boot="${document.documentElement.dataset.bootCustomizer}"]`,
-          );
-          if (bootTemplate) document.getElementById('boot-customizer').append(bootTemplate.content.cloneNode(true));
-        }
+        (() => {
+          /* Shows the server-rendered frame for this route, cloning it unless it is inline. */
+          const { bootRoute, bootKey } = document.documentElement.dataset;
+          const frame = document.getElementById('boot-frame');
+          const wanted = `${bootRoute}:${bootKey}`;
+          if (frame.querySelector(`:scope > [data-boot-inline="${wanted}"]`)) {
+            frame.querySelectorAll(':scope > template').forEach((template) => template.remove());
+            return;
+          }
+          const template = frame.querySelector(`:scope > template[data-boot-frame="${wanted}"]`);
+          frame.replaceChildren(...(template ? [template.content.cloneNode(true)] : []));
+        })();
       </script>
-      <div class="route-skeleton route-skeleton--profile" data-route-skeleton="profile">
-        <header class="route-skeleton__header">
-          <span class="route-skeleton__brand"></span><span class="route-skeleton__nav"></span
-          ><span class="route-skeleton__action"></span>
-        </header>
-        <main class="route-skeleton__reference">
-          <span class="route-skeleton__line route-skeleton__line--short"></span
-          ><span class="route-skeleton__line route-skeleton__line--title"></span>
-          <section class="route-skeleton__profile-form">
-            <span class="route-skeleton__control"></span><span class="route-skeleton__control"></span
-            ><span class="route-skeleton__button"></span>
-          </section>
-        </main>
-      </div>
     </div>
     <div id="boot-recovery" hidden role="alert" aria-live="assertive">
       <div class="boot-recovery__card">

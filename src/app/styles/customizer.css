@@ -2181,7 +2181,7 @@ html[data-input-modality='keyboard'] .customizer-app-shell .design-select-card:h
   border-top: 1px solid var(--workshop-border-subtle);
 }
 
-/* Pre-React boot frame only (scoped to the copy in #boot-customizer). */
+/* Pre-React boot frame only (scoped to the copy in #boot-frame). */
 .customizer-boot-frame .workspace {
   min-height: 0;
 }

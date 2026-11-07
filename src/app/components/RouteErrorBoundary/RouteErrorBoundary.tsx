@@ -7,6 +7,7 @@ import { type Locale } from '../../../infrastructure/i18n/config';
 import { recoveryMessage, recoverySteps, t } from '../../../infrastructure/i18n/utils';
 import { captureReactException } from '../../../infrastructure/telemetry/react-exceptions';
 import { resetRetryableLazy } from '../../../shared/ui/RetryableLazy';
+import { commitBoot } from '../../boot/handoff';
 
 type RouteErrorBoundaryProps = {
   locale: Locale;
@@ -29,11 +30,7 @@ export class RouteErrorBoundary extends Component<
   }
 
   override componentDidCatch(error: Error): void {
-    const root = document.getElementById('root');
-
-    root?.removeAttribute('inert');
-    root?.setAttribute('data-app-ready', 'true');
-    document.documentElement.setAttribute('data-app-ready', 'true');
+    commitBoot({ awaitHero: false });
     resetRetryableLazy();
     captureReactException(error);
     console.error('Route module failed to load.');

@@ -34,6 +34,27 @@ their query/state locale, privacy remains canonical at `/privacy`, and only the
 customizer emits `WebApplication` structured data. Changes to these contracts
 must include unit coverage and focused browser coverage.
 
+## Boot frames
+
+Landing (`/`) and the Customizer (`/create`) paint a server-rendered copy of their first screen
+before the app entry runs; the hosted profile paints the `RouteLoading` skeleton. One registry,
+`scripts/build/boot-routes.ts`, lists each frame's component, variants, page modules and output
+document, and `scripts/build/route-boot-plugin.ts` renders them at build time (and on request in
+development):
+
+- The frames are the live components (`src/app/boot/*BootFrame.tsx`), so a layout change reaches
+  the frame without a second copy. Keep new above-the-fold markup inside those components.
+- Their stylesheets are the CSS reachable through static imports from the route's page modules,
+  linked after the entry CSS. The build fails when a CSS-module class in a frame has no linked
+  rule.
+- The inline resolver in `index.html` picks the variant from the path and query, like
+  `detectInitialLocale`; keep the two in step when locale or template rules change.
+- `src/app/boot/handoff.ts` removes the frame once React commits (on the landing page after the
+  live hero image decodes, at most 150 ms). Tests that act on landing markup navigate with
+  `gotoLive` from `e2e/helpers.ts`.
+- `public/_redirects` serves `create/index.html` for `/create` and `app.html`, which has no landing
+  frame, for every other path. `vite preview` copies those rules.
+
 ## Migration aliases
 
 TypeScript, Vite, and Vitest expose matching aliases for `@/app/*`,
