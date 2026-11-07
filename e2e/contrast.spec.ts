@@ -212,9 +212,11 @@ test('keeps landing focus indicators visible against their surfaces', async ({ p
 });
 
 test('keeps icon action hover states visually distinct and contrasting', async ({ page }) => {
-  await page.goto('/create');
+  /* `actions.all()` snapshots elements: before hand-off it would include the boot frame's inert
+   * copies of these buttons, which never take hover and are then removed. */
+  await gotoLive(page, '/create');
   const actions = page.locator(
-    '.export-header-button, .share-header-button, .randomize-header-button, .language-picker-trigger',
+    '#root :is(.export-header-button, .share-header-button, .randomize-header-button, .language-picker-trigger)',
   );
   const finePointer = await page.evaluate(
     () => matchMedia('(hover: hover) and (pointer: fine)').matches,
