@@ -916,3 +916,58 @@ derivative.
 show a keyring hole a magnet does not have; they need recapturing (`pnpm capture:ui`). Unreferenced
 camera originals (`prints/example_{1,2}.jpeg`, 7.4 MB) and the mobile template captures were
 removed; `e2e/capture.spec.ts` now writes mobile captures under `artifacts/`.
+
+## 2026-11-07 — Russian and Ukrainian load on demand
+
+**Decision:** English ships with the entry; `ru` and `uk` are separate chunks
+(`src/infrastructure/i18n/locales/resources.<locale>.ts`, about 21 KB gzip each) loaded by
+`loadLocale`. `main.tsx` waits for the first render's locale (`detectInitialLocale`) before
+rendering; the resolver in `index.html` now sets `data-boot-locale` on every route, and the build
+adds an inline script that preloads that locale's chunk alongside the entry. `App` renders through
+`useLoadedLocale`, which keeps the last loaded locale on screen until a newly requested one
+arrives, so a language switch or a link to `/ru/…` never paints English in between. The language
+picker loads the other locales on pointer or focus. `detectLocale` reads `i18n.language`, because
+`resolvedLanguage` stays English until the detected locale's strings exist.
+
+**Rationale:** Every page shipped all three locales in the entry graph (about 180 KB gzip). The
+entry graph is now 136 KB gzip for English visitors; Russian and Ukrainian visitors download one
+21 KB chunk in parallel with it.
+
+**Consequences:** Code that renders a locale other than the displayed one must call `loadLocale`
+first. Unit tests start with every locale loaded (`scripts/validation/vitest-setup.ts`), as does the
+build-time frame renderer. `src/app/boot/boot-resolver.test.ts` runs the inline resolver against
+every SEO path, so it cannot drift from `detectInitialLocale`.
+
+## 2026-11-07 — The landing boot heading first paints in Bree
+
+**Decision:** `.landing-boot-frame .landing-hero h1` uses `OpenBreeBoot`, a second face on the
+same preloaded `bree-serif.ttf` with `font-display: block`; the live heading keeps `OpenBree`
+(swap).
+
+**Rationale:** The hero heading is the phone LCP element. On the deploy preview the frame painted
+it at 1.2 s in the metric-matched fallback, about 2% smaller than in Bree, so the live heading that
+replaces it at hand-off became a new, larger LCP candidate at 3.6 s, later than production's 3.1 s.
+Painted in Bree, the frame heading has the live heading's size and hand-off adds no candidate; LCP
+becomes Bree's arrival (21 KB, preloaded).
+
+**Consequences:** If Bree takes longer than the 3 s block period, the frame falls back and the old
+behavior returns. Desktop is unaffected: its LCP element is the hero image.
+
+## 2026-11-07 — `/create` is served without a redirect
+
+**Decision:** `public/_redirects` forces `/create /create/index.html 200!`.
+
+**Rationale:** Netlify answered `/create` (and `/create?lang=…`, the sitemap URLs) with a 301 to
+`/create/` before applying the unforced rewrite, because `create/index.html` exists. Every direct
+visit paid a round trip before the HTML.
+
+## 2026-11-07 — Push browser gates count two slots per Playwright worker
+
+**Decision:** In push plans, the smoke, regression and journey gates claim
+`browserGateSlots(workers)` = two slots per Playwright worker. CI plans are unchanged.
+
+**Rationale:** A Customizer page keeps its main thread and its geometry worker busy. Counted as
+one slot each, the regression and journey gates ran beside the unit gate on four cores, and their
+CPU-bound steps (the 10 s geometry rebuild in `keychain.spec.ts:54`, the 5 s Quick setup close in
+the critical journey) failed first attempts. On four cores the regression gate now runs alone and
+the journey runs at most beside two unit workers.

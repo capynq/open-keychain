@@ -47,13 +47,16 @@ development):
 - Their stylesheets are the CSS reachable through static imports from the route's page modules,
   linked after the entry CSS. The build fails when a CSS-module class in a frame has no linked
   rule.
-- The inline resolver in `index.html` picks the variant from the path and query, like
-  `detectInitialLocale`; keep the two in step when locale or template rules change.
+- The inline resolver in `index.html` picks the variant and the locale from the path, query and
+  browser languages, like `detectInitialLocale`; `src/app/boot/boot-resolver.test.ts` checks the
+  two agree on every SEO path. The build adds a script that preloads the picked locale's chunk
+  (English ships with the entry; see `loadLocale` in `src/infrastructure/i18n/config.ts`).
 - `src/app/boot/handoff.ts` removes the frame once React commits (on the landing page after the
   live hero image decodes, at most 150 ms). Tests that act on landing markup navigate with
   `gotoLive` from `e2e/helpers.ts`.
-- `public/_redirects` serves `create/index.html` for `/create` and `app.html`, which has no landing
-  frame, for every other path. `vite preview` copies those rules.
+- `public/_redirects` serves `create/index.html` for `/create` (forced, or Netlify redirects to
+  `/create/`) and `app.html`, which has no landing frame, for every other path. `vite preview`
+  copies those rules.
 - Each document also preloads its route's chunk graph; the landing document preloads the hero
   image from `ConfiguratorShowcase/hero-image.ts` and lists the editor's files for the idle
   prefetch (`src/app/routing/routePrefetch.ts`).
