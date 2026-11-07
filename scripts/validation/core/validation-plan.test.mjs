@@ -16,7 +16,7 @@ describe('validation gate selection', () => {
     expect(journey).toMatchObject({
       required: true,
       cacheable: false,
-      workerSlots: 1,
+      workerSlots: 2,
       args: ['test:e2e:journey'],
       env: {
         PLAYWRIGHT_BASE_URL: '',
@@ -251,6 +251,11 @@ describe('validation gate selection', () => {
       args: ['test:e2e:regression'],
       dependsOn: ['build'],
     });
+    /* Two slots per Playwright worker (page + geometry worker): on four cores the regression
+     * gate never overlaps the unit gate or the journey. */
+    expect(plan.find(({ id }) => id === 'browser').workerSlots).toBe(4);
+    expect(plan.find(({ id }) => id === 'browser:regression').workerSlots).toBe(4);
+    expect(plan.find(({ id }) => id === 'browser:journey').workerSlots).toBe(2);
   });
 
   it('typechecks UI stylesheet changes because they can affect component contracts', () => {

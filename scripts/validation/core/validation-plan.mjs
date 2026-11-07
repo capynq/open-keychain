@@ -37,11 +37,17 @@ const matrixWorkerCount = () =>
     boundedConcurrency('MATRIX_CONCURRENCY', validationConcurrency(), MAX_MATRIX_CONCURRENCY),
     validationConcurrency(),
   );
+/*
+ * A Playwright worker keeps at least two threads busy in the Customizer: the page and its geometry
+ * worker. Counted as one slot, the regression and journey gates ran beside the unit gate on four
+ * cores, and their CPU-bound steps (a 10 s geometry rebuild, the 5 s Quick setup close) timed out.
+ */
+export const browserGateSlots = (playwrightWorkers) => playwrightWorkers * 2;
 const browserRegressionGate = () => ({
   id: 'browser:regression',
   name: 'Browser regression',
   required: true,
-  workerSlots: 2,
+  workerSlots: browserGateSlots(2),
   command: 'pnpm',
   args: ['test:e2e:regression'],
   env: { PLAYWRIGHT_USE_EXISTING_BUILD: 'true', PLAYWRIGHT_SMOKE: 'false' },
@@ -288,7 +294,7 @@ const appendJourneyGate = (gates) => {
       required: true,
       cacheable: false,
       verificationRequired: true,
-      workerSlots: 1,
+      workerSlots: browserGateSlots(1),
       command: 'pnpm',
       args: ['test:e2e:journey'],
       env: {
@@ -457,7 +463,7 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
         id: 'browser',
         name: 'Browser smoke',
         required: true,
-        workerSlots: 2,
+        workerSlots: browserGateSlots(2),
         command: 'pnpm',
         args: ['test:e2e:smoke'],
         env: {
@@ -644,7 +650,7 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
       id: 'browser',
       name: 'Browser smoke',
       required: true,
-      workerSlots: 2,
+      workerSlots: browserGateSlots(2),
       command: 'pnpm',
       args: ['test:e2e:smoke'],
       env: { PLAYWRIGHT_USE_EXISTING_BUILD: 'true' },
