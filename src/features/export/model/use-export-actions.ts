@@ -17,11 +17,14 @@ import {
   GeometryOperationError,
   type OperationDiagnostics,
 } from '../../../shared/lib/recovery/operation-diagnostics';
+import { logError } from '../../../shared/lib/support/error-log';
 
 export type ExportActionsState = {
   downloading: boolean;
   printable: boolean;
   status: 'idle' | 'exporting' | 'success' | 'error';
+  /** Format of the most recent download attempt. */
+  lastFormat?: ExportFormat;
   error?: string;
   failure?: RecoveryFailure;
   download: (format: ExportFormat, mode?: ThreeMfMode) => Promise<void>;
@@ -88,6 +91,7 @@ export const useExportActions = ({
   const [status, setStatus] = useState<ExportActionsState['status']>('idle');
   const [error, setError] = useState<string>();
   const [failure, setFailure] = useState<RecoveryFailure>();
+  const [lastFormat, setLastFormat] = useState<ExportFormat>();
   const inFlight = useRef(false);
   const lastRequest = useRef<{
     format: ExportFormat;
@@ -115,6 +119,7 @@ export const useExportActions = ({
     const startedAt = performance.now();
 
     inFlight.current = true;
+    setLastFormat(format);
     setDownloading(true);
     setStatus('exporting');
     setError(undefined);
@@ -200,6 +205,7 @@ export const useExportActions = ({
       setError(message);
       setFailure(recoveryFailure);
       setStatus('error');
+      logError('export', `${recoveryFailure.code}: ${message}`);
       track('export_failed', {
         format,
         mode,
@@ -243,6 +249,7 @@ export const useExportActions = ({
       exportAllowed && (geometry.result?.printable || (allowDisconnected && disconnectedOnly)),
     ),
     status,
+    lastFormat,
     error,
     failure,
     download,

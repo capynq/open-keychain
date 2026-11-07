@@ -1,6 +1,7 @@
 import { Copy } from 'lucide-react';
 import { useId, type ReactElement } from 'react';
 
+import { useRecoveryReport } from '@/features/feedback/hooks/useRecoveryReport';
 import { PopoverAction } from '@/shared/ui/PopoverAction';
 import { RecoveryNotice } from '@/shared/ui/RecoveryNotice';
 
@@ -39,6 +40,7 @@ export const ShareFeedback = ({
   onNative: () => void;
 }): ReactElement => {
   const manualInputId = useId();
+  const reportFor = useRecoveryReport(locale);
   const feedback = share.feedback;
   const { status } = feedback;
 
@@ -76,6 +78,9 @@ export const ShareFeedback = ({
           detailsLabel={t(locale, 'recoveryDetails')}
           diagnostic={feedback.failure.message}
           steps={recoverySteps(locale, feedback.failure)}
+          report={reportFor(feedback.failure, {
+            message: recoveryMessage(locale, feedback.failure),
+          })}
           actions={[
             {
               id: 'copy-share-link',
@@ -93,6 +98,9 @@ export const ShareFeedback = ({
           detailsLabel={t(locale, 'recoveryDetails')}
           diagnostic={feedback.failure.message}
           steps={recoverySteps(locale, feedback.failure)}
+          report={reportFor(feedback.failure, {
+            message: recoveryMessage(locale, feedback.failure),
+          })}
           actions={[
             ...(share.canShareViaDevice
               ? [

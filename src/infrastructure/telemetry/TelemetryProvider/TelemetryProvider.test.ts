@@ -244,6 +244,57 @@ describe('AnalyticsProvider consent and startup', () => {
     expect(automaticException.properties.app_release).toBe(testBundleRelease);
   });
 
+  it('queues survey impressions until the SDK is ready but never queues survey answers', async () => {
+    const { recordSurveyShown, submitSurveyResponse } = await import('../feedback');
+    const fetchMock = vi.fn(async () => new Response(null, { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const survey = {
+      id: 'survey-1',
+      name: 'Print outcome',
+      questions: [{ id: 'outcome', question: 'Did it print?' }],
+    };
+    const context = { trigger: 'print_check' as const, locale: 'en' as const };
+    await renderProvider();
+    await click('accept');
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    recordSurveyShown(survey, context);
+    await expect(
+      submitSurveyResponse({ survey, responses: { outcome: 'Printed fine' }, context }),
+    ).resolves.toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(posthogMock.client.capture).not.toHaveBeenCalled();
+
+    posthogMock.client.__loaded = true;
+    await act(async () => initConfig?.loaded?.());
+
+    expect(posthogMock.client.capture).toHaveBeenCalledTimes(1);
+    expect(posthogMock.client.capture).toHaveBeenCalledWith(
+      'survey shown',
+      expect.objectContaining({ $survey_id: 'survey-1', feedback_trigger: 'print_check' }),
+    );
+  });
+
+  it('drops queued survey impressions when consent is declined before the SDK is ready', async () => {
+    const { recordSurveyShown } = await import('../feedback');
+    await renderProvider();
+    await click('accept');
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    recordSurveyShown(
+      { id: 'survey-1', name: 'App feedback', questions: [] },
+      { trigger: 'export', locale: 'en' },
+    );
+    await click('decline');
+    posthogMock.client.__loaded = true;
+    await act(async () => initConfig?.loaded?.());
+
+    expect(posthogMock.client.capture).not.toHaveBeenCalled();
+  });
+
   it('throttles canvas replay and registers the fps property on coarse pointers', async () => {
     const matchMedia = vi.fn(() => ({ matches: true }));
     vi.stubGlobal('matchMedia', matchMedia);

@@ -40,6 +40,18 @@ test('retries a failed export after recovery is exhausted and switches formats w
   await dialog.getByRole('button', { name: /STL file/ }).click();
   await expect(dialog.getByRole('alert')).toContainText('worker stopped');
   await expect(dialog.getByRole('button', { name: 'Try again', exact: true })).toBeEnabled();
+  const emailSupport = dialog.getByRole('link', { name: 'Email support' });
+  await emailSupport.hover();
+  await expect(emailSupport).toHaveAttribute(
+    'href',
+    /^mailto:support@open-keychain\.com\?subject=Open%20Keychain%20error%3A%20[a-z-]+&body=.*App%3A.*Design%3A%20http/,
+  );
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await dialog.getByRole('button', { name: 'Copy error report' }).click();
+  await expect(dialog.getByText(/^Copied\./)).toBeVisible();
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copied).toContain('--- Error report ---');
+  expect(copied).toMatch(/Recent errors:\n- \d\d:\d\d:\d\d export: /);
   await page.evaluate(() => {
     const control = (window as unknown as { exportRecoveryTest: { workers: Worker[] } })
       .exportRecoveryTest;

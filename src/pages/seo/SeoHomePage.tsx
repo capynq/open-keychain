@@ -2,6 +2,7 @@ import type { SeoRoute } from '@/features/seo';
 
 import { ConfiguratorShowcase } from '@/app/components/landing/ConfiguratorShowcase/ConfiguratorShowcase';
 import { LandingFaq } from '@/app/components/landing/LandingFaq/LandingFaq';
+import { LandingFinalCta } from '@/app/components/landing/LandingFinalCta/LandingFinalCta';
 import { LandingRunModes } from '@/app/components/landing/LandingRunModes/LandingRunModes';
 import { LandingTemplates } from '@/app/components/landing/LandingTemplates/LandingTemplates';
 import { LandingTrust } from '@/app/components/landing/LandingTrust/LandingTrust';
@@ -49,6 +50,7 @@ export const SeoHomePage = ({
       <LandingRunModes locale={locale} />
       <LandingTrust locale={locale} />
       <LandingFaq locale={locale} />
+      <LandingFinalCta locale={locale} />
     </div>
     <SeoFooter locale={locale} />
   </SeoShell>

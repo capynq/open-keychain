@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 
 import { CustomizerNavigationHeader } from '@/app/components/CustomizerNavigationHeader/CustomizerNavigationHeader';
@@ -13,9 +14,15 @@ import { TEMPLATE_CATALOG } from '@/domain/keychain/templates/template-builder';
 import { applyPrintAppearanceOverrides } from '@/entities/keychain/model/types';
 import { useQuickSetup } from '@/features/customizer/hooks/useQuickSetup';
 import { setupAppearance } from '@/features/customizer/model/quick-setup';
+import { ExportFeedback } from '@/features/feedback/components/ExportFeedback/ExportFeedback';
+import { PrintCheckNotice } from '@/features/feedback/components/PrintCheckNotice/PrintCheckNotice';
+import { useExportFeedback } from '@/features/feedback/hooks/useExportFeedback';
+import { usePrintCheck } from '@/features/feedback/hooks/usePrintCheck';
 import { SharePopover } from '@/features/share/components/SharePopover';
+import { buildShareUrl } from '@/features/share/model/share-url';
 import { useWebMcp } from '@/features/webmcp/hooks/useWebMcp';
 import { recoveryMessage } from '@/infrastructure/i18n/utils';
+import { setSupportDesignUrlProvider } from '@/shared/lib/support/support-report';
 
 import type { Locale } from '../../infrastructure/i18n/config';
 
@@ -55,6 +62,34 @@ export const CustomizerPage = ({
     state.geometry.result,
     state.customizer.acceptedParams.sizeEnvelope,
   );
+  const exportFeedback = useExportFeedback(locale);
+  const printCheck = usePrintCheck(locale, !state.exportOpen && !quickSetup.setupOpen);
+  const exportedDesignUrl = (): string | undefined => {
+    try {
+      return buildShareUrl(
+        window.location.href,
+        state.customizer.acceptedParams,
+        state.appearanceOverrides,
+      );
+    } catch {
+      return undefined;
+    }
+  };
+
+  const closeExport = (): void => {
+    exportFeedback.close();
+    state.setExportOpen(false);
+  };
+
+  const supportDesignParams = state.customizer.acceptedParams;
+  const supportAppearance = state.appearanceOverrides;
+  useEffect(() => {
+    setSupportDesignUrlProvider(() =>
+      buildShareUrl(window.location.href, supportDesignParams, supportAppearance),
+    );
+
+    return () => setSupportDesignUrlProvider(undefined);
+  }, [supportDesignParams, supportAppearance]);
   useUndoShortcuts(state.undo, state.redo);
   useStickyPreview();
   useWebMcp(state.customizer, {
@@ -132,7 +167,11 @@ export const CustomizerPage = ({
         }
         onClose={quickSetup.closeSetup}
         onApply={quickSetup.applySetup}
-        initialText={state.customizer.params.text}
+        initialText={
+          !quickSetup.setupReopened && routeModel.setupText
+            ? routeModel.setupText
+            : state.customizer.params.text
+        }
         supportsKeyring={
           TEMPLATE_CATALOG.find(
             (template) => template.id === state.customizer.acceptedParams.templateId,
@@ -189,10 +228,36 @@ export const CustomizerPage = ({
             : undefined
         }
         acceptedMetrics={acceptedMetrics}
-        onClose={() => state.setExportOpen(false)}
+        onClose={closeExport}
+        onExportSuccess={(format) =>
+          exportFeedback.onExportSuccess({
+            format,
+            template: state.customizer.acceptedParams.templateId,
+            designUrl: exportedDesignUrl(),
+          })
+        }
+        successContent={
+          exportFeedback.prompt ? (
+            <ExportFeedback
+              locale={locale}
+              lastExport={exportFeedback.prompt}
+              onSubmit={exportFeedback.submit}
+            />
+          ) : undefined
+        }
         disconnectedExportAcknowledged={state.disconnectedExportAcknowledged}
         onDisconnectedExportAcknowledged={state.setDisconnectedExportAcknowledged}
       />
+      {/* Hidden, not unmounted, under dialogs so an answered check stays answered. */}
+      {printCheck.lastExport && (
+        <PrintCheckNotice
+          locale={locale}
+          lastExport={printCheck.lastExport}
+          hidden={state.exportOpen || quickSetup.setupOpen}
+          onSubmit={printCheck.submit}
+          onDismiss={printCheck.dismiss}
+        />
+      )}
     </main>
   );
 };

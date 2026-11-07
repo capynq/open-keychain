@@ -1,5 +1,6 @@
 import type { Locale } from '@/infrastructure/i18n/config';
 
+import { useRecoveryReport } from '@/features/feedback/hooks/useRecoveryReport';
 import { recoveryMessage, recoverySteps, t } from '@/infrastructure/i18n/utils';
 import { RecoveryNotice } from '@/shared/ui/RecoveryNotice';
 
@@ -22,6 +23,7 @@ export const CustomizerNotices = ({
   onNewDesign: () => void;
   onRetryRandomize: () => void;
 }) => {
+  const reportFor = useRecoveryReport(locale);
   const failure = invalidDesign
     ? { code: 'invalid-design' }
     : randomizeFailure
@@ -40,6 +42,7 @@ export const CustomizerNotices = ({
             message={recoveryMessage(locale, failure)}
             steps={recoverySteps(locale, failure)}
             detailsLabel={t(locale, 'recoveryDetails')}
+            report={reportFor(failure, { message: recoveryMessage(locale, failure) })}
             actions={
               invalidDesign
                 ? [

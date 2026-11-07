@@ -386,6 +386,8 @@ pseudonymous, not fully anonymous.
 
 **Consequences:** Do not enable autocapture, session replay, cookies, or expand event payloads without
 an explicit privacy decision and matching implementation/tests.
+Feedback that a visitor explicitly sends is covered by "Explicit feedback is sent on submit"
+(2026-11-06).
 
 ## WebMCP is a native, narrowly scoped enhancement
 
@@ -769,3 +771,45 @@ TTL for an untaken client still applies, and hand-over and `isUsable()` checks a
 **Telemetry:** `preview_quality` on `geometry_ready` and `preview_rendered` is the only new key. `preview_rendered` stays tied to the cold full generation. See the 2026-11-03 telemetry entry and `docs/analytics.md`.
 
 **Consequences:** Geometry for export and validation, cache keys for export and validation, and acceptance are unchanged. The e2e spec `e2e/preview-quality.spec.ts` drives the tier by rewriting the worker-reported `workerComputeMs` in the page message stream. It then checks the `data-preview-quality` steps and that an STL export at the low tier matches a full-quality export of the same design.
+
+## 2026-11-06 — Explicit feedback is sent on submit, with or without analytics consent
+
+**Status:** active. Amends "Telemetry is consent-gated and data-minimized".
+
+**Decision (owner):** The app asks for feedback itself instead of relying on SDK-rendered PostHog
+surveys. The old "Customizer feedback" widget never rendered (`widgetType: "button"` without a
+selector, which posthog-js does not display) and was ended on 2026-11-06. Two PostHog `api` surveys
+replace it, rendered with Workshop components and localized in en/ru/uk:
+
+- **App feedback** (`01a1b2d5-8181-0000-7c08-a2fd5211ce56`): optional 1–5 rating and optional
+  free text. Shown inside the export dialog after a successful download (not within 60 days of an
+  answer or 14 days of an unanswered ask) and from the "Send feedback" button in the controls panel,
+  landing footer, SEO footer and closing call to action.
+- **Print outcome** (`01a1b2d5-8db2-0000-e575-d7bb47b250bb`): Printed fine / Needed tweaks / Didn't
+  work / Haven't printed yet, plus optional text. Shown once per export on a return visit 3 h–30 days
+  after it, only after the consent banner is answered.
+
+**Sending rules:** Nothing is sent until the visitor presses Send. With analytics consent the
+loaded SDK captures `survey sent` (and `survey shown`/`survey dismissed`). Without consent one
+anonymous `survey sent` request goes to the PostHog capture endpoint with a random distinct ID and
+`$process_person_profile: false`; shown and dismissed events are not recorded. Properties are the
+survey contract (`$survey_id`, `$survey_response_<question id>`, `$survey_submission_id`,
+`$survey_completed`, `$survey_questions`) plus `feedback_trigger`, `locale`, `template` and `format`.
+Free text is user-provided, trimmed to 1000 characters, and the form asks people to leave out
+personal details. The design text and geometry are never attached. Builds without a PostHog key
+send feedback by email instead. `disable_surveys: true` stops the SDK from fetching surveys.
+
+**Support email:** Every recovery notice offers "Email support" and "Copy error report". The report
+holds the failure code and message, page path, time, app build, locale, user agent, the last 10
+in-memory errors and a link to the open design. The visitor's own mail app opens with it; nothing is
+sent until they send it. "Send a photo" requests after export and in the print check work the same
+way and include the last exported design's link. Address: `support@open-keychain.com`.
+
+**Device state:** `open-keychain.feedback` in localStorage holds the last export (time, format,
+template, design link) and when the visitor was last asked or answered. It is read only to decide
+when to ask and to prefill those emails.
+
+**Consequences:** `/privacy` describes all of this. `support_contact_opened` (reason and recovery
+code only) and `start_designing` sources are the only new tracked properties and stay consent-gated.
+Test builds use `VITE_POSTHOG_KEY=phc_playwright` and `VITE_POSTHOG_HOST=https://posthog.test`, which
+`e2e/feedback.spec.ts` intercepts.

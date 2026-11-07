@@ -25,7 +25,7 @@ test('renders every declared route without browser errors', async ({ page }) => 
         'Open Keychain 3D | Free 3D printable name-keychain generator',
       );
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-      await expect(page.locator('.landing-button-primary')).toBeVisible();
+      await expect(page.locator('.landing-hero .landing-button-primary')).toBeVisible();
     } else {
       await expect(page).toHaveTitle('Open Keychain 3D | Create a keychain');
       await expect(page.getByRole('main', { name: 'Customizer' })).toBeVisible();
@@ -370,7 +370,7 @@ test('keeps the current route visible while the next route chunk is pending', as
   await page.getByRole('link', { name: 'Start designing' }).first().click();
   await expect.poll(() => chunkRequested).toBe(true);
   await expect(page).toHaveURL('/create?setup=1&lang=en');
-  await expect(page.locator('#root .landing-button-primary')).toBeVisible();
+  await expect(page.locator('#root .landing-hero .landing-button-primary')).toBeVisible();
   await expect(page.locator('#root [data-route-skeleton]')).toHaveCount(0);
 
   releaseChunk?.();
@@ -630,6 +630,10 @@ test('requires explicit analytics consent and remembers the choice', async ({ pa
 test('accepts analytics consent without blocking the primary action', async ({ page }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
 
+  /* Test builds point PostHog at an unroutable host; answer it so the SDK can start. */
+  await page.route('https://posthog.test/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }),
+  );
   await page.goto('/');
   await page.locator('.analytics-consent').getByRole('button', { name: 'Allow analytics' }).click();
   await expect(page.locator('.analytics-consent')).toBeHidden();
@@ -658,7 +662,7 @@ for (const locale of ['en', 'ru', 'uk'] as const) {
     await page.goto('/');
     await selectLocale(page, locale);
     await expect(page.locator('.configurator-showcase-caption')).toBeVisible();
-    await expect(page.locator('.landing-process span').first()).toHaveCSS('font-size', '24px');
+    await expect(page.locator('.landing-step-card > span').first()).toHaveCSS('font-size', '24px');
     const gap = await page.locator('.configurator-showcase').evaluate((showcase) => {
       const windowBox = showcase.querySelector('.configurator-window')?.getBoundingClientRect();
       const captionBox = showcase

@@ -25,6 +25,7 @@ import type { QuickSetupChanges } from '@/features/customizer/model/quick-setup'
 import type { Locale } from '@/infrastructure/i18n';
 import type { RecoveryFailure } from '@/shared/lib/recovery/failure';
 
+import { useRecoveryReport } from '@/features/feedback/hooks/useRecoveryReport';
 import { t } from '@/infrastructure/i18n';
 import { recoverySteps } from '@/infrastructure/i18n/utils';
 import { useAnalytics } from '@/infrastructure/telemetry/useTelemetry';
@@ -94,6 +95,7 @@ export const QuickSetupDialog = ({
   initialKeyringLengthMm = 5,
 }: Props) => {
   const { consent, track } = useAnalytics();
+  const reportFor = useRecoveryReport(locale);
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousActiveRef = useRef<HTMLElement | null>(null);
   const [draft, setDraft] = useQuickSetupDraft({
@@ -352,6 +354,9 @@ export const QuickSetupDialog = ({
                 steps={recoveryFailure ? recoverySteps(locale, recoveryFailure) : undefined}
                 diagnostic={recoveryFailure?.message}
                 detailsLabel={t(locale, 'recoveryDetails')}
+                report={reportFor(recoveryFailure ?? { code: 'setup-rejected' }, {
+                  message: error,
+                })}
                 actions={[
                   {
                     id: 'review-name-size',

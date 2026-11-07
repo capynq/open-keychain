@@ -13,6 +13,7 @@ import {
   formatAcceptedThickness,
   selectAcceptedMetrics,
 } from '../../../domain/keychain/model/accepted-metrics';
+import { useRecoveryReport } from '../../../features/feedback/hooks/useRecoveryReport';
 import { t } from '../../../infrastructure/i18n/utils';
 
 type SummaryGeometry = {
@@ -78,6 +79,7 @@ export const PreviewSummary = ({
   exportOpen: boolean;
   onReview?: () => void;
 }) => {
+  const reportFor = useRecoveryReport(locale);
   if (!status.feedback || exportOpen) return null;
   const failure = geometry.failure ??
     status.feedbackIssue?.failure ?? { code: status.feedbackIssue?.code ?? 'unknown-failure' };
@@ -91,6 +93,11 @@ export const PreviewSummary = ({
           steps={recoverySteps(locale, failure)}
           detailsLabel={t(locale, 'recoveryDetails')}
           diagnostic={geometry.failure?.message ?? status.feedbackIssue?.message}
+          report={
+            geometry.failure
+              ? reportFor(failure, { message: recoveryMessage(locale, failure) })
+              : undefined
+          }
           actions={[
             ...(geometry.failure && geometry.retry
               ? [

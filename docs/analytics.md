@@ -166,18 +166,28 @@ export_completed` by `acquisition_source = portfolio`, `environment = production
 `internal_traffic = false`. This measures consenting visitors only. Existing event names and
 pseudonymous identity remain unchanged; no new dashboard or production configuration is created.
 
-## Customizer feedback survey
+## Feedback surveys
 
-The Customizer feedback widget is configured in PostHog project `251074` and targets the `/create`
-route. On 2026-10-20 it was active, shown once, and had a 30-day wait period; it asks for a required
-1–5 usefulness rating and an optional single-choice reason. It has no free-text question and does
-not request names, design parameters, or generated geometry. It is English-only (`translations` is
-unset), and its internal targeting flag is inactive; verify consent-based delivery and targeting
-behavior before changing the survey or adding response results to the dashboard.
-The existing consent-gated SDK loads only after analytics is accepted; PostHog keeps surveys hidden
-while capture is disabled and after opt-out. The rating-and-reason widget is the only direct prompt;
-do not add another prompt until this one has impressions and the action data identifies a specific
-friction point.
+Feedback is collected by the app itself through two PostHog `api` surveys in project `251074`. See
+DECISIONS "Explicit feedback is sent on submit" for the privacy rules.
+
+| Survey        | ID                                     | Questions                                                       | Where it appears                                                                                                            |
+| ------------- | -------------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| App feedback  | `01a1b2d5-8181-0000-7c08-a2fd5211ce56` | 1–5 rating `40d3c4ef-…`, open text `c3a5d685-…` (both optional) | Export dialog after a successful download; "Send feedback" dialog in the controls panel, footers and closing call to action |
+| Print outcome | `01a1b2d5-8db2-0000-e575-d7bb47b250bb` | Single choice `835843d3-…`, open text `867357e6-…`              | Return visit 3 h–30 days after an export, once per export                                                                   |
+
+`feedback_trigger` (`export`, `footer`, `print_check`), `locale`, `template` and `format` separate the
+sources. Responses from visitors without analytics consent arrive as anonymous events without a
+person profile, so filter by survey, not by person, when counting. The export prompt waits 60 days
+after an answer and 14 days after an unanswered ask; this is stored only in the visitor's browser.
+`support_contact_opened` counts (with consent) how often visitors open a support email or copy an
+error report, by `reason` (`error`, `print_result`, `feedback`) and `recovery_code`.
+
+The previous "Customizer feedback" widget survey never rendered (button widget without a selector)
+and was ended on 2026-11-06 with 0 impressions.
+
+`start_designing` now carries `source` (`hero`, `header`, `template_card`, `final_cta`) and
+`prefilled` (whether a name was typed on the landing page). The typed name is never sent.
 
 The existing **Open Keychain Activation** dashboard (ID `902571`) covers the activation funnel,
 landing views, export outcomes, and template selection. Keep its 14-day ordered activation funnel.

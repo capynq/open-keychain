@@ -10,6 +10,7 @@ import type { PhotoCaptureApi } from '../../../features/preview/model/photo-capt
 import type { PhotoDesign } from '../../../features/preview/model/photo-filename';
 import type { Locale } from '../../../infrastructure/i18n/config';
 
+import { useRecoveryReport } from '../../../features/feedback/hooks/useRecoveryReport';
 import { usePhotoDownload } from '../../../features/preview/hooks/usePhotoDownload';
 import { PHOTO_FORMATS, type PhotoFormat } from '../../../features/preview/model/photo-format';
 import {
@@ -30,6 +31,7 @@ export const PreviewPhoto = ({
   design?: PhotoDesign;
   disabled: boolean;
 }) => {
+  const reportFor = useRecoveryReport(locale);
   const [open, setOpen] = useState(false);
   const formatName = useId();
   const [format, setFormat] = useState<PhotoFormat>('png');
@@ -127,6 +129,9 @@ export const PreviewPhoto = ({
               detailsLabel={t(locale, 'recoveryDetails')}
               diagnostic={state.failure.message}
               steps={recoverySteps(locale, state.failure)}
+              report={reportFor(state.failure, {
+                message: recoveryMessage(locale, state.failure),
+              })}
               actions={[
                 {
                   id: 'retry-photo',

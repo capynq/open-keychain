@@ -5,6 +5,7 @@ import type { Locale } from '@/infrastructure/i18n';
 import { PROFILE_ROUTE } from '@/app/routes';
 import { hostedMode } from '@/features/hosted/config';
 import { t } from '@/infrastructure/i18n';
+import { useAnalytics } from '@/infrastructure/telemetry/useTelemetry';
 
 import { createSetupPath } from '../../../shared/lib/create-path';
 import { BrandMark } from '../BrandMark/BrandMark';
@@ -33,39 +34,47 @@ export const LandingNavigationHeader = ({
   locale,
   onLocaleChange,
   seo,
-}: LandingNavigationHeaderProps) => (
-  <header className={`${styles.root} topbar landing-topbar`}>
-    <BrandMark locale={locale} to={seo?.homePath} />
-    <nav className="landing-nav" aria-label={t(locale, 'landing.navigation')}>
-      {seo ? (
-        <>
-          <Link to={seo.templatesPath}>{seo.templatesLabel}</Link>
-          <Link to={seo.guidesPath}>{seo.guidesLabel}</Link>
-          <Link to={seo.howItWorksPath}>{seo.howItWorksLabel}</Link>
-        </>
-      ) : (
-        <>
-          <a href="#how-it-works">{t(locale, 'landing.navHow')}</a>
-          <a href="#products">{t(locale, 'landing.navProducts')}</a>
-          <a href="#run">{t(locale, 'landing.navRun')}</a>
-          <a href="#faq">{t(locale, 'landing.navFaq')}</a>
-        </>
-      )}
-    </nav>
-    <div className="topbar-actions landing-topbar-actions">
-      {seo ? (
-        <LanguagePicker locale={locale} onLocaleChange={seo.onLocaleChange} />
-      ) : (
-        <LanguagePicker locale={locale} onLocaleChange={onLocaleChange!} />
-      )}
-      {hostedMode && (
-        <Link className="header-profile-link" to={PROFILE_ROUTE}>
-          {t(locale, 'profile')}
+}: LandingNavigationHeaderProps) => {
+  const { track } = useAnalytics();
+
+  return (
+    <header className={`${styles.root} topbar landing-topbar`}>
+      <BrandMark locale={locale} to={seo?.homePath} />
+      <nav className="landing-nav" aria-label={t(locale, 'landing.navigation')}>
+        {seo ? (
+          <>
+            <Link to={seo.templatesPath}>{seo.templatesLabel}</Link>
+            <Link to={seo.guidesPath}>{seo.guidesLabel}</Link>
+            <Link to={seo.howItWorksPath}>{seo.howItWorksLabel}</Link>
+          </>
+        ) : (
+          <>
+            <a href="#how-it-works">{t(locale, 'landing.navHow')}</a>
+            <a href="#products">{t(locale, 'landing.navProducts')}</a>
+            <a href="#run">{t(locale, 'landing.navRun')}</a>
+            <a href="#faq">{t(locale, 'landing.navFaq')}</a>
+          </>
+        )}
+      </nav>
+      <div className="topbar-actions landing-topbar-actions">
+        {seo ? (
+          <LanguagePicker locale={locale} onLocaleChange={seo.onLocaleChange} />
+        ) : (
+          <LanguagePicker locale={locale} onLocaleChange={onLocaleChange!} />
+        )}
+        {hostedMode && (
+          <Link className="header-profile-link" to={PROFILE_ROUTE}>
+            {t(locale, 'profile')}
+          </Link>
+        )}
+        <Link
+          className="landing-header-cta"
+          to={createSetupPath(locale)}
+          onClick={() => track('start_designing', { source: 'header' })}
+        >
+          {t(locale, 'landing.startDesigning')}
         </Link>
-      )}
-      <Link className="landing-header-cta" to={createSetupPath(locale)}>
-        {t(locale, 'landing.startDesigning')}
-      </Link>
-    </div>
-  </header>
-);
+      </div>
+    </header>
+  );
+};

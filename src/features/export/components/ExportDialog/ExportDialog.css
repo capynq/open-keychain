@@ -209,7 +209,8 @@
   background: #fff0e8;
 }
 
-.export-inline-state button {
+.export-inline-state button,
+.export-inline-state [data-popover-action='link'] {
   flex: 0 0 auto;
   min-height: 30px;
   padding: 5px 9px;
@@ -227,12 +228,14 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .export-inline-state button:hover:not(:disabled) {
+  .export-inline-state button:hover:not(:disabled),
+  .export-inline-state [data-popover-action='link']:hover {
     transform: translateY(var(--workshop-hover-lift));
   }
 }
 
-.export-inline-state button:active:not(:disabled) {
+.export-inline-state button:active:not(:disabled),
+.export-inline-state [data-popover-action='link']:active {
   transition-duration: var(--workshop-motion-fast);
   transition-timing-function: var(--workshop-ease);
   transform: scale(var(--workshop-press-scale));

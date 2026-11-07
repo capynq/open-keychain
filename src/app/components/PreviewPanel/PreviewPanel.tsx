@@ -25,6 +25,7 @@ import type {
 import type { Locale } from '../../../infrastructure/i18n/config';
 
 import { applyPrintAppearanceOverrides } from '../../../domain/keychain/model/types';
+import { useRecoveryReport } from '../../../features/feedback/hooks/useRecoveryReport';
 import { t } from '../../../infrastructure/i18n/utils';
 import styles from './PreviewPanel.module.css';
 import { PreviewPhoto } from './PreviewPhoto';
@@ -73,6 +74,7 @@ export const PreviewPanel = ({
   previewQuality = 'high',
   onSurfaceReset,
 }: PreviewPanelProps) => {
+  const reportFor = useRecoveryReport(locale);
   const previewRef = useRef<HTMLElement>(null);
   const [viewerRetry, setViewerRetry] = useState(0);
   const autoRestartUsed = useRef(false);
@@ -288,6 +290,10 @@ export const PreviewPanel = ({
                 message={recoveryMessage(locale, { code: 'preview-unavailable' })}
                 steps={recoverySteps(locale, { code: 'preview-unavailable' })}
                 detailsLabel={t(locale, 'recoveryDetails')}
+                report={reportFor(
+                  { code: 'preview-unavailable' },
+                  { message: recoveryMessage(locale, { code: 'preview-unavailable' }) },
+                )}
                 actions={[
                   {
                     id: 'retry-preview',

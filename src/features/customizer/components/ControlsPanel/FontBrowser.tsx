@@ -7,6 +7,7 @@ import type { FontTarget } from '@/features/customizer/model/font-browser';
 
 import { FONT_CATEGORY_ORDER, type FontCategory } from '@/domain/keychain/fonts/catalog';
 import { useFontBrowser } from '@/features/customizer/hooks/useFontBrowser';
+import { useRecoveryReport } from '@/features/feedback/hooks/useRecoveryReport';
 import { recoveryMessage, recoverySteps, t, type Locale } from '@/infrastructure/i18n';
 import { IconButton } from '@/shared/ui/IconButton';
 import { RecoveryNotice } from '@/shared/ui/RecoveryNotice';
@@ -39,6 +40,7 @@ export const FontBrowser = ({
   onFontProposed,
   showReset = true,
 }: Props) => {
+  const reportFor = useRecoveryReport(locale);
   const instanceId = useId().replace(/:/g, '');
   const tablistRef = useRef<HTMLDivElement>(null);
   const localFileInputRef = useRef<HTMLInputElement>(null);
@@ -295,6 +297,18 @@ export const FontBrowser = ({
               )}
               detailsLabel={t(locale, 'recoveryDetails')}
               diagnostic={googleFailure?.message ?? customizer.googleError}
+              report={reportFor(
+                googleFailure ?? { code: 'google-font-failed', message: customizer.googleError },
+                {
+                  message: recoveryMessage(
+                    locale,
+                    googleFailure ?? {
+                      code: 'google-font-failed',
+                      message: customizer.googleError,
+                    },
+                  ),
+                },
+              )}
               steps={
                 googleFailure
                   ? recoverySteps(locale, googleFailure)
@@ -378,6 +392,9 @@ export const FontBrowser = ({
                     detailsLabel={t(locale, 'recoveryDetails')}
                     diagnostic={localFontFailure.message}
                     steps={recoverySteps(locale, localFontFailure)}
+                    report={reportFor(localFontFailure, {
+                      message: recoveryMessage(locale, localFontFailure),
+                    })}
                     actions={[
                       {
                         id: 'retry-local-font',

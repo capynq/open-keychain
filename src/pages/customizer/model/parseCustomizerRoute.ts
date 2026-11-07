@@ -13,9 +13,12 @@ import {
 } from '@/entities/keychain/fonts/catalog';
 import { DEFAULT_PARAMS, normalizeParams } from '@/entities/keychain/model/types';
 import { TEMPLATE_CATALOG } from '@/entities/keychain/templates/template-builder';
+import { SETUP_TEXT_LIMIT } from '@/shared/lib/create-path';
 
 type CustomizerLocationState = {
   projectParams?: Record<string, unknown>;
+  /** Name typed on the landing page; prefills quick setup without touching the URL. */
+  setupText?: unknown;
 };
 
 export type CustomizerRouteModel = {
@@ -24,6 +27,7 @@ export type CustomizerRouteModel = {
   routeInputKey?: string;
   hasInvalidDesign: boolean;
   sharedFontFallback: boolean;
+  setupText?: string;
 };
 
 const normalizeInitialParams = (params: KeychainParams): KeychainParams => {
@@ -40,7 +44,12 @@ const normalizeInitialParams = (params: KeychainParams): KeychainParams => {
 };
 
 export const parseCustomizerRoute = (search: string, state: unknown): CustomizerRouteModel => {
-  const projectParams = (state as CustomizerLocationState | null)?.projectParams;
+  const locationState = state as CustomizerLocationState | null;
+  const projectParams = locationState?.projectParams;
+  const setupText =
+    typeof locationState?.setupText === 'string'
+      ? Array.from(locationState.setupText.trim()).slice(0, SETUP_TEXT_LIMIT).join('')
+      : '';
   const searchParams = new URLSearchParams(search);
   const designValue = searchParams.get('design');
   const sharedDocument = designValue ? decodeDesignDocument(designValue) : undefined;
@@ -63,5 +72,6 @@ export const parseCustomizerRoute = (search: string, state: unknown): Customizer
     routeInputKey: designValue ?? undefined,
     hasInvalidDesign: searchParams.has('design') && !sharedDocument,
     sharedFontFallback: Boolean(sharedDocument?.fontFallback),
+    ...(setupText ? { setupText } : {}),
   };
 };

@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from 'react';
 
+import { recoveryReport } from '@/features/feedback/model/recovery-report';
 import { RecoveryNotice } from '@/shared/ui/RecoveryNotice';
 
 import { type Locale } from '../../../infrastructure/i18n/config';
@@ -54,6 +55,11 @@ export class RouteErrorBoundary extends Component<
           message={recoveryMessage(this.props.locale, { code: 'route-load-failed' })}
           steps={recoverySteps(this.props.locale, { code: 'route-load-failed' })}
           detailsLabel={t(this.props.locale, 'recoveryDetails')}
+          report={recoveryReport(
+            this.props.locale,
+            { code: 'route-load-failed' },
+            { message: recoveryMessage(this.props.locale, { code: 'route-load-failed' }) },
+          )}
           actions={[
             {
               id: 'reload',

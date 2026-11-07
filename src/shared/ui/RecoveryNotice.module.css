@@ -37,3 +37,17 @@
   overflow-wrap: anywhere;
   padding-block-start: var(--workshop-space-2);
 }
+.report {
+  display: grid;
+  min-width: 0;
+  gap: var(--workshop-space-1);
+  padding-block-start: var(--workshop-space-2);
+  border-block-start: 1px solid var(--workshop-border-subtle);
+}
+.copyStatus {
+  color: var(--workshop-text-muted);
+  font-size: var(--workshop-font-description);
+}
+.copyStatus:empty {
+  display: none;
+}

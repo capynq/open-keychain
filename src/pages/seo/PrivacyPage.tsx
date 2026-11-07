@@ -63,6 +63,8 @@ export const PrivacyPage = ({
             {t(locale, 'analytics.decline')}
           </button>
         </div>
+        <h2>{t(locale, 'feedback.privacyTitle')}</h2>
+        <p>{t(locale, 'feedback.privacyBody')}</p>
         <h2>{t(locale, 'landing.localFirstTitle')}</h2>
         <p>{t(locale, 'landing.localFirstBody')}</p>
         <h2>{t(locale, 'landing.betaTitle')}</h2>

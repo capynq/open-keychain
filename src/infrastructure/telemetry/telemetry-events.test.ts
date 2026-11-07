@@ -405,4 +405,33 @@ describe('analytics event properties', () => {
     expect(sanitizeProperties('preview_rendered', { wasm_wait_ms: 5 })).toEqual({});
     expect(sanitizeProperties('geometry_attempt_finished', { cache_hit: false })).toEqual({});
   });
+
+  it('keeps only fixed start sources and a boolean prefill flag, never the typed name', () => {
+    expect(
+      sanitizeProperties('start_designing', {
+        source: 'hero',
+        prefilled: true,
+        text: 'OLIVER',
+      }),
+    ).toEqual({ source: 'hero', prefilled: true });
+    expect(
+      sanitizeProperties('start_designing', { source: 'template_card', template: 'name-keychain' }),
+    ).toEqual({ source: 'template_card', template: 'name-keychain' });
+    expect(sanitizeProperties('start_designing', { source: 'OLIVER', prefilled: 'yes' })).toEqual(
+      {},
+    );
+  });
+
+  it('keeps only the reason and a safe recovery code when visitors contact support', () => {
+    expect(
+      sanitizeProperties('support_contact_opened', {
+        reason: 'error',
+        recovery_code: 'geometry-export-failed',
+        message: 'The file could not be created.',
+      }),
+    ).toEqual({ reason: 'error', recovery_code: 'geometry-export-failed' });
+    expect(
+      sanitizeProperties('support_contact_opened', { reason: 'other', recovery_code: 'A B' }),
+    ).toEqual({});
+  });
 });

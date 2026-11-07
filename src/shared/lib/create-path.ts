@@ -8,3 +8,6 @@ export const createSetupPath = (locale: string): string =>
 /** Canonical localized entry point for a preselected customizer template. */
 export const templateCreatePath = (locale: string, templateId: string): string =>
   `/create?template=${encodeURIComponent(templateId)}&lang=${encodeURIComponent(locale)}`;
+
+/** Name length accepted by quick setup and the editor; the landing form prefills up to this. */
+export const SETUP_TEXT_LIMIT = 24;

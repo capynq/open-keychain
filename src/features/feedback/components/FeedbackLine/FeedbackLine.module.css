@@ -1,0 +1,35 @@
+.root {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--workshop-space-5);
+  margin: 0;
+  color: var(--workshop-text-muted);
+  font-size: var(--workshop-font-description);
+}
+.lead {
+  flex-basis: 100%;
+  color: var(--workshop-text);
+  font-weight: 650;
+}
+.root .action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--workshop-space-2);
+  min-height: var(--workshop-touch-target);
+  color: var(--workshop-accent-strong);
+  font-size: inherit;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.root .action:hover {
+  color: var(--workshop-accent-link-hover);
+}
+.root .action:focus-visible {
+  outline: var(--workshop-focus-ring);
+  outline-offset: 2px;
+}
+.root .action svg {
+  flex: none;
+}
