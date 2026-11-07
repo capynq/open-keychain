@@ -244,6 +244,28 @@ describe('AnalyticsProvider consent and startup', () => {
     expect(automaticException.properties.app_release).toBe(testBundleRelease);
   });
 
+  it('waits for the boot hand-off before loading the SDK for a returning consented visitor', async () => {
+    window.localStorage.setItem('open-keychain.analytics-consent', 'accepted');
+    document.documentElement.dataset.bootRoute = 'landing';
+    try {
+      await reloadProvider();
+      await renderProvider();
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      });
+      expect(posthogMock.client.init).not.toHaveBeenCalled();
+
+      await act(async () => {
+        document.documentElement.setAttribute('data-app-ready', 'true');
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      });
+      expect(posthogMock.client.init).toHaveBeenCalledTimes(1);
+    } finally {
+      delete document.documentElement.dataset.bootRoute;
+      document.documentElement.removeAttribute('data-app-ready');
+    }
+  });
+
   it('queues survey impressions until the SDK is ready but never queues survey answers', async () => {
     const { recordSurveyShown, submitSurveyResponse } = await import('../feedback');
     const fetchMock = vi.fn(async () => new Response(null, { status: 200 }));

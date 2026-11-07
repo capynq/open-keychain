@@ -164,9 +164,13 @@
 .landing-final-cta h2 {
   margin: 0;
   color: #262b3a;
-  font-family: OpenBree, OpenNunito, sans-serif;
+  font-family: OpenBree, OpenBreeFallback, OpenNunito, sans-serif;
   font-weight: 400;
   letter-spacing: -0.055em;
+}
+
+.landing-boot-frame .landing-hero h1 {
+  font-family: OpenBreeBoot, OpenBreeFallback, OpenNunito, sans-serif;
 }
 
 .landing-hero h1 {
@@ -877,7 +881,7 @@
 
 .landing-trust h2 {
   color: #fff9ef;
-  font-family: OpenNunito, sans-serif;
+  font-family: OpenNunito, OpenNunitoFallback, sans-serif;
   font-size: clamp(24px, 2.5vw, 35px);
   font-weight: 900;
   letter-spacing: -0.04em;

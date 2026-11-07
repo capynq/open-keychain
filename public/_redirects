@@ -1,6 +1,8 @@
 /privacy.html /privacy 301
 # The official deployment proxies this public contract to the private hosted service.
 /api/* https://api.open-keychain.com/api/:splat 200
-/create /create/index.html 200
+# Forced: without `!`, Netlify answers /create with a 301 to /create/ (the directory index).
+/create /create/index.html 200!
 /create/ /create/index.html 200
-/* /index.html 200
+# Every other path renders in the app; app.html is index.html without the landing frame.
+/* /app.html 200

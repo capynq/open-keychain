@@ -16,7 +16,7 @@ describe('validation gate selection', () => {
     expect(journey).toMatchObject({
       required: true,
       cacheable: false,
-      workerSlots: 1,
+      workerSlots: 2,
       args: ['test:e2e:journey'],
       env: {
         PLAYWRIGHT_BASE_URL: '',
@@ -104,6 +104,23 @@ describe('validation gate selection', () => {
       );
     expect(relatedArgs).toContain(
       'src/domain/keychain/build/keychain-builder.styles-fonts.test.ts',
+    );
+  });
+
+  it('runs changed timing-budget specs alone with one worker', () => {
+    const plan = createCiChangedGatePlan(['e2e/performance.spec.ts', 'e2e/carousel.spec.ts']);
+    const parallel = plan.find(({ id }) => id === 'browser:changed');
+    const budget = plan.find(({ id }) => id === 'browser:changed:budget');
+    expect(parallel.args).toContain('e2e/carousel.spec.ts');
+    expect(parallel.args).not.toContain('e2e/performance.spec.ts');
+    expect(budget.args).toEqual(
+      expect.arrayContaining(['e2e/performance.spec.ts', '--project=desktop', '--workers=1']),
+    );
+    expect(budget.args).not.toContain('e2e/carousel.spec.ts');
+    expect(budget.workerSlots).toBe(validationConcurrency());
+    expect(budget.dependsOn).toEqual(['build']);
+    expect(createCiChangedGatePlan(['e2e/carousel.spec.ts']).map(({ id }) => id)).not.toContain(
+      'browser:changed:budget',
     );
   });
 
@@ -251,6 +268,11 @@ describe('validation gate selection', () => {
       args: ['test:e2e:regression'],
       dependsOn: ['build'],
     });
+    /* Two slots per Playwright worker (page + geometry worker): on four cores the regression
+     * gate never overlaps the unit gate or the journey. */
+    expect(plan.find(({ id }) => id === 'browser').workerSlots).toBe(4);
+    expect(plan.find(({ id }) => id === 'browser:regression').workerSlots).toBe(4);
+    expect(plan.find(({ id }) => id === 'browser:journey').workerSlots).toBe(2);
   });
 
   it('typechecks UI stylesheet changes because they can affect component contracts', () => {

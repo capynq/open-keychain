@@ -7,7 +7,7 @@ import {
   resolveBuildRelease,
   resolveBuildVersion,
 } from './scripts/build/build-version.ts';
-import { customizerBootPlugin } from './scripts/build/customizer-boot-plugin.ts';
+import { routeBootPlugin } from './scripts/build/route-boot-plugin.ts';
 
 const appEnvironment = resolveBuildEnvironment(process.env);
 const appVersion = resolveBuildVersion({
@@ -23,7 +23,7 @@ export default defineConfig({
     __OPEN_KEYCHAIN_VERSION__: JSON.stringify(appVersion),
     __OPEN_KEYCHAIN_RELEASE__: JSON.stringify(appRelease),
   },
-  plugins: [react(), customizerBootPlugin()],
+  plugins: [react(), routeBootPlugin()],
   cacheDir: process.env.OPEN_KEYCHAIN_VITE_CACHE_DIR,
   resolve: {
     alias: {
@@ -52,9 +52,6 @@ export default defineConfig({
     rolldownOptions: {
       input: {
         app: fileURLToPath(new URL('./index.html', import.meta.url)),
-        customizerBootStyles: fileURLToPath(
-          new URL('./src/app/boot/customizer-boot-styles.ts', import.meta.url),
-        ),
       },
       output: {
         codeSplitting: {

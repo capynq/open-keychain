@@ -557,7 +557,8 @@ selection path. Do not auto-fetch catalog metadata on scroll or persist discover
 Deduplicate normalized family names and respect articulated/script restrictions. Retain a search
 escape route when loading fails or suggestions end, and keep the active page dot visible without
 unbounded dot rows. Share preview loading with the full font browser; preload only current/next
-Simple pages and guard superseded selection/target changes.
+Simple pages and guard superseded selection/target changes. Bundled fonts are exempt: their
+specimens come from the generated outline sprite (2026-11-07 entry) and load no font file.
 
 ## Font discovery is an inline card
 
@@ -813,3 +814,168 @@ when to ask and to prefill those emails.
 code only) and `start_designing` sources are the only new tracked properties and stay consent-gated.
 Test builds use `VITE_POSTHOG_KEY=phc_playwright` and `VITE_POSTHOG_HOST=https://posthog.test`, which
 `e2e/feedback.spec.ts` intercepts.
+
+## 2026-11-07 — Boot stylesheets come from the build graph
+
+**Decision:** The stylesheets linked for the pre-React boot frame are derived from the build
+graph, not from a list. Production links the CSS reachable through static imports from the
+Customizer page and Viewer chunks (found by facade module, imports before importers, minus the
+entry CSS), collected after `vite:css-post` has folded CSS-only chunks. Development links every
+stylesheet reached through static imports from `src/main.tsx`, the frame and the same two roots.
+The build fails when a CSS-module class in the rendered frame is missing from the linked CSS.
+
+**Rationale:** Since `01bdbe7` the feedback dialog shares `IconButton` with the landing and SEO
+footers, which moved `IconButton.module.css` into an unnamed shared chunk. The chunk-name list
+missed it, so Quick setup and Export stacked their icon over the label until the editor chunk
+loaded. Any future shared chunk would fail the same way.
+
+**Consequences:** The `customizerBootStyles` rollup input is gone; the frame's own rules live in
+`customizer.css` under `.customizer-boot-frame`. Development caches the rendered frame and its
+stylesheet list until a file under `src/` changes. `e2e/routes.spec.ts` checks the header buttons'
+boxes and computed display, and that no stylesheet appears after hand-off.
+
+## 2026-11-07 — Bundled font specimens are pre-drawn outlines
+
+**Decision:** The "Aa"/"Аа" specimens of bundled fonts in the Simple font picker and the Quick
+setup font step are drawn from one generated SVG sprite (`public/fonts/specimens-<hash>.svg`, via
+`pnpm assets:font-specimens`) instead of text in the font's own face. The generator lays glyphs
+out like the browser where opentype.js can shape them (substitutions, pair kerning) and per glyph
+otherwise, at the catalog weight, instancing variable fonts on `wght`. Online and local fonts keep
+loading their face for the current and next Simple pages. The full font browser still renders the
+user's text in real fonts.
+
+**Rationale:** Every carousel page renders at once, so the inline `font-family` made a cold
+`/create` download all 13 default-suggestion TTFs (6.9 MB raw, 2.7 MB over Brotli) before the boot
+frame finished painting, to show two letters each. The sprite is 38 KB raw (12 KB Brotli). In
+Chromium at 160 px every Latin and Cyrillic specimen matches the text box to 1 px and the ink
+bounds to 1 px.
+
+**Consequences:** `/create` preloads only Nunito; landing and other pages keep Nunito and Bree
+Serif. Hovering or focusing a bundled font card fetches its TTF at low priority so the geometry
+worker reads it from cache on selection. `generate-font-specimens.test.ts` fails when the
+committed sprite or metrics are stale.
+
+## 2026-11-07 — The landing page boots from its real first screen
+
+**Decision:** `/` paints the live header, hero and workflow section, rendered at build time into
+`dist/index.html`, before React runs; the hand-drawn skeleton and its second copy in `core.css`
+are gone. Landing, Customizer and profile frames share one registry and plugin
+(`scripts/build/route-boot-plugin.ts`). The build writes `index.html` (landing), `create/index.html`
+(Customizer) and `app.html` (SPA fallback without landing assets); `public/_redirects` rewrites
+other paths to `app.html`. The English landing variant is inline; `?lang=ru|uk` clones a template.
+
+**Rationale:** The skeleton drifted from the page (header 62 vs 68 px, hero 1320 vs 1180 px wide,
+48 vs 130 px top padding, a 16:10 box where phones show a tall screenshot), so every cold load
+jumped. The real first screen also starts the hero image download at HTML parse time instead of
+after two JavaScript chunks. At 390–1920 px every measured box matches the live page within 1 px.
+
+**Consequences:** The frame stays until React commits; on the landing page `data-boot-handoff`
+holds it at most 150 ms more while the live hero image decodes, and `data-app-ready` still marks
+the commit. The frame's ids and label targets are stripped so anchors such as `#faq` resolve to
+the live page. While the landing frame shows, the page is 1 px taller than the viewport, so
+classic scrollbars take the same width they take on the live page. The Customizer resolver now
+picks the first supported entry of `navigator.languages`, as i18next does.
+
+## 2026-11-07 — Each document preloads what its first screen needs
+
+**Decision:** The build adds, per document, `modulepreload` for the route's chunk graph
+(LandingPage on `/`; CustomizerPage, Viewer and three.js on `/create`, after the worker and WASM
+preloads), and the landing document preloads the hero AVIF with `imagesrcset`/`imagesizes`/`media`
+generated from the same list the `<picture>` renders (`ConfiguratorShowcase/hero-image.ts`). The
+`/` Link header no longer preloads images. After the owner-approved landing idle prewarm
+(2026-11-04 entry) the landing page also prefetches the editor's files from the
+`#route-prefetch` list in its document, under the same gates (after load, LCP quiet 1 s, idle,
+skipped on Save-Data and 2G). Prefetched files enter the HTTP cache without running, so the
+landing page never gains Customizer CSS. The hero name form counts as editor intent like a
+`/create` link. Consented PostHog starts after the boot hand-off and an idle slot (2 s timeout)
+instead of in the first effect; events queue until then. opentype.js on the main thread loads only
+when a local font is imported or restored.
+
+**Rationale:** Each route chunk was requested only after the entry ran, and the Viewer and
+three.js only after the Customizer mounted, so cold loads ran as a chain of round trips. The 1x
+mobile Link preload named the 490w file while 390 px phones pick 390w, a wasted download, and
+desktop had none.
+
+**Consequences:** One hero request per device, matching `currentSrc`. vendor-opentype is no longer
+in the Customizer chunk graph. `useRoutePreload` matches `[data-preload-route="create"]`.
+
+## 2026-11-07 — Design cards load sized AVIF/WebP
+
+**Decision:** Template and style cards render a `<picture>` (`display: contents`) with AVIF and
+WebP at 240/480/720 w from `pnpm assets:landing` under `/showcase/v1/cards/`, `sizes` matched to the
+measured card crops, lazy loading, and the PNG as fallback. A template's default style uses the
+template image's URL when the renders are identical (name keychain and plant label contour, magnet
+ribbon). The generator never rewrites an existing `/showcase/v1/` file, because that path is
+served immutable; `--check` reports missing derivatives. The landing magnet card gained its v1
+derivative.
+
+**Rationale:** A cold `/create` downloaded eleven 1280×720 PNGs (about 490 KB) for cards about
+120–260 CSS px wide; the sized AVIFs are 14 KB on desktop and 21 KB on a 2x phone.
+
+**Open:** The six `styles/magnet-*.png` previews are byte-identical to the name keychain renders and
+show a keyring hole a magnet does not have; they need recapturing (`pnpm capture:ui`). Unreferenced
+camera originals (`prints/example_{1,2}.jpeg`, 7.4 MB) and the mobile template captures were
+removed; `e2e/capture.spec.ts` now writes mobile captures under `artifacts/`.
+
+## 2026-11-07 — Russian and Ukrainian load on demand
+
+**Decision:** English ships with the entry; `ru` and `uk` are separate chunks
+(`src/infrastructure/i18n/locales/resources.<locale>.ts`, about 21 KB gzip each) loaded by
+`loadLocale`. `main.tsx` waits for the first render's locale (`detectInitialLocale`) before
+rendering; the resolver in `index.html` now sets `data-boot-locale` on every route, and the build
+adds an inline script that preloads that locale's chunk alongside the entry. `App` renders through
+`useLoadedLocale`, which keeps the last loaded locale on screen until a newly requested one
+arrives, so a language switch or a link to `/ru/…` never paints English in between. The language
+picker loads the other locales on pointer or focus. `detectLocale` reads `i18n.language`, because
+`resolvedLanguage` stays English until the detected locale's strings exist.
+
+**Rationale:** Every page shipped all three locales in the entry graph (about 180 KB gzip). The
+entry graph is now 136 KB gzip for English visitors; Russian and Ukrainian visitors download one
+21 KB chunk in parallel with it.
+
+**Consequences:** Code that renders a locale other than the displayed one must call `loadLocale`
+first. Localized SEO pages render in their path's locale, so `AppRoutes` wraps them in
+`LocaleGate`, which suspends on `localeSettled` until that locale loads; navigations are
+transitions, so the previous page stays on screen. Unit tests start with every locale loaded (`scripts/validation/vitest-setup.ts`), as does the
+build-time frame renderer. `src/app/boot/boot-resolver.test.ts` runs the inline resolver against
+every SEO path, so it cannot drift from `detectInitialLocale`.
+
+## 2026-11-07 — The landing boot heading first paints in Bree
+
+**Decision:** `.landing-boot-frame .landing-hero h1` uses `OpenBreeBoot`, a second face on the
+same preloaded `bree-serif.ttf` with `font-display: block`; the live heading keeps `OpenBree`
+(swap).
+
+**Rationale:** The hero heading is the phone LCP element. On the deploy preview the frame painted
+it at 1.2 s in the metric-matched fallback, about 2% smaller than in Bree, so the live heading that
+replaces it at hand-off became a new, larger LCP candidate at 3.6 s, later than production's 3.1 s.
+Painted in Bree, the frame heading has the live heading's size and hand-off adds no candidate; LCP
+becomes Bree's arrival (21 KB, preloaded).
+
+**Consequences:** If Bree takes longer than the 3 s block period, the frame falls back and the old
+behavior returns. Desktop is unaffected: its LCP element is the hero image.
+
+## 2026-11-07 — `/create` is served without a redirect
+
+**Decision:** `public/_redirects` forces `/create /create/index.html 200!`.
+
+**Rationale:** Netlify answered `/create` (and `/create?lang=…`, the sitemap URLs) with a 301 to
+`/create/` before applying the unforced rewrite, because `create/index.html` exists. Every direct
+visit paid a round trip before the HTML.
+
+## 2026-11-07 — Push browser gates count two slots per Playwright worker
+
+**Decision:** In push plans, the smoke, regression and journey gates claim
+`browserGateSlots(workers)` = two slots per Playwright worker. CI plans are unchanged.
+
+**Rationale:** A Customizer page keeps its main thread and its geometry worker busy. Counted as
+one slot each, the regression and journey gates ran beside the unit gate on four cores, and their
+CPU-bound steps (the 10 s geometry rebuild in `keychain.spec.ts:54`, the 5 s Quick setup close in
+the critical journey) failed first attempts. On four cores the regression gate now runs alone and
+the journey runs at most beside two unit workers.
+
+In CI, a changed `e2e/performance.spec.ts` (`TIMING_BUDGET_SPECS`) runs in its own
+`browser:changed:budget` gate with one worker and every slot: in the two-worker changed-spec gate
+its 3 s first-preview budget measured the runner (3.1–5.2 s under load on the base commit as well).
+The carousel lock and swipe tests no longer race the 20-frame scroll or Embla's 170 ms flick window:
+the lock test records control state in the page, and the swipe crosses half a slide.

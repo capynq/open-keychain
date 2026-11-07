@@ -58,6 +58,24 @@ it.each(['pointerover', 'focusin', 'touchstart'])(
   },
 );
 
+it('treats the hero name form as editor intent', async () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  const form = document.createElement('form');
+
+  form.dataset.preloadRoute = 'create';
+  const input = document.createElement('input');
+
+  form.append(input);
+  document.body.append(form);
+  root = createRoot(host);
+  act(() => root!.render(createElement(Harness)));
+
+  input.dispatchEvent(new Event('focusin', { bubbles: true }));
+
+  await vi.waitFor(() => expect(prewarmGeometryClient).toHaveBeenCalledTimes(1));
+  expect(preloadCreateRoute).toHaveBeenCalledTimes(1);
+});
+
 it('treats a trailing-slash create link as the create route', async () => {
   intent(mount('/create/'), 'pointerover');
 

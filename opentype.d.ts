@@ -5,9 +5,10 @@ declare module 'opentype.js' {
     | { type: 'C'; x: number; y: number; x1: number; y1: number; x2: number; y2: number }
     | { type: 'Z' };
   export type Path = { commands: PathCommand[] };
+  export type GlyphRenderOptions = { variation?: Record<string, number> };
   export type Glyph = {
     advanceWidth: number;
-    getPath(x: number, y: number, fontSize: number): Path;
+    getPath(x: number, y: number, fontSize: number, options?: GlyphRenderOptions, font?: Font): Path;
   };
   export type Font = {
     charToGlyphIndex(character: string): number;

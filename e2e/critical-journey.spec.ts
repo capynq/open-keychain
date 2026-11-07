@@ -2,7 +2,7 @@ import { expect, test, type Download } from '@playwright/test';
 import { strFromU8, unzipSync } from 'fflate';
 import { readFile } from 'node:fs/promises';
 
-import { assertVisibleModel, waitForReadyGeometry, watchBrowserErrors } from './helpers';
+import { assertVisibleModel, waitForReadyGeometry, watchBrowserErrors, gotoLive } from './helpers';
 
 const verifyDownload = async (
   download: Download,
@@ -49,7 +49,7 @@ test('critical journey: landing, setup, edit, preview, STL and both 3MF exports'
   await page.addInitScript(() => {
     localStorage.setItem('open-keychain.analytics-consent', 'declined');
   });
-  await page.goto('/');
+  await gotoLive(page, '/');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await page.getByRole('link', { name: 'Start designing', exact: true }).first().click();
   await expect(page).toHaveURL(/\/create\?setup=1&lang=en$/);

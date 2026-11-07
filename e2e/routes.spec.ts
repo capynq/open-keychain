@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { ROUTE_MANIFEST } from '../src/app/routes';
 import {
@@ -7,7 +7,32 @@ import {
   waitForReadyGeometry,
   selectLocale,
   watchBrowserErrors,
+  gotoLive,
 } from './helpers';
+
+/** Labelled header actions put the icon beside the label; a missing stylesheet stacks them. */
+const BOOT_HEADER_BUTTON_SELECTORS = [
+  '.setup-header-button',
+  '.setup-header-button > svg',
+  '.randomize-header-button',
+  '.export-header-button',
+  '.export-header-button > svg',
+  '.export-header-button > span',
+  '.share-header-button',
+];
+
+const readHeaderButtonDisplays = (page: Page, root: '#boot-frame' | '#root') =>
+  page.evaluate(
+    (selectorRoot) =>
+      Object.fromEntries(
+        ['.setup-header-button', '.export-header-button'].map((selector) => {
+          const button = document.querySelector(`${selectorRoot} ${selector}`);
+          if (!button) throw new Error(`Missing header button: ${selector}`);
+          return [selector, getComputedStyle(button).display];
+        }),
+      ),
+    root,
+  );
 
 const activeHeroImageSelector =
   '.configurator-carousel-slide[data-showcase-kind="configurator"][data-active="true"] img';
@@ -39,7 +64,7 @@ test('renders every declared route without browser errors', async ({ page }) => 
 test('takes the primary landing call to action to the customizer', async ({ page }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
 
-  await page.goto('/');
+  await gotoLive(page, '/');
   await page.getByRole('link', { name: 'Start designing' }).first().click();
   await expect(page).toHaveURL('/create?setup=1&lang=en');
   await waitForReadyGeometry(page);
@@ -50,7 +75,7 @@ test('exposes a working customizer entry point for every landing template card',
   page,
 }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
-  await page.goto('/');
+  await gotoLive(page, '/');
   const expected = ['name-keychain', 'articulated-name', 'nameplate', 'plant-label', 'magnet'];
   const links = page.locator('.landing-template-card-action');
   await expect(links).toHaveCount(expected.length);
@@ -94,7 +119,7 @@ test('localizes the template, export, free-use, font, and license facts', async 
     },
   } as const;
 
-  await page.goto('/');
+  await gotoLive(page, '/');
   for (const locale of ['en', 'ru', 'uk'] as const) {
     await selectLocale(page, locale);
     await expect(page.locator('#products')).toContainText(facts[locale].magnet);
@@ -131,10 +156,22 @@ test('renders the real Customizer frame before React and hands off without a lay
     );
     await document.fonts.ready;
   });
-  await expect(page.locator('head link[data-customizer-boot-style]')).toHaveCount(4);
+  const readStylesheets = () =>
+    page
+      .locator('link[rel="stylesheet"]')
+      .evaluateAll((links) =>
+        links.map((link) => new URL((link as HTMLLinkElement).href).pathname),
+      );
+  const bootStylesheets = await page
+    .locator('head link[data-boot-style]')
+    .evaluateAll((links) => links.map((link) => new URL((link as HTMLLinkElement).href).pathname));
+  expect(bootStylesheets.length).toBeGreaterThan(0);
+  expect(new Set(bootStylesheets).size).toBe(bootStylesheets.length);
+  const stylesheetsBeforeReact = await readStylesheets();
 
   const selectors = [
     'header.customizer-topbar',
+    ...BOOT_HEADER_BUTTON_SELECTORS,
     'aside.controls-panel',
     '[data-testid="name-settings"]',
     '[data-testid="template-settings"]',
@@ -142,7 +179,7 @@ test('renders the real Customizer frame before React and hands off without a lay
     '.preview-heading',
     '.viewer-wrap',
   ];
-  const readBoxes = async (root: '#boot-customizer' | '#root') =>
+  const readBoxes = async (root: '#boot-frame' | '#root') =>
     page.evaluate(
       ({ boxSelectors, selectorRoot }) => {
         const boxes = Object.fromEntries(
@@ -157,7 +194,7 @@ test('renders the real Customizer frame before React and hands off without a lay
       },
       { boxSelectors: selectors, selectorRoot: root },
     );
-  const readVisibleFontCards = async (root: '#boot-customizer' | '#root') =>
+  const readVisibleFontCards = async (root: '#boot-frame' | '#root') =>
     page.evaluate((selectorRoot) => {
       const panel = document.querySelector(`${selectorRoot} .controls-panel`);
       if (!panel) throw new Error(`Missing controls panel in ${selectorRoot}`);
@@ -191,14 +228,18 @@ test('renders the real Customizer frame before React and hands off without a lay
         );
     }, root);
 
-  await expect(page.locator('#boot-customizer')).toHaveAttribute('aria-hidden', 'true');
-  await expect(page.locator('#boot-customizer header.customizer-topbar')).toBeVisible();
-  await expect(
-    page.locator('#boot-customizer [data-testid="template-card-nameplate"]'),
-  ).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#boot-frame')).toHaveAttribute('aria-hidden', 'true');
+  await expect(page.locator('#boot-frame header.customizer-topbar')).toBeVisible();
+  await expect(page.locator('#boot-frame [data-testid="template-card-nameplate"]')).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
   await expect(page.locator('#root')).not.toHaveAttribute('data-app-ready', 'true');
-  const bootBoxes = await readBoxes('#boot-customizer');
-  const bootFontCards = await readVisibleFontCards('#boot-customizer');
+  const bootBoxes = await readBoxes('#boot-frame');
+  const bootFontCards = await readVisibleFontCards('#boot-frame');
+  const bootButtonDisplays = await readHeaderButtonDisplays(page, '#boot-frame');
+  expect(bootButtonDisplays['.setup-header-button']).toBe('flex');
+  expect(bootButtonDisplays['.export-header-button']).toBe('flex');
 
   releaseAppEntry?.();
   await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
@@ -215,6 +256,10 @@ test('renders the real Customizer frame before React and hands off without a lay
   const liveBoxes = await readBoxes('#root');
   const liveFontCards = await readVisibleFontCards('#root');
   expect(bootFontCards).toEqual(liveFontCards);
+  expect(await readHeaderButtonDisplays(page, '#root')).toEqual(bootButtonDisplays);
+  await expect(page.locator('#root .viewer-surface canvas')).toBeVisible({ timeout: 30_000 });
+  /* Every stylesheet the live editor needs was already linked for the boot frame. */
+  expect(await readStylesheets()).toEqual(stylesheetsBeforeReact);
   for (const selector of selectors) {
     const bootBox = bootBoxes[selector as keyof typeof bootBoxes];
     const liveBox = liveBoxes[selector as keyof typeof liveBoxes];
@@ -229,6 +274,108 @@ test('renders the real Customizer frame before React and hands off without a lay
       );
     }
   }
+});
+
+test('renders the real landing frame before React and hands off without a layout jump', async ({
+  page,
+}) => {
+  let releaseAppEntry: (() => void) | undefined;
+  const appEntryHeld = new Promise<void>((resolve) => {
+    releaseAppEntry = resolve;
+  });
+  await page.route('**/assets/app-*.js', async (route) => {
+    await appEntryHeld;
+    await route.continue();
+  });
+  const heroRequested = page.waitForRequest(/\/showcase\/v1\/create-(desktop|mobile)-\d+\.avif$/);
+  await page.goto('/', { waitUntil: 'commit' });
+  /* The frame's hero picture starts downloading while the app entry is still held. */
+  await heroRequested;
+  await page.evaluate(async () => {
+    await Promise.all(
+      [...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')].map((link) =>
+        link.sheet
+          ? Promise.resolve()
+          : new Promise<void>((resolve) => {
+              link.addEventListener('load', () => resolve(), { once: true });
+              link.addEventListener('error', () => resolve(), { once: true });
+            }),
+      ),
+    );
+    await document.fonts.ready;
+  });
+  await expect(page.locator('#boot-frame [data-boot-inline="landing:en"]')).toHaveCount(1);
+  await expect(page.locator('#boot-frame h1')).toHaveText(
+    'Turn a name into something you can print.',
+  );
+  await expect(page.locator('#boot-frame [id]')).toHaveCount(0);
+  await expect(page.locator('#root')).not.toHaveAttribute('data-app-ready', 'true');
+
+  const selectors = [
+    'header.landing-topbar',
+    '.landing-nav',
+    '.landing-header-cta',
+    '.language-picker-trigger',
+    '.landing-hero h1',
+    '.landing-lede',
+    '.landing-name-row input',
+    '.landing-button-primary',
+    '.landing-name-hint',
+    '.configurator-carousel',
+    activeHeroImageSelector,
+    '.configurator-carousel-dots',
+    '.configurator-showcase-caption',
+  ];
+  const readBoxes = (root: '#boot-frame' | '#root') =>
+    page.evaluate(
+      ({ boxSelectors, selectorRoot }) =>
+        Object.fromEntries(
+          boxSelectors.map((selector) => {
+            const element = document.querySelector(`${selectorRoot} ${selector}`);
+            if (!element) throw new Error(`Missing landing parity selector: ${selector}`);
+            const { x, y, width, height } = element.getBoundingClientRect();
+            return [selector, { x, y, width, height }];
+          }),
+        ),
+      { boxSelectors: selectors, selectorRoot: root },
+    );
+  const bootBoxes = await readBoxes('#boot-frame');
+
+  releaseAppEntry?.();
+  await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
+  await expect(page.locator('html')).not.toHaveAttribute('data-boot-handoff', 'pending');
+  await expect(page.locator('#boot-shell')).toBeHidden();
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+  const liveBoxes = await readBoxes('#root');
+  for (const selector of selectors) {
+    const bootBox = bootBoxes[selector as keyof typeof bootBoxes];
+    const liveBox = liveBoxes[selector as keyof typeof liveBoxes];
+    for (const key of ['x', 'y', 'width', 'height'] as const) {
+      expect(Math.abs(bootBox[key] - liveBox[key]), `${selector} ${key}`).toBeLessThanOrEqual(1);
+    }
+  }
+});
+
+test('renders the requested landing locale before React and keeps the frame out of the fallback', async ({
+  page,
+}) => {
+  await page.route('**/assets/app-*.js', (route) => route.abort());
+  await page.goto('/?lang=ru');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
+  await expect(page.locator('#boot-frame [data-boot-inline]')).toHaveCount(0);
+  await expect(page.locator('#boot-frame h1')).toBeVisible();
+  await expect(page.locator('#boot-frame h1')).not.toHaveText(
+    'Turn a name into something you can print.',
+  );
+
+  const fallback = await page.request.get('/ru/', { headers: { accept: 'text/html' } });
+  expect(fallback.ok()).toBe(true);
+  expect(await fallback.text()).not.toContain('data-boot-frame="landing');
 });
 
 test('selects known boot URL variants and stays neutral for restored designs', async ({ page }) => {
@@ -246,26 +393,24 @@ test('selects known boot URL variants and stays neutral for restored designs', a
   for (const variant of variants) {
     await page.goto(`/create${variant.query}`);
     await expect(page.locator('html')).toHaveAttribute('lang', variant.locale);
-    await expect(page.locator('#boot-customizer')).toHaveAttribute('aria-hidden', 'true');
-    await expect(page.locator('#boot-customizer .customizer-topbar')).toBeVisible();
+    await expect(page.locator('#boot-frame')).toHaveAttribute('aria-hidden', 'true');
+    await expect(page.locator('#boot-frame .customizer-topbar')).toBeVisible();
     if (variant.selected) {
       await expect(
-        page.locator(`#boot-customizer [data-testid="template-card-${variant.selected}"]`),
+        page.locator(`#boot-frame [data-testid="template-card-${variant.selected}"]`),
       ).toHaveAttribute('aria-pressed', 'true');
       if (variant.selected === 'name-keychain') {
         await expect(
-          page.locator('#boot-customizer [data-testid="style-card-contour"]'),
+          page.locator('#boot-frame [data-testid="style-card-contour"]'),
         ).toHaveAttribute('aria-pressed', 'true');
       }
     } else {
-      await expect(
-        page.locator('#boot-customizer .template-grid [aria-pressed="true"]'),
-      ).toHaveCount(0);
-      await expect(page.locator('#boot-customizer .preview-panel')).not.toContainText(
+      await expect(page.locator('#boot-frame .template-grid [aria-pressed="true"]')).toHaveCount(0);
+      await expect(page.locator('#boot-frame .preview-panel')).not.toContainText(
         /keychain|nameplate|label|магнит|табличк/i,
       );
       await expect(
-        page.locator('#boot-customizer [data-testid="simple-font-picker"] input:checked'),
+        page.locator('#boot-frame [data-testid="simple-font-picker"] input:checked'),
       ).toHaveCount(0);
     }
   }
@@ -286,8 +431,8 @@ test('preserves visible Font cards in the taller desktop first viewport', async 
     await route.continue();
   });
   await page.goto(path, { waitUntil: 'commit' });
-  await expect(page.locator('#boot-customizer aside.controls-panel')).toBeVisible();
-  const readVisibleFontCards = async (root: '#boot-customizer' | '#root') =>
+  await expect(page.locator('#boot-frame aside.controls-panel')).toBeVisible();
+  const readVisibleFontCards = async (root: '#boot-frame' | '#root') =>
     page.evaluate((selectorRoot) => {
       const panel = document.querySelector(`${selectorRoot} .controls-panel`);
       if (!panel) throw new Error(`Missing controls panel in ${selectorRoot}`);
@@ -311,7 +456,7 @@ test('preserves visible Font cards in the taller desktop first viewport', async 
               card.width * 0.95,
         );
     }, root);
-  const bootCards = await readVisibleFontCards('#boot-customizer');
+  const bootCards = await readVisibleFontCards('#boot-frame');
   await expect(
     bootCards.length,
     'the first three font suggestions should reach the taller viewport',
@@ -332,7 +477,7 @@ test('keeps root overlays inert until the cold Customizer route commits', async 
   });
 
   await page.goto('/create?lang=en');
-  await expect(page.locator('#boot-customizer .customizer-topbar')).toBeVisible();
+  await expect(page.locator('#boot-frame .customizer-topbar')).toBeVisible();
   await expect(page.locator('#root .analytics-consent-accept')).toBeVisible();
   await expect(page.locator('#root')).toHaveAttribute('inert', '');
   await page.keyboard.press('Tab');
@@ -366,7 +511,7 @@ test('keeps the current route visible while the next route chunk is pending', as
     await route.continue();
   });
 
-  await page.goto('/');
+  await gotoLive(page, '/');
   await page.getByRole('link', { name: 'Start designing' }).first().click();
   await expect.poll(() => chunkRequested).toBe(true);
   await expect(page).toHaveURL('/create?setup=1&lang=en');
@@ -379,7 +524,7 @@ test('keeps the current route visible while the next route chunk is pending', as
 });
 
 test('keeps source navigation in footers, not headers', async ({ page }) => {
-  await page.goto('/');
+  await gotoLive(page, '/');
   await expect(
     page.locator('header a[href="https://github.com/capynq/open-keychain"]'),
   ).toHaveCount(0);
@@ -401,7 +546,7 @@ test('loads all reviewed landing visuals at the active responsive breakpoint', a
 }, testInfo) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
 
-  await page.goto('/');
+  await gotoLive(page, '/');
   await expect(page.locator('.landing-template-card img')).toHaveCount(5);
   await page.locator('.landing-template-card').last().scrollIntoViewIfNeeded();
   await Promise.all([
@@ -417,10 +562,7 @@ test('loads all reviewed landing visuals at the active responsive breakpoint', a
     }),
   );
 
-  expect(images.slice(0, 4).every((image) => image.src.includes('/showcase/v1/templates/'))).toBe(
-    true,
-  );
-  expect(images[4]?.src).toContain('/showcase/templates/magnet.png');
+  expect(images.every((image) => image.src.includes('/showcase/v1/templates/'))).toBe(true);
   expect(images.every((image) => image.width > 0 && image.height > 0)).toBe(true);
   const expectedHeroAsset =
     testInfo.project.name === 'mobile-2x'
@@ -479,7 +621,7 @@ test('uses the density-appropriate mobile customizer capture on a mobile landing
   const assertNoBrowserErrors = watchBrowserErrors(page);
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/');
+  await gotoLive(page, '/');
   await expect(page.locator('.landing-template-card img')).toHaveCount(5);
   await waitForImageToLoad(page.locator(activeHeroImageSelector));
   const expectedHeroAsset =
@@ -539,7 +681,7 @@ test('keeps the customizer title when its path has a trailing slash', async ({ p
 test('updates the localized landing title', async ({ page }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
 
-  await page.goto('/');
+  await gotoLive(page, '/');
   await selectLocale(page, 'ru');
   await expect(page).toHaveTitle('Open Keychain 3D | Генератор брелоков для 3D-печати');
   await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
@@ -549,7 +691,7 @@ test('updates the localized landing title', async ({ page }) => {
 test('keeps the language flag picker accessible and keyboard navigable', async ({ page }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
 
-  await page.goto('/');
+  await gotoLive(page, '/');
   const picker = page.locator('.language-picker');
   const trigger = picker.locator('.language-picker-trigger');
   await expect(trigger).toContainText('🇬🇧');
@@ -586,7 +728,7 @@ test('publishes crawler metadata and route-aware canonical URLs', async ({ page 
   expect(sitemap.ok()).toBe(true);
   expect(await sitemap.text()).toContain('<loc>https://open-keychain.com/</loc>');
 
-  await page.goto('/');
+  await gotoLive(page, '/');
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     'href',
     'https://open-keychain.com/',
@@ -616,7 +758,7 @@ test('publishes crawler metadata and route-aware canonical URLs', async ({ page 
 test('requires explicit analytics consent and remembers the choice', async ({ page }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
 
-  await page.goto('/');
+  await gotoLive(page, '/');
   const banner = page.locator('.analytics-consent');
   await expect(banner).toBeVisible();
   await banner.getByRole('button', { name: 'No thanks' }).click();
@@ -634,7 +776,7 @@ test('accepts analytics consent without blocking the primary action', async ({ p
   await page.route('https://posthog.test/**', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }),
   );
-  await page.goto('/');
+  await gotoLive(page, '/');
   await page.locator('.analytics-consent').getByRole('button', { name: 'Allow analytics' }).click();
   await expect(page.locator('.analytics-consent')).toBeHidden();
   expect(await page.evaluate(() => localStorage.getItem('open-keychain.analytics-consent'))).toBe(
@@ -659,7 +801,7 @@ for (const locale of ['en', 'ru', 'uk'] as const) {
   test(`keeps the ${locale.toUpperCase()} landing chrome readable`, async ({ page }) => {
     const assertNoBrowserErrors = watchBrowserErrors(page);
 
-    await page.goto('/');
+    await gotoLive(page, '/');
     await selectLocale(page, locale);
     await expect(page.locator('.configurator-showcase-caption')).toBeVisible();
     await expect(page.locator('.landing-step-card > span').first()).toHaveCSS('font-size', '24px');
@@ -685,7 +827,7 @@ for (const width of [760, 761, 1000, 1001]) {
     const assertNoBrowserErrors = watchBrowserErrors(page);
 
     await page.setViewportSize({ width, height: 900 });
-    await page.goto('/');
+    await gotoLive(page, '/');
     await expect(page.getByRole('link', { name: 'Start designing' }).first()).toBeVisible();
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     const layout = await page.evaluate(() => ({

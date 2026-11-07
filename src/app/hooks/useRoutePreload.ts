@@ -4,8 +4,10 @@ import { CREATE_ROUTE } from '../routes';
 import { loadAndPrewarm } from '../routing/geometryPrewarm';
 import { preloadCreateRoute } from '../routing/routeModules';
 
+/** Links to the editor, and controls that open it without a link (the hero name form). */
 const isCreateLink = (target: EventTarget | null): boolean => {
   if (!(target instanceof Element)) return false;
+  if (target.closest('[data-preload-route="create"]')) return true;
   const anchor = target.closest<HTMLAnchorElement>('a[href]');
 
   if (!anchor) return false;

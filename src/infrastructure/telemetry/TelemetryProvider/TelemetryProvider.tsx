@@ -264,12 +264,50 @@ const configurePostHog = async (): Promise<void> => {
   }
 };
 
+const IDLE_START_TIMEOUT_MS = 2000;
+
+/**
+ * Starts consented analytics once the page has handed off from its boot frame and the main
+ * thread is idle, so a returning visitor's SDK download and session-recording setup never
+ * compete with the route chunks on a cold load. Events are queued until then. Documents without
+ * a boot frame (and tests) count as ready.
+ */
+const afterAppReadyAndIdle = (run: () => void): (() => void) => {
+  const html = document.documentElement;
+  let cancelIdle: (() => void) | undefined;
+  const scheduleIdle = () => {
+    if (typeof window.requestIdleCallback === 'function') {
+      const id = window.requestIdleCallback(run, { timeout: IDLE_START_TIMEOUT_MS });
+      cancelIdle = () => window.cancelIdleCallback(id);
+    } else {
+      const id = window.setTimeout(run, 0);
+      cancelIdle = () => window.clearTimeout(id);
+    }
+  };
+  const ready = () => !html.dataset.bootRoute || html.dataset.appReady === 'true';
+  if (ready()) {
+    scheduleIdle();
+    return () => cancelIdle?.();
+  }
+  const observer = new MutationObserver(() => {
+    if (!ready()) return;
+    observer.disconnect();
+    scheduleIdle();
+  });
+  observer.observe(html, { attributes: true, attributeFilter: ['data-app-ready'] });
+  return () => {
+    observer.disconnect();
+    cancelIdle?.();
+  };
+};
+
 export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
   const [consent, setConsentState] = useState<AnalyticsConsent>(readConsent);
 
   useEffect(() => {
     syncReferralConsent();
-    if (consent === 'accepted') void configurePostHog();
+    if (consent !== 'accepted') return undefined;
+    return afterAppReadyAndIdle(() => void configurePostHog());
   }, [consent]);
 
   useEffect(() => {

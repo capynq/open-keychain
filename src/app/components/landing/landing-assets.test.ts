@@ -15,6 +15,8 @@ const assets = [
   ['showcase/v1/create-mobile-780.webp', 'webp', 780],
   ['showcase/v1/templates/name-keychain-320.avif', 'avif', 320],
   ['showcase/v1/templates/name-keychain-640.webp', 'webp', 640],
+  ['showcase/v1/templates/magnet-320.avif', 'avif', 320],
+  ['showcase/v1/templates/magnet-640.webp', 'webp', 640],
   ['showcase/v1/prints/example_1-en-627.avif', 'avif', 627],
   ['showcase/v1/prints/example_1-en-1254.webp', 'webp', 1254],
 ] as const;

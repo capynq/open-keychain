@@ -81,9 +81,8 @@ describe('llms.txt contract', () => {
     expect(headersText).toContain(
       'Link: </llms.txt>; rel="describedby"; type="text/markdown", </ai-catalog.json>; rel="ai-catalog"; type="application/json"',
     );
-    expect(headersText).toContain(
-      '/\n  Link: </llms.txt>; rel="describedby"; type="text/markdown", </ai-catalog.json>; rel="ai-catalog"; type="application/json", </showcase/v1/create-mobile-490.avif>; rel="preload"; as="image"; type="image/avif"; media="(max-width: 760px) and (max-resolution: 1.99dppx)", </showcase/v1/create-mobile-780.avif>; rel="preload"; as="image"; type="image/avif"; media="(max-width: 760px) and (min-resolution: 2dppx)"',
-    );
+    /* The landing document preloads its hero image itself, matching the picture's sources. */
+    expect(headersText).not.toContain('rel="preload"');
     expect(headersText).toContain('/fonts/*\n  Cache-Control: public, max-age=31536000, immutable');
     expect(headersText).toContain(
       '/showcase/v1/*\n  Cache-Control: public, max-age=31536000, immutable',

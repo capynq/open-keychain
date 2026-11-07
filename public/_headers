@@ -6,9 +6,6 @@
   Permissions-Policy: camera=(), microphone=(), geolocation=(), tools=(self)
   Link: </llms.txt>; rel="describedby"; type="text/markdown", </ai-catalog.json>; rel="ai-catalog"; type="application/json"
 
-/
-  Link: </llms.txt>; rel="describedby"; type="text/markdown", </ai-catalog.json>; rel="ai-catalog"; type="application/json", </showcase/v1/create-mobile-490.avif>; rel="preload"; as="image"; type="image/avif"; media="(max-width: 760px) and (max-resolution: 1.99dppx)", </showcase/v1/create-mobile-780.avif>; rel="preload"; as="image"; type="image/avif"; media="(max-width: 760px) and (min-resolution: 2dppx)"
-
 /llms.txt
   Content-Type: text/markdown; charset=UTF-8
   Cache-Control: public, max-age=3600, must-revalidate
@@ -16,6 +13,9 @@
 /ai-catalog.json
   Content-Type: application/json; charset=UTF-8
   Cache-Control: public, max-age=3600, must-revalidate
+
+/app.html
+  X-Robots-Tag: noindex, follow
 
 /privacy
   X-Robots-Tag: noindex, follow

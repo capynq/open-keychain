@@ -20,6 +20,7 @@ import { useAppNavigationEffects } from '../hooks/useAppNavigationEffects';
 import { useGeometryPrewarmRelease } from '../hooks/useGeometryPrewarmRelease';
 import { useInputModality } from '../hooks/useInputModality';
 import { useLandingIdlePrewarm } from '../hooks/useLandingIdlePrewarm';
+import { useLoadedLocale } from '../hooks/useLoadedLocale';
 import { useRoutePreload } from '../hooks/useRoutePreload';
 import { CREATE_ROUTE, PROFILE_ROUTE } from '../routes';
 import { AppSeoHead, useAppSeo } from '../seo/useAppSeo';
@@ -63,7 +64,7 @@ const App = () => {
   useGeometryPrewarmRelease(location.pathname);
   useInputModality();
 
-  const displayLocale = resolveDisplayLocale(location, locale);
+  const displayLocale = useLoadedLocale(resolveDisplayLocale(location, locale));
 
   useAppSeo({
     locale: displayLocale,

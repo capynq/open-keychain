@@ -2,7 +2,7 @@ import type { Locale } from '../../../infrastructure/i18n/config';
 
 import { t } from '../../../infrastructure/i18n/utils';
 
-export type RouteLoadingVariant = 'landing' | 'profile' | 'reference' | 'not-found';
+export type RouteLoadingVariant = 'profile' | 'reference' | 'not-found';
 
 const SkeletonMark = () => <span className="route-skeleton__brand" aria-hidden="true" />;
 
@@ -14,23 +14,7 @@ const SkeletonHeader = ({ variant }: { variant: RouteLoadingVariant }) => (
   </header>
 );
 
-const LandingSkeleton = () => (
-  <main className="route-skeleton__landing">
-    <div className="route-skeleton__landing-copy" aria-hidden="true">
-      <span className="route-skeleton__line route-skeleton__line--short" />
-      <span className="route-skeleton__line route-skeleton__line--title" />
-      <span className="route-skeleton__line route-skeleton__line--title route-skeleton__line--wide" />
-      <span className="route-skeleton__line route-skeleton__line--body" />
-      <span className="route-skeleton__line route-skeleton__line--body route-skeleton__line--wide" />
-      <span className="route-skeleton__button" />
-    </div>
-    <div className="route-skeleton__showcase" aria-hidden="true">
-      <span />
-    </div>
-  </main>
-);
-
-const ReferenceSkeleton = ({ variant }: { variant: 'profile' | 'reference' | 'not-found' }) => (
+const ReferenceSkeleton = ({ variant }: { variant: RouteLoadingVariant }) => (
   <main className={`route-skeleton__reference route-skeleton__reference--${variant}`}>
     <div className="route-skeleton__line route-skeleton__line--eyebrow" aria-hidden="true" />
     <div
@@ -70,6 +54,6 @@ export const RouteLoading = ({
   >
     <span className="route-skeleton__sr-only">{t(locale, 'routeOpening')}</span>
     <SkeletonHeader variant={variant} />
-    {variant === 'landing' ? <LandingSkeleton /> : <ReferenceSkeleton variant={variant} />}
+    <ReferenceSkeleton variant={variant} />
   </div>
 );

@@ -1,8 +1,11 @@
 # Search visibility checklist
 
 The public SEO pages are rendered by React from the typed catalog and public API in
-[`src/features/seo`](../src/features/seo). The build emits one `index.html`;
-the SPA fallback serves localized routes, `/privacy`, and a noindex not-found state.
+[`src/features/seo`](../src/features/seo). The build derives three documents from `index.html`:
+`index.html` for `/` (with the landing boot frame), `create/index.html` for the Customizer, and
+`app.html`, the SPA fallback that serves localized routes, `/privacy`, and a noindex not-found
+state. The boot frames are inert, `aria-hidden` previews, not crawlable content; the React app
+still renders every page's text and metadata.
 
 The catalog is the source of truth for the sitemap: every entry has a canonical path, locale, and page-specific
 `lastModified` date. `pnpm seo:sitemap` generates the tracked sitemap from `SEO_SITEMAP_MANIFEST`, and production builds

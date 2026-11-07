@@ -5,7 +5,8 @@ Status: accepted
 ## Decision
 
 Remain on Vite and React, rendering the SEO catalog and metadata in the client application. Netlify
-serves one static `index.html` with an SPA fallback.
+serves static documents derived from one `index.html` (see `docs/architecture.md`, "Boot frames")
+with an SPA fallback.
 
 ## Context
 

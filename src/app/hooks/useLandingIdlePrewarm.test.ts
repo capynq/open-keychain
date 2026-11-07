@@ -82,6 +82,52 @@ it('waits for window load and then for idle before prewarming', async () => {
   await vi.waitFor(() => expect(prewarmGeometryClient).toHaveBeenCalledTimes(1));
 });
 
+it('prefetches the editor files listed by the landing document with the prewarm', async () => {
+  const manifest = document.createElement('script');
+
+  manifest.type = 'application/json';
+  manifest.id = 'route-prefetch';
+  manifest.textContent = JSON.stringify({
+    customizer: ['/assets/CustomizerPage-a.js', '/assets/CustomizerPage-a.css'],
+  });
+  document.head.append(manifest);
+  try {
+    readyState = 'complete';
+    render('/');
+    expect(document.querySelectorAll('link[rel="prefetch"]')).toHaveLength(0);
+
+    runIdle();
+    const links = [...document.querySelectorAll<HTMLLinkElement>('link[rel="prefetch"]')];
+
+    expect(links.map((link) => new URL(link.href).pathname)).toEqual([
+      '/assets/CustomizerPage-a.js',
+      '/assets/CustomizerPage-a.css',
+    ]);
+    expect(links.every((link) => link.getAttribute('crossorigin') === '')).toBe(true);
+  } finally {
+    manifest.remove();
+    document.querySelectorAll('link[rel="prefetch"]').forEach((link) => link.remove());
+  }
+});
+
+it('prefetches nothing on data saver connections', async () => {
+  const manifest = document.createElement('script');
+
+  manifest.type = 'application/json';
+  manifest.id = 'route-prefetch';
+  manifest.textContent = JSON.stringify({ customizer: ['/assets/CustomizerPage-b.js'] });
+  document.head.append(manifest);
+  try {
+    setConnection({ saveData: true, effectiveType: '4g' });
+    readyState = 'complete';
+    render('/');
+    runIdle();
+    expect(document.querySelectorAll('link[rel="prefetch"]')).toHaveLength(0);
+  } finally {
+    manifest.remove();
+  }
+});
+
 it('does not prewarm before the load event', async () => {
   render('/');
   await macrotask();

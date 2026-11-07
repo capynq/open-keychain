@@ -2,6 +2,11 @@
   display: block;
 }
 
+/* The picture adds no box, so the image stays the card's absolutely positioned backdrop. */
+.picture {
+  display: contents;
+}
+
 :global(.design-select-card) {
   position: relative;
   display: grid;

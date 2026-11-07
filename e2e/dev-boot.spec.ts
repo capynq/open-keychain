@@ -1,6 +1,20 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 const customizerRoutes = ['/create', '/create/'] as const;
+
+/** Variants are cloned out of their templates, so count them in the served document. */
+const customizerTemplates = (html: string) =>
+  html.match(/<template data-boot-frame="customizer:/g)?.length ?? 0;
+
+/** Derived from the frame's import graph, so assert the invariants rather than a count. */
+const expectUniqueBootStylesheets = async (page: Page) => {
+  const hrefs = await page
+    .locator('link[data-boot-style]')
+    .evaluateAll((links) => links.map((link) => link.getAttribute('href')));
+  expect(hrefs.length).toBeGreaterThan(0);
+  expect(new Set(hrefs).size).toBe(hrefs.length);
+  expect(hrefs).toContain('/src/shared/ui/IconButton.module.css');
+};
 
 test('serves the Customizer boot variants only on development Customizer routes', async ({
   page,
@@ -8,16 +22,23 @@ test('serves the Customizer boot variants only on development Customizer routes'
   for (const route of customizerRoutes) {
     const response = await page.goto(route, { waitUntil: 'domcontentloaded' });
     expect(response?.status(), route).toBe(200);
-    await expect(page.locator('template[data-customizer-boot]')).toHaveCount(18);
-    await expect(page.locator('#boot-customizer .customizer-topbar')).toBeVisible();
-    await expect(page.locator('#boot-customizer aside.controls-panel')).toBeVisible();
-    await expect(page.locator('link[data-customizer-boot-style]')).toHaveCount(16);
+    expect(customizerTemplates(await response!.text())).toBe(18);
+    await expect(page.locator('#boot-frame .customizer-topbar')).toBeVisible();
+    await expect(page.locator('#boot-frame aside.controls-panel')).toBeVisible();
+    await expectUniqueBootStylesheets(page);
   }
 
   const landingResponse = await page.goto('/', { waitUntil: 'domcontentloaded' });
   expect(landingResponse?.status()).toBe(200);
-  await expect(page.locator('template[data-customizer-boot]')).toHaveCount(0);
-  await expect(page.locator('#boot-customizer .customizer-topbar')).toHaveCount(0);
+  const landingHtml = await landingResponse!.text();
+  expect(customizerTemplates(landingHtml)).toBe(0);
+  expect(landingHtml).toContain('data-boot-inline="landing:en"');
+  await expect(page.locator('#boot-frame .customizer-topbar')).toHaveCount(0);
+
+  const fallbackResponse = await page.goto('/privacy', { waitUntil: 'domcontentloaded' });
+  const fallbackHtml = await fallbackResponse!.text();
+  expect(fallbackHtml).not.toContain('data-boot-frame="customizer');
+  expect(fallbackHtml).not.toContain('data-boot-inline="landing');
 });
 
 test('renders the requested locale and template before the React entry loads', async ({
@@ -37,13 +58,13 @@ test('renders the requested locale and template before the React entry loads', a
       waitUntil: 'commit',
     });
     expect(response?.status()).toBe(200);
-    await expect(page.locator('template[data-customizer-boot]')).toHaveCount(18);
     await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
-    await expect(page.locator('link[data-customizer-boot-style]')).toHaveCount(16);
-    await expect(
-      page.locator('#boot-customizer [data-testid="template-card-magnet"]'),
-    ).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.locator('#boot-customizer')).toBeVisible();
+    await expectUniqueBootStylesheets(page);
+    await expect(page.locator('#boot-frame [data-testid="template-card-magnet"]')).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await expect(page.locator('#boot-frame')).toBeVisible();
 
     await page.evaluate(async () => {
       await Promise.all(
@@ -61,6 +82,12 @@ test('renders the requested locale and template before the React entry loads', a
 
     const selectors = [
       'header.customizer-topbar',
+      '.setup-header-button',
+      '.setup-header-button > svg',
+      '.export-header-button',
+      '.export-header-button > svg',
+      '.export-header-button > span',
+      '.share-header-button',
       'aside.controls-panel',
       '[data-testid="template-card-nameplate"]',
       '.preview-panel',
@@ -68,7 +95,7 @@ test('renders the requested locale and template before the React entry loads', a
       '.viewer-wrap',
     ];
     const mobileVariableHeightSelectors = new Set(['aside.controls-panel']);
-    const readBoxes = async (root: '#boot-customizer' | '#root') =>
+    const readBoxes = async (root: '#boot-frame' | '#root') =>
       page.evaluate(
         ({ boxSelectors, selectorRoot }) =>
           Object.fromEntries(
@@ -81,7 +108,7 @@ test('renders the requested locale and template before the React entry loads', a
           ),
         { boxSelectors: selectors, selectorRoot: root },
       );
-    const bootBoxes = await readBoxes('#boot-customizer');
+    const bootBoxes = await readBoxes('#boot-frame');
     releaseEntry?.();
     releaseEntry = undefined;
     await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');

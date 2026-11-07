@@ -4,6 +4,7 @@ import { resolveSeoRoute } from '@/features/seo';
 
 import { LANDING_ROUTE } from '../routes';
 import { loadAndPrewarm } from '../routing/geometryPrewarm';
+import { prefetchRouteFiles } from '../routing/routePrefetch';
 
 const IDLE_TIMEOUT_MS = 4000;
 const FALLBACK_DELAY_MS = 1500;
@@ -75,8 +76,9 @@ export const useLandingIdlePrewarm = (pathname: string): void => {
     const onReady = (): void => {
       cancelLcp = onceLcpSettles(() => {
         cancelIdle = scheduleIdle(() => {
-          if (!isConstrainedConnection())
-            loadAndPrewarm(() => isLandingPath(window.location.pathname));
+          if (isConstrainedConnection()) return;
+          loadAndPrewarm(() => isLandingPath(window.location.pathname));
+          if (isLandingPath(window.location.pathname)) prefetchRouteFiles('customizer');
         });
       });
     };

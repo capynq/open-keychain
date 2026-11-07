@@ -5,13 +5,14 @@ import {
   waitForImageToLoad,
   waitForReadyGeometry,
   watchBrowserErrors,
+  gotoLive,
 } from './helpers';
 
 const activeHeroImageSelector =
   '.configurator-carousel-slide[data-showcase-kind="configurator"][data-active="true"] img';
 
 test('generates and exports through the production static site', async ({ page }) => {
-  await page.goto('/');
+  await gotoLive(page, '/');
   await expect(page.getByRole('link', { name: 'Open Keychain' })).toBeVisible();
   await page.goto('/create');
   await expect(page.locator('.status-pill')).toHaveText(/Ready/, { timeout: 15_000 });
@@ -25,7 +26,7 @@ test('generates and exports through the production static site', async ({ page }
 
 test('loads static metadata and privacy page in production', async ({ page }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
-  await page.goto('/');
+  await gotoLive(page, '/');
   await expect(page.locator('.landing-template-card img')).toHaveCount(5);
   await page.locator('.landing-template-card').last().scrollIntoViewIfNeeded();
   await Promise.all([
@@ -51,8 +52,9 @@ test('loads static metadata and privacy page in production', async ({ page }) =>
       },
     ],
   });
-  const rootHeaders = (await page.request.get('/')).headers();
-  expect(rootHeaders.link).toContain('rel="preload"');
+  const root = await page.request.get('/');
+  expect(root.headers().link).toContain('rel="describedby"');
+  expect(await root.text()).toContain('<link rel="preload" as="image" type="image/avif"');
   const versionedAsset = await page.request.get('/showcase/v1/create-mobile-490.avif');
   expect(versionedAsset.headers()['cache-control']).toContain('max-age=31536000');
   expect(versionedAsset.headers()['cache-control']).toContain('immutable');
@@ -63,14 +65,25 @@ test('loads static metadata and privacy page in production', async ({ page }) =>
 });
 
 test('uses the SPA fallback for unknown production paths', async ({ page }) => {
+  const fallback = await page.request.get('/seo-route-that-does-not-exist', {
+    headers: { accept: 'text/html' },
+  });
+  expect(await fallback.text()).not.toContain('data-boot-inline="landing');
+  expect(await (await page.request.get('/')).text()).toContain('data-boot-inline="landing:en"');
   await page.goto('/seo-route-that-does-not-exist');
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex,follow');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 });
 
+test('serves the Customizer document at /create without a redirect', async ({ page }) => {
+  const response = await page.request.get('/create?lang=uk', { maxRedirects: 0 });
+  expect(response.status()).toBe(200);
+  expect(await response.text()).toContain('data-boot-frame="customizer:uk:name-keychain"');
+});
+
 test('keeps all supported languages and customizer readiness in production', async ({ page }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
-  await page.goto('/');
+  await gotoLive(page, '/');
   for (const locale of ['en', 'ru', 'uk'] as const) {
     await selectLocale(page, locale);
     await expect(page.locator('html')).toHaveAttribute('lang', locale);

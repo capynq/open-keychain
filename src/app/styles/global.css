@@ -130,8 +130,51 @@
   font-display: swap;
 }
 
+/*
+ * Metric-matched stand-ins shown until the web fonts arrive. The boot frames paint text before
+ * Nunito and Bree Serif load (font-display: swap), so widths and line boxes are scaled to the real
+ * faces from their own metrics: average advance over landing copy against Arial / Times New Roman
+ * (Liberation Sans / Serif share those metrics), keeping line breaks and heights through the swap.
+ */
+@font-face {
+  font-family: OpenNunitoFallback;
+  src: local('Arial'), local('ArialMT'), local('Liberation Sans'), local('Helvetica');
+  font-weight: 100 549;
+  size-adjust: 102.4%;
+  ascent-override: 98.75%;
+  descent-override: 34.48%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: OpenNunitoFallback;
+  src: local('Arial Bold'), local('Arial-BoldMT'), local('Liberation Sans Bold'), local('Helvetica Bold');
+  font-weight: 550 1000;
+  size-adjust: 101.8%;
+  ascent-override: 99.3%;
+  descent-override: 34.6%;
+  line-gap-override: 0%;
+}
+/*
+ * The landing boot frame's heading is the page's LCP element. Painted in the fallback, it is a
+ * little smaller than the live heading that replaces it at hand-off, which Chrome then reports
+ * as a new, later LCP. This face shares OpenBree's preloaded file but blocks, so the frame's
+ * heading first paints in Bree, at the size the live heading has.
+ */
+@font-face {
+  font-family: OpenBreeBoot;
+  src: url('/fonts/bree-serif.ttf') format('truetype');
+  font-display: block;
+}
+@font-face {
+  font-family: OpenBreeFallback;
+  src: local('Times New Roman'), local('TimesNewRomanPSMT'), local('Liberation Serif');
+  size-adjust: 109.73%;
+  ascent-override: 98.15%;
+  descent-override: 25.61%;
+  line-gap-override: 0%;
+}
 :root {
-  font-family: OpenNunito, system-ui, sans-serif;
+  font-family: OpenNunito, OpenNunitoFallback, system-ui, sans-serif;
   color: #202433;
   background: #f6f4ef;
   font-synthesis: none;

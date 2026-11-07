@@ -1,0 +1,6 @@
+/* Swashes may leave the line box, as they would as text. */
+.root {
+  display: block;
+  flex: none;
+  overflow: visible;
+}

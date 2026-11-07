@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
+import { dirname } from 'node:path';
 import sharp from 'sharp';
 
 import {
@@ -207,7 +208,12 @@ for (const template of templatePreviews) {
             .resize({ width: 1280, height: 720, fit: 'cover', position: 'centre' })
             .png()
             .toBuffer();
-    const assetTarget = `public/showcase/templates/${template.file}${suffix === 'mobile' ? '-mobile' : ''}.png`;
+    /* Only the desktop capture ships; the mobile one is kept for review outside public/. */
+    const assetTarget =
+      suffix === 'mobile'
+        ? `artifacts/capture/showcase/templates/${template.file}-mobile.png`
+        : `public/showcase/templates/${template.file}.png`;
+    await mkdir(dirname(assetTarget), { recursive: true });
     await sharp(screenshot).toFile(assetTarget);
     await assertPngCapture(screenshot, { width: 1280, height: 720 });
     assertNoBrowserErrors();

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import sharp from 'sharp';
 
-import { assertVisibleModel, waitForReadyGeometry } from './helpers';
+import { assertVisibleModel, waitForReadyGeometry, gotoLive } from './helpers';
 
 const countRedPixels = async (image: Buffer): Promise<number> => {
   const { data, info } = await sharp(image)
@@ -70,7 +70,7 @@ test.describe('preview lifecycle', () => {
     await waitForReadyGeometry(page);
     await assertVisibleModel(page);
     await assertControlledDefaultPixels(page);
-    await page.goto('/');
+    await gotoLive(page, '/');
     await page.goto('/create');
     await waitForReadyGeometry(page);
     await assertVisibleModel(page);

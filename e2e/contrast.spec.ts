@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { waitForReadyGeometry } from './helpers';
+import { waitForReadyGeometry, gotoLive } from './helpers';
 
 type ContrastAudit = {
   selector: string;
@@ -47,7 +47,7 @@ const focusSelectors = [
 ] as const;
 
 test('keeps landing and consent text at WCAG AA contrast', async ({ page }) => {
-  await page.goto('/');
+  await gotoLive(page, '/');
   await expect(page.locator('.analytics-consent')).toBeVisible();
 
   const audit = await page.evaluate((selectors) => {
@@ -114,7 +114,7 @@ test('keeps landing footer links large enough to activate on touch screens', asy
     testInfo.project.name === 'desktop',
     'Touch-target sizing is covered by mobile projects',
   );
-  await page.goto('/');
+  await gotoLive(page, '/');
   await page.locator('.landing-footer a').last().scrollIntoViewIfNeeded();
 
   const links = await page.locator('.landing-footer a').evaluateAll((elements) =>
@@ -132,7 +132,7 @@ test('keeps landing footer links large enough to activate on touch screens', asy
 });
 
 test('keeps landing focus indicators visible against their surfaces', async ({ page }) => {
-  await page.goto('/');
+  await gotoLive(page, '/');
   await expect(page.locator('.analytics-consent')).toBeVisible();
 
   const readIndicator = async (selector: string) =>
@@ -212,9 +212,11 @@ test('keeps landing focus indicators visible against their surfaces', async ({ p
 });
 
 test('keeps icon action hover states visually distinct and contrasting', async ({ page }) => {
-  await page.goto('/create');
+  /* `actions.all()` snapshots elements: before hand-off it would include the boot frame's inert
+   * copies of these buttons, which never take hover and are then removed. */
+  await gotoLive(page, '/create');
   const actions = page.locator(
-    '.export-header-button, .share-header-button, .randomize-header-button, .language-picker-trigger',
+    '#root :is(.export-header-button, .share-header-button, .randomize-header-button, .language-picker-trigger)',
   );
   const finePointer = await page.evaluate(
     () => matchMedia('(hover: hover) and (pointer: fine)').matches,

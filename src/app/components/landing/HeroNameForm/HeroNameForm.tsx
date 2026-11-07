@@ -30,6 +30,7 @@ export const HeroNameForm = ({
   return (
     <form
       className={['landing-name-form', className].filter(Boolean).join(' ')}
+      data-preload-route="create"
       onSubmit={(event) => {
         event.preventDefault();
         const setupText = name.trim();

@@ -1,8 +1,7 @@
 import { Check, ChevronDown } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-import type { Locale } from '../../../infrastructure/i18n/config';
-
+import { loadLocale, type Locale } from '../../../infrastructure/i18n/config';
 import { t } from '../../../infrastructure/i18n/utils';
 import styles from './LanguagePicker.module.css';
 
@@ -97,6 +96,10 @@ export const LanguagePicker = ({
   };
 
   const currentOption = LOCALE_OPTIONS[Math.max(currentIndex, 0)];
+  /* Pointing at or focusing the picker loads the other locales, so a choice switches at once. */
+  const warmLocales = (): void => {
+    for (const option of LOCALE_OPTIONS) loadLocale(option.value).catch(() => undefined);
+  };
 
   return (
     <div className={`${styles.root} language-picker`} ref={rootRef}>
@@ -117,6 +120,8 @@ export const LanguagePicker = ({
           setOpen((current) => !current);
         }}
         onKeyDown={handleButtonKeyDown}
+        onPointerEnter={warmLocales}
+        onFocus={warmLocales}
       >
         <span className="language-picker-flag" aria-hidden="true">
           {currentOption.flag}

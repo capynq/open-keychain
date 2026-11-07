@@ -37,11 +37,17 @@ const matrixWorkerCount = () =>
     boundedConcurrency('MATRIX_CONCURRENCY', validationConcurrency(), MAX_MATRIX_CONCURRENCY),
     validationConcurrency(),
   );
+/*
+ * A Playwright worker keeps at least two threads busy in the Customizer: the page and its geometry
+ * worker. Counted as one slot, the regression and journey gates ran beside the unit gate on four
+ * cores, and their CPU-bound steps (a 10 s geometry rebuild, the 5 s Quick setup close) timed out.
+ */
+export const browserGateSlots = (playwrightWorkers) => playwrightWorkers * 2;
 const browserRegressionGate = () => ({
   id: 'browser:regression',
   name: 'Browser regression',
   required: true,
-  workerSlots: 2,
+  workerSlots: browserGateSlots(2),
   command: 'pnpm',
   args: ['test:e2e:regression'],
   env: { PLAYWRIGHT_USE_EXISTING_BUILD: 'true', PLAYWRIGHT_SMOKE: 'false' },
@@ -252,6 +258,11 @@ export const ciGateGroup = ({ id }) =>
 
 /* Changed specs run on desktop and mobile; mobile-2x only adds a different pixel ratio. */
 export const CI_CHANGED_SPEC_PROJECTS = ['desktop', 'mobile'];
+/*
+ * Specs with wall-clock budgets (the 3 s / 5 s first-preview budget) run in their own gate with one
+ * worker; beside other browser workers they measure the runner's contention, not the app.
+ */
+export const TIMING_BUDGET_SPECS = ['e2e/performance.spec.ts'];
 const PIXEL_RATIO_SENSITIVE =
   /project\.name\s*===\s*'mobile-2x'|devicePixelRatio|deviceScaleFactor/;
 export const isPixelRatioSensitiveSpec = (spec) => {
@@ -288,7 +299,7 @@ const appendJourneyGate = (gates) => {
       required: true,
       cacheable: false,
       verificationRequired: true,
-      workerSlots: 1,
+      workerSlots: browserGateSlots(1),
       command: 'pnpm',
       args: ['test:e2e:journey'],
       env: {
@@ -376,7 +387,9 @@ export const createCiChangedGatePlan = (inputFiles) => {
     add('build', 'Build', ['build:artifact'], {
       env: E2E_BUILD_ENV,
     });
-  if (changedBrowserSpecs.length > 0) {
+  const budgetSpecs = changedBrowserSpecs.filter((spec) => TIMING_BUDGET_SPECS.includes(spec));
+  const parallelSpecs = changedBrowserSpecs.filter((spec) => !TIMING_BUDGET_SPECS.includes(spec));
+  if (parallelSpecs.length > 0) {
     const workers = unitWorkerCount();
     /* Every CI plan builds once; changed specs reuse that artifact instead of racing it. */
     const options = {
@@ -391,13 +404,13 @@ export const createCiChangedGatePlan = (inputFiles) => {
         'exec',
         'playwright',
         'test',
-        ...changedBrowserSpecs,
+        ...parallelSpecs,
         ...CI_CHANGED_SPEC_PROJECTS.map((project) => `--project=${project}`),
         `--workers=${workers}`,
       ],
       options,
     );
-    const pixelRatioSpecs = changedBrowserSpecs.filter(isPixelRatioSensitiveSpec);
+    const pixelRatioSpecs = parallelSpecs.filter(isPixelRatioSensitiveSpec);
     if (pixelRatioSpecs.length > 0)
       add(
         'browser:changed:2x',
@@ -413,6 +426,26 @@ export const createCiChangedGatePlan = (inputFiles) => {
         options,
       );
   }
+  if (budgetSpecs.length > 0)
+    add(
+      'browser:changed:budget',
+      'Browser (changed timing budgets)',
+      [
+        'exec',
+        'playwright',
+        'test',
+        ...budgetSpecs,
+        ...CI_CHANGED_SPEC_PROJECTS.map((project) => `--project=${project}`),
+        ...(budgetSpecs.some(isPixelRatioSensitiveSpec) ? ['--project=mobile-2x'] : []),
+        '--workers=1',
+      ],
+      {
+        /* Every slot, so no other gate runs beside it. */
+        workerSlots: validationConcurrency(),
+        env: { PLAYWRIGHT_USE_EXISTING_BUILD: 'true' },
+        dependsOn: ['build'],
+      },
+    );
   if (!documentationOnly && !testOnly && needsBrowser && !needsGeometry)
     add('browser', 'Browser smoke', ['test:e2e:smoke'], {
       workerSlots: 2,
@@ -457,7 +490,7 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
         id: 'browser',
         name: 'Browser smoke',
         required: true,
-        workerSlots: 2,
+        workerSlots: browserGateSlots(2),
         command: 'pnpm',
         args: ['test:e2e:smoke'],
         env: {
@@ -644,7 +677,7 @@ export const createGatePlan = (inputFiles, profile = 'push') => {
       id: 'browser',
       name: 'Browser smoke',
       required: true,
-      workerSlots: 2,
+      workerSlots: browserGateSlots(2),
       command: 'pnpm',
       args: ['test:e2e:smoke'],
       env: { PLAYWRIGHT_USE_EXISTING_BUILD: 'true' },

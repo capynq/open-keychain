@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { gotoLive } from './helpers';
+
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem('open-keychain.analytics-consent', 'declined');
@@ -10,7 +12,7 @@ test('landing hover and keyboard focus stay spatially stable with reduced motion
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('/');
+  await gotoLive(page, '/');
   const action = page.locator('.landing-card-link').first();
   await expect(action).toBeVisible();
   await action.hover();
@@ -74,7 +76,7 @@ test.describe('large touch hover behavior', () => {
   test.use({ hasTouch: true, isMobile: true, viewport: { width: 1024, height: 900 } });
 
   test('public cards do not move when touch produces hover state', async ({ page }) => {
-    await page.goto('/');
+    await gotoLive(page, '/');
     const card = page.locator('.landing-template-card').first();
     await expect(card).toBeVisible();
     await card.hover();

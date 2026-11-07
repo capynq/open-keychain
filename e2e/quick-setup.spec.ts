@@ -242,9 +242,11 @@ test('walks through six focused steps and applies accepted keyring, colors, and 
   const calligraphic = fontCategory(dialog, 'Calligraphic');
   const calligraphicCard = calligraphic.locator('..');
   const calligraphicSpecimen = calligraphicCard.locator('[class*="categorySpecimen"]');
-  await expect(calligraphicSpecimen).toHaveText('Aa');
-  await expect(calligraphicSpecimen).toHaveCSS('font-family', /OpenMarck/);
-  await expect(calligraphicSpecimen).toHaveCSS('font-weight', '400');
+  await expect(calligraphicSpecimen).toHaveAttribute('data-font-specimen', 'marck-script-latin');
+  await expect(calligraphicSpecimen.locator('use')).toHaveAttribute(
+    'href',
+    /\/fonts\/specimens-[0-9a-f]+\.svg#marck-script-latin$/,
+  );
   await calligraphicCard.click();
   await expect(calligraphic).toBeChecked();
   await expect

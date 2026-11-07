@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { SEO_PAGE_MANIFEST } from '../src/infrastructure/seo/catalog';
-import { selectLocale } from './helpers';
+import { selectLocale, gotoLive } from './helpers';
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -155,7 +155,7 @@ test('keeps the workflow link anchored on localized SEO home pages', async ({ pa
 });
 
 test('uses the query locale for the root SEO home', async ({ page }) => {
-  await page.goto('/?lang=ru');
+  await gotoLive(page, '/?lang=ru');
   await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
   await expect(page.getByRole('heading', { level: 1 })).toContainText(
     'Превратите имя в вещь для печати.',
@@ -247,8 +247,29 @@ test('uses the shared language picker and preserves SEO route context', async ({
   await expect(page.locator('.language-picker-trigger')).toContainText('🇺🇦');
 });
 
+test('keeps the current language on screen until a new SEO locale loads', async ({ page }) => {
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => (release = resolve));
+  await page.route(/\/assets\/resources\.uk-[^/]+\.js$/, async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.goto('/ru/templates/nameplate/');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
+  const heading = page.locator('#root h1');
+  const russian = (await heading.textContent())!;
+  await selectLocale(page, 'uk');
+  await expect(page).toHaveURL('/uk/templates/nameplate/');
+  /* No English fallback while the Ukrainian chunk is held: the Russian page stays. */
+  await page.waitForTimeout(500);
+  await expect(heading).toHaveText(russian);
+  release();
+  await expect(heading).not.toHaveText(russian);
+  await expect(page.locator('html')).toHaveAttribute('lang', 'uk');
+});
+
 test('preserves landing locale on generic customizer CTAs', async ({ page }) => {
-  await page.goto('/');
+  await gotoLive(page, '/');
   await selectLocale(page, 'ru');
   await page.locator('.landing-header-cta').click();
   await expect(page).toHaveURL('/create?setup=1&lang=ru');
