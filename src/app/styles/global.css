@@ -154,6 +154,17 @@
   descent-override: 34.6%;
   line-gap-override: 0%;
 }
+/*
+ * The landing boot frame's heading is the page's LCP element. Painted in the fallback, it is a
+ * little smaller than the live heading that replaces it at hand-off, which Chrome then reports
+ * as a new, later LCP. This face shares OpenBree's preloaded file but blocks, so the frame's
+ * heading first paints in Bree, at the size the live heading has.
+ */
+@font-face {
+  font-family: OpenBreeBoot;
+  src: url('/fonts/bree-serif.ttf') format('truetype');
+  font-display: block;
+}
 @font-face {
   font-family: OpenBreeFallback;
   src: local('Times New Roman'), local('TimesNewRomanPSMT'), local('Liberation Serif');
