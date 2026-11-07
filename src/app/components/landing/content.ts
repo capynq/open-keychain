@@ -61,6 +61,7 @@ export const TEMPLATE_SHOWCASE: readonly TemplateShowcase[] = [
   {
     id: 'magnet',
     assetPath: '/showcase/templates/magnet.png',
+    modernAssetName: 'magnet',
     titleKey: 'landing.products.magnet.title',
     bodyKey: 'landing.products.magnet.body',
     altKey: 'landing.templatePreviewAlt.magnet',

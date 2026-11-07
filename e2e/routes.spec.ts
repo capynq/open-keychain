@@ -562,10 +562,7 @@ test('loads all reviewed landing visuals at the active responsive breakpoint', a
     }),
   );
 
-  expect(images.slice(0, 4).every((image) => image.src.includes('/showcase/v1/templates/'))).toBe(
-    true,
-  );
-  expect(images[4]?.src).toContain('/showcase/templates/magnet.png');
+  expect(images.every((image) => image.src.includes('/showcase/v1/templates/'))).toBe(true);
   expect(images.every((image) => image.width > 0 && image.height > 0)).toBe(true);
   const expectedHeroAsset =
     testInfo.project.name === 'mobile-2x'

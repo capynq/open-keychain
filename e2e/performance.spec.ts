@@ -252,7 +252,7 @@ test('selects modern landing images while preserving lazy PNG fallbacks', async 
     .poll(() =>
       templateImages.last().evaluate((element) => (element as HTMLImageElement).currentSrc),
     )
-    .toContain('/showcase/templates/magnet.png');
+    .toContain('/showcase/v1/templates/magnet-');
   await expect(page.locator('[data-showcase-kind="photo"] img').first()).toHaveAttribute(
     'loading',
     'lazy',

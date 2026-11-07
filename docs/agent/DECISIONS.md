@@ -898,3 +898,21 @@ desktop had none.
 
 **Consequences:** One hero request per device, matching `currentSrc`. vendor-opentype is no longer
 in the Customizer chunk graph. `useRoutePreload` matches `[data-preload-route="create"]`.
+
+## 2026-11-07 — Design cards load sized AVIF/WebP
+
+**Decision:** Template and style cards render a `<picture>` (`display: contents`) with AVIF and
+WebP at 240/480/720 w from `pnpm assets:landing` under `/showcase/v1/cards/`, `sizes` matched to the
+measured card crops, lazy loading, and the PNG as fallback. A template's default style uses the
+template image's URL when the renders are identical (name keychain and plant label contour, magnet
+ribbon). The generator never rewrites an existing `/showcase/v1/` file, because that path is
+served immutable; `--check` reports missing derivatives. The landing magnet card gained its v1
+derivative.
+
+**Rationale:** A cold `/create` downloaded eleven 1280×720 PNGs (about 490 KB) for cards about
+120–260 CSS px wide; the sized AVIFs are 14 KB on desktop and 21 KB on a 2x phone.
+
+**Open:** The six `styles/magnet-*.png` previews are byte-identical to the name keychain renders and
+show a keyring hole a magnet does not have; they need recapturing (`pnpm capture:ui`). Unreferenced
+camera originals (`prints/example_{1,2}.jpeg`, 7.4 MB) and the mobile template captures were
+removed; `e2e/capture.spec.ts` now writes mobile captures under `artifacts/`.

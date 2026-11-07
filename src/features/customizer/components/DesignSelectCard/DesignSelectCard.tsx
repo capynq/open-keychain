@@ -1,5 +1,6 @@
 import { useId, useRef } from 'react';
 
+import { DESIGN_CARD_IMAGE_SIZES, designCardImageSources } from '../design-card-assets';
 import styles from './DesignSelectCard.module.css';
 
 export type DesignSelectCardProps = {
@@ -28,6 +29,7 @@ export const DesignSelectCard = ({
 }: DesignSelectCardProps) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const descriptionId = useId();
+  const sources = designCardImageSources(previewSrc);
 
   const keepInView = (): void => {
     buttonRef.current?.scrollIntoView?.({
@@ -51,7 +53,23 @@ export const DesignSelectCard = ({
       onClick={onSelect}
       onFocus={keepInView}
     >
-      <img src={previewSrc} alt="" aria-hidden="true" />
+      <picture className={styles.picture}>
+        {sources && (
+          <>
+            <source type="image/avif" srcSet={sources.avif} sizes={DESIGN_CARD_IMAGE_SIZES} />
+            <source type="image/webp" srcSet={sources.webp} sizes={DESIGN_CARD_IMAGE_SIZES} />
+          </>
+        )}
+        <img
+          src={previewSrc}
+          alt=""
+          aria-hidden="true"
+          width="1280"
+          height="720"
+          loading="lazy"
+          decoding="async"
+        />
+      </picture>
       <span className="design-select-card-overlay" aria-hidden="true" />
       <span className="design-select-card-copy">
         <strong>{title}</strong>
