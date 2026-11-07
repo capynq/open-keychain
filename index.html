@@ -25,17 +25,21 @@
         const params = new URLSearchParams(window.location.search);
         const locales = ['en', 'ru', 'uk'];
         const requested = locales.includes(params.get('lang')) ? params.get('lang') : undefined;
+        /* Like i18next's navigator detector: the first supported language in the list. */
+        const browser = [...(navigator.languages?.length ? navigator.languages : [navigator.language])]
+          .map((language) => language.toLowerCase().split('-')[0])
+          .find((language) => locales.includes(language));
+        /* As detectInitialLocale: SEO pages own their locale (`/ru/…`, `/uk/…`, English
+         * unprefixed), `/` is English unless `?lang` asks otherwise, other paths follow the browser. */
+        const seoLocale =
+          /^\/(ru|uk)(?:\/|$)/.exec(path)?.[1] ?? (/^\/(?:templates|guides)(?:\/|$)/.test(path) ? 'en' : undefined);
+        const locale = seoLocale ?? requested ?? (route === 'landing' ? 'en' : (browser ?? 'en'));
+        /* Read by the locale preload the build adds below. */
+        html.dataset.bootLocale = locale;
         if (route === 'landing') {
-          /* `/` is English unless `?lang` asks otherwise (detectInitialLocale). */
-          const locale = requested ?? 'en';
           html.lang = locale;
           html.dataset.bootKey = locale;
         } else if (route === 'customizer') {
-          /* Like i18next's navigator detector: the first supported language in the list. */
-          const browser = [...(navigator.languages?.length ? navigator.languages : [navigator.language])]
-            .map((language) => language.toLowerCase().split('-')[0])
-            .find((language) => locales.includes(language));
-          const locale = requested ?? browser ?? 'en';
           const templates = ['name-keychain', 'articulated-name', 'magnet', 'nameplate', 'plant-label'];
           const template = params.has('design')
             ? 'neutral'

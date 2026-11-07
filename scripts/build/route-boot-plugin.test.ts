@@ -7,6 +7,7 @@ import {
   buildBootDocument,
   findGeometryWorkerHref,
   geometryPreloadTags,
+  localePreloadScript,
   modulePreloadTags,
   previewDocumentFor,
   routePrefetchManifest,
@@ -110,6 +111,43 @@ describe('modulePreloadTags and routePrefetchManifest', () => {
       '<script type="application/json" id="route-prefetch">' +
         '{"customizer":["/assets/a.js","/assets/\\u003c/script>.css"]}</script>',
     );
+  });
+});
+
+/** Runs an inline script against a minimal document and returns what it changed. */
+const runInline = (
+  source: string,
+  { url = '/', languages = ['en-US'], dataset = {} as Record<string, string> } = {},
+) => {
+  const { pathname, search } = new URL(url, 'https://open-keychain.com');
+  const appended: { rel: string; href: string; crossOrigin: string | null }[] = [];
+  const documentElement = { dataset: { ...dataset }, lang: 'en' };
+  const document = {
+    documentElement,
+    createElement: () => ({ rel: '', href: '', crossOrigin: null }),
+    head: { append: (link: (typeof appended)[number]) => appended.push(link) },
+  };
+  new Function('window', 'document', 'navigator', source)(
+    { location: { pathname, search } },
+    document,
+    { languages, language: languages[0] },
+  );
+  return { dataset: documentElement.dataset, lang: documentElement.lang, appended };
+};
+
+describe('localePreloadScript', () => {
+  const script = localePreloadScript({ ru: ['/assets/ru.js'], uk: ['/assets/uk.js'] });
+  const body = script.replace(/^<script>|<\/script>$/g, '');
+
+  it('preloads the chunk of the locale the resolver picked, in CORS mode', () => {
+    expect(runInline(body, { dataset: { bootLocale: 'ru' } }).appended).toEqual([
+      { rel: 'modulepreload', href: '/assets/ru.js', crossOrigin: '' },
+    ]);
+    expect(runInline(body, { dataset: { bootLocale: 'en' } }).appended).toEqual([]);
+  });
+
+  it('cannot close its script element', () => {
+    expect(localePreloadScript({ ru: ['/</script>.js'] })).not.toContain('</script>.js');
   });
 });
 

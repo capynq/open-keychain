@@ -19,6 +19,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
+    setupFiles: ['./scripts/validation/vitest-setup.ts'],
     include: ['src/**/*.test.ts', 'scripts/**/*.test.ts', 'scripts/**/*.test.mjs'],
     reporters: ['default', './scripts/validation/reporters/validation-vitest-reporter.mjs'],
   },

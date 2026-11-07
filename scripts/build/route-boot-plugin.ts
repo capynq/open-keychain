@@ -7,10 +7,12 @@ import { MemoryRouter } from 'react-router';
 import { createServer, type Plugin, type ResolvedConfig, type ViteDevServer } from 'vite';
 
 import {
+  BOOT_LOCALES,
   BOOT_ROUTES,
   CUSTOMIZER_BOOT_ROUTE,
   FALLBACK_FONT_PRELOADS,
   LANDING_BOOT_ROUTE,
+  LOCALE_MODULES,
   PROFILE_BOOT_ROUTE,
   type BootRoute,
 } from './boot-routes.ts';
@@ -64,6 +66,13 @@ export const modulePreloadTags = (hrefs: string[], priority?: 'low'): string =>
 /** Files another route needs, for `src/app/routing/routePrefetch.ts` to prefetch at idle. */
 export const routePrefetchManifest = (routes: Record<string, string[]>): string =>
   `<script type="application/json" id="route-prefetch">${JSON.stringify(routes).replace(/</g, '\\u003c')}</script>`;
+
+/**
+ * Starts the locale chunk the resolver in `index.html` picked (`data-boot-locale`) alongside the
+ * entry, which would otherwise request it only after it runs.
+ */
+export const localePreloadScript = (files: Record<string, string[]>): string =>
+  `<script>(()=>{for(const href of ${JSON.stringify(files).replace(/</g, '\\u003c')}[document.documentElement.dataset.bootLocale]??[]){const link=document.createElement('link');link.rel='modulepreload';link.crossOrigin='';link.href=href;document.head.append(link);}})()</script>`;
 
 export const bootStylesheetLinks = (hrefs: string[]): string =>
   hrefs.map((href) => `<link rel="stylesheet" href="${href}" data-boot-style />`).join('');
@@ -216,7 +225,12 @@ export const routeBootPlugin = (): Plugin => {
 
   const renderRoute = async (route: BootRoute): Promise<RenderedRoute> => {
     const ssrServer = await getServer();
-    await ssrServer.ssrLoadModule('/src/infrastructure/i18n/config.ts');
+    const { loadLocale } = (await ssrServer.ssrLoadModule(
+      '/src/infrastructure/i18n/config.ts',
+    )) as {
+      loadLocale: (locale: string) => Promise<void>;
+    };
+    await Promise.all(BOOT_LOCALES.map((locale) => loadLocale(locale)));
     const [frameModule, { AnalyticsContext }] = await Promise.all([
       ssrServer.ssrLoadModule(route.frame.module),
       ssrServer.ssrLoadModule('/src/infrastructure/telemetry/telemetry-context.ts'),
@@ -358,6 +372,16 @@ export const routeBootPlugin = (): Plugin => {
             ];
           }),
         );
+        const localeFiles = Object.fromEntries(
+          Object.entries(LOCALE_MODULES).map(([locale, module]) => [
+            locale,
+            collectChunkFiles(
+              bundle,
+              [findChunkByFacade(bundle, path.join(config.root, module))],
+              linkedChunks,
+            ).map((file) => `/${file}`),
+          ]),
+        );
         const documents = new Map<string, string>();
 
         for (const { route, frames, markup, head } of rendered) {
@@ -379,6 +403,7 @@ export const routeBootPlugin = (): Plugin => {
             }),
           );
           const preloads = [
+            localePreloadScript(localeFiles),
             route === CUSTOMIZER_BOOT_ROUTE
               ? geometryPreloadTags(findGeometryWorkerHref(bundle))
               : '',

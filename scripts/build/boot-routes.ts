@@ -14,6 +14,15 @@ export const CUSTOMIZER_BOOT_TEMPLATES = [
   'neutral',
 ] as const;
 
+/**
+ * Locale chunks the entry imports on demand (`src/infrastructure/i18n/config.ts`). Each
+ * document preloads the one the resolver in `index.html` picks; English ships with the entry.
+ */
+export const LOCALE_MODULES: Record<Exclude<(typeof BOOT_LOCALES)[number], 'en'>, string> = {
+  ru: '/src/infrastructure/i18n/locales/resources.ru.ts',
+  uk: '/src/infrastructure/i18n/locales/resources.uk.ts',
+};
+
 export type BootVariant = { key: string; props: Record<string, unknown> };
 
 export type BootRoute = {
