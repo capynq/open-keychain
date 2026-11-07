@@ -1,5 +1,35 @@
 # Agent handoff
 
+## Boot frames and first-screen loading, 2026-11-07
+
+On `feature/dreamy-franklin-epfa18`. See DECISIONS entries dated 2026-11-07.
+
+- Header button bug: since `01bdbe7` `IconButton.module.css` sat in a shared chunk the boot frame
+  never linked, so Quick setup and Export stacked icon over label until the editor loaded. Boot CSS
+  now comes from the chunk graph, and the build fails on any frame class without a linked rule.
+- `/` boots from the real header, hero and workflow (`LandingBootFrame`); one registry
+  (`scripts/build/boot-routes.ts`) drives landing, Customizer and profile frames. The build writes
+  `index.html`, `create/index.html` and `app.html` (fallback, `/* /app.html 200`). Landing boxes
+  match the live page within 1 px at 390–1920 px in production and development.
+- Bundled font specimens come from `public/fonts/specimens-<hash>.svg` (`pnpm assets:font-specimens`);
+  design cards from `/showcase/v1/cards/` (`pnpm assets:landing`).
+- Measured against `01bdbe7` (local Brotli server over HTTP/1.1, 4x CPU, medians of 3):
+  - `/create` at 200 KB/s: wire 4267 → 899 KB, React commit 19.8 → 4.5 s, first preview
+    26.2 → 9.0 s, LCP 12.3 → 4.0 s; FCP 1.15 → 1.48 s.
+  - `/create` at 10 Mbps: commit 3.6 → 1.6 s, first preview 6.3 → 4.1 s, FCP 652 → 668 ms.
+  - `/` at 200 KB/s on a phone: LCP 2.6 → 1.1 s; React commit 2.58 → 2.94 s (the frame is painted
+    by then). `/` at 10 Mbps: LCP 1080 → 468 ms.
+- Open:
+  - `styles/magnet-*.png` are copies of the name keychain renders (keyring hole); recapture.
+  - The entry graph (`app` + `createLucideIcon` chunk, about 180 KB gzip) bundles all three
+    locales (about 59 KB gzip); lazy non-active locales would shrink the critical path on every page.
+  - Pre-push browser gates flake on this 4-core container when unit tests and two browser gates run
+    together: the keyboard workflow (`keychain.spec.ts:54`, 10 s step) and the critical journey's
+    Quick setup close (5 s) fail first attempts; both reproduce on the pre-change build under the
+    same load and pass alone. Push with nothing else running.
+  - Netlify Link header preloads for images were removed; verify on the deploy preview that the
+    HTML preload (`imagesrcset`) is the only hero request per device.
+
 ## Feedback collection and landing conversion, 2026-11-06
 
 On `feature/peaceful-goodall-13iv0t` (restarted from `main` after PR #66 merged). See DECISIONS
