@@ -60,7 +60,11 @@ const mergeRecords = (
  */
 let parserModule: Promise<typeof opentype> | undefined;
 const parse = async (data: ArrayBuffer): Promise<opentype.Font> => {
-  parserModule ??= import('opentype.js');
+  parserModule ??= import('opentype.js').catch((error: unknown) => {
+    /* A failed chunk download (offline, a deploy in between) must not stick: retry next time. */
+    parserModule = undefined;
+    throw error;
+  });
   const module = (await parserModule) as unknown as {
     parse?: (value: ArrayBuffer) => opentype.Font;
     default?: { parse?: (value: ArrayBuffer) => opentype.Font };
