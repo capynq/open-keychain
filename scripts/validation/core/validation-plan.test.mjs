@@ -107,6 +107,23 @@ describe('validation gate selection', () => {
     );
   });
 
+  it('runs changed timing-budget specs alone with one worker', () => {
+    const plan = createCiChangedGatePlan(['e2e/performance.spec.ts', 'e2e/carousel.spec.ts']);
+    const parallel = plan.find(({ id }) => id === 'browser:changed');
+    const budget = plan.find(({ id }) => id === 'browser:changed:budget');
+    expect(parallel.args).toContain('e2e/carousel.spec.ts');
+    expect(parallel.args).not.toContain('e2e/performance.spec.ts');
+    expect(budget.args).toEqual(
+      expect.arrayContaining(['e2e/performance.spec.ts', '--project=desktop', '--workers=1']),
+    );
+    expect(budget.args).not.toContain('e2e/carousel.spec.ts');
+    expect(budget.workerSlots).toBe(validationConcurrency());
+    expect(budget.dependsOn).toEqual(['build']);
+    expect(createCiChangedGatePlan(['e2e/carousel.spec.ts']).map(({ id }) => id)).not.toContain(
+      'browser:changed:budget',
+    );
+  });
+
   it('selects UI smoke, direct changed Playwright specs, and changed unit tests', () => {
     const ui = createCiChangedGatePlan([
       'src/features/customizer/components/ControlsPanel/ControlsPanel.tsx',

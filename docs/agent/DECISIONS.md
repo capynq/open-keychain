@@ -971,3 +971,9 @@ one slot each, the regression and journey gates ran beside the unit gate on four
 CPU-bound steps (the 10 s geometry rebuild in `keychain.spec.ts:54`, the 5 s Quick setup close in
 the critical journey) failed first attempts. On four cores the regression gate now runs alone and
 the journey runs at most beside two unit workers.
+
+In CI, a changed `e2e/performance.spec.ts` (`TIMING_BUDGET_SPECS`) runs in its own
+`browser:changed:budget` gate with one worker and every slot: in the two-worker changed-spec gate
+its 3 s first-preview budget measured the runner (3.1–5.2 s under load on the base commit as well).
+The carousel lock and swipe tests no longer race the 20-frame scroll or Embla's 170 ms flick window:
+the lock test records control state in the page, and the swipe crosses half a slide.
