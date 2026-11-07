@@ -40,6 +40,15 @@ export type BootRoute = {
   linksStylesheets: boolean;
   /** Removes ids and label targets so the frame never duplicates the live page's anchors. */
   stripIds: boolean;
+  /**
+   * Root modules whose chunks are preloaded at low priority, so they do not compete with the
+   * stylesheets and code the frame and its hand-off wait on. Their CSS is still linked.
+   */
+  lowPriorityRootModules?: string[];
+  /** A module export returning extra head markup for the document, such as image preloads. */
+  head?: { module: string; exportName: string };
+  /** Routes whose files this document lists for an idle prefetch (`#route-prefetch`). */
+  prefetchRoutes?: BootRoute['id'][];
 };
 
 const NUNITO = '/fonts/nunito.ttf';
@@ -58,6 +67,12 @@ export const LANDING_BOOT_ROUTE: BootRoute = {
   fontPreloads: [NUNITO, BREE],
   linksStylesheets: true,
   stripIds: true,
+  head: {
+    module: '/src/app/components/landing/ConfiguratorShowcase/hero-image.ts',
+    exportName: 'heroImagePreloadTags',
+  },
+  /* Fetched at idle by useLandingIdlePrewarm, so opening the editor needs no network. */
+  prefetchRoutes: ['customizer'],
 };
 
 export const CUSTOMIZER_BOOT_ROUTE: BootRoute = {
@@ -78,6 +93,8 @@ export const CUSTOMIZER_BOOT_ROUTE: BootRoute = {
     '/src/pages/customizer/CustomizerPage.tsx',
     '/src/features/preview/components/Viewer/Viewer.tsx',
   ],
+  /* three.js is needed for the first draw, which also waits on the worker's first build. */
+  lowPriorityRootModules: ['/src/features/preview/components/Viewer/Viewer.tsx'],
   document: 'create/index.html',
   devPaths: ['/create', '/create/'],
   fontPreloads: [NUNITO],

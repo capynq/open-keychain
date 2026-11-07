@@ -16,7 +16,9 @@ import {
 } from './boot-routes.ts';
 import {
   collectChunkCss,
+  collectChunkFiles,
   cssFilesDefining,
+  entryChunks,
   entryCss,
   findChunkByFacade,
   missingBootClasses,
@@ -49,6 +51,19 @@ export const fontPreloadTags = (hrefs: string[]): string =>
   hrefs
     .map((href) => `<link rel="preload" href="${href}" as="font" type="font/ttf" crossorigin />`)
     .join('');
+
+/** Route chunks the entry would only request after it runs; `crossorigin` matches module fetches. */
+export const modulePreloadTags = (hrefs: string[], priority?: 'low'): string =>
+  hrefs
+    .map(
+      (href) =>
+        `<link rel="modulepreload" crossorigin href="${href}"${priority ? ` fetchpriority="${priority}"` : ''}>`,
+    )
+    .join('');
+
+/** Files another route needs, for `src/app/routing/routePrefetch.ts` to prefetch at idle. */
+export const routePrefetchManifest = (routes: Record<string, string[]>): string =>
+  `<script type="application/json" id="route-prefetch">${JSON.stringify(routes).replace(/</g, '\\u003c')}</script>`;
 
 export const bootStylesheetLinks = (hrefs: string[]): string =>
   hrefs.map((href) => `<link rel="stylesheet" href="${href}" data-boot-style />`).join('');
@@ -152,7 +167,7 @@ export const collectDevelopmentStyles = async (
   return orderStylesheets(imports, roots);
 };
 
-type RenderedRoute = { route: BootRoute; frames: string; markup: string };
+type RenderedRoute = { route: BootRoute; frames: string; markup: string; head: string };
 
 /** Paths served by `vite preview` the way `public/_redirects` serves them on Netlify. */
 export const previewDocumentFor = (pathname: string, accept = ''): string | undefined => {
@@ -171,7 +186,7 @@ export const routeBootPlugin = (): Plugin => {
   let devGeneration = 0;
   const devFrames = new Map<
     string,
-    { generation: number; frames: string; stylesheets: string[] }
+    { generation: number; frames: string; head: string; stylesheets: string[] }
   >();
 
   const getServer = async () => {
@@ -207,6 +222,11 @@ export const routeBootPlugin = (): Plugin => {
       ssrServer.ssrLoadModule('/src/infrastructure/telemetry/telemetry-context.ts'),
     ]);
     const Frame = frameModule[route.frame.exportName] as ComponentType<Record<string, unknown>>;
+    const head = route.head
+      ? (
+          (await ssrServer.ssrLoadModule(route.head.module))[route.head.exportName] as () => string
+        )()
+      : '';
     const analytics = {
       consent: 'declined' as const,
       setConsent: () => undefined,
@@ -229,6 +249,7 @@ export const routeBootPlugin = (): Plugin => {
       route,
       frames: bootFrameMarkup(route, rendered),
       markup: rendered.map(({ markup }) => markup).join(''),
+      head,
     };
   };
 
@@ -258,7 +279,7 @@ export const routeBootPlugin = (): Plugin => {
       if (cached?.generation !== devGeneration) {
         const generation = devGeneration;
         try {
-          const { frames } = await renderRoute(route);
+          const { frames, head } = await renderRoute(route);
           const stylesheets = route.linksStylesheets
             ? await collectDevelopmentStyles(await getServer(), [
                 DEV_ENTRY,
@@ -266,7 +287,7 @@ export const routeBootPlugin = (): Plugin => {
                 route.frame.module,
               ])
             : [];
-          cached = { generation, frames, stylesheets };
+          cached = { generation, frames, head, stylesheets };
           devFrames.set(route.id, cached);
         } finally {
           await closeSsrServer();
@@ -274,6 +295,7 @@ export const routeBootPlugin = (): Plugin => {
       }
       return buildBootDocument(html, {
         fonts: route.fontPreloads,
+        preloads: cached.head,
         stylesheets: bootStylesheetLinks(cached.stylesheets),
         frames: cached.frames,
       });
@@ -311,18 +333,35 @@ export const routeBootPlugin = (): Plugin => {
           const output = bundle[file];
           return output?.type === 'asset' ? String(output.source) : '';
         };
+        const linkedChunks = entryChunks(bundle);
+        const rendered = await buildRoutes();
+        const assets = new Map(
+          rendered.map(({ route }) => {
+            const roots = route.rootModules.map((module) =>
+              findChunkByFacade(bundle, path.join(config.root, module)),
+            );
+            const lowPriority = new Set(route.lowPriorityRootModules ?? []);
+            const primaryRoots = roots.filter(
+              (_, index) => !lowPriority.has(route.rootModules[index]),
+            );
+            const js = collectChunkFiles(bundle, primaryRoots, linkedChunks);
+            const lowJs = collectChunkFiles(bundle, roots, linkedChunks).filter(
+              (file) => !js.includes(file),
+            );
+            return [
+              route.id,
+              {
+                css: route.linksStylesheets ? collectChunkCss(bundle, roots, linkedByEntry) : [],
+                js,
+                lowJs,
+              },
+            ];
+          }),
+        );
         const documents = new Map<string, string>();
 
-        for (const { route, frames, markup } of await buildRoutes()) {
-          const css = route.linksStylesheets
-            ? collectChunkCss(
-                bundle,
-                route.rootModules.map((module) =>
-                  findChunkByFacade(bundle, path.join(config.root, module)),
-                ),
-                linkedByEntry,
-              )
-            : [];
+        for (const { route, frames, markup, head } of rendered) {
+          const { css, js, lowJs } = assets.get(route.id)!;
           const missing = missingBootClasses(markup, [...linkedByEntry, ...css].map(source));
           if (missing.length) {
             this.error(
@@ -333,16 +372,33 @@ export const routeBootPlugin = (): Plugin => {
                 .join('; ')}`,
             );
           }
-          const preloads =
+          const prefetch = Object.fromEntries(
+            (route.prefetchRoutes ?? []).map((id) => {
+              const target = assets.get(id)!;
+              return [id, [...target.js, ...target.lowJs, ...target.css].map((file) => `/${file}`)];
+            }),
+          );
+          const preloads = [
             route === CUSTOMIZER_BOOT_ROUTE
               ? geometryPreloadTags(findGeometryWorkerHref(bundle))
-              : '';
+              : '',
+            head,
+            route.prefetchRoutes?.length ? routePrefetchManifest(prefetch) : '',
+          ].join('');
+          /* Route code follows the stylesheets the frame's first paint waits on, so connections
+           * without request priorities fetch the CSS first. */
+          const modulePreloads =
+            modulePreloadTags(js.map((file) => `/${file}`)) +
+            modulePreloadTags(
+              lowJs.map((file) => `/${file}`),
+              'low',
+            );
           documents.set(
             route.document,
             buildBootDocument(html, {
               fonts: route.fontPreloads,
               preloads,
-              stylesheets: bootStylesheetLinks(css.map((file) => `/${file}`)),
+              stylesheets: bootStylesheetLinks(css.map((file) => `/${file}`)) + modulePreloads,
               frames,
             }),
           );

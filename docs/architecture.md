@@ -54,6 +54,9 @@ development):
   `gotoLive` from `e2e/helpers.ts`.
 - `public/_redirects` serves `create/index.html` for `/create` and `app.html`, which has no landing
   frame, for every other path. `vite preview` copies those rules.
+- Each document also preloads its route's chunk graph; the landing document preloads the hero
+  image from `ConfiguratorShowcase/hero-image.ts` and lists the editor's files for the idle
+  prefetch (`src/app/routing/routePrefetch.ts`).
 
 ## Migration aliases
 

@@ -6,10 +6,10 @@ import { createLocalFontStore, fontDefinitionFromBytes, isLocalFontId } from './
 afterEach(() => vi.unstubAllGlobals());
 
 describe('local font metadata', () => {
-  it('uses OpenType names and marks imported fonts as non-articulated', () => {
+  it('uses OpenType names and marks imported fonts as non-articulated', async () => {
     const file = readFileSync('public/fonts/nunito.ttf');
     const bytes = file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength);
-    const font = fontDefinitionFromBytes('local-test', 'nunito.ttf', bytes);
+    const font = await fontDefinitionFromBytes('local-test', 'nunito.ttf', bytes);
     expect(font.name).toContain('Nunito');
     expect(font.provider).toBe('local-file');
     expect(font.source).toBe('local');

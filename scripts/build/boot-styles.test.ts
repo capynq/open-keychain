@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   collectChunkCss,
+  collectChunkFiles,
   cssFilesDefining,
   cssModuleClassTokens,
+  entryChunks,
   entryCss,
   findChunkByFacade,
   missingBootClasses,
@@ -79,6 +81,30 @@ describe('orderStylesheets', () => {
       '/src/IconButton.module.css',
       '/src/frame.css',
       '/src/viewer.css',
+    ]);
+  });
+});
+
+describe('collectChunkFiles', () => {
+  it('lists each chunk before its imports and leaves out the entry graph', () => {
+    const bundle = bundleOf(
+      chunk('app.js', {
+        isEntry: true,
+        facadeModuleId: '/root/index.html',
+        imports: ['vendor.js'],
+      }),
+      chunk('vendor.js'),
+      chunk('page.js', { imports: ['shared.js', 'vendor.js'] }),
+      chunk('shared.js', { imports: ['page.js'] }),
+      chunk('viewer.js', { imports: ['three.js'] }),
+      chunk('three.js'),
+    );
+    const roots = [bundle['page.js'], bundle['viewer.js']] as BootBundleChunk[];
+    expect(collectChunkFiles(bundle, roots, entryChunks(bundle))).toEqual([
+      'page.js',
+      'shared.js',
+      'viewer.js',
+      'three.js',
     ]);
   });
 });

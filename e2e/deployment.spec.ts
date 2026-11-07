@@ -52,8 +52,9 @@ test('loads static metadata and privacy page in production', async ({ page }) =>
       },
     ],
   });
-  const rootHeaders = (await page.request.get('/')).headers();
-  expect(rootHeaders.link).toContain('rel="preload"');
+  const root = await page.request.get('/');
+  expect(root.headers().link).toContain('rel="describedby"');
+  expect(await root.text()).toContain('<link rel="preload" as="image" type="image/avif"');
   const versionedAsset = await page.request.get('/showcase/v1/create-mobile-490.avif');
   expect(versionedAsset.headers()['cache-control']).toContain('max-age=31536000');
   expect(versionedAsset.headers()['cache-control']).toContain('immutable');

@@ -57,15 +57,45 @@ export const collectChunkCss = (
   return [...css];
 };
 
-/** CSS the HTML entry already links, which boot documents must not link a second time. */
-export const entryCss = (bundle: BootBundle): Set<string> => {
+/**
+ * JavaScript chunks reachable through static imports from `roots`, each before its imports
+ * (Vite's preload order). The entry graph is excluded because the HTML already preloads it.
+ */
+export const collectChunkFiles = (
+  bundle: BootBundle,
+  roots: BootBundleChunk[],
+  exclude: ReadonlySet<string> = new Set(),
+): string[] => {
+  const files: string[] = [];
+  const visited = new Set<string>();
+  const visit = (fileName: string) => {
+    if (visited.has(fileName) || exclude.has(fileName)) return;
+    visited.add(fileName);
+    const chunk = bundle[fileName];
+    if (!isChunk(chunk)) return;
+    files.push(chunk.fileName);
+    chunk.imports.forEach(visit);
+  };
+  roots.forEach((root) => visit(root.fileName));
+  return files;
+};
+
+const htmlEntries = (bundle: BootBundle): BootBundleChunk[] => {
   const entries = Object.values(bundle).filter(
     (output): output is BootBundleChunk =>
       isChunk(output) && output.isEntry && Boolean(output.facadeModuleId?.endsWith('.html')),
   );
   if (!entries.length) throw new Error('Expected an HTML entry chunk in the bundle.');
-  return new Set(collectChunkCss(bundle, entries));
+  return entries;
 };
+
+/** Chunks the HTML entry already loads, which boot documents must not preload again. */
+export const entryChunks = (bundle: BootBundle): Set<string> =>
+  new Set(collectChunkFiles(bundle, htmlEntries(bundle)));
+
+/** CSS the HTML entry already links, which boot documents must not link a second time. */
+export const entryCss = (bundle: BootBundle): Set<string> =>
+  new Set(collectChunkCss(bundle, htmlEntries(bundle)));
 
 /**
  * Stylesheets in module evaluation order (imports before importers, in source order), which is

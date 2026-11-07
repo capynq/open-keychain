@@ -1,4 +1,4 @@
-import * as opentype from 'opentype.js';
+import type * as opentype from 'opentype.js';
 
 import type { RecoveryFailure } from '@/shared/lib/recovery/failure';
 
@@ -54,8 +54,14 @@ const mergeRecords = (
   ...additions.filter((record) => !current.some((existing) => existing.id === record.id)),
 ];
 
-const parse = (data: ArrayBuffer): opentype.Font => {
-  const module = opentype as unknown as {
+/**
+ * opentype.js is only needed once a visitor imports or restores a local font, so it loads on
+ * first use instead of riding in the Customizer chunk (the geometry worker has its own copy).
+ */
+let parserModule: Promise<typeof opentype> | undefined;
+const parse = async (data: ArrayBuffer): Promise<opentype.Font> => {
+  parserModule ??= import('opentype.js');
+  const module = (await parserModule) as unknown as {
     parse?: (value: ArrayBuffer) => opentype.Font;
     default?: { parse?: (value: ArrayBuffer) => opentype.Font };
   };
@@ -133,13 +139,13 @@ const fontDataRevision = (data: ArrayBuffer): string => {
   return (hash >>> 0).toString(36);
 };
 
-export const fontDefinitionFromBytes = (
+export const fontDefinitionFromBytes = async (
   id: string,
   fileName: string,
   data: ArrayBuffer,
   dataRevision = fontDataRevision(data),
-): FontDefinition => {
-  const parsed = parse(data) as unknown as {
+): Promise<FontDefinition> => {
+  const parsed = (await parse(data)) as unknown as {
     names?: {
       windows?: Record<string, { en?: string }>;
       fontFamily?: { en?: string };
@@ -194,7 +200,7 @@ const makeRecord = async (file: File, handle?: FileSystemFileHandle): Promise<Lo
     name: file.name,
     fileName: file.name,
     handle,
-    font: fontDefinitionFromBytes(id, file.name, data, dataRevision),
+    font: await fontDefinitionFromBytes(id, file.name, data, dataRevision),
     status: 'available',
   };
 };
@@ -226,7 +232,7 @@ export const createLocalFontStore = (options: LocalFontStoreOptions = {}) => {
               continue;
             }
             const file = await record.handle.getFile();
-            record.font = fontDefinitionFromBytes(
+            record.font = await fontDefinitionFromBytes(
               record.id,
               record.fileName,
               await file.arrayBuffer(),
@@ -311,7 +317,7 @@ export const createLocalFontStore = (options: LocalFontStoreOptions = {}) => {
           record.name = file.name;
           record.fileName = file.name;
           const data = await file.arrayBuffer();
-          record.font = fontDefinitionFromBytes(id, file.name, data);
+          record.font = await fontDefinitionFromBytes(id, file.name, data);
         } else if (record.handle) {
           const permission = record.handle.requestPermission
             ? await record.handle.requestPermission({ mode: 'read' })
@@ -319,7 +325,7 @@ export const createLocalFontStore = (options: LocalFontStoreOptions = {}) => {
           if (permission !== 'granted') return undefined;
           const file = await record.handle.getFile();
           const data = await file.arrayBuffer();
-          record.font = fontDefinitionFromBytes(id, record.fileName, data);
+          record.font = await fontDefinitionFromBytes(id, record.fileName, data);
         } else {
           return undefined;
         }

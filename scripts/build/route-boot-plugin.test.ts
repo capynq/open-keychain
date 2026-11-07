@@ -7,7 +7,9 @@ import {
   buildBootDocument,
   findGeometryWorkerHref,
   geometryPreloadTags,
+  modulePreloadTags,
   previewDocumentFor,
+  routePrefetchManifest,
   stripFrameIds,
   stripImagePreloads,
 } from './route-boot-plugin.ts';
@@ -92,6 +94,21 @@ describe('bootFrameMarkup', () => {
     ).toBe(
       '<div data-boot-inline="landing:en" style="display:contents"><b>en</b></div>' +
         '<template data-boot-frame="landing:ru"><b>ru</b></template>',
+    );
+  });
+});
+
+describe('modulePreloadTags and routePrefetchManifest', () => {
+  it('preloads route chunks in CORS mode like module imports', () => {
+    expect(modulePreloadTags(['/assets/a.js'])).toBe(
+      '<link rel="modulepreload" crossorigin href="/assets/a.js">',
+    );
+  });
+
+  it('writes an inert JSON list that cannot close its script element', () => {
+    expect(routePrefetchManifest({ customizer: ['/assets/a.js', '/assets/</script>.css'] })).toBe(
+      '<script type="application/json" id="route-prefetch">' +
+        '{"customizer":["/assets/a.js","/assets/\\u003c/script>.css"]}</script>',
     );
   });
 });

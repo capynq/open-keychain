@@ -17,7 +17,7 @@
 
 .profile-intro h1 {
   margin: 0;
-  font-family: OpenBree, OpenNunito, sans-serif;
+  font-family: OpenBree, OpenBreeFallback, OpenNunito, sans-serif;
   font-size: clamp(38px, 5vw, 58px);
   font-weight: 400;
   letter-spacing: -0.055em;

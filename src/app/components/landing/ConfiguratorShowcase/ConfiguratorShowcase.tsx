@@ -6,6 +6,7 @@ import type { Locale } from '@/infrastructure/i18n';
 import { t } from '@/infrastructure/i18n';
 
 import styles from './ConfiguratorShowcase.module.css';
+import { HERO_IMAGE_FALLBACK, HERO_IMAGE_SOURCES } from './hero-image';
 
 type Slide = {
   id: string;
@@ -189,52 +190,22 @@ export const ConfiguratorShowcase = ({ locale }: { locale: Locale }) => {
                 >
                   {slide.kind === 'configurator' ? (
                     <picture>
-                      <source
-                        type="image/avif"
-                        media="(max-width: 760px) and (min-resolution: 2dppx)"
-                        srcSet="/showcase/v1/create-mobile-780.avif 780w"
-                        sizes="calc(100vw - 50px)"
-                      />
-                      <source
-                        type="image/avif"
-                        media="(max-width: 760px)"
-                        srcSet="/showcase/v1/create-mobile-390.avif 390w, /showcase/v1/create-mobile-490.avif 490w"
-                        sizes="calc(100vw - 50px)"
-                      />
-                      <source
-                        type="image/avif"
-                        srcSet="/showcase/v1/create-desktop-720.avif 720w, /showcase/v1/create-desktop-1440.avif 1440w"
-                        sizes="(max-width: 760px) 100vw, 50vw"
-                      />
-                      <source
-                        type="image/webp"
-                        media="(max-width: 760px) and (min-resolution: 2dppx)"
-                        srcSet="/showcase/v1/create-mobile-780.webp 780w"
-                        sizes="calc(100vw - 50px)"
-                      />
-                      <source
-                        type="image/webp"
-                        media="(max-width: 760px)"
-                        srcSet="/showcase/v1/create-mobile-390.webp 390w, /showcase/v1/create-mobile-490.webp 490w"
-                        sizes="calc(100vw - 50px)"
-                      />
-                      <source
-                        type="image/webp"
-                        srcSet="/showcase/v1/create-desktop-720.webp 720w, /showcase/v1/create-desktop-1440.webp 1440w"
-                        sizes="(max-width: 760px) 100vw, 50vw"
-                      />
-                      <source
-                        media="(max-width: 760px)"
-                        srcSet="/showcase/create-mobile.png 1x, /showcase/create-mobile@2x.png 2x"
-                        sizes="calc(100vw - 50px)"
-                      />
+                      {HERO_IMAGE_SOURCES.map((source) => (
+                        <source
+                          key={`${source.type ?? 'png'}-${source.media ?? 'any'}`}
+                          type={source.type}
+                          media={source.media}
+                          srcSet={source.srcSet}
+                          sizes={source.sizes}
+                        />
+                      ))}
                       <img
-                        src="/showcase/create-desktop.png"
-                        srcSet="/showcase/create-desktop.png 1x"
-                        sizes="(max-width: 760px) calc(100vw - 50px), 50vw"
+                        src={HERO_IMAGE_FALLBACK.src}
+                        srcSet={HERO_IMAGE_FALLBACK.srcSet}
+                        sizes={HERO_IMAGE_FALLBACK.sizes}
                         alt={slide.alt}
-                        width="1440"
-                        height="900"
+                        width={HERO_IMAGE_FALLBACK.width}
+                        height={HERO_IMAGE_FALLBACK.height}
                         fetchPriority="high"
                         loading="eager"
                         decoding="async"

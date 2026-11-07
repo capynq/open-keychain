@@ -39,7 +39,7 @@
   max-width: 52rem;
   margin: 0 0 1.2rem;
   color: var(--seo-ink);
-  font-family: OpenBree, OpenNunito, sans-serif;
+  font-family: OpenBree, OpenBreeFallback, OpenNunito, sans-serif;
   font-size: clamp(2.5rem, 7vw, 5.75rem);
   font-weight: 400;
   letter-spacing: -0.045em;
@@ -50,7 +50,7 @@
   max-width: 48rem;
   margin: clamp(2.75rem, 6vw, 5rem) 0 0.8rem;
   color: var(--seo-ink);
-  font-family: OpenBree, OpenNunito, sans-serif;
+  font-family: OpenBree, OpenBreeFallback, OpenNunito, sans-serif;
   font-size: clamp(1.5rem, 3vw, 2.4rem);
   font-weight: 400;
   letter-spacing: -0.025em;

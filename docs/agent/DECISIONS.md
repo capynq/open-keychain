@@ -875,3 +875,26 @@ the commit. The frame's ids and label targets are stripped so anchors such as `#
 the live page. While the landing frame shows, the page is 1 px taller than the viewport, so
 classic scrollbars take the same width they take on the live page. The Customizer resolver now
 picks the first supported entry of `navigator.languages`, as i18next does.
+
+## 2026-11-07 — Each document preloads what its first screen needs
+
+**Decision:** The build adds, per document, `modulepreload` for the route's chunk graph
+(LandingPage on `/`; CustomizerPage, Viewer and three.js on `/create`, after the worker and WASM
+preloads), and the landing document preloads the hero AVIF with `imagesrcset`/`imagesizes`/`media`
+generated from the same list the `<picture>` renders (`ConfiguratorShowcase/hero-image.ts`). The
+`/` Link header no longer preloads images. After the owner-approved landing idle prewarm
+(2026-11-04 entry) the landing page also prefetches the editor's files from the
+`#route-prefetch` list in its document, under the same gates (after load, LCP quiet 1 s, idle,
+skipped on Save-Data and 2G). Prefetched files enter the HTTP cache without running, so the
+landing page never gains Customizer CSS. The hero name form counts as editor intent like a
+`/create` link. Consented PostHog starts after the boot hand-off and an idle slot (2 s timeout)
+instead of in the first effect; events queue until then. opentype.js on the main thread loads only
+when a local font is imported or restored.
+
+**Rationale:** Each route chunk was requested only after the entry ran, and the Viewer and
+three.js only after the Customizer mounted, so cold loads ran as a chain of round trips. The 1x
+mobile Link preload named the 490w file while 390 px phones pick 390w, a wasted download, and
+desktop had none.
+
+**Consequences:** One hero request per device, matching `currentSrc`. vendor-opentype is no longer
+in the Customizer chunk graph. `useRoutePreload` matches `[data-preload-route="create"]`.
