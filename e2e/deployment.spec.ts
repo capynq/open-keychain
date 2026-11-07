@@ -75,6 +75,12 @@ test('uses the SPA fallback for unknown production paths', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 });
 
+test('serves the Customizer document at /create without a redirect', async ({ page }) => {
+  const response = await page.request.get('/create?lang=uk', { maxRedirects: 0 });
+  expect(response.status()).toBe(200);
+  expect(await response.text()).toContain('data-boot-frame="customizer:uk:name-keychain"');
+});
+
 test('keeps all supported languages and customizer readiness in production', async ({ page }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
   await gotoLive(page, '/');
