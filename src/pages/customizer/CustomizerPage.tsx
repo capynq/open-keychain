@@ -248,10 +248,12 @@ export const CustomizerPage = ({
         disconnectedExportAcknowledged={state.disconnectedExportAcknowledged}
         onDisconnectedExportAcknowledged={state.setDisconnectedExportAcknowledged}
       />
-      {printCheck.lastExport && !state.exportOpen && !quickSetup.setupOpen && (
+      {/* Hidden, not unmounted, under dialogs so an answered check stays answered. */}
+      {printCheck.lastExport && (
         <PrintCheckNotice
           locale={locale}
           lastExport={printCheck.lastExport}
+          hidden={state.exportOpen || quickSetup.setupOpen}
           onSubmit={printCheck.submit}
           onDismiss={printCheck.dismiss}
         />

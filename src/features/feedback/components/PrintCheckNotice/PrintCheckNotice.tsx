@@ -27,11 +27,14 @@ export const PrintCheckNotice = ({
   lastExport,
   onSubmit,
   onDismiss,
+  hidden = false,
 }: {
   locale: Locale;
   lastExport: LastExport;
   onSubmit: (outcome: PrintOutcomeId, text: string) => Promise<boolean>;
   onDismiss: (answered: boolean) => void;
+  /** Temporarily hidden under a dialog; stays mounted so its answer and text survive. */
+  hidden?: boolean;
 }) => {
   const titleId = useId();
   const textId = useId();
@@ -54,7 +57,12 @@ export const PrintCheckNotice = ({
   const printed = outcome !== undefined && outcome !== 'not-yet';
 
   return (
-    <aside className={styles.root} aria-labelledby={titleId} data-testid="print-check">
+    <aside
+      className={styles.root}
+      aria-labelledby={titleId}
+      data-testid="print-check"
+      hidden={hidden}
+    >
       <div className={styles.header}>
         <div className={styles.titles}>
           <p id={titleId} className={styles.title}>

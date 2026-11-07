@@ -16,6 +16,9 @@
   box-shadow: 0 1rem 2.5rem -1rem var(--workshop-text-strong-alpha-40);
   color: var(--workshop-text);
 }
+.root[hidden] {
+  display: none;
+}
 .header {
   display: flex;
   align-items: flex-start;

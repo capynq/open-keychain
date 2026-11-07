@@ -145,6 +145,17 @@ test('asks how the last print went on a return visit and offers a photo email', 
     '$survey_response_867357e6-1961-4c0e-98d7-7b1fc9217c62': 'The letters came apart',
   });
 
+  /* Opening and closing the export dialog hides the card but keeps it answered. */
+  await page.locator('.export-header-button').click();
+  const exportDialog = page.getByRole('dialog', { name: 'Choose an export' });
+  await expect(exportDialog).toBeVisible();
+  await expect(notice).toBeHidden();
+  await page.keyboard.press('Escape');
+  await expect(exportDialog).toBeHidden();
+  await expect(notice.getByRole('status')).toHaveText(/Thank you!/);
+  await expect(notice.getByRole('button', { name: 'Send' })).toHaveCount(0);
+  expect(requests).toHaveLength(1);
+
   await notice.getByRole('button', { name: 'Not now' }).click();
   await expect(notice).toHaveCount(0);
   await page.reload();
