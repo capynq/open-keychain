@@ -557,7 +557,8 @@ selection path. Do not auto-fetch catalog metadata on scroll or persist discover
 Deduplicate normalized family names and respect articulated/script restrictions. Retain a search
 escape route when loading fails or suggestions end, and keep the active page dot visible without
 unbounded dot rows. Share preview loading with the full font browser; preload only current/next
-Simple pages and guard superseded selection/target changes.
+Simple pages and guard superseded selection/target changes. Bundled fonts are exempt: their
+specimens come from the generated outline sprite (2026-11-07 entry) and load no font file.
 
 ## Font discovery is an inline card
 
@@ -832,3 +833,24 @@ loaded. Any future shared chunk would fail the same way.
 `customizer.css` under `.customizer-boot-frame`. Development caches the rendered frame and its
 stylesheet list until a file under `src/` changes. `e2e/routes.spec.ts` checks the header buttons'
 boxes and computed display, and that no stylesheet appears after hand-off.
+
+## 2026-11-07 — Bundled font specimens are pre-drawn outlines
+
+**Decision:** The "Aa"/"Аа" specimens of bundled fonts in the Simple font picker and the Quick
+setup font step are drawn from one generated SVG sprite (`public/fonts/specimens-<hash>.svg`, via
+`pnpm assets:font-specimens`) instead of text in the font's own face. The generator lays glyphs
+out like the browser where opentype.js can shape them (substitutions, pair kerning) and per glyph
+otherwise, at the catalog weight, instancing variable fonts on `wght`. Online and local fonts keep
+loading their face for the current and next Simple pages. The full font browser still renders the
+user's text in real fonts.
+
+**Rationale:** Every carousel page renders at once, so the inline `font-family` made a cold
+`/create` download all 13 default-suggestion TTFs (6.9 MB raw, 2.7 MB over Brotli) before the boot
+frame finished painting, to show two letters each. The sprite is 38 KB raw (12 KB Brotli). In
+Chromium at 160 px every Latin and Cyrillic specimen matches the text box to 1 px and the ink
+bounds to 1 px.
+
+**Consequences:** `/create` preloads only Nunito; landing and other pages keep Nunito and Bree
+Serif. Hovering or focusing a bundled font card fetches its TTF at low priority so the geometry
+worker reads it from cache on selection. `generate-font-specimens.test.ts` fails when the
+committed sprite or metrics are stale.

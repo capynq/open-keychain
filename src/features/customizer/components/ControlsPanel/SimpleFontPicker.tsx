@@ -7,8 +7,15 @@ import type { useFontSuggestions } from '@/features/customizer/hooks/useFontSugg
 import type { Locale } from '@/infrastructure/i18n';
 import type { RecoveryFailure } from '@/shared/lib/recovery/failure';
 
+import { FONT_SPECIMEN_TEXT } from '@/domain/keychain/fonts/font-specimen-text';
+import { FontSpecimen } from '@/features/customizer/components/FontSpecimen/FontSpecimen';
 import { useDiscoveryMotion } from '@/features/customizer/hooks/useDiscoveryMotion';
 import { useFontPreviewLoader } from '@/features/customizer/hooks/useFontPreviewLoader';
+import {
+  fontSpecimenScript,
+  hasFontSpecimen,
+  warmBundledFontFile,
+} from '@/features/customizer/model/font-specimen';
 import { useRecoveryReport } from '@/features/feedback/hooks/useRecoveryReport';
 import { recoveryMessage, recoverySteps, t } from '@/infrastructure/i18n';
 import { activationMotion, navigationMotion, type MotionIntent } from '@/shared/lib/motion';
@@ -39,6 +46,7 @@ export const SimpleFontPicker = ({
   const reportFor = useRecoveryReport(locale);
   const name = useId();
   const text = target === 'secondary' ? params.subtitle : params.text;
+  const specimenScript = (font: FontDefinition) => fontSpecimenScript(font, text);
   const selectedId = neutralSelection
     ? undefined
     : target === 'secondary'
@@ -201,6 +209,8 @@ export const SimpleFontPicker = ({
                     className={`${styles.choice} ${styles.fontChoice}`}
                     data-font-id={font.id}
                     key={font.id}
+                    onPointerEnter={() => warmBundledFontFile(font)}
+                    onFocus={() => warmBundledFontFile(font)}
                   >
                     <input
                       type="radio"
@@ -212,21 +222,24 @@ export const SimpleFontPicker = ({
                       aria-busy={loadingFontId === font.id}
                       onChange={() => void selectFont(font)}
                     />
-                    <span
-                      className={styles.fontSpecimen}
-                      style={{
-                        fontFamily:
-                          font.source === 'bundled' || loadedPreviews.has(font.id)
-                            ? font.previewFamily
-                            : undefined,
-                        fontWeight: font.weight,
-                      }}
-                      aria-hidden="true"
-                    >
-                      {font.scripts.includes('cyrillic') && /[\u0400-\u04ff]/u.test(text)
-                        ? 'Аа'
-                        : 'Aa'}
-                    </span>
+                    {hasFontSpecimen(font.id, specimenScript(font)) ? (
+                      <FontSpecimen
+                        className={styles.fontSpecimen}
+                        fontId={font.id}
+                        script={specimenScript(font)}
+                      />
+                    ) : (
+                      <span
+                        className={styles.fontSpecimen}
+                        style={{
+                          fontFamily: loadedPreviews.has(font.id) ? font.previewFamily : undefined,
+                          fontWeight: font.weight,
+                        }}
+                        aria-hidden="true"
+                      >
+                        {FONT_SPECIMEN_TEXT[specimenScript(font)]}
+                      </span>
+                    )}
                     <span className={styles.choiceCopy}>
                       <strong>{font.name}</strong>
                       <small>

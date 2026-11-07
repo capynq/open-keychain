@@ -37,7 +37,7 @@ describe('geometryPreloadTags', () => {
 });
 
 describe('buildCustomizerDocument', () => {
-  const html = `<html><head><meta charset="utf-8" /><script>__CUSTOMIZER_BOOT_STYLE_URLS__</script></head><body><!-- customizer-boot-variants --></body></html>`;
+  const html = `<html><head><meta charset="utf-8" /><!-- route-font-preloads --><script>__CUSTOMIZER_BOOT_STYLE_URLS__</script></head><body><!-- customizer-boot-variants --></body></html>`;
 
   it('injects preloads and stylesheets into the head and the variants into the body', () => {
     const result = buildCustomizerDocument(
@@ -48,6 +48,10 @@ describe('buildCustomizerDocument', () => {
     );
 
     expect(result).toContain('<script>[]</script>');
+    expect(result).toContain(
+      '<link rel="preload" href="/fonts/nunito.ttf" as="font" type="font/ttf" crossorigin /><script>',
+    );
+    expect(result).not.toContain('bree-serif');
     expect(result).toContain(
       '<link rel="modulepreload" href="/assets/geometry-worker-x.js"><link rel="preload" href="/manifold-v1.wasm" as="fetch" crossorigin><link rel="stylesheet" href="/assets/a.css" data-customizer-boot-style /></head>',
     );

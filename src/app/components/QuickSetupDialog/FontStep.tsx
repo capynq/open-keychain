@@ -5,7 +5,7 @@ import { Check } from 'lucide-react';
 import type { Locale } from '@/infrastructure/i18n';
 
 import { FONT_CATEGORY_ORDER, type FontCategory } from '@/domain/keychain/fonts/catalog';
-import { FONT_CATALOG } from '@/domain/keychain/fonts/catalog';
+import { FontSpecimen } from '@/features/customizer/components/FontSpecimen/FontSpecimen';
 import { t } from '@/infrastructure/i18n';
 import { useAnalytics } from '@/infrastructure/telemetry/useTelemetry';
 
@@ -28,11 +28,6 @@ const categorySpecimenFont: Record<FontCategory, string> = {
   Calligraphic: 'marck-script',
   Marker: 'amatic-sc',
 };
-
-const categorySpecimen = (category: FontCategory) =>
-  FONT_CATALOG.find((font) => font.id === categorySpecimenFont[category]);
-
-const specimenLabel = String.fromCharCode(65, 97);
 
 export const FontStep = ({
   locale,
@@ -71,20 +66,13 @@ export const FontStep = ({
                 }}
               />
               <Check className={styles.choiceCheck} aria-hidden="true" />
-              <span
+              {/* `.choiceCard span` gave the text specimen a 1.4 line box; keep that height. */}
+              <FontSpecimen
                 className={styles.categorySpecimen}
-                aria-hidden="true"
-                style={
-                  categorySpecimen(category)
-                    ? {
-                        fontFamily: categorySpecimen(category)?.previewFamily,
-                        fontWeight: categorySpecimen(category)?.weight,
-                      }
-                    : undefined
-                }
-              >
-                {specimenLabel}
-              </span>
+                fontId={categorySpecimenFont[category]}
+                script="latin"
+                lineHeight={1.4}
+              />
               <span className={styles.categoryLabel}>{t(locale, categoryKey(category))}</span>
             </label>
           ))}

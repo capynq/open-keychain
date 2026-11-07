@@ -26,6 +26,10 @@ const templates = [
   'neutral',
 ] as const;
 const placeholder = '<!-- customizer-boot-variants -->';
+const fontPreloadPlaceholder = '<!-- route-font-preloads -->';
+/** UI faces each document paints with: the app uses Nunito, landing and SEO headings Bree Serif. */
+const SHARED_FONT_PRELOADS = ['/fonts/nunito.ttf', '/fonts/bree-serif.ttf'];
+const CUSTOMIZER_FONT_PRELOADS = ['/fonts/nunito.ttf'];
 const bootStylesPlaceholder = '__CUSTOMIZER_BOOT_STYLE_URLS__';
 const frameModule = '/src/app/boot/CustomizerBootFrame.tsx';
 const devEntryModule = '/src/main.tsx';
@@ -54,6 +58,11 @@ export const geometryPreloadTags = (workerHref: string): string =>
     '<link rel="preload" href="/manifold-v1.wasm" as="fetch" crossorigin>',
   ].join('');
 
+export const fontPreloadTags = (hrefs: string[]): string =>
+  hrefs
+    .map((href) => `<link rel="preload" href="${href}" as="font" type="font/ttf" crossorigin />`)
+    .join('');
+
 export const bootStylesheetLinks = (hrefs: string[]): string =>
   hrefs
     .map((href) => `<link rel="stylesheet" href="${href}" data-customizer-boot-style />`)
@@ -67,6 +76,7 @@ export const buildCustomizerDocument = (
 ): string =>
   html
     .replace(bootStylesPlaceholder, '[]')
+    .replace(fontPreloadPlaceholder, () => fontPreloadTags(CUSTOMIZER_FONT_PRELOADS))
     .replace(
       '</head>',
       () =>
@@ -215,11 +225,14 @@ export const customizerBootPlugin = (): Plugin => {
         bootStylesPlaceholder,
         config.command === 'serve' ? '[]' : bootStylesPlaceholder,
       );
-      if (!withStyles.includes(placeholder)) return withStyles;
       if (config.command !== 'serve') return withStyles;
 
       const pathname = (context?.originalUrl ?? context?.path)?.split('?')[0];
-      if (pathname !== '/create' && pathname !== '/create/') return withStyles;
+      const customizer = pathname === '/create' || pathname === '/create/';
+      const withFonts = withStyles.replace(fontPreloadPlaceholder, () =>
+        fontPreloadTags(customizer ? CUSTOMIZER_FONT_PRELOADS : SHARED_FONT_PRELOADS),
+      );
+      if (!customizer || !withFonts.includes(placeholder)) return withFonts;
 
       /* Serialize render+close across concurrent requests */
       const previousRender = devRenderQueue;
@@ -244,7 +257,7 @@ export const customizerBootPlugin = (): Plugin => {
           }
         }
         const { variants, stylesheets } = devFrame!;
-        const withStylesheets = withStyles.replace(
+        const withStylesheets = withFonts.replace(
           '</head>',
           () => `${bootStylesheetLinks(stylesheets)}</head>`,
         );
@@ -297,6 +310,7 @@ export const customizerBootPlugin = (): Plugin => {
       }
       const preparedHtml = html
         .replace(bootStylesPlaceholder, JSON.stringify(bootStyleUrls))
+        .replace(fontPreloadPlaceholder, () => fontPreloadTags(SHARED_FONT_PRELOADS))
         .replace(placeholder, '');
       await writeFile(htmlPath, preparedHtml);
 
