@@ -16,13 +16,14 @@ describe('usePrintCheck', () => {
   let root: Root;
   let container: HTMLDivElement;
   let check: ReturnType<typeof usePrintCheck>;
+  let onScreen = true;
   const context: AnalyticsContextValue = {
     consent: 'declined',
     setConsent: vi.fn(),
     track: vi.fn(),
   };
   const Harness = () => {
-    check = usePrintCheck('en');
+    check = usePrintCheck('en', onScreen);
     return null;
   };
   const render = async () => {
@@ -35,6 +36,7 @@ describe('usePrintCheck', () => {
 
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    onScreen = true;
     localStorage.setItem(
       FEEDBACK_STORAGE_KEY,
       JSON.stringify({ v: 1, lastExport: { at: Date.now() - 5 * 60 * 60 * 1000, format: 'stl' } }),
@@ -68,5 +70,31 @@ describe('usePrintCheck', () => {
     await render();
 
     expect(check.lastExport).toBeUndefined();
+  });
+
+  it('counts one impression, and only once the card is actually on screen', async () => {
+    const capture = vi.fn(() => true);
+    registerSurveyTransport(capture, {
+      host: 'https://posthog.test',
+      apiKey: 'phc_test',
+      context: () => ({}),
+    });
+    onScreen = false;
+    await render();
+    expect(check.lastExport).toBeDefined();
+    expect(capture).not.toHaveBeenCalled();
+
+    onScreen = true;
+    await render();
+    onScreen = false;
+    await render();
+    onScreen = true;
+    await render();
+
+    expect(capture).toHaveBeenCalledTimes(1);
+    expect(capture).toHaveBeenCalledWith(
+      'survey shown',
+      expect.objectContaining({ feedback_trigger: 'print_check' }),
+    );
   });
 });

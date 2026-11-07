@@ -63,7 +63,7 @@ export const CustomizerPage = ({
     state.customizer.acceptedParams.sizeEnvelope,
   );
   const exportFeedback = useExportFeedback(locale);
-  const printCheck = usePrintCheck(locale);
+  const printCheck = usePrintCheck(locale, !state.exportOpen && !quickSetup.setupOpen);
   const exportedDesignUrl = (): string | undefined => {
     try {
       return buildShareUrl(

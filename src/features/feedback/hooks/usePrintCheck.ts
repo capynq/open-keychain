@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import {
   feedbackSubmissionAvailable,
@@ -34,9 +34,14 @@ const pendingPrintCheck = (): LastExport | undefined => {
  * On a return visit 3 h–30 days after an export, ask once how that print came out. Waits until
  * the consent banner is answered so the two never stack, and only asks when the answer can be sent.
  */
-export const usePrintCheck = (locale: Locale) => {
+export const usePrintCheck = (
+  locale: Locale,
+  /** False while a dialog covers the card; the impression waits until it is really on screen. */
+  onScreen = true,
+) => {
   const { consent } = useAnalytics();
   const [lastExport, setLastExport] = useState(pendingPrintCheck);
+  const impressionRecorded = useRef(false);
   /* Builds without a PostHog key have nowhere to send the answer, so they never ask. */
   const visible = Boolean(lastExport) && consent !== 'unknown' && feedbackSubmissionAvailable();
   const context: FeedbackContext = {
@@ -49,14 +54,15 @@ export const usePrintCheck = (locale: Locale) => {
   const shownFormat = visible ? lastExport?.format : undefined;
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible || !onScreen || impressionRecorded.current) return;
+    impressionRecorded.current = true;
     recordSurveyShown(PRINT_OUTCOME_SURVEY, {
       trigger: 'print_check',
       locale,
       template: shownTemplate,
       format: shownFormat,
     });
-  }, [visible, locale, shownTemplate, shownFormat]);
+  }, [visible, onScreen, locale, shownTemplate, shownFormat]);
 
   const markDone = (): void => {
     if (lastExport) updateFeedbackState({ printCheckDoneFor: lastExport.at });
