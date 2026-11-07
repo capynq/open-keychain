@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import {
+  feedbackSubmissionAvailable,
   recordSurveyDismissed,
   recordSurveyShown,
   submitSurveyResponse,
@@ -31,12 +32,13 @@ const pendingPrintCheck = (): LastExport | undefined => {
 
 /**
  * On a return visit 3 h–30 days after an export, ask once how that print came out. Waits until
- * the consent banner is answered so the two never stack.
+ * the consent banner is answered so the two never stack, and only asks when the answer can be sent.
  */
 export const usePrintCheck = (locale: Locale) => {
   const { consent } = useAnalytics();
   const [lastExport, setLastExport] = useState(pendingPrintCheck);
-  const visible = Boolean(lastExport) && consent !== 'unknown';
+  /* Builds without a PostHog key have nowhere to send the answer, so they never ask. */
+  const visible = Boolean(lastExport) && consent !== 'unknown' && feedbackSubmissionAvailable();
   const context: FeedbackContext = {
     trigger: 'print_check',
     locale,

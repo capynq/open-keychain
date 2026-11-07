@@ -60,6 +60,9 @@ const pendingEvents: Array<{
   event: AnalyticsEvent;
   properties: Record<string, string | number | boolean>;
 }> = [];
+/* Survey impressions wait for the SDK like other events; answers never queue (see captureSurveyEvent). */
+const MAX_PENDING_SURVEY_EVENTS = 20;
+const pendingSurveyEvents: Array<{ event: string; properties: Record<string, unknown> }> = [];
 
 const flushPendingEvents = (): void => {
   if (
@@ -72,6 +75,13 @@ const flushPendingEvents = (): void => {
   for (const pending of pendingEvents.splice(0)) {
     try {
       capturePendingEvent(pending.event, pending.properties);
+    } catch {
+      continue;
+    }
+  }
+  for (const pending of pendingSurveyEvents.splice(0)) {
+    try {
+      posthogClient.capture(pending.event, pending.properties);
     } catch {
       continue;
     }
@@ -168,6 +178,7 @@ const syncPostHogConsent = (): void => {
 
   pendingEvents.length = 0;
   pendingExceptions.length = 0;
+  pendingSurveyEvents.length = 0;
   if (!client.has_opted_out_capturing()) {
     client.opt_out_capturing();
     client.reset();
@@ -271,6 +282,7 @@ export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
       if (nextConsent !== 'accepted') {
         pendingEvents.length = 0;
         pendingExceptions.length = 0;
+        pendingSurveyEvents.length = 0;
         syncPostHogConsent();
       } else {
         void configurePostHog();
@@ -295,12 +307,14 @@ export const AnalyticsProvider = ({ children }: { children: ReactNode }) => {
       } else {
         pendingEvents.length = 0;
         pendingExceptions.length = 0;
+        pendingSurveyEvents.length = 0;
         syncPostHogConsent();
       }
     } catch {
       if (nextConsent === 'declined') {
         pendingEvents.length = 0;
         pendingExceptions.length = 0;
+        pendingSurveyEvents.length = 0;
       }
     }
     setConsentState(nextConsent);
@@ -355,15 +369,20 @@ const sendReactException = (error: Error): void => {
 
 registerReactExceptionCapture(sendReactException);
 
-/** Survey events go through the SDK only with consent; the caller decides the anonymous fallback. */
+/**
+ * Survey events go through the SDK only with consent; the caller decides the anonymous fallback.
+ * Before the SDK loads, impressions and dismissals queue with the other events. A `survey sent`
+ * answer never queues: it takes the anonymous path so it is not lost if the SDK never loads.
+ */
 const captureSurveyEvent = (event: string, properties: Record<string, unknown>): boolean => {
-  if (
-    captureConsent !== 'accepted' ||
-    !POSTHOG_KEY ||
-    !posthogClient?.__loaded ||
-    posthogClient.has_opted_out_capturing()
-  )
-    return false;
+  if (captureConsent !== 'accepted' || !POSTHOG_KEY) return false;
+  if (!posthogClient?.__loaded) {
+    if (event === 'survey sent' || pendingSurveyEvents.length >= MAX_PENDING_SURVEY_EVENTS)
+      return false;
+    pendingSurveyEvents.push({ event, properties });
+    return true;
+  }
+  if (posthogClient.has_opted_out_capturing()) return false;
   posthogClient.capture(event, properties);
   return true;
 };

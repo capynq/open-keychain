@@ -2,7 +2,6 @@ import { Camera, X } from 'lucide-react';
 import { useId, useState } from 'react';
 
 import { t, templateName } from '@/infrastructure/i18n/utils';
-import { feedbackSubmissionAvailable } from '@/infrastructure/telemetry/feedback';
 import { useAnalytics } from '@/infrastructure/telemetry/useTelemetry';
 import { IconButton } from '@/shared/ui/IconButton';
 
@@ -53,7 +52,6 @@ export const PrintCheckNotice = ({
     .filter(Boolean)
     .join(' · ');
   const printed = outcome !== undefined && outcome !== 'not-yet';
-  const sendable = feedbackSubmissionAvailable();
 
   return (
     <aside className={styles.root} aria-labelledby={titleId} data-testid="print-check">
@@ -101,7 +99,7 @@ export const PrintCheckNotice = ({
               </label>
             ))}
           </fieldset>
-          {outcome && sendable && (
+          {outcome && (
             <>
               <div className={styles.field}>
                 <label htmlFor={textId}>{t(locale, 'feedback.printCheck.textLabel')}</label>
