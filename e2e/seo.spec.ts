@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { SEO_PAGE_MANIFEST } from '../src/infrastructure/seo/catalog';
-import { selectLocale } from './helpers';
+import { selectLocale, gotoLive } from './helpers';
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -155,7 +155,7 @@ test('keeps the workflow link anchored on localized SEO home pages', async ({ pa
 });
 
 test('uses the query locale for the root SEO home', async ({ page }) => {
-  await page.goto('/?lang=ru');
+  await gotoLive(page, '/?lang=ru');
   await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
   await expect(page.getByRole('heading', { level: 1 })).toContainText(
     'Превратите имя в вещь для печати.',
@@ -248,7 +248,7 @@ test('uses the shared language picker and preserves SEO route context', async ({
 });
 
 test('preserves landing locale on generic customizer CTAs', async ({ page }) => {
-  await page.goto('/');
+  await gotoLive(page, '/');
   await selectLocale(page, 'ru');
   await page.locator('.landing-header-cta').click();
   await expect(page).toHaveURL('/create?setup=1&lang=ru');

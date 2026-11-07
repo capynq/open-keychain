@@ -32,6 +32,20 @@ export const watchBrowserErrors = (page: Page): (() => void) => {
   return () => expect(errors, errors.join('\n')).toEqual([]);
 };
 
+/**
+ * Navigates and waits until React owns the page and the pre-React boot frame is gone. Until then
+ * the landing and Customizer frames duplicate the live markup, so CSS locators can match the
+ * inert copy first.
+ */
+export const gotoLive = async (page: Page, url: string): Promise<void> => {
+  await page.goto(url);
+  await page.waitForFunction(
+    () =>
+      document.documentElement.dataset.appReady === 'true' &&
+      !document.documentElement.dataset.bootHandoff,
+  );
+};
+
 export const waitForLocalFonts = async (page: Page): Promise<void> => {
   await page.evaluate(async () => {
     await Promise.all([
@@ -96,8 +110,8 @@ export const waitForImageToLoad = async (image: Locator): Promise<void> => {
 };
 
 export const selectLocale = async (page: Page, locale: 'en' | 'ru' | 'uk'): Promise<void> => {
-  await page.locator('.language-picker-trigger').click();
-  await page.locator(`[data-language-option="${locale}"]`).click();
+  await page.locator('#root .language-picker-trigger').click();
+  await page.locator(`#root [data-language-option="${locale}"]`).click();
 };
 
 export const prepareForCapture = async (page: Page): Promise<void> => {

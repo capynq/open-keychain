@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { waitForImageToLoad, waitForReadyGeometry, watchBrowserErrors } from './helpers';
+import { waitForImageToLoad, waitForReadyGeometry, watchBrowserErrors, gotoLive } from './helpers';
 
 const carousel = '.configurator-carousel';
 const activeSlide = '[data-showcase-slide][data-active="true"]';
@@ -14,7 +14,7 @@ test('loads the landing hero, reviewed visuals, and carousel without layout erro
   page,
 }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
-  await page.goto('/');
+  await gotoLive(page, '/');
 
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await expect(page.locator('[data-showcase-slide]')).toHaveCount(3);
@@ -37,7 +37,7 @@ test('loads the landing hero, reviewed visuals, and carousel without layout erro
 
 test('advances and wraps the carousel with its controls', async ({ page }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
-  await page.goto('/');
+  await gotoLive(page, '/');
   const next = page.locator('[data-showcase-control="next"]');
 
   await waitForSlide(page, 'configurator');

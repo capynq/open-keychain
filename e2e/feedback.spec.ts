@@ -1,6 +1,6 @@
 import { expect, test, type Page, type Request } from '@playwright/test';
 
-import { waitForReadyGeometry, watchBrowserErrors } from './helpers';
+import { waitForReadyGeometry, watchBrowserErrors, gotoLive } from './helpers';
 
 const APP_FEEDBACK_SURVEY = '01a1b2d5-8181-0000-7c08-a2fd5211ce56';
 const PRINT_OUTCOME_SURVEY = '01a1b2d5-8db2-0000-e575-d7bb47b250bb';
@@ -168,7 +168,7 @@ test('keeps a feedback form and the support address one click away', async ({ pa
   const assertNoBrowserErrors = watchBrowserErrors(page);
   const requests = await captureFeedbackRequests(page);
   await declineAnalytics(page);
-  await page.goto('/');
+  await gotoLive(page, '/');
 
   const footer = page.locator('.landing-footer');
   await expect(footer.getByRole('link', { name: 'support@open-keychain.com' })).toHaveAttribute(
@@ -200,7 +200,7 @@ test('carries a name typed on the landing page into quick setup without putting 
 }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
   await declineAnalytics(page);
-  await page.goto('/');
+  await gotoLive(page, '/');
 
   const hero = page.locator('.landing-hero');
   await hero.getByLabel('Name or text').fill('MAYA');

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { selectLocale, waitForImageToLoad, watchBrowserErrors } from './helpers';
+import { selectLocale, waitForImageToLoad, watchBrowserErrors, gotoLive } from './helpers';
 
 const carousel = '.configurator-carousel';
 const activeSlide = '[data-showcase-slide][data-active="true"]';
@@ -12,7 +12,7 @@ const waitForSlide = async (page: Page, id: string) => {
 
 test('provides three stable, fully framed showcase slides', async ({ page }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
-  await page.goto('/');
+  await gotoLive(page, '/');
 
   const slides = page.locator('[data-showcase-slide]');
   await expect(slides).toHaveCount(3);
@@ -53,7 +53,7 @@ test('provides three stable, fully framed showcase slides', async ({ page }) => 
 });
 
 test('uses a named carousel region with localized slide groups', async ({ page }) => {
-  await page.goto('/');
+  await gotoLive(page, '/');
 
   const region = page.getByRole('region', { name: 'Open Keychain customizer preview' });
   await expect(region).toHaveAttribute('aria-roledescription', 'carousel');
@@ -71,7 +71,7 @@ test('uses a named carousel region with localized slide groups', async ({ page }
 
 test('keeps controls single-step, wrapped, and locked while moving', async ({ page }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
-  await page.goto('/');
+  await gotoLive(page, '/');
   const next = page.locator('[data-showcase-control="next"]');
   const previous = page.locator('[data-showcase-control="previous"]');
   const dots = page.locator('[data-showcase-control^="slide-"]');
@@ -99,7 +99,7 @@ test('keeps controls single-step, wrapped, and locked while moving', async ({ pa
 
 test('supports keyboard and horizontal swipe navigation', async ({ page }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
-  await page.goto('/');
+  await gotoLive(page, '/');
   const viewport = page.locator(carousel);
   await viewport.focus();
   await page.keyboard.press('ArrowRight');
@@ -127,7 +127,7 @@ test('supports keyboard and horizontal swipe navigation', async ({ page }) => {
 test('uses localized captions and instant reduced-motion controls', async ({ page }) => {
   const assertNoBrowserErrors = watchBrowserErrors(page);
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('/');
+  await gotoLive(page, '/');
   await selectLocale(page, 'ru');
   await page.locator('[data-showcase-control="slide-2"]').click();
   await waitForSlide(page, 'print-example-1');
