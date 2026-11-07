@@ -56,6 +56,20 @@ export const loadLocale = (locale: Locale): Promise<void> => {
   return request;
 };
 
+const settled = new Map<Locale, Promise<void>>();
+/**
+ * Resolves once a locale has loaded or failed (missing strings then fall back to English). The
+ * promise is stable per locale, as React's `use` requires.
+ */
+export const localeSettled = (locale: Locale): Promise<void> => {
+  let promise = settled.get(locale);
+  if (!promise) {
+    promise = loadLocale(locale).catch(() => undefined);
+    settled.set(locale, promise);
+  }
+  return promise;
+};
+
 /** Notifies after any locale finishes loading. */
 export const subscribeLocaleLoads = (listener: () => void): (() => void) => {
   listeners.add(listener);

@@ -247,6 +247,27 @@ test('uses the shared language picker and preserves SEO route context', async ({
   await expect(page.locator('.language-picker-trigger')).toContainText('🇺🇦');
 });
 
+test('keeps the current language on screen until a new SEO locale loads', async ({ page }) => {
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => (release = resolve));
+  await page.route(/\/assets\/resources\.uk-[^/]+\.js$/, async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.goto('/ru/templates/nameplate/');
+  await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
+  const heading = page.locator('#root h1');
+  const russian = (await heading.textContent())!;
+  await selectLocale(page, 'uk');
+  await expect(page).toHaveURL('/uk/templates/nameplate/');
+  /* No English fallback while the Ukrainian chunk is held: the Russian page stays. */
+  await page.waitForTimeout(500);
+  await expect(heading).toHaveText(russian);
+  release();
+  await expect(heading).not.toHaveText(russian);
+  await expect(page.locator('html')).toHaveAttribute('lang', 'uk');
+});
+
 test('preserves landing locale on generic customizer CTAs', async ({ page }) => {
   await gotoLive(page, '/');
   await selectLocale(page, 'ru');

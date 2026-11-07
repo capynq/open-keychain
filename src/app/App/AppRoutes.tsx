@@ -1,4 +1,4 @@
-import { Suspense, useLayoutEffect, type ReactNode } from 'react';
+import { Suspense, use, useLayoutEffect, type ReactNode } from 'react';
 import { Navigate, Route, Routes, type Location } from 'react-router';
 
 import type { SeoCtaTrack } from '@/pages/seo/model/types';
@@ -7,7 +7,7 @@ import { resolveSeoRoute } from '@/features/seo';
 import { SeoPage } from '@/pages/seo/SeoPage';
 
 import { hostedMode } from '../../features/hosted/config';
-import { type Locale } from '../../infrastructure/i18n/config';
+import { isLocaleLoaded, localeSettled, type Locale } from '../../infrastructure/i18n/config';
 import { commitBoot } from '../boot/handoff';
 import { RouteLoading, type RouteLoadingVariant } from '../components/RouteLoading/RouteLoading';
 import { CREATE_ROUTE, LANDING_ROUTE, PROFILE_ROUTE } from '../routes';
@@ -22,6 +22,16 @@ import {
 const RouteCommitted = ({ children }: { children: ReactNode }) => {
   useLayoutEffect(() => commitBoot(), []);
 
+  return children;
+};
+
+/**
+ * Localized SEO pages render in their path's locale, not the gated display locale, so they
+ * suspend until its strings load. Navigations are transitions, so the previous page stays on
+ * screen instead of an English fallback.
+ */
+const LocaleGate = ({ locale, children }: { locale: Locale; children: ReactNode }) => {
+  if (!isLocaleLoaded(locale)) use(localeSettled(locale));
   return children;
 };
 
@@ -105,16 +115,18 @@ export const AppRoutes = ({
                     onLocaleChange={onSeoLocaleChange}
                   />
                 ) : seoRoute ? (
-                  <SeoPage
-                    route={
-                      seoRoute.kind === 'home' && seoRoute.path === '/'
-                        ? { ...seoRoute, locale: displayLocale }
-                        : seoRoute
-                    }
-                    onCtaClick={onSeoCtaClick}
-                    onLocaleChange={onSeoLocaleChange}
-                    resetKey={`${location.pathname}${location.search}${location.hash}`}
-                  />
+                  <LocaleGate locale={seoRoute.locale}>
+                    <SeoPage
+                      route={
+                        seoRoute.kind === 'home' && seoRoute.path === '/'
+                          ? { ...seoRoute, locale: displayLocale }
+                          : seoRoute
+                      }
+                      onCtaClick={onSeoCtaClick}
+                      onLocaleChange={onSeoLocaleChange}
+                      resetKey={`${location.pathname}${location.search}${location.hash}`}
+                    />
+                  </LocaleGate>
                 ) : (
                   <SeoNotFoundPage
                     resetKey={`${location.pathname}${location.search}${location.hash}`}

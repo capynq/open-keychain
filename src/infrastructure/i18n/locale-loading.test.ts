@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import i18n, { isLocaleLoaded, loadLocale, subscribeLocaleLoads } from './config';
+import i18n, { isLocaleLoaded, loadLocale, localeSettled, subscribeLocaleLoads } from './config';
 
 const NAMESPACES = ['translation', 'styles', 'templates'];
 
@@ -25,5 +25,10 @@ describe('loadLocale', () => {
     for (const namespace of NAMESPACES) expect(i18n.hasResourceBundle('uk', namespace)).toBe(true);
     expect(i18n.getFixedT('uk')('language')).not.toBe(i18n.getFixedT('en')('language'));
     expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('gives React one settled promise per locale', async () => {
+    expect(localeSettled('ru')).toBe(localeSettled('ru'));
+    await expect(localeSettled('ru')).resolves.toBeUndefined();
   });
 });

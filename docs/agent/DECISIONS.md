@@ -934,7 +934,9 @@ entry graph is now 136 KB gzip for English visitors; Russian and Ukrainian visit
 21 KB chunk in parallel with it.
 
 **Consequences:** Code that renders a locale other than the displayed one must call `loadLocale`
-first. Unit tests start with every locale loaded (`scripts/validation/vitest-setup.ts`), as does the
+first. Localized SEO pages render in their path's locale, so `AppRoutes` wraps them in
+`LocaleGate`, which suspends on `localeSettled` until that locale loads; navigations are
+transitions, so the previous page stays on screen. Unit tests start with every locale loaded (`scripts/validation/vitest-setup.ts`), as does the
 build-time frame renderer. `src/app/boot/boot-resolver.test.ts` runs the inline resolver against
 every SEO path, so it cannot drift from `detectInitialLocale`.
 
