@@ -76,13 +76,34 @@ test('keeps controls single-step, wrapped, and locked while moving', async ({ pa
   const previous = page.locator('[data-showcase-control="previous"]');
   const dots = page.locator('[data-showcase-control^="slide-"]');
 
+  /* Record the controls in the page whenever anything changes while the carousel moves: a 20-frame
+   * scroll can settle before a test action lands on a loaded runner. */
+  await page.evaluate((selector) => {
+    const viewport = document.querySelector(selector)!;
+    const states: boolean[] = [];
+    (window as unknown as { __lockedWhileMoving: boolean[] }).__lockedWhileMoving = states;
+    new MutationObserver(() => {
+      if (viewport.getAttribute('data-moving') !== 'true') return;
+      states.push(
+        [...document.querySelectorAll<HTMLButtonElement>('[data-showcase-control]')].every(
+          (control) => control.disabled,
+        ),
+      );
+    }).observe(viewport.closest('section') ?? document.body, {
+      attributes: true,
+      attributeFilter: ['data-moving', 'disabled'],
+      subtree: true,
+    });
+  }, carousel);
   await next.click();
-  await expect(page.locator(carousel)).toHaveAttribute('data-moving', 'true');
   await next.hover();
   await previous.hover();
-  await expect(next).toBeDisabled();
-  await expect(previous).toBeDisabled();
   await waitForSlide(page, 'print-example-1');
+  const lockedWhileMoving = await page.evaluate(
+    () => (window as unknown as { __lockedWhileMoving: boolean[] }).__lockedWhileMoving,
+  );
+  expect(lockedWhileMoving.length).toBeGreaterThan(0);
+  expect(lockedWhileMoving.every(Boolean)).toBe(true);
 
   await next.click();
   await waitForSlide(page, 'print-example-2');
@@ -111,14 +132,18 @@ test('supports keyboard and horizontal swipe navigation', async ({ page }) => {
   expect(bounds).toBeTruthy();
   const centerY = bounds!.y + bounds!.height / 2;
   const centerX = bounds!.x + bounds!.width / 2;
+  /* Past half a slide, so the drag snaps by distance: Embla only counts a release as a flick
+   * within 170 ms of the last move, which a loaded runner can miss. */
+  const swipe = bounds!.width * 0.6;
+  const pageWidth = page.viewportSize()!.width;
   await page.mouse.move(centerX, centerY);
   await page.mouse.down();
-  await page.mouse.move(centerX - Math.min(180, bounds!.width / 2), centerY, { steps: 5 });
+  await page.mouse.move(Math.max(1, centerX - swipe), centerY, { steps: 5 });
   await page.mouse.up();
   await waitForSlide(page, 'print-example-1');
   await page.mouse.move(centerX, centerY);
   await page.mouse.down();
-  await page.mouse.move(centerX + Math.min(180, bounds!.width / 2), centerY, { steps: 5 });
+  await page.mouse.move(Math.min(pageWidth - 1, centerX + swipe), centerY, { steps: 5 });
   await page.mouse.up();
   await waitForSlide(page, 'configurator');
   assertNoBrowserErrors();
