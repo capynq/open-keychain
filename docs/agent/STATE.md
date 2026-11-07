@@ -13,22 +13,27 @@ On `feature/dreamy-franklin-epfa18`. See DECISIONS entries dated 2026-11-07.
   match the live page within 1 px at 390–1920 px in production and development.
 - Bundled font specimens come from `public/fonts/specimens-<hash>.svg` (`pnpm assets:font-specimens`);
   design cards from `/showcase/v1/cards/` (`pnpm assets:landing`).
-- Measured against `01bdbe7` (local Brotli server over HTTP/1.1, 4x CPU, medians of 3):
-  - `/create` at 200 KB/s: wire 4267 → 899 KB, React commit 19.8 → 4.5 s, first preview
-    26.2 → 9.0 s, LCP 12.3 → 4.0 s; FCP 1.15 → 1.48 s.
-  - `/create` at 10 Mbps: commit 3.6 → 1.6 s, first preview 6.3 → 4.1 s, FCP 652 → 668 ms.
-  - `/` at 200 KB/s on a phone: LCP 2.6 → 1.1 s; React commit 2.58 → 2.94 s (the frame is painted
-    by then). `/` at 10 Mbps: LCP 1080 → 468 ms.
+- Measured on the PR 68 deploy preview against production (`main`), 4x CPU, CDP throttling,
+  medians of 5. This container's proxy limits Chromium to HTTP/1.1 (`nextHopProtocol`), so real
+  HTTP/2 was not measured:
+  - `/create` at 200 KB/s: wire 4580 → 943 KB, FCP 1.25 → 1.09 s, LCP 12.5 → 4.1 s, app ready
+    21.7 → 4.4 s, first preview 25.9 → 7.6 s.
+  - `/create` at 10 Mbps: FCP 868 → 756 ms, LCP 2.65 → 1.18 s, ready 4.5 → 1.6 s, first preview
+    6.6 → 3.5 s (390 px and `ru-RU` alike).
+  - `/` on a phone at 200 KB/s: FCP 3.16 → 0.94 s, LCP 3.16 → 1.20 s, ready 3.14 → 3.11 s, wire
+    411 → 382 KB. `/` at 10 Mbps: LCP 1.42–1.48 s → 0.68 s.
+  - One hero image request per device (390w at 1x, 780w at 2x and 3x, 720w/1440w on desktop);
+    production's 1x phones fetched 490w. `/create` answers 200 instead of a 301 to `/create/`.
+  - English visitors request no locale chunk; `ru`/`uk` visitors request theirs within 4 ms of the
+    entry, and React's first commit is already localized.
+- Deployment suite (`playwright.deployment.config.ts`) passes against the preview. From this
+  container `page.request` needs `use.proxy` set to `HTTPS_PROXY`; the browser already uses it.
+- Push gates passed first time with two slots per Playwright worker (4 min on four cores).
 - Open:
   - `styles/magnet-*.png` are copies of the name keychain renders (keyring hole); recapture.
-  - The entry graph (`app` + `createLucideIcon` chunk, about 180 KB gzip) bundles all three
-    locales (about 59 KB gzip); lazy non-active locales would shrink the critical path on every page.
-  - Pre-push browser gates flake on this 4-core container when unit tests and two browser gates run
-    together: the keyboard workflow (`keychain.spec.ts:54`, 10 s step) and the critical journey's
-    Quick setup close (5 s) fail first attempts; both reproduce on the pre-change build under the
-    same load and pass alone. Push with nothing else running.
-  - Netlify Link header preloads for images were removed; verify on the deploy preview that the
-    HTML preload (`imagesrcset`) is the only hero request per device.
+  - `playwright.dev-boot.config.ts` (not in CI or push gates): "handles concurrent cold and repeat
+    Customizer loads" and "keeps actual model pixels through reload and navigation" time out in
+    this container on `main` as well; Firefox is not installed here.
 
 ## Feedback collection and landing conversion, 2026-11-06
 
