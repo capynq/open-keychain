@@ -2180,3 +2180,16 @@ html[data-input-modality='keyboard'] .customizer-app-shell .design-select-card:h
   padding-top: var(--workshop-space-4);
   border-top: 1px solid var(--workshop-border-subtle);
 }
+
+/* Pre-React boot frame only (scoped to the copy in #boot-customizer). */
+.customizer-boot-frame .workspace {
+  min-height: 0;
+}
+
+.customizer-boot-frame .controls-panel {
+  scrollbar-gutter: stable both-edges;
+}
+
+.customizer-boot-frame .preview-panel {
+  pointer-events: none;
+}

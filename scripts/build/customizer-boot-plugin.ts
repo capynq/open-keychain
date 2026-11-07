@@ -4,7 +4,17 @@ import path from 'node:path';
 import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router';
-import { createServer, type Plugin, type ResolvedConfig } from 'vite';
+import { createServer, type Plugin, type ResolvedConfig, type ViteDevServer } from 'vite';
+
+import {
+  collectChunkCss,
+  cssFilesDefining,
+  entryCss,
+  findChunkByFacade,
+  missingBootClasses,
+  orderStylesheets,
+  type BootBundle,
+} from './boot-styles.ts';
 
 const locales = ['en', 'ru', 'uk'] as const;
 const templates = [
@@ -17,23 +27,15 @@ const templates = [
 ] as const;
 const placeholder = '<!-- customizer-boot-variants -->';
 const bootStylesPlaceholder = '__CUSTOMIZER_BOOT_STYLE_URLS__';
-const developmentBootStyles = [
-  '/src/app/styles/tokens.css',
-  '/src/app/styles/global.css',
-  '/src/app/styles/app.css',
-  '/src/app/styles/customizer.css',
-  '/src/app/styles/preview.css',
-  '/src/features/preview/styles/preview.css',
-  '/src/app/boot/CustomizerBootFrame.css',
-  '/src/app/components/CustomizerNavigationHeader/CustomizerNavigationHeader.module.css',
-  '/src/app/components/PreviewPanel/PreviewPanel.module.css',
-  '/src/features/customizer/components/ControlsPanel/ControlsPanel.module.css',
-  '/src/features/customizer/components/ControlsPanel/AppearanceControls.module.css',
-  '/src/features/customizer/components/ControlsPanel/SimpleOptions.module.css',
-  '/src/features/customizer/components/ControlsPanel/SimpleFontCarousel.module.css',
-  '/src/shared/ui/ColorControl.module.css',
-  '/src/features/customizer/components/DesignCardRail/DesignCardRail.module.css',
-  '/src/features/customizer/components/DesignSelectCard/DesignSelectCard.module.css',
+const frameModule = '/src/app/boot/CustomizerBootFrame.tsx';
+const devEntryModule = '/src/main.tsx';
+/**
+ * The boot frame renders the Customizer page and its preview, and the Viewer arrives through a
+ * dynamic import that the server render never follows, so it is a root of its own.
+ */
+const bootRootModules = [
+  '/src/pages/customizer/CustomizerPage.tsx',
+  '/src/features/preview/components/Viewer/Viewer.tsx',
 ];
 
 export const findGeometryWorkerHref = (bundle: Record<string, { fileName: string }>): string => {
@@ -52,28 +54,85 @@ export const geometryPreloadTags = (workerHref: string): string =>
     '<link rel="preload" href="/manifold-v1.wasm" as="fetch" crossorigin>',
   ].join('');
 
+export const bootStylesheetLinks = (hrefs: string[]): string =>
+  hrefs
+    .map((href) => `<link rel="stylesheet" href="${href}" data-customizer-boot-style />`)
+    .join('');
+
 export const buildCustomizerDocument = (
   html: string,
   bootStyleUrls: string[],
   geometryWorkerHref: string,
   variants: string,
-): string => {
-  const stylesheetLinks = bootStyleUrls
-    .map((href) => `<link rel="stylesheet" href="${href}" data-customizer-boot-style />`)
-    .join('');
-  return html
+): string =>
+  html
     .replace(bootStylesPlaceholder, '[]')
-    .replace('</head>', `${geometryPreloadTags(geometryWorkerHref)}${stylesheetLinks}</head>`)
+    .replace(
+      '</head>',
+      () =>
+        `${geometryPreloadTags(geometryWorkerHref)}${bootStylesheetLinks(bootStyleUrls)}</head>`,
+    )
     .replace(placeholder, () => variants);
+
+type ModuleGraphNode = {
+  url: string;
+  staticImportedUrls?: Set<string>;
+  importedModules: Set<{ url: string }>;
+};
+
+const isStylesheet = (url: string) => /\.css$/.test(url);
+const walkable = (url: string) => url.startsWith('/') && !url.includes('/node_modules/');
+
+/**
+ * Development stylesheets for the frame: every CSS module reached through static imports from
+ * the app entry and the boot roots, in evaluation order. Transforming does not execute code, so
+ * the entry and the Viewer can be walked without a browser; each level is transformed in
+ * parallel because the graph holds a few hundred modules.
+ */
+export const collectDevelopmentStyles = async (
+  server: Pick<ViteDevServer, 'environments'>,
+  roots: string[],
+): Promise<string[]> => {
+  const environment = server.environments.ssr;
+  const imports = new Map<string, string[]>();
+  let frontier = roots.filter(walkable);
+  const seen = new Set(frontier);
+  while (frontier.length) {
+    const next: string[] = [];
+    await Promise.all(
+      frontier.map(async (url) => {
+        /* Vite inlines a stylesheet's own @import rules, so its dependencies are not linked. */
+        if (isStylesheet(url)) return;
+        await environment.transformRequest(url);
+        const node = (await environment.moduleGraph.getModuleByUrl(url)) as
+          ModuleGraphNode | undefined;
+        const urls = [
+          ...(node?.staticImportedUrls ??
+            new Set([...(node?.importedModules ?? [])].map((m) => m.url))),
+        ].filter(walkable);
+        imports.set(url, urls);
+        for (const imported of urls) {
+          if (seen.has(imported)) continue;
+          seen.add(imported);
+          next.push(imported);
+        }
+      }),
+    );
+    frontier = next;
+  }
+  return orderStylesheets(imports, roots);
 };
 
 export const customizerBootPlugin = (): Plugin => {
   let config: ResolvedConfig;
   let server: Awaited<ReturnType<typeof createServer>> | undefined;
-  let renderedVariants: string | undefined;
+  let renderedVariants: Promise<string> | undefined;
   let bootStyleUrls: string[] = [];
   let geometryWorkerHref: string | undefined;
   let devRenderQueue = Promise.resolve();
+  /** Any source edit can change the frame, so the cached render is keyed by a change counter. */
+  let devGeneration = 0;
+  let devFrame: { generation: number; variants: string; stylesheets: string[] } | undefined;
 
   const getServer = async () => {
     if (server) return server;
@@ -101,11 +160,10 @@ export const customizerBootPlugin = (): Plugin => {
   };
 
   const renderVariants = async (): Promise<string> => {
-    if (renderedVariants && config.command === 'build') return renderedVariants;
     const ssrServer = await getServer();
     await ssrServer.ssrLoadModule('/src/infrastructure/i18n/config.ts');
     const [{ CustomizerBootFrame }, { AnalyticsContext }] = await Promise.all([
-      ssrServer.ssrLoadModule('/src/app/boot/CustomizerBootFrame.tsx'),
+      ssrServer.ssrLoadModule(frameModule),
       ssrServer.ssrLoadModule('/src/infrastructure/telemetry/telemetry-context.ts'),
     ]);
     const value = {
@@ -133,7 +191,12 @@ export const customizerBootPlugin = (): Plugin => {
         );
       }
     }
-    renderedVariants = variants.join('');
+    return variants.join('');
+  };
+
+  /** Build renders once, alongside bundling; the result is awaited when the bundle is final. */
+  const buildVariants = () => {
+    renderedVariants ??= renderVariants().finally(closeSsrServer);
     return renderedVariants;
   };
 
@@ -141,6 +204,11 @@ export const customizerBootPlugin = (): Plugin => {
     name: 'customizer-boot-variants',
     configResolved(resolved) {
       config = resolved;
+    },
+    buildStart() {
+      if (config.command !== 'build') return;
+      /* Observed in generateBundle; the catch keeps an early failure from going unhandled. */
+      buildVariants().catch(() => undefined);
     },
     async transformIndexHtml(html, context) {
       const withStyles = html.replace(
@@ -161,39 +229,63 @@ export const customizerBootPlugin = (): Plugin => {
       });
       await previousRender;
       try {
-        const stylesheetLinks = developmentBootStyles
-          .map((href) => `<link rel="stylesheet" href="${href}" data-customizer-boot-style />`)
-          .join('');
-        const withStylesheets = withStyles.replace('</head>', `${stylesheetLinks}</head>`);
-        return withStylesheets.replace(placeholder, await renderVariants());
-      } finally {
-        try {
-          await closeSsrServer();
-        } finally {
-          releaseRender();
+        if (devFrame?.generation !== devGeneration) {
+          const generation = devGeneration;
+          try {
+            const variants = await renderVariants();
+            const stylesheets = await collectDevelopmentStyles(await getServer(), [
+              devEntryModule,
+              frameModule,
+              ...bootRootModules,
+            ]);
+            devFrame = { generation, variants, stylesheets };
+          } finally {
+            await closeSsrServer();
+          }
         }
+        const { variants, stylesheets } = devFrame!;
+        const withStylesheets = withStyles.replace(
+          '</head>',
+          () => `${bootStylesheetLinks(stylesheets)}</head>`,
+        );
+        return withStylesheets.replace(placeholder, () => variants);
+      } finally {
+        releaseRender();
       }
     },
-    generateBundle(_options, bundle) {
-      if (config.command !== 'build') return;
-      const bootChunks = new Set([
-        'customizerBootStyles',
-        'CustomizerPage',
-        'preview',
-        'Viewer',
-        'AppHeader',
-      ]);
-      bootStyleUrls = [
-        ...new Set(
-          Object.values(bundle).flatMap((output) =>
-            output.type === 'chunk' && bootChunks.has(output.name)
-              ? [...(output.viteMetadata?.importedCss ?? [])]
-              : [],
-          ),
-        ),
-      ].map((file) => `/${file}`);
-      if (!bootStyleUrls.length) this.error('The Customizer boot stylesheet entry emitted no CSS.');
-      geometryWorkerHref = findGeometryWorkerHref(bundle);
+    generateBundle: {
+      /* After vite:css-post, which folds CSS-only chunks into their importers' CSS lists. */
+      order: 'post',
+      async handler(_options, outputBundle) {
+        if (config.command !== 'build') return;
+        const bundle = outputBundle as unknown as BootBundle;
+        const roots = bootRootModules.map((module) =>
+          findChunkByFacade(bundle, path.join(config.root, module)),
+        );
+        const linkedByEntry = entryCss(bundle);
+        const bootCss = collectChunkCss(bundle, roots, linkedByEntry);
+        if (!bootCss.length) this.error('The Customizer boot roots emitted no CSS.');
+        bootStyleUrls = bootCss.map((file) => `/${file}`);
+        geometryWorkerHref = findGeometryWorkerHref(bundle);
+
+        const source = (file: string) => {
+          const output = bundle[file];
+          return output?.type === 'asset' ? String(output.source) : '';
+        };
+        const missing = missingBootClasses(
+          await buildVariants(),
+          [...linkedByEntry, ...bootCss].map(source),
+        );
+        if (missing.length) {
+          this.error(
+            `The Customizer boot frame uses classes no boot stylesheet defines: ${missing
+              .map(
+                (token) => `${token} (${cssFilesDefining(bundle, token).join(', ') || 'no CSS'})`,
+              )
+              .join('; ')}`,
+          );
+        }
+      },
     },
     async writeBundle(outputOptions) {
       if (config.command !== 'build') return;
@@ -212,13 +304,17 @@ export const customizerBootPlugin = (): Plugin => {
         html,
         bootStyleUrls,
         geometryWorkerHref!,
-        await renderVariants(),
+        await buildVariants(),
       );
       const customizerHtmlPath = path.join(outputDir, 'create', 'index.html');
       await mkdir(path.dirname(customizerHtmlPath), { recursive: true });
       await writeFile(customizerHtmlPath, customizerHtml);
     },
     configureServer(viteServer) {
+      const sourceDirectory = path.join(config.root, 'src') + path.sep;
+      viteServer.watcher.on('all', (_event, file) => {
+        if (file.startsWith(sourceDirectory)) devGeneration += 1;
+      });
       viteServer.httpServer?.once('close', () => {
         void closeSsrServer();
       });

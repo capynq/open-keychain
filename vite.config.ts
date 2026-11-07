@@ -52,9 +52,6 @@ export default defineConfig({
     rolldownOptions: {
       input: {
         app: fileURLToPath(new URL('./index.html', import.meta.url)),
-        customizerBootStyles: fileURLToPath(
-          new URL('./src/app/boot/customizer-boot-styles.ts', import.meta.url),
-        ),
       },
       output: {
         codeSplitting: {

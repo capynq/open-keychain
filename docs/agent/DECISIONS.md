@@ -813,3 +813,22 @@ when to ask and to prefill those emails.
 code only) and `start_designing` sources are the only new tracked properties and stay consent-gated.
 Test builds use `VITE_POSTHOG_KEY=phc_playwright` and `VITE_POSTHOG_HOST=https://posthog.test`, which
 `e2e/feedback.spec.ts` intercepts.
+
+## 2026-11-07 — Boot stylesheets come from the build graph
+
+**Decision:** The stylesheets linked for the pre-React boot frame are derived from the build
+graph, not from a list. Production links the CSS reachable through static imports from the
+Customizer page and Viewer chunks (found by facade module, imports before importers, minus the
+entry CSS), collected after `vite:css-post` has folded CSS-only chunks. Development links every
+stylesheet reached through static imports from `src/main.tsx`, the frame and the same two roots.
+The build fails when a CSS-module class in the rendered frame is missing from the linked CSS.
+
+**Rationale:** Since `01bdbe7` the feedback dialog shares `IconButton` with the landing and SEO
+footers, which moved `IconButton.module.css` into an unnamed shared chunk. The chunk-name list
+missed it, so Quick setup and Export stacked their icon over the label until the editor chunk
+loaded. Any future shared chunk would fail the same way.
+
+**Consequences:** The `customizerBootStyles` rollup input is gone; the frame's own rules live in
+`customizer.css` under `.customizer-boot-frame`. Development caches the rendered frame and its
+stylesheet list until a file under `src/` changes. `e2e/routes.spec.ts` checks the header buttons'
+boxes and computed display, and that no stylesheet appears after hand-off.

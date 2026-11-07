@@ -15,8 +15,6 @@ import { previewStatus } from '@/features/preview/model/preview-status';
 import '@/app/styles/customizer.css';
 import '@/app/styles/preview.css';
 
-import './CustomizerBootFrame.css';
-
 const noop = (): void => {};
 const BOOT_STYLE = { version: 1 } as const;
 

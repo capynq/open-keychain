@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { ROUTE_MANIFEST } from '../src/app/routes';
 import {
@@ -8,6 +8,30 @@ import {
   selectLocale,
   watchBrowserErrors,
 } from './helpers';
+
+/** Labelled header actions put the icon beside the label; a missing stylesheet stacks them. */
+const BOOT_HEADER_BUTTON_SELECTORS = [
+  '.setup-header-button',
+  '.setup-header-button > svg',
+  '.randomize-header-button',
+  '.export-header-button',
+  '.export-header-button > svg',
+  '.export-header-button > span',
+  '.share-header-button',
+];
+
+const readHeaderButtonDisplays = (page: Page, root: '#boot-customizer' | '#root') =>
+  page.evaluate(
+    (selectorRoot) =>
+      Object.fromEntries(
+        ['.setup-header-button', '.export-header-button'].map((selector) => {
+          const button = document.querySelector(`${selectorRoot} ${selector}`);
+          if (!button) throw new Error(`Missing header button: ${selector}`);
+          return [selector, getComputedStyle(button).display];
+        }),
+      ),
+    root,
+  );
 
 const activeHeroImageSelector =
   '.configurator-carousel-slide[data-showcase-kind="configurator"][data-active="true"] img';
@@ -131,10 +155,22 @@ test('renders the real Customizer frame before React and hands off without a lay
     );
     await document.fonts.ready;
   });
-  await expect(page.locator('head link[data-customizer-boot-style]')).toHaveCount(4);
+  const readStylesheets = () =>
+    page
+      .locator('link[rel="stylesheet"]')
+      .evaluateAll((links) =>
+        links.map((link) => new URL((link as HTMLLinkElement).href).pathname),
+      );
+  const bootStylesheets = await page
+    .locator('head link[data-customizer-boot-style]')
+    .evaluateAll((links) => links.map((link) => new URL((link as HTMLLinkElement).href).pathname));
+  expect(bootStylesheets.length).toBeGreaterThan(0);
+  expect(new Set(bootStylesheets).size).toBe(bootStylesheets.length);
+  const stylesheetsBeforeReact = await readStylesheets();
 
   const selectors = [
     'header.customizer-topbar',
+    ...BOOT_HEADER_BUTTON_SELECTORS,
     'aside.controls-panel',
     '[data-testid="name-settings"]',
     '[data-testid="template-settings"]',
@@ -199,6 +235,9 @@ test('renders the real Customizer frame before React and hands off without a lay
   await expect(page.locator('#root')).not.toHaveAttribute('data-app-ready', 'true');
   const bootBoxes = await readBoxes('#boot-customizer');
   const bootFontCards = await readVisibleFontCards('#boot-customizer');
+  const bootButtonDisplays = await readHeaderButtonDisplays(page, '#boot-customizer');
+  expect(bootButtonDisplays['.setup-header-button']).toBe('flex');
+  expect(bootButtonDisplays['.export-header-button']).toBe('flex');
 
   releaseAppEntry?.();
   await expect(page.locator('#root')).toHaveAttribute('data-app-ready', 'true');
@@ -215,6 +254,10 @@ test('renders the real Customizer frame before React and hands off without a lay
   const liveBoxes = await readBoxes('#root');
   const liveFontCards = await readVisibleFontCards('#root');
   expect(bootFontCards).toEqual(liveFontCards);
+  expect(await readHeaderButtonDisplays(page, '#root')).toEqual(bootButtonDisplays);
+  await expect(page.locator('#root .viewer-surface canvas')).toBeVisible({ timeout: 30_000 });
+  /* Every stylesheet the live editor needs was already linked for the boot frame. */
+  expect(await readStylesheets()).toEqual(stylesheetsBeforeReact);
   for (const selector of selectors) {
     const bootBox = bootBoxes[selector as keyof typeof bootBoxes];
     const liveBox = liveBoxes[selector as keyof typeof liveBoxes];

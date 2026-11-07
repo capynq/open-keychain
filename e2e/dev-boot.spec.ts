@@ -1,6 +1,16 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 const customizerRoutes = ['/create', '/create/'] as const;
+
+/** Derived from the frame's import graph, so assert the invariants rather than a count. */
+const expectUniqueBootStylesheets = async (page: Page) => {
+  const hrefs = await page
+    .locator('link[data-customizer-boot-style]')
+    .evaluateAll((links) => links.map((link) => link.getAttribute('href')));
+  expect(hrefs.length).toBeGreaterThan(0);
+  expect(new Set(hrefs).size).toBe(hrefs.length);
+  expect(hrefs).toContain('/src/shared/ui/IconButton.module.css');
+};
 
 test('serves the Customizer boot variants only on development Customizer routes', async ({
   page,
@@ -11,7 +21,7 @@ test('serves the Customizer boot variants only on development Customizer routes'
     await expect(page.locator('template[data-customizer-boot]')).toHaveCount(18);
     await expect(page.locator('#boot-customizer .customizer-topbar')).toBeVisible();
     await expect(page.locator('#boot-customizer aside.controls-panel')).toBeVisible();
-    await expect(page.locator('link[data-customizer-boot-style]')).toHaveCount(16);
+    await expectUniqueBootStylesheets(page);
   }
 
   const landingResponse = await page.goto('/', { waitUntil: 'domcontentloaded' });
@@ -39,7 +49,7 @@ test('renders the requested locale and template before the React entry loads', a
     expect(response?.status()).toBe(200);
     await expect(page.locator('template[data-customizer-boot]')).toHaveCount(18);
     await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
-    await expect(page.locator('link[data-customizer-boot-style]')).toHaveCount(16);
+    await expectUniqueBootStylesheets(page);
     await expect(
       page.locator('#boot-customizer [data-testid="template-card-magnet"]'),
     ).toHaveAttribute('aria-pressed', 'true');
@@ -61,6 +71,12 @@ test('renders the requested locale and template before the React entry loads', a
 
     const selectors = [
       'header.customizer-topbar',
+      '.setup-header-button',
+      '.setup-header-button > svg',
+      '.export-header-button',
+      '.export-header-button > svg',
+      '.export-header-button > span',
+      '.share-header-button',
       'aside.controls-panel',
       '[data-testid="template-card-nameplate"]',
       '.preview-panel',
